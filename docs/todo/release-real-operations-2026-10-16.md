@@ -8,11 +8,12 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-CI30 is prepared for a new source-bound acceptance run; execution is still pending.
-See the [CI30 preparation](#ci30--prepared-source-native-execution-pending).
-This does not replace the completed CI29 failure below.
+The latest completed run, CI30, **FAILED** overall: three jobs pass and two fail.
+See the [CI30 actual record](#ci30--actual-five-job-results-and-pending-follow-ups).
+The subsequent Goal, diagnostic-clock and attachment fixes have finite local
+regressions; native CI31 is still pending.
 
-The latest completed run, CI29, failed overall across five jobs. macOS, Linux
+CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
 38 operations/five normal Mains plus separate Review drafts three/one, then
 fails Composer identity before any Composer operation. Its recorded exit
@@ -3528,3 +3529,112 @@ and Core-barrel definitions changed. Hosted CI must rerun all 32 files; the
 historical result is not promoted to a fresh combined pass.
 Hosted native execution, including full NSIS replacement/uninstall/OS restoration,
 remains pending; no successful hook execution or readiness is inferred.
+
+## CI30 — actual five-job results and pending follow-ups
+
+[Run 39069879809](https://github.com/cjhyy/codeshell/actions/runs/39069879809),
+push attempt one, is bound to immutable source
+`2bbb517b615a6035e1c68fa8cac13f0b6f3a1eb2`. The final result is **FAILED**:
+three successful jobs and two failures. This is not release approval. Later
+source fixes below do not retrospectively repair this run or earlier failures.
+
+| Scope                                        | Actual accepted boundary                                                                                                                                                                          | Result |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Web, job `117505097262`                      | 31 scenarios: service worker eleven, Auth four, subagent eight and annotations eight; six complete RPC arrays and representative images checked.                                                  | Passed |
+| macOS, job `117505097131`                    | Original 83 operations/twelve normal Mains; separate Review drafts three/one; one paused-Goal acceptance in the existing Preferences Main; separate DMG thirteen plus thirteen/two Mains.         | Passed |
+| Linux, job `117505097273`                    | Original 83/twelve, separate drafts three/one and Goal one in the existing Preferences Main; AppImage integrity, runtime, sandbox and ten GET gates.                                              | Passed |
+| Windows matrix, job `117505097245`           | Original completed 54/seven normal Mains plus separate drafts three/one. Preferences completes six language/theme actions and three normal Mains but fails its required Goal gate; HOME retained. | Failed |
+| Independent Windows NSIS, job `117505097241` | Ten of sixteen phases; first installed UI thirteen/one normal Main and three normal controller roots. Replacement times out; six required phases are not accepted.                                | Failed |
+
+macOS and Linux also pass the new required HTTP-401 error-details disclosure:
+short summary, initially closed details, full technical message retained and
+keyboard close/reopen behavior. Composer's new public diagnostics and fixed
+owned guard exports are checked separately from the original operation counts.
+The two added diagnostic/Goal contract vectors are 43 pure Node tests in the
+native matrix and 27 in the independent installer job; these are not native
+operations. Windows actually records 445 tests/3,541 expectations/32 files,
+while macOS records 445/3,550/32; platform counts are not copied between jobs.
+The project-override regression is separately 27 tests/85 expectations.
+
+Windows matrix step 35 first fails at `paused Goal: actual reload and durable
+null`: the existing objective remains visible during the ten-second hidden
+locator wait. The complete captured Main request/response pairs show a successful
+`goalDelete` followed by two `goalGet` replies with `goal:null` and `paused:false`.
+This is **not a deletion-failed result**. The required Goal acceptance remains
+zero and the entire Preferences fixture is failed despite six completed actions
+and three normal exits. Its failure gate precedes private JSONL reconciliation;
+no successful durable-CAS verification or independent private-file reread is
+claimed. Packaged UI, updater, DMG and the matrix NSIS path are skipped. Fifteen
+uploaded owned maps contain 113 parent edges with no full-birth chronology
+contradiction; this does not assert all OS processes or signal delivery.
+
+The separate NSIS job accepts first-installed Main `1624` normal `0/null` and
+thirteen UI actions with its private HOME removed. Replacement Setup `4548`
+reaches the unchanged 180,000 ms watchdog: timeout sequence 33, authorized
+SIGTERM request 34, exit `1/null` 35, then later process/outer assertions. The
+cleanup-following exit is not proof of a spontaneous crash. `replace`,
+`replacement-identity`, `replacement-ui`, `uninstall`, `cache-cleanup` and
+`final-integrity` remain unaccepted; no final OS/cache restoration or complete
+26-UI/six-root success is claimed. Advisory role observation has zero samples
+and `observerFault:true`, so the two descendants' image roles and the replacement
+cause remain **UNKNOWN**. Compiled hook bytes do not establish that the hook ran.
+
+Root's final five-scope matrix, `ci30-final-five-scope-verified-matrix-20261018.json`,
+has SHA-256 `7ed878fda1dd9186f02ee084c14d21e3ee9873ad0e01b2cd6a584e4a8d65e4c3`.
+It binds final run/jobs/artifact APIs and all five immutable evidence freezes.
+The Windows failed-aware summary has SHA-256
+`d613d302551717abdcee8b2bd04215c058d92f837664779f8e5e1eb299b7753e`;
+its seventy-reference freeze has SHA-256
+`6250fbe6ede88d8d51ffb21106aef852b62fa641413dc2bcd08c72e73c4f9d41`.
+The first offline reader omitted the existing `handshakeCompleted:true` field
+from an exact metadata expectation. Its error is retained; the reviewed
+four-field correction passes without removing a native gate. Other retained
+metadata-authoring errors are not product or native failures.
+
+### Source follow-ups awaiting a new combined run
+
+Goal commit `8af52de38947a72cf9340595623cafe111ea9f40` reconciles an explicit
+cleared Goal during transcript hydration rather than retaining the old renderer
+cache. The pure baseline is seven passes/one meaningful failure; the related
+suite then passes forty tests/85 expectations. This is source-level repair
+validation; fresh hosted native Goal reload acceptance is still pending CI31.
+
+Diagnostic commit `3676e9ba2048fc6f53ed19023119818f3907c37d` correctly binds the
+role observer's default monotonic clock. A meaningful pure regression fails
+before the fix, then twelve pure tests pass on Node 25.8.1/macOS. This repairs
+an advisory observer defect; it does not explain or fix the NSIS timeout.
+
+Attachment commit `98a5ac8e76d29b3923bdc7929a21dc8136c9b9d2` addresses
+`ATTACH-R64-01`: different IDs in one session can share a PNG path, so retiring
+an expired draft ID must preserve bytes still referenced by a valid sent item
+or an item of unknown age. When all references expire, the file is removed once.
+The owned-file baseline has zero passes/three failures/fifteen expectations;
+the new five-test shard passes 32 expectations and the original 22-test shard
+passes 85 expectations in separate guarded processes. These are owned temporary
+files, not native UI, real-user attachment cleanup or provider execution.
+The thirteen-reference source proof, `verified-source-summary.json` under
+`/private/tmp/codeshell-attachment-retention-root-proof-20261018`, has SHA-256
+`73ca7764f99109ed0730ef9be7b03c367ffb938a470f861e2e4981cbd0afb40f`.
+
+These isolated source changes have not yet received a combined build/typecheck
+or a source-bound CI31 run at this documentation checkpoint. Original budgets,
+identity/custody/normal-exit, OS/cache/HOME and all existing acceptance gates
+remain required. No release, signing, publication, retry or guard relaxation is
+approved by this record. CI29 and all older unknown failures remain unchanged.
+
+### Subsequent combined static checkpoint
+
+After the preceding documentation checkpoint, Root source
+`97909db793d2714f52a2e0ac3ea9402485e61b9d` includes the three follow-ups and passes
+all seventeen finite static commands. The dependency build emits twelve
+non-Desktop package declarations, Web static assets and the root shim;
+fourteen workspace commands cover sixteen no-emit TypeScript checks; separate
+renderer and mobile browser bundles also exit zero. This is not a complete
+Desktop native build, package or native UI run, and no tests are inferred from
+these static commands. The actual result at
+`/private/tmp/codeshell-ci31-combined-static-root-20261018/verified-final-static-result.json`
+has SHA-256 `579b7bf1a14784afb902d6e36bafb1243ecaf762bd84958068d9a2267fcf4fcb`.
+Existing bundle-size warnings remain: Web 773.23 kB and mobile 741.23 kB exceed
+500 kB; renderer index 1,468.78 kB exceeds 1,000 kB. This is not a zero-warning
+result. The earlier pending statement remains its historical checkpoint;
+source-bound native CI31 is still pending and CI30 remains failed.
