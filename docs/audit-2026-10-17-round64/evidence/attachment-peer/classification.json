@@ -1,0 +1,41 @@
+{
+  "formalFindingsByPeer": [],
+  "newCandidates": [],
+  "newRelated": [],
+  "sameItemReview": {
+    "id": "ATTACH-R64-01",
+    "suggestedPriority": "P2",
+    "verdict": "support",
+    "countOnceAtRoot": true,
+    "normalScenario": "Registered ordinary project / non-qchat session: paste valid PNG A; remove A chip (renderer state only); paste same PNG as B and send B; later normal startup cleanup at >=A24h but <B30d deletes shared path according to expired A id.",
+    "contract": "same-session identical content reuses file but creates distinct IDs; draft24h vs sent30d are explicit product constants and existing test declarations; no live-id/path retention guard in TTL cleanup",
+    "impact": "shared staged file backing sent B is physically removed before sent retention expires; recent attachment list then filters it out because file absent. No claim every sent image is affected, original external image is deleted, or all transcript data is lost.",
+    "independentStaticChallenge": "removedFromDraft writer not found in all packages filename search; actual chip remove writes local array only; ordinary non-qchat IPC branch directly invokes stage/mark; sessionId cleanup is separate intentional full-session deletion and is not used in trigger.",
+    "evidenceStrength": "Root first owned-tempFS guarded fixture observes same-path deletion and independent-session sent control retention; peer independently read exact fixture/raw+exit but did not run product. No Desktop UI/native/real-user reproduction.",
+    "limitations": [
+      "Ordinary successful staging/sending and known project cwd assumed; no auth/custody certification",
+      "Root runtime fixture advances public cleanup now parameter, not elapsed24h or IPC-injected time",
+      "No assertion about every image/format, current displayed-history reload behavior or recovery from external originals",
+      "History cause query is finite regex navigation, not proof all prior history unmentioned"
+    ]
+  },
+  "peerIndependentRunCounts": {
+    "product": 0,
+    "test": 0,
+    "fixture": 0,
+    "Git": 0,
+    "network": 0,
+    "native": 0
+  },
+  "rootObservedEvidence": {
+    "testFile": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+    "attempt": 1,
+    "pass": 1,
+    "expect": 11,
+    "fail": 0,
+    "skip": 0,
+    "exitCode": 0,
+    "completedBunShard": true,
+    "defectAssertionsNotFix": true
+  }
+}

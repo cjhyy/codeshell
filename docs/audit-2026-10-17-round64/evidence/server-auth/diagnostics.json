@@ -1,0 +1,32 @@
+{
+  "firstOldGateReader": {
+    "stdout": "read-old-gate.first.stdout.txt",
+    "stderr": "read-old-gate.first.stderr.txt",
+    "exit": "read-old-gate.first.exit.json",
+    "childExitCode": 1,
+    "cause": "Requested file-mutex-round19.md 88–103 but actual EOF96. Previous two old reports had emitted; no product code ran. Original source/method retained.",
+    "followup": "Separate bounded old metadata windows and compact module-object projection only, no product validation retry."
+  },
+  "toolDisplayTruncations": [
+    {
+      "chunkId": "84bb9d",
+      "raw": "read-old-gate.first.stdout.txt",
+      "toolReportedOriginalTokens": 7026,
+      "maxOutputTokens": 6800
+    },
+    {
+      "chunkId": "31d44b",
+      "raw": "read-old-gate-bounded.first.stdout.txt",
+      "toolReportedOriginalTokens": 8349,
+      "maxOutputTokens": 5700,
+      "cause": "Unnecessarily printed original 187/188-path inventory groups; subsequently inspected compact fields and exact missing old-report windows, not all inventory paths semantically."
+    }
+  ],
+  "sourceBodyDisplayTruncations": [],
+  "metadataSyntaxWarning": {
+    "artifact": "navigate-callers.first.stderr.txt",
+    "childExitCode": 0,
+    "cause": "Non-raw regex literal invalid-escape SyntaxWarning; navigation completed. Method not rewritten/rerun."
+  },
+  "actualProductImportOrTestAttempts": 0
+}

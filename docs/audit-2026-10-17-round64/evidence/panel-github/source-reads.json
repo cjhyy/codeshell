@@ -1,0 +1,1006 @@
+[
+  {
+    "path": "packages/core/src/panel-apps/github-ref.ts",
+    "atUTC": "2026-10-17T21:08:31.812429+00:00",
+    "mode": "full",
+    "ranges": [
+      [
+        1,
+        134
+      ]
+    ],
+    "totalLines": 134,
+    "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "atUTC": "2026-10-17T21:08:31.877913+00:00",
+    "mode": "full",
+    "ranges": [
+      [
+        1,
+        96
+      ]
+    ],
+    "totalLines": 96,
+    "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-request.ts",
+    "atUTC": "2026-10-17T21:08:31.963604+00:00",
+    "mode": "full",
+    "ranges": [
+      [
+        1,
+        12
+      ]
+    ],
+    "totalLines": 12,
+    "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-manifest.ts",
+    "atUTC": "2026-10-17T21:08:34.835074+00:00",
+    "mode": "full",
+    "ranges": [
+      [
+        1,
+        210
+      ]
+    ],
+    "totalLines": 210,
+    "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af"
+  },
+  {
+    "path": "packages/core/src/panel-apps/update-check.ts",
+    "atUTC": "2026-10-17T21:08:34.890700+00:00",
+    "mode": "full",
+    "ranges": [
+      [
+        1,
+        171
+      ]
+    ],
+    "totalLines": 171,
+    "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b"
+  },
+  {
+    "path": "packages/core/src/panel-apps/installer.ts",
+    "atUTC": "2026-10-17T21:08:57.566083+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        27,
+        27
+      ],
+      [
+        104,
+        104
+      ],
+      [
+        108,
+        108
+      ],
+      [
+        111,
+        111
+      ],
+      [
+        112,
+        112
+      ],
+      [
+        127,
+        127
+      ],
+      [
+        133,
+        133
+      ],
+      [
+        134,
+        134
+      ],
+      [
+        143,
+        143
+      ],
+      [
+        148,
+        148
+      ],
+      [
+        167,
+        167
+      ],
+      [
+        178,
+        178
+      ],
+      [
+        185,
+        185
+      ],
+      [
+        210,
+        210
+      ],
+      [
+        211,
+        211
+      ],
+      [
+        220,
+        220
+      ],
+      [
+        222,
+        222
+      ],
+      [
+        229,
+        229
+      ],
+      [
+        239,
+        239
+      ],
+      [
+        244,
+        244
+      ],
+      [
+        261,
+        261
+      ],
+      [
+        269,
+        269
+      ],
+      [
+        276,
+        276
+      ],
+      [
+        277,
+        277
+      ],
+      [
+        281,
+        281
+      ],
+      [
+        282,
+        282
+      ],
+      [
+        285,
+        285
+      ],
+      [
+        286,
+        286
+      ],
+      [
+        298,
+        298
+      ],
+      [
+        303,
+        303
+      ],
+      [
+        304,
+        304
+      ],
+      [
+        308,
+        308
+      ],
+      [
+        312,
+        312
+      ],
+      [
+        365,
+        365
+      ],
+      [
+        586,
+        586
+      ],
+      [
+        610,
+        610
+      ],
+      [
+        615,
+        615
+      ],
+      [
+        659,
+        659
+      ],
+      [
+        821,
+        821
+      ],
+      [
+        952,
+        952
+      ],
+      [
+        954,
+        954
+      ],
+      [
+        964,
+        964
+      ],
+      [
+        1021,
+        1021
+      ],
+      [
+        1150,
+        1150
+      ]
+    ],
+    "totalLines": 1228,
+    "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+    "pattern": "resolveGitHubPanelAppCommit|normalizeGitPanelAppSource|GitPanelAppSourceInput|source:|commit|ref:|subdir|readGitHub"
+  },
+  {
+    "path": "packages/desktop/src/main/panel-app-update-service.ts",
+    "atUTC": "2026-10-17T21:08:57.631530+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        16,
+        16
+      ],
+      [
+        19,
+        19
+      ],
+      [
+        29,
+        29
+      ],
+      [
+        39,
+        39
+      ],
+      [
+        41,
+        41
+      ],
+      [
+        42,
+        42
+      ],
+      [
+        44,
+        44
+      ],
+      [
+        54,
+        54
+      ],
+      [
+        55,
+        55
+      ],
+      [
+        67,
+        67
+      ],
+      [
+        73,
+        73
+      ],
+      [
+        74,
+        74
+      ],
+      [
+        88,
+        88
+      ],
+      [
+        100,
+        100
+      ],
+      [
+        101,
+        101
+      ],
+      [
+        106,
+        106
+      ],
+      [
+        122,
+        122
+      ],
+      [
+        135,
+        135
+      ]
+    ],
+    "totalLines": 138,
+    "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+    "pattern": "checkInstalled|checkSelected|source|cache|identity|version"
+  },
+  {
+    "path": "packages/core/src/panel-apps/update-check.test.ts",
+    "atUTC": "2026-10-17T21:08:57.693617+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        25,
+        25
+      ],
+      [
+        70,
+        70
+      ],
+      [
+        82,
+        82
+      ],
+      [
+        105,
+        105
+      ],
+      [
+        109,
+        109
+      ],
+      [
+        110,
+        110
+      ],
+      [
+        150,
+        150
+      ],
+      [
+        158,
+        158
+      ],
+      [
+        179,
+        179
+      ],
+      [
+        194,
+        194
+      ],
+      [
+        206,
+        206
+      ],
+      [
+        226,
+        226
+      ],
+      [
+        237,
+        237
+      ],
+      [
+        249,
+        249
+      ],
+      [
+        257,
+        257
+      ],
+      [
+        267,
+        267
+      ],
+      [
+        287,
+        287
+      ],
+      [
+        298,
+        298
+      ],
+      [
+        311,
+        311
+      ],
+      [
+        328,
+        328
+      ],
+      [
+        351,
+        351
+      ],
+      [
+        356,
+        356
+      ],
+      [
+        357,
+        357
+      ],
+      [
+        380,
+        380
+      ],
+      [
+        396,
+        396
+      ],
+      [
+        411,
+        411
+      ],
+      [
+        424,
+        424
+      ],
+      [
+        439,
+        439
+      ],
+      [
+        451,
+        451
+      ],
+      [
+        456,
+        456
+      ],
+      [
+        464,
+        464
+      ],
+      [
+        469,
+        469
+      ],
+      [
+        481,
+        481
+      ],
+      [
+        494,
+        494
+      ],
+      [
+        504,
+        504
+      ],
+      [
+        514,
+        514
+      ],
+      [
+        526,
+        526
+      ]
+    ],
+    "totalLines": 546,
+    "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+    "pattern": "test\\(|it\\(|describe\\(|ref:|subdir:|tree/"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-ref.test.ts",
+    "atUTC": "2026-10-17T21:08:57.753343+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        35,
+        35
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        38,
+        38
+      ],
+      [
+        65,
+        65
+      ],
+      [
+        70,
+        70
+      ],
+      [
+        72,
+        72
+      ],
+      [
+        73,
+        73
+      ],
+      [
+        83,
+        83
+      ],
+      [
+        85,
+        85
+      ],
+      [
+        89,
+        89
+      ],
+      [
+        91,
+        91
+      ],
+      [
+        94,
+        94
+      ],
+      [
+        107,
+        107
+      ],
+      [
+        111,
+        111
+      ],
+      [
+        115,
+        115
+      ],
+      [
+        124,
+        124
+      ],
+      [
+        127,
+        127
+      ],
+      [
+        132,
+        132
+      ],
+      [
+        138,
+        138
+      ],
+      [
+        145,
+        145
+      ],
+      [
+        149,
+        149
+      ],
+      [
+        151,
+        151
+      ],
+      [
+        158,
+        158
+      ],
+      [
+        170,
+        170
+      ]
+    ],
+    "totalLines": 180,
+    "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+    "pattern": "test\\(|it\\(|describe\\(|ref:|tree/"
+  },
+  {
+    "path": "packages/desktop/src/main/panel-app-update-service.ts",
+    "atUTC": "2026-10-17T21:09:01.981706+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        1,
+        138
+      ]
+    ],
+    "totalLines": 138,
+    "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98"
+  },
+  {
+    "path": "packages/core/src/panel-apps/installer.ts",
+    "atUTC": "2026-10-17T21:09:02.044362+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        104,
+        112
+      ],
+      [
+        210,
+        237
+      ],
+      [
+        261,
+        290
+      ],
+      [
+        940,
+        964
+      ]
+    ],
+    "totalLines": 1228,
+    "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817"
+  },
+  {
+    "path": "packages/core/src/panel-apps/update-check.test.ts",
+    "atUTC": "2026-10-17T21:09:02.127169+00:00",
+    "mode": "test-declaration",
+    "ranges": [
+      [
+        82,
+        149
+      ]
+    ],
+    "totalLines": 546,
+    "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-ref.test.ts",
+    "atUTC": "2026-10-17T21:09:02.182694+00:00",
+    "mode": "test-declaration",
+    "ranges": [
+      [
+        35,
+        81
+      ]
+    ],
+    "totalLines": 180,
+    "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-archive.ts",
+    "atUTC": "2026-10-17T21:09:16.897699+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        18,
+        18
+      ],
+      [
+        23,
+        23
+      ],
+      [
+        28,
+        28
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        42,
+        42
+      ],
+      [
+        52,
+        52
+      ],
+      [
+        58,
+        58
+      ]
+    ],
+    "totalLines": 156,
+    "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+    "pattern": "source.ref|codeload|normalizeGit|downloadGit|function|export"
+  },
+  {
+    "path": "packages/core/src/panel-apps/discovery.ts",
+    "atUTC": "2026-10-17T21:09:16.948752+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        2,
+        2
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        9,
+        9
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        21,
+        21
+      ],
+      [
+        22,
+        22
+      ],
+      [
+        25,
+        25
+      ],
+      [
+        30,
+        30
+      ],
+      [
+        31,
+        31
+      ],
+      [
+        33,
+        33
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        41,
+        41
+      ]
+    ],
+    "totalLines": 64,
+    "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+    "pattern": "MAX_PANEL|depth|readdir|manifest|roots|directories|node_modules|startsWith|walk|scan|visit"
+  },
+  {
+    "path": "packages/core/src/panel-apps/manifest.ts",
+    "atUTC": "2026-10-17T21:09:17.012045+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        4,
+        4
+      ],
+      [
+        121,
+        121
+      ],
+      [
+        170,
+        170
+      ],
+      [
+        171,
+        171
+      ],
+      [
+        172,
+        172
+      ],
+      [
+        189,
+        189
+      ],
+      [
+        194,
+        194
+      ],
+      [
+        200,
+        200
+      ],
+      [
+        272,
+        272
+      ]
+    ],
+    "totalLines": 272,
+    "sha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+    "pattern": "PANEL_APP_MANIFEST_FILE|version:|id:|PanelAppManifest"
+  },
+  {
+    "path": "packages/core/src/index.ts",
+    "atUTC": "2026-10-17T21:09:17.072906+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        469,
+        469
+      ],
+      [
+        470,
+        470
+      ],
+      [
+        472,
+        472
+      ]
+    ],
+    "totalLines": 864,
+    "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+    "pattern": "resolveGitHubPanelAppCommit|checkInstalledPanelAppUpdate|checkSelectedPanelAppUpdate"
+  },
+  {
+    "path": "packages/core/src/panel-apps/index.ts",
+    "atUTC": "2026-10-17T21:09:17.133448+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        60,
+        60
+      ],
+      [
+        61,
+        61
+      ],
+      [
+        66,
+        66
+      ]
+    ],
+    "totalLines": 66,
+    "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+    "pattern": "resolveGitHubPanelAppCommit|checkInstalledPanelAppUpdate|checkSelectedPanelAppUpdate"
+  },
+  {
+    "path": "packages/core/src/panel-apps/discovery.ts",
+    "atUTC": "2026-10-17T21:09:24.718577+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        1,
+        64
+      ]
+    ],
+    "totalLines": 64,
+    "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-archive.ts",
+    "atUTC": "2026-10-17T21:09:24.762213+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        23,
+        49
+      ]
+    ],
+    "totalLines": 156,
+    "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51"
+  },
+  {
+    "path": "packages/core/src/panel-apps/update-check.test.ts",
+    "atUTC": "2026-10-17T21:09:24.803034+00:00",
+    "mode": "test-declaration",
+    "ranges": [
+      [
+        308,
+        438
+      ]
+    ],
+    "totalLines": 546,
+    "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e"
+  },
+  {
+    "path": "packages/desktop/src/main/project-panel-ipc.ts",
+    "atUTC": "2026-10-17T21:09:31.452304+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        19,
+        19
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        57,
+        57
+      ],
+      [
+        190,
+        190
+      ],
+      [
+        194,
+        194
+      ],
+      [
+        195,
+        195
+      ]
+    ],
+    "totalLines": 308,
+    "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+    "pattern": "createProjectPanelAppUpdateService|checkUpdate|check-update|updateService|check\\("
+  },
+  {
+    "path": "packages/desktop/src/main/panel-app-install-service.ts",
+    "atUTC": "2026-10-17T21:09:31.496446+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        15,
+        15
+      ],
+      [
+        58,
+        58
+      ],
+      [
+        99,
+        99
+      ],
+      [
+        113,
+        113
+      ]
+    ],
+    "totalLines": 114,
+    "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+    "pattern": "panelAppUpdateService|checkUpdate|check-update|\\.check\\("
+  },
+  {
+    "path": "packages/desktop/src/main/project-panel-ipc.ts",
+    "atUTC": "2026-10-17T21:09:35.086083+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        48,
+        60
+      ],
+      [
+        185,
+        199
+      ]
+    ],
+    "totalLines": 308,
+    "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84"
+  },
+  {
+    "path": "packages/desktop/src/main/panel-app-install-service.ts",
+    "atUTC": "2026-10-17T21:09:35.135722+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        48,
+        60
+      ],
+      [
+        88,
+        101
+      ],
+      [
+        105,
+        114
+      ]
+    ],
+    "totalLines": 114,
+    "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb"
+  }
+]

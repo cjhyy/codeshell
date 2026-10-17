@@ -1,0 +1,1386 @@
+{
+  "atUTC": "2026-10-17T21:05:46.882389+00:00",
+  "excludedFormalAtOrAbove": 64,
+  "historyFiles": 6801,
+  "jsonValueScalarsVisited": 5060759,
+  "capPerTarget": 100,
+  "errors": [],
+  "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading.",
+  "productExecution": 0,
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round175-settings-flags/history-batch.json",
+    "bytes": 1853203,
+    "sha256": "10b4d36a66e4b47e0a1edb838f60a9e0c3334f934c279df3175df31599653b83",
+    "pinAtUTC": "2026-10-17T21:06:16.071914+00:00"
+  },
+  "queries": {
+    "packages/server/src/hub/auth-http.ts": [
+      "packages/server/src/hub/auth-http.ts",
+      "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+    ],
+    "packages/server/src/hub/auth-store.ts": [
+      "packages/server/src/hub/auth-store.ts",
+      "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+    ]
+  },
+  "counts": {
+    "packages/server/src/hub/auth-http.ts": 72,
+    "packages/server/src/hub/auth-store.ts": 78
+  },
+  "hits": {
+    "packages/server/src/hub/auth-http.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/1966",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/164",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3438/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3438/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13885/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13885/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13886/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13886/sourceHashFields/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13886/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3760/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3760/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3760/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3760/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/3418",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3761/oldSha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3761/oldSha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3761/oldSha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/3761/original55Sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/3761/oldSha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "location": "/filenames/285",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/3761/oldSha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/panel-resource-clone/canonical-old-gate.json",
+        "location": "/objects/3/originalObject/paths/8",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/panel-resource-clone/canonical-old-gate.json",
+        "location": "/objects/4/originalObject/paths/8",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/current-source-inventory.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/current-source-inventory.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/ending-source-inventory.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/ending-source-inventory.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+        "location": "/files/3761/path",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+        "location": "/files/3761/sha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+        "location": "/files/3761/oldSha256",
+        "matched": [
+          "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a"
+        ],
+        "value": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+        "location": "/hits/41/text",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "- Auth JSON reader有8KiB声明/实际流量限制、对象验证、10秒timer和aborted/error收束；fail移除旧reader后保留一次error监听并resume，避免把已断开的request error误当新Host崩溃候选。[reader](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:234)。handler对activeLogins使用finally减计数，未把解析失败留成活跃login。[handler](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:132)。这里只读，不声称本轮动态故障/延时测试通过。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+        "location": "/hits/48/text",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "- Auth JSON reader有8KiB声明/实际流量限制、对象验证、10秒timer和aborted/error收束；fail移除旧reader后保留一次error监听并resume，避免把已断开的request error误当新Host崩溃候选。[reader](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:234)。handler对activeLogins使用finally减计数，未把解析失败留成活跃login。[handler](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:132)。这里只读，不声称本轮动态故障/延时测试通过。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/auth-round7.md",
+        "location": 28,
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "- [auth-http.ts:154](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:154) logout 删除 session，触发 onRevoke，清 cookie；同文件 162–167 设备会话 DELETE 也触发同一 callback。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/auth-round7.md",
+        "location": 39,
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "- [auth-store.ts:214](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:214) grant 删除 supplied replaceToken 对应会话及已过期会话，返回 revokedSessionIds；[auth-http.ts:101](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:101) 将轮换释放到真实 WS/HTTP callback。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+        "location": 11,
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "实际 callback [auth-http.ts:107–108](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:107) 调 store.authenticate。HubAuthStore [85](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:85) filePath 为 dataDir/hub/auth.json；[161–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 对格式有效 token 调 mutate。即使一分钟内无需持久化 lastSeenAt，也先取得锁：mutate [254–263](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:254) ensureDirectory → acquireFileLock → read/validate → 按 changed 写入 → finally release。lastSeenAt 写节流不能排除 acquisition。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/http-error-preflight-round23.md",
+        "location": 7,
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "- Auth JSON reader有8KiB声明/实际流量限制、对象验证、10秒timer和aborted/error收束；fail移除旧reader后保留一次error监听并resume，避免把已断开的request error误当新Host崩溃候选。[reader](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:234)。handler对activeLogins使用finally减计数，未把解析失败留成活跃login。[handler](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:132)。这里只读，不声称本轮动态故障/延时测试通过。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-file-mutex-round19/quality-audit.md",
+        "location": 11,
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "实际 callback [auth-http.ts:107–108](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:107) 调 store.authenticate。HubAuthStore [85](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:85) filePath 为 dataDir/hub/auth.json；[161–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 对格式有效 token 调 mutate。即使一分钟内无需持久化 lastSeenAt，也先取得锁：mutate [254–263](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:254) ensureDirectory → acquireFileLock → read/validate → 按 changed 写入 → finally release。lastSeenAt 写节流不能排除 acquisition。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-preflight-round23/http-error-preflight-round23.md",
+        "location": 7,
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "- Auth JSON reader有8KiB声明/实际流量限制、对象验证、10秒timer和aborted/error收束；fail移除旧reader后保留一次error监听并resume，避免把已断开的request error误当新Host崩溃候选。[reader](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:234)。handler对activeLogins使用finally减计数，未把解析失败留成活跃login。[handler](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:132)。这里只读，不声称本轮动态故障/延时测试通过。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/84740d56/paths/8",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/a66f4ef2/paths/8",
+        "matched": [
+          "packages/server/src/hub/auth-http.ts"
+        ],
+        "value": "packages/server/src/hub/auth-http.ts",
+        "truncatedValue": false
+      }
+    ],
+    "packages/server/src/hub/auth-store.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/1967",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "location": "/hits/all_429/64/context",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "r-lockfile 已在依赖 `lib/lockfile.js:46–48` 将非EEXIST错误立即返回；这里把真实 EACCES 重新包成整轮30秒等待。\n\n**正式入口与真实前置门禁：** Hub Sessions 行的“重命名”按钮 `packages/web/app/HubSessions.tsx:417–429` 打开编辑器，表单第303–306行调用 mutate，mutate第173–177行发 PATCH `/api/v1/sessions/:id`。本次原生验证使用实际 setup 得到的 Cookie 和该合法 endpoint。Headless 中未被公开/auth handler提前处理的 `/api/` 业务请求（含本次title PATCH）在 `packages/server/src/serve/headless-server.ts:727–728` 执行 HubAuth.authenticate；`packages/server/src/hub/auth-store.ts:85` 的真实 auth 文件是 `<dataDir>/hub/auth.json`，第161–174行 authenticate 每次经过第254–264行 mutate，先在第256行 acquire",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "location": "/hits/all_429/74/context",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "r-lockfile 已在依赖 `lib/lockfile.js:46–48` 将非EEXIST错误立即返回；这里把真实 EACCES 重新包成整轮30秒等待。\n\n**正式入口与真实前置门禁：** Hub Sessions 行的“重命名”按钮 `packages/web/app/HubSessions.tsx:417–429` 打开编辑器，表单第303–306行调用 mutate，mutate第173–177行发 PATCH `/api/v1/sessions/:id`。本次原生验证使用实际 setup 得到的 Cookie 和该合法 endpoint。Headless 的所有 `/api/` 请求先在 `packages/server/src/serve/headless-server.ts:727–728` 执行 HubAuth.authenticate；`packages/server/src/hub/auth-store.ts:85` 的真实 auth 文件是 `<dataDir>/hub/auth.json`，第161–174行 authenticate 每次经过第254–264行 mutate，先在第256行 acquireFileLock。Core第73–76行锁定文件所在 hub 目录，pro",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/156",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3440/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3440/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13891/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13891/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13892/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13892/sourceHashFields/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/13892/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3762/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3762/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3762/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3762/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/3420",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3763/oldSha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3763/oldSha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3763/oldSha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/3763/original55Sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/3763/oldSha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "location": "/filenames/277",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/3763/oldSha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/panel-resource-clone/canonical-old-gate.json",
+        "location": "/objects/3/originalObject/paths/9",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/panel-resource-clone/canonical-old-gate.json",
+        "location": "/objects/4/originalObject/paths/9",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/current-source-inventory.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/current-source-inventory.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/ending-source-inventory.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/ending-source-inventory.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+        "location": "/files/3763/path",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+        "location": "/files/3763/sha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+        "location": "/files/3763/oldSha256",
+        "matched": [
+          "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da"
+        ],
+        "value": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/auth-round7.md",
+        "location": 39,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "- [auth-store.ts:214](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:214) grant 删除 supplied replaceToken 对应会话及已过期会话，返回 revokedSessionIds；[auth-http.ts:101](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:101) 将轮换释放到真实 WS/HTTP callback。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/auth-round7.md",
+        "location": 40,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "- [auth-store.ts:161](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 每次鉴权重读磁盘并检查 expiresAt；[headless-server.ts:274](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:274) 默认每 5 秒重查已打开 WS，823 行每条入站 WS message 再鉴权。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+        "location": 11,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "实际 callback [auth-http.ts:107–108](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:107) 调 store.authenticate。HubAuthStore [85](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:85) filePath 为 dataDir/hub/auth.json；[161–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 对格式有效 token 调 mutate。即使一分钟内无需持久化 lastSeenAt，也先取得锁：mutate [254–263](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:254) ensureDirectory → acquireFileLock → read/validate → 按 changed 写入 → finally release。lastSeenAt 写节流不能排除 acquisition。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+        "location": 13,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "Core acquireFileLock [73–76](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:73) 锁 dirname(file)，所以 sibling 为 dataDir/hub.lock。Auth ensureDirectory [267–273](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:267) 仅确保/chmod hub 子目录 0700，不修 dataDir parent。启动和 setup 已建立 hub 后，当前非 root Host 可读/遍历 dataDir 却不可新建 entry（自有 parent chmod 0500），正常带 Cookie 的请求便可在 auth lock mkdir EACCES。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+        "location": 31,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "Auth setup/login [127–129/146–153](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:127) 在锁前 await scrypt，mutate 锁内仅同步 read/validate/write/finally release。这不是该 writer 的同进程 async-holder deadlock，不能借 CODESHELL 警告另造一个发现。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/file-mutex-round19.md",
+        "location": 18,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "**正式入口与真实前置门禁：** Hub Sessions 行的“重命名”按钮 `packages/web/app/HubSessions.tsx:417–429` 打开编辑器，表单第303–306行调用 mutate，mutate第173–177行发 PATCH `/api/v1/sessions/:id`。本次原生验证使用实际 setup 得到的 Cookie 和该合法 endpoint。Headless 中未被公开/auth handler提前处理的 `/api/` 业务请求（含本次title PATCH）在 `packages/server/src/serve/headless-server.ts:727–728` 执行 HubAuth.authenticate；`packages/server/src/hub/auth-store.ts:85` 的真实 auth 文件是 `<dataDir>/hub/auth.json`，第161–174行 authenticate 每次经过第254–264行 mutate，先在第256行 acquireFileLock。Core第73–76行锁定文件所在 hub 目录，proper-lockfile 创建 sibling `<dataDir>/hub.lock`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/file-mutex-round19.md",
+        "location": 96,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "[无差别同步重试](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:95)。[真实认证入口](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:254)。[本次业务API前认证](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:727)。[无需认证的健康路由](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:719)。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-file-mutex-round19/quality-audit.md",
+        "location": 11,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "实际 callback [auth-http.ts:107–108](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:107) 调 store.authenticate。HubAuthStore [85](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:85) filePath 为 dataDir/hub/auth.json；[161–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 对格式有效 token 调 mutate。即使一分钟内无需持久化 lastSeenAt，也先取得锁：mutate [254–263](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:254) ensureDirectory → acquireFileLock → read/validate → 按 changed 写入 → finally release。lastSeenAt 写节流不能排除 acquisition。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-file-mutex-round19/quality-audit.md",
+        "location": 13,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "Core acquireFileLock [73–76](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:73) 锁 dirname(file)，所以 sibling 为 dataDir/hub.lock。Auth ensureDirectory [267–273](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:267) 仅确保/chmod hub 子目录 0700，不修 dataDir parent。启动和 setup 已建立 hub 后，当前非 root Host 可读/遍历 dataDir 却不可新建 entry（自有 parent chmod 0500），正常带 Cookie 的请求便可在 auth lock mkdir EACCES。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-file-mutex-round19/quality-audit.md",
+        "location": 31,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "Auth setup/login [127–129/146–153](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:127) 在锁前 await scrypt，mutate 锁内仅同步 read/validate/write/finally release。这不是该 writer 的同进程 async-holder deadlock，不能借 CODESHELL 警告另造一个发现。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-file-mutex-round19/report.md",
+        "location": 16,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "**正式入口与真实前置门禁：** Hub Sessions 行的“重命名”按钮 `packages/web/app/HubSessions.tsx:417–429` 打开编辑器，表单第303–306行调用 mutate，mutate第173–177行发 PATCH `/api/v1/sessions/:id`。本次原生验证使用实际 setup 得到的 Cookie 和该合法 endpoint。Headless 的所有 `/api/` 请求先在 `packages/server/src/serve/headless-server.ts:727–728` 执行 HubAuth.authenticate；`packages/server/src/hub/auth-store.ts:85` 的真实 auth 文件是 `<dataDir>/hub/auth.json`，第161–174行 authenticate 每次经过第254–264行 mutate，先在第256行 acquireFileLock。Core第73–76行锁定文件所在 hub 目录，proper-lockfile 创建 sibling `<dataDir>/hub.lock`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/84740d56/paths/9",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/a66f4ef2/paths/9",
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "packages/server/src/hub/auth-store.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/codeshell-hub-iteration-design.md",
+        "location": 360,
+        "matched": [
+          "packages/server/src/hub/auth-store.ts"
+        ],
+        "value": "1. `packages/server/src/hub/auth-store.ts`：管理员一次性初始化 token、登录、opaque session",
+        "truncatedValue": false
+      }
+    ]
+  }
+}

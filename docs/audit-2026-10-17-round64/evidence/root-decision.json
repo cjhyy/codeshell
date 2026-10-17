@@ -1,0 +1,55 @@
+{
+  "allReadersFrozen": true,
+  "rootSourceReviewComplete": true,
+  "formal": [
+    {
+      "id": "ATTACH-R64-01",
+      "priority": "P2",
+      "severity": "P2",
+      "title": "按ID过期清理删除仍被已发送附件复用的图片文件",
+      "file": "packages/server/src/attachment-service.ts",
+      "line": 448,
+      "endLine": 458,
+      "status": "confirmed-at-frozen-source-and-first-guarded-reproduction",
+      "fixed": false,
+      "trigger": "同一工作区/会话两次正常添加同一PNG，A作为旧草稿留在manifest，B已发送；无sessionId的TTL/启动清理到A的24h期限但B尚未到30d。",
+      "expected": "共享文件至少保留到所有引用它的有效附件均过期；较新的已发送B仍可读取并出现在最近附件。",
+      "actual": "两次stage返回不同id且同absPath。latestAttachmentState逐id保存，A的draft TTL一到就rm共享absPath；B虽未过sent TTL也失去文件，listRecentAttachments因文件不存在过滤B。",
+      "rootCause": "内容文件按会话内hash去重，但清理以逻辑attachment id分别计算期限，没有按物理路径保护尚未过期的其他引用。",
+      "impact": "正常已发送附件在承诺的30d保留窗口内提前丢失；粘贴图片可能仅有这一份暂存文件。未声称消息正文丢失或全部附件均受影响。",
+      "evidence": {
+        "sourceLocations": [
+          "attachment-service.ts:256-279",
+          "attachment-service.ts:356-385",
+          "attachment-service.ts:448-458",
+          "attachment-service.ts:875-885"
+        ],
+        "fixture": "evidence/attachment-shared-path.test.ts",
+        "rawLog": "evidence/attachment-shared-path.first.log",
+        "exitReceipt": "evidence/attachment-shared-path.first-exit.json",
+        "attempts": 1,
+        "passedTests": 1,
+        "expectations": 11,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "exitCode": 0,
+        "guardedCompleted": true,
+        "control": "另一会话的同PNG已发送附件拥有独立路径，在同次清理后仍存在。"
+      },
+      "limits": "真实服务函数与自有临时文件；使用公开now参数，无Date修改/等待/UI/native/网络/账号。实际UI调用链为静态核对，未启动Electron。测试记录当前错误，不证明修复。",
+      "suggestedFix": "先按实际文件路径聚合所有仍有效的引用，再删除无有效引用的文件；同步维护清理manifest，保留各ID独立状态。"
+    }
+  ],
+  "candidates": [],
+  "related": [],
+  "independentPeer": "176 read the actual source, challenged UI chip removal, inspected Root first-run evidence; same cause counted once.",
+  "historicalFormal": 120,
+  "priorities": {
+    "P2": 47,
+    "P3": 73
+  },
+  "historicalCandidates": 42,
+  "productAttempts": 1,
+  "productReruns": 0,
+  "goalStillActive": true
+}

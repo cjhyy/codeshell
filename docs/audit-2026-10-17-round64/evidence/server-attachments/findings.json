@@ -1,0 +1,97 @@
+{
+  "count": 1,
+  "publication": "Proposed singleRootID; no additional bug ID",
+  "findings": [
+    {
+      "id": "ATTACH-R64-01",
+      "priority": "P2",
+      "status": "author static-confirmed opinion; formal publication controlled by Root",
+      "title": "TTL cleanup deletes a deduplicated file still retained by a sent attachment",
+      "path": "packages/server/src/attachment-service.ts",
+      "lineRange": [
+        448,
+        458
+      ],
+      "normalTrigger": [
+        "Same cwd/session and same valid image bytes staged twice; second stage reuses absPath but receives a different ID.",
+        "One staged ID remains draft; the other is marked sent normally.",
+        "No-sessionId TTL cleanup runs when draft is at least24h old and sent entry is still within30d."
+      ],
+      "cause": "Cleanup reduces state by attachmentID and unlinks each expired ID path without checking other retained IDs sharing the same content file.",
+      "sourceProof": {
+        "sharedPathAndDifferentID": [
+          [
+            252,
+            279
+          ]
+        ],
+        "markSent": [
+          [
+            356,
+            385
+          ]
+        ],
+        "TTLUnlink": [
+          [
+            448,
+            468
+          ]
+        ],
+        "perIDReducer": [
+          [
+            875,
+            887
+          ]
+        ],
+        "recentBackedByFile": [
+          [
+            400,
+            417
+          ]
+        ]
+      },
+      "actualCallerProof": {
+        "startupCleanup": {
+          "path": "packages/desktop/src/main/index.ts",
+          "ranges": [
+            [
+              3194,
+              3208
+            ],
+            [
+              3240,
+              3247
+            ],
+            [
+              3475,
+              3477
+            ]
+          ]
+        },
+        "normalSent": {
+          "path": "packages/desktop/src/renderer/app/useRunController.ts",
+          "ranges": [
+            [
+              394,
+              407
+            ],
+            [
+              625,
+              639
+            ]
+          ]
+        }
+      },
+      "effect": "Canonical backing file for a still-retained sent attachment is unlinked; recent projection omits its metadata when the file is missing. No actual user data deletion or UI frame was observed by this author.",
+      "counterEvidenceAndLimits": [
+        "Different-session hash reuse has separate storage paths and is not affected by this shared-path cause.",
+        "cleanup with explicitsessionId intentionally removes the whole session and is not this defect.",
+        "The existing TTL test uses different sessions; ordinary hash-reuse test separately requires identicalpath/differentID.",
+        "Marking all shared IDs sent can avoid the early draft branch; both references expiring normally is not this defect.",
+        "No malformed image, hash collision, restart ID collision, Date mocking or artificial failed I/O is needed."
+      ],
+      "suggestedRepair": "Retire expired metadata perID, but unlink a canonicalpath only when every live reference to that path is expired or removed.",
+      "authorProductRuns": 0
+    }
+  ]
+}

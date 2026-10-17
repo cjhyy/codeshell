@@ -1,0 +1,96 @@
+[
+  {
+    "path": "packages/server/src/serve/headless-server.ts",
+    "bytes": 66162,
+    "lines": 1690,
+    "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+    "pinAtUTC": "2026-10-17T21:09:14.371615+00:00",
+    "ranges": [
+      [
+        185,
+        215
+      ],
+      [
+        255,
+        280
+      ],
+      [
+        775,
+        820
+      ],
+      [
+        842,
+        887
+      ]
+    ],
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/web/app/auth.ts",
+    "bytes": 8128,
+    "lines": 252,
+    "sha256": "445fba9915b52707efd00d278028619c2b4342019b01258e3170b48697e6f6cb",
+    "pinAtUTC": "2026-10-17T21:09:14.373036+00:00",
+    "ranges": [
+      [
+        61,
+        141
+      ],
+      [
+        196,
+        205
+      ]
+    ],
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/web/app/AuthGate.tsx",
+    "bytes": 12795,
+    "lines": 355,
+    "sha256": "7a58c8a31ea00b2a8c305b39e85a190f6ecef9aadcc7c21b44e2a4790331981f",
+    "pinAtUTC": "2026-10-17T21:09:14.373645+00:00",
+    "ranges": [
+      [
+        114,
+        145
+      ],
+      [
+        192,
+        224
+      ],
+      [
+        289,
+        348
+      ]
+    ],
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/server/src/hub/auth-store.test.ts",
+    "bytes": 8011,
+    "lines": 176,
+    "sha256": "2ad72e595f1fb729ceb0d10779de96be1b32e9182c414fbff7b39a0e2916bf08",
+    "pinAtUTC": "2026-10-17T21:09:14.374206+00:00",
+    "ranges": [
+      [
+        21,
+        97
+      ]
+    ],
+    "sourceKind": "test-declaration"
+  },
+  {
+    "path": "packages/server/src/hub/auth-http.test.ts",
+    "bytes": 15160,
+    "lines": 372,
+    "sha256": "6956d5352d6f5b00c8f95c819f78634d3e8130085460b02634c421bfe9eb435a",
+    "pinAtUTC": "2026-10-17T21:09:14.374757+00:00",
+    "ranges": [
+      [
+        92,
+        148
+      ]
+    ],
+    "sourceKind": "test-declaration"
+  }
+]

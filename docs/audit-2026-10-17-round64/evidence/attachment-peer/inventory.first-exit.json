@@ -1,0 +1,1 @@
+{"argv": ["rg", "--files", "packages/desktop/src", "docs/audit-2026-10-17-round64/evidence", "-g", "*attachment*", "-g", "*Attachment*"], "exitCode": 0, "kind": "filename-only"}

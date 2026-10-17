@@ -1,0 +1,11 @@
+{
+  "path": "packages/server/src/hub/auth-http.ts",
+  "bytes": 11306,
+  "lines": 290,
+  "sha256": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+  "pinAtUTC": "2026-10-17T21:07:30.860007+00:00",
+  "range": [
+    1,
+    145
+  ]
+}

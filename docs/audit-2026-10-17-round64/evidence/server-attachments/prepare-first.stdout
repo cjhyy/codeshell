@@ -1,0 +1,24 @@
+{
+  "totals": {
+    "semanticFiles": 7,
+    "fullProductFiles": 1,
+    "selectedProductFiles": 5,
+    "selectedTestFiles": 1,
+    "productSemanticLines": 1228,
+    "testDeclarationLines": 146,
+    "bodyDisplayedLines": 1556,
+    "bodyPlusNavigationDisplayedLines": 1595,
+    "oldFullProductBodyExcluded": 1,
+    "navigationOnlyFiles": 1,
+    "instructionHashOnly": 2,
+    "authorTestsExecuted": 0,
+    "existingTestDeclarationsRead": 5,
+    "newUniqueCoverageClaim": false
+  },
+  "endingPins": 21,
+  "allUnchanged": true,
+  "sharedHistorySame": true,
+  "authorStaticFinding": "ATTACH-R64-01/P2",
+  "authorProductExecution": 0,
+  "RootReportedSeparateAttempt": 1
+}

@@ -1,0 +1,134 @@
+1: import type { GitPanelAppSourceInput } from "./installer.js";
+2: import { PanelAppInstallError } from "./paths.js";
+3: import { withPanelSourceAbort } from "./github-request.js";
+4: import { normalizeGitPanelAppSource } from "./source.js";
+5: 
+6: const REF_TIMEOUT_MS = 15_000;
+7: const MAX_REF_BYTES = 4 * 1024 * 1024;
+8: const SHA = /^[a-f0-9]{40}$/i;
+9: const ADVERTISEMENT_TYPE = "application/x-git-upload-pack-advertisement";
+10: 
+11: type RefFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+12: 
+13: function advertisedCommit(bytes: Buffer, ref: string): string {
+14:   let offset = 0;
+15:   function packet(): Buffer | null {
+16:     if (offset + 4 > bytes.length) throw new Error("truncated packet");
+17:     const header = bytes.subarray(offset, offset + 4).toString("latin1");
+18:     if (!/^[a-f0-9]{4}$/i.test(header)) throw new Error("invalid packet length");
+19:     const length = parseInt(header, 16);
+20:     offset += 4;
+21:     if (length === 0) return null;
+22:     if (length < 4 || length > 65_520 || offset + length - 4 > bytes.length)
+23:       throw new Error("invalid packet length");
+24:     const payload = bytes.subarray(offset, offset + length - 4);
+25:     offset += length - 4;
+26:     return payload;
+27:   }
+28: 
+29:   const refs = new Map<string, string>();
+30:   try {
+31:     if (packet()?.toString("utf8") !== "# service=git-upload-pack\n" || packet() !== null)
+32:       throw new Error("invalid service header");
+33:     for (;;) {
+34:       const payload = packet();
+35:       if (payload === null) break;
+36:       const match = /^([a-f0-9]{40}) ([^\0\r\n ]+)(?:\0[^\0\r\n]*)?\n$/i.exec(
+37:         payload.toString("utf8"),
+38:       );
+39:       if (!match || (refs.size > 0 && payload.includes(0)) || refs.has(match[2]))
+40:         throw new Error("invalid ref record");
+41:       refs.set(match[2], match[1].toLowerCase());
+42:     }
+43:     if (offset !== bytes.length) throw new Error("trailing packets");
+44:   } catch {
+45:     throw new PanelAppInstallError("GitHub source returned an invalid Git ref advertisement");
+46:   }
+47: 
+48:   // Git gives branch names precedence over tags with the same short name.
+49:   const candidates =
+50:     ref === "HEAD" || ref.startsWith("refs/") ? [ref] : [`refs/heads/${ref}`, `refs/tags/${ref}`];
+51:   for (const candidate of candidates) {
+52:     const commit = refs.get(`${candidate}^{}`) ?? refs.get(candidate);
+53:     if (commit && !/^0+$/.test(commit)) return commit;
+54:   }
+55:   throw new PanelAppInstallError("GitHub repository or ref was not found");
+56: }
+57: 
+58: /** Resolve public Git refs without GitHub API rate limits or a local Git executable. */
+59: export async function resolveGitHubPanelAppCommit(
+60:   input: GitPanelAppSourceInput,
+61:   options: { fetch?: RefFetch; timeoutMs?: number } = {},
+62: ): Promise<string> {
+63:   const source = normalizeGitPanelAppSource(input);
+64:   const ref = source.ref ?? "HEAD";
+65:   if (SHA.test(ref)) return ref.toLowerCase();
+66:   const url = new URL(`${source.url}/info/refs?service=git-upload-pack`);
+67:   const controller = new AbortController();
+68:   const timeout = setTimeout(
+69:     () => controller.abort(new Error("GitHub source ref lookup timed out")),
+70:     options.timeoutMs ?? REF_TIMEOUT_MS,
+71:   );
+72:   let response: Response | undefined;
+73:   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+74:   try {
+75:     response = await withPanelSourceAbort(
+76:       (options.fetch ?? globalThis.fetch)(url, {
+77:         method: "GET",
+78:         redirect: "error",
+79:         credentials: "omit",
+80:         headers: {
+81:           Accept: ADVERTISEMENT_TYPE,
+82:           "Accept-Encoding": "identity",
+83:           "User-Agent": "CodeShell-panel-app-ref-check/1",
+84:         },
+85:         signal: controller.signal,
+86:       }),
+87:       controller.signal,
+88:     );
+89:     if (response.status === 404)
+90:       throw new PanelAppInstallError("GitHub repository or ref was not found");
+91:     if (!response.ok)
+92:       throw new PanelAppInstallError(`GitHub source ref lookup returned HTTP ${response.status}`);
+93:     if (response.headers.get("content-type")?.split(";")[0].trim() !== ADVERTISEMENT_TYPE)
+94:       throw new PanelAppInstallError("GitHub source returned an invalid Git ref advertisement");
+95:     const declaredText = response.headers.get("content-length");
+96:     const declared = declaredText === null ? undefined : Number(declaredText);
+97:     if (
+98:       declaredText !== null &&
+99:       (!/^[0-9]+$/.test(declaredText) ||
+100:         !Number.isSafeInteger(declared) ||
+101:         declared! > MAX_REF_BYTES)
+102:     )
+103:       throw new PanelAppInstallError(
+104:         "GitHub source refs exceed the 4 MiB limit; use a full commit SHA",
+105:       );
+106:     if (!response.body)
+107:       throw new PanelAppInstallError("GitHub source returned an empty Git ref advertisement");
+108:     reader = response.body.getReader();
+109:     const chunks: Buffer[] = [];
+110:     let total = 0;
+111:     for (;;) {
+112:       const { value, done } = await withPanelSourceAbort(reader.read(), controller.signal);
+113:       if (done) break;
+114:       total += value.byteLength;
+115:       if (total > MAX_REF_BYTES)
+116:         throw new PanelAppInstallError(
+117:           "GitHub source refs exceed the 4 MiB limit; use a full commit SHA",
+118:         );
+119:       chunks.push(Buffer.from(value));
+120:     }
+121:     if (declared !== undefined && total !== declared)
+122:       throw new PanelAppInstallError("GitHub source ref length does not match Content-Length");
+123:     return advertisedCommit(Buffer.concat(chunks, total), ref);
+124:   } catch (error) {
+125:     if (error instanceof PanelAppInstallError) throw error;
+126:     throw new PanelAppInstallError(
+127:       `GitHub source ref lookup failed: ${error instanceof Error ? error.message : String(error)}`,
+128:     );
+129:   } finally {
+130:     clearTimeout(timeout);
+131:     // A peer that stops transmitting must not delay the deadline while being cancelled.
+132:     void (reader ? reader.cancel() : response?.body?.cancel())?.catch(() => undefined);
+133:   }
+134: }

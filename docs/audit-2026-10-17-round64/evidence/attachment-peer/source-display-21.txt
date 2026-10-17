@@ -1,0 +1,67 @@
+3194: async function knownAttachmentCwds(): Promise<string[]> {
+3195:   const out = new Set<string>();
+3196:   try {
+3197:     for (const project of await loadProjects()) {
+3198:       if (typeof project.path === "string" && project.path) out.add(project.path);
+3199:     }
+3200:   } catch {
+3201:     // best effort
+3202:   }
+3203:   try {
+3204:     out.add(resolveNoRepoCwd());
+3205:   } catch {
+3206:     // best effort
+3207:   }
+3208:   return [...out];
+3209: }
+3210: 
+3211: async function knownReplyAttachmentCwds(): Promise<string[]> {
+3212:   return [...new Set([...(await knownAttachmentCwds()), join(userHome(), "Downloads")])];
+3213: }
+3214: 
+3215: async function inspectKnownReplyAttachment(
+3216:   path: string,
+3217: ): Promise<GatewayControlEventAttachment | null> {
+5034: async function runClaimBoundAttachmentOperation<T>(
+5035:   ownerId: number,
+5036:   payload: { cwd?: string; sessionId?: string; quickChatClaimId?: string },
+5037:   operation: () => Promise<T>,
+5038: ): Promise<T> {
+5039:   const sessionId = payload.sessionId!;
+5040:   if (!sessionId.startsWith("qchat-")) return operation();
+5041: 
+5042:   // Quick-chat disk writes share the same ownership generation as fork/GC.
+5043:   // Missing/stale claims fail before IO; cleanup tombstones the claim and waits
+5044:   // for already-started operations to settle before deleting the session.
+5045:   assertQuickChatClaim(sessionId, payload.quickChatClaimId);
+5046:   const claimId = payload.quickChatClaimId!;
+5047:   if (!quickChatOwnership.beginOperation(sessionId, ownerId, claimId)) {
+5048:     throw new Error("quick-chat attachment claim is no longer active");
+5049:   }
+5050: 
+5051:   let result: T | undefined;
+5052:   let operationError: unknown;
+5053:   try {
+5054:     result = await operation();
+5055:   } catch (error) {
+5056:     operationError = error;
+5057:   }
+5058:   const settled = await quickChatOwnership.settleOperation(
+5059:     sessionId,
+5060:     ownerId,
+5061:     claimId,
+5062:     async () => {
+5063:       await deleteDesktopSession(sessionId);
+5064:       if (payload.cwd) {
+5065:         // Worktree cwd may not be in the project registry scanned by the
+5066:         // generic session cleanup, so remove the exact late-write directory.
+5067:         await cleanupSessionAttachments(payload.cwd, sessionId).catch(() => undefined);
+5068:       }
+5069:     },
+5070:   );
+5071:   if (operationError) throw operationError;
+5072:   if (!settled.active) {
+5073:     throw new Error("quick-chat attachment result arrived after cleanup");
+5074:   }
+5075:   return result as T;
+5076: }

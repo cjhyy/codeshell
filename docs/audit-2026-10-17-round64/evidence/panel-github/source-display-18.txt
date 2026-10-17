@@ -1,0 +1,3 @@
+60:   checkInstalledPanelAppUpdate,
+61:   checkSelectedPanelAppUpdate,
+66: export { resolveGitHubPanelAppCommit } from "./github-ref.js";

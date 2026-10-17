@@ -1,0 +1,27 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [],
+  "unboundNavigationReferences": [],
+  "externalMetadataInputs": [
+    {
+      "taskOwnedEvidencePath": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+      "bytes": 3358,
+      "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+      "scope": "Uncommitted Root first-run evidence read by peer; not a baseline product/Git source pin."
+    },
+    {
+      "taskOwnedEvidencePath": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+      "bytes": 517,
+      "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+      "scope": "Uncommitted Root first-run evidence read by peer; not a baseline product/Git source pin."
+    },
+    {
+      "taskOwnedEvidencePath": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json",
+      "bytes": 343,
+      "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+      "scope": "Uncommitted Root first-run evidence read by peer; not a baseline product/Git source pin."
+    }
+  ],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows. Nested historical inputs without the canonical sha256 key remain original author metadata, not additional source coverage.",
+  "productRuns": 0
+}

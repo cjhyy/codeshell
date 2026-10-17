@@ -1,0 +1,24 @@
+{
+  "reindexClarification": "First metadata index used productRuns=0 for the indexer only. Original method preserved as reindex-audit.first.py; current schema distinguishes productRunsByIndexer=0 from roundProductAttempts=1. No product rerun.",
+  "triggerWording": "Narrowed draft finding wording from periodic/startup to actual TTL/startup caller before publication; catalog64 source-document SHA updated. Original frozen author packages and raw first-run evidence unchanged.",
+  "finalizerFirstFailure": {
+    "exitCode": 1,
+    "stage": "After read-only verifier parsed successfully, before any git add/stage/commit.",
+    "cause": "Copied metadata finalizer still asserted zero raw logs despite the current one guarded run.",
+    "correction": "Require one raw log matching the one validation run; original method/stdout/stderr/exit preserved.",
+    "productReruns": 0
+  },
+  "finalizerSecondFailure": {
+    "exitCode": 1,
+    "stage": "After staging only owned audit prefix; full whitespace header-set comparison.",
+    "cause": "Two mandatory blank-context prefix spaces in the newly preserved raw Git diff were not yet included among exact provenance exemptions.",
+    "correction": "Freeze exact diff bytes/SHA and line6/52, retain original raw diff; no product-source exemption, no product rerun.",
+    "productReruns": 0
+  },
+  "finalizerThirdFailure": {
+    "exitCode": 1,
+    "cause": "The saved first raw whitespace-check stdout quotes the same original whitespace and itself needs an exact evidence exemption.",
+    "correction": "Freeze that one diagnostic by exact bytes/SHA/line numbers; keep subsequent observation outside the repository to avoid recursive evidence copying.",
+    "productReruns": 0
+  }
+}

@@ -1,0 +1,1 @@
+{"argv": ["rg", "-l", "stageImage|inspectAttachments|removeAttachment", "packages/desktop/src/renderer"], "exitCode": 0}

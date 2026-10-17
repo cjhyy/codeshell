@@ -1,0 +1,4 @@
+15: import { panelAppUpdateService } from "./panel-app-update-service.js";
+58:     panelAppUpdateService.invalidate(installed.id);
+99:     panelAppUpdateService.invalidate(installed.id);
+113:   panelAppUpdateService.invalidate(id);

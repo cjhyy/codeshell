@@ -1,0 +1,64 @@
+from pathlib import Path
+import json,hashlib,datetime,io,contextlib,traceback
+P=Path('/tmp/codeshell-audit-round174-server-attachments');R=Path('/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell')
+def h(b):return hashlib.sha256(b).hexdigest()
+def save(n,j):(P/n).write_text(json.dumps(j,ensure_ascii=False,indent=2)+'\n')
+def merge(rs):
+ out=[]
+ for a,b in sorted(rs):
+  if out and a<=out[-1][1]+1:out[-1][1]=max(out[-1][1],b)
+  else:out.append([a,b])
+ return out
+def count(rs):return sum(b-a+1 for a,b in merge(rs))
+def main():
+ pins=[]
+ for n in ['initial-pins.json','test-pin.json','upload-pin.json','caller-pins.json','sent-caller-pin.json']:pins+=json.loads((P/n).read_text())['files']
+ by={r['path']:r for r in pins};server='packages/server/src/';desktop='packages/desktop/src/'
+ specs={
+ server+'image-byte-probe.ts':('full',[[1,326]],[[1,326]],[], 'Entire static signature/CRC/container bounds, dimensions, JPEG marker/scan and trailing-data sanitation algorithms. Previous R14 parser overlap retained; SOF3/DQT remains the same excluded old candidate, not a new finding or decoder validity proof.'),
+ server+'attachment-service.ts':('selected',[[18,473],[479,515],[676,715],[717,809],[835,865],[875,887]],[[1,475],[479,519],[676,809],[835,865],[875,887]],[[521,521],[531,531],[549,549],[568,568],[583,583],[593,593],[624,624],[634,634],[648,648],[663,663],[810,810],[831,831]], 'Normal input/label/MIME/size and image/file staging, shared-hash path and distinct IDs, metadata/send state, recent projection and per-ID TTL cleanup, base64 estimate, file reuse and manifest parse/reduce. Filesystem containment helpers520-675, whole API, actual authority/real storage/native guarantees unreviewed; old selected stage/limit overlap retained.'),
+ server+'hub/uploads.ts':('selected',[[174,239]],[[174,241]],[[8,9],[90,91],[99,99]], 'Actual normal ready upload -> stageImageBytes/stageFileBytes -> attachment result -> commit/markSent data chain. No upload network, owner enforcement, spool lifecycle or full service certification; old20MiB vs10MiB admission cause excluded.'),
+ desktop+'main/index.ts':('selected',[[3194,3208],[3240,3248],[3261,3279],[3330,3350],[3475,3477],[5117,5140],[5154,5174]],[[3194,3210],[3218,3290],[3325,3358],[3468,3484],[5114,5144],[5154,5178]],[[348,348],[354,354],[357,358],[3577,3577],[5079,5079],[5093,5093],[5096,5096],[5098,5098],[5101,5101],[5105,5105],[6898,6898]], 'Actual registered project/no-repo cwd enumeration, startup TTL cleanup, normal stage/markSent and cleanup IPC forwarding; adjacent project/identity/claim/native/IM mechanisms are not certified or invoked.'),
+ desktop+'preload/index.ts':('selected',[[925,946]],[[925,949]],[], 'Actual ordinary stage/cleanup/inspect/markSent IPC shape; no IPC/native/UI runtime.'),
+ desktop+'renderer/app/useRunController.ts':('selected',[[378,380],[394,407],[625,639]],[[378,407],[612,639]],[], 'Actual normal send and Quick Chat attachment markSent forwarding with original metadata. No React/Engine/query/claim lifecycle execution or complete controller review.'),
+ server+'attachment-service.test.ts':('selected',[[28,41],[54,127],[434,491]],[[1,130],[434,491]],[[135,135],[169,169],[172,172],[204,204],[230,230],[357,357],[385,385],[413,413],[492,492],[516,516]], 'Existing four maintained image-byte constructors and five normal staging/dedup/raw-source/recent/TTL test declarations. Source read only; TTL declaration uses different sessions and does not refute same-session shared-file deletion. No tests/fixtures imported or run by this author.')
+ }
+ files=[];capture=[]
+ for path,(coverage,sem,body,nav,purpose) in specs.items():
+  row=dict(by[path]);row.update({'coverage':coverage,'selectedLineRanges':merge(sem),'bodyDisplayedLineRanges':merge(body),'additionalNavigationSnippetLineRanges':merge(nav),'scope':purpose,'semanticFull':coverage=='full','newUniqueCoverageClaim':False,'category':'test-declaration' if path.endswith('.test.ts') else 'product'})
+  row['semanticLineCount']=count(sem);row['bodyDisplayedLineCount']=count(body);row['displayedLineRanges']=merge(body+nav);row['displayedLineCount']=count(body+nav)
+  assert count(body+nav+sem)==row['displayedLineCount']
+  assert all(1<=a<=b<=row['lines'] for a,b in row['displayedLineRanges']+row['selectedLineRanges'])
+  if coverage=='full':assert row['selectedLineRanges']==[[1,row['lines']]]
+  text=(R/path).read_text().splitlines();assert len(text)==row['lines']
+  for a,b in row['selectedLineRanges']:capture.append({'path':path,'range':[a,b],'text':'\n'.join(text[a-1:b]),'captureTiming':'After actual displayed static review, not new coverage'})
+  files.append(row)
+ save('source-excerpts.json',{'files':capture})
+ metadata=[]
+ for n in ['canonical-pins.json','additional-canonical-pins.json','cause-canonical-pins.json']:metadata+=json.loads((P/n).read_text())['files']
+ metadata.append(json.loads((P/'cause-catalog-pin.json').read_text()))
+ ending=[]
+ for old in pins+metadata:
+  b=(R/old['path']).read_bytes();ending.append({'path':old['path'],'bytes':len(b),'sha256':h(b),'unchanged':len(b)==old['bytes'] and h(b)==old['sha256']})
+ assert all(r['unchanged'] for r in ending)
+ shared=json.loads((P/'shared-history-pin.json').read_text());b=Path(shared['path']).read_bytes();assert h(b)==shared['sha256']
+ save('ending.json',{'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':ending,'sourceInstructionPins':len(pins),'canonicalMetadataPins':len(metadata),'sharedHistoryUnchanged':True,'sourceBodyChanges':0,'noAll6801SemanticReadClaim':True})
+ product=[r for r in files if r['category']=='product'];test=[r for r in files if r['category']=='test-declaration']
+ totals={'semanticFiles':len(files),'fullProductFiles':1,'selectedProductFiles':len(product)-1,'selectedTestFiles':len(test),'productSemanticLines':sum(r['semanticLineCount'] for r in product),'testDeclarationLines':sum(r['semanticLineCount'] for r in test),'bodyDisplayedLines':sum(r['bodyDisplayedLineCount'] for r in files),'bodyPlusNavigationDisplayedLines':sum(r['displayedLineCount'] for r in files),'oldFullProductBodyExcluded':1,'navigationOnlyFiles':1,'instructionHashOnly':2,'authorTestsExecuted':0,'existingTestDeclarationsRead':5,'newUniqueCoverageClaim':False}
+ types=dict(by[desktop+'preload/types.d.ts']);types.update({'coverage':'navigation-only','selectedLineRanges':[],'semanticLineCount':0,'displayedLineRanges':[[1609,1609],[1615,1615]],'displayedLineCount':2,'scope':'Two matching API signature-name lines only'})
+ client=dict(by[server+'client-message-id.ts']);client.update({'coverage':'hash-only','scope':'Same-SHA originalR17 explicit full source gate; excluded before product body read'})
+ external={'executor':'Root only, not this author','attemptsReported':1,'stateReported':'Completed','exitCodeReported':0,'passReported':1,'expectReported':11,'failReported':0,'skipReported':0,'fixturePath':'docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts','rawLogReported':'docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log','independentlyReadOrRunByAuthor':False,'scopeReported':'Actualstage same-sid existing valid PNG -> two IDs same path -> markSentB -> supported cleanup.now around24h -> shared path/recentB gone; distinct-sid sent same PNG preserved. Only Root-owned temporary FS, no Date replacement, UI, network or user resources.'}
+ finding={'id':'ATTACH-R64-01','priority':'P2','status':'author static-confirmed opinion; formal publication controlled by Root','title':'TTL cleanup deletes a deduplicated file still retained by a sent attachment','path':server+'attachment-service.ts','lineRange':[448,458],'normalTrigger':['Same cwd/session and same valid image bytes staged twice; second stage reuses absPath but receives a different ID.','One staged ID remains draft; the other is marked sent normally.','No-sessionId TTL cleanup runs when draft is at least24h old and sent entry is still within30d.'],'cause':'Cleanup reduces state by attachmentID and unlinks each expired ID path without checking other retained IDs sharing the same content file.','sourceProof':{'sharedPathAndDifferentID':[[252,279]],'markSent':[[356,385]],'TTLUnlink':[[448,468]],'perIDReducer':[[875,887]],'recentBackedByFile':[[400,417]]},'actualCallerProof':{'startupCleanup':{'path':desktop+'main/index.ts','ranges':[[3194,3208],[3240,3247],[3475,3477]]},'normalSent':{'path':desktop+'renderer/app/useRunController.ts','ranges':[[394,407],[625,639]]}},'effect':'Canonical backing file for a still-retained sent attachment is unlinked; recent projection omits its metadata when the file is missing. No actual user data deletion or UI frame was observed by this author.','counterEvidenceAndLimits':['Different-session hash reuse has separate storage paths and is not affected by this shared-path cause.','cleanup with explicitsessionId intentionally removes the whole session and is not this defect.','The existing TTL test uses different sessions; ordinary hash-reuse test separately requires identicalpath/differentID.','Marking all shared IDs sent can avoid the early draft branch; both references expiring normally is not this defect.','No malformed image, hash collision, restart ID collision, Date mocking or artificial failed I/O is needed.'],'suggestedRepair':'Retire expired metadata perID, but unlink a canonicalpath only when every live reference to that path is expired or removed.','authorProductRuns':0}
+ save('findings.json',{'count':1,'publication':'Proposed singleRootID; no additional bug ID','findings':[finding]})
+ save('classification.json',{'authorStaticFindings':1,'proposedFormalIDs':['ATTACH-R64-01'],'newCandidates':[],'newRelated':[],'RootControlsFormalPromotion':True,'oldExcluded':[{'id':'BYTES-R14-C1','cause':'SOF3/lossless vs unconditionalDQT precondition','disposition':'Same old candidate; no decoder validity/downstream support proof newly obtained, not promoted or counted anew'},{'id':'R20/S5','cause':'Hub20MiB admission versus10MiB image staging','disposition':'Known different cause excluded'},{'path':server+'client-message-id.ts','disposition':'R17 same-SHA explicitfull; no body read'}],'oldCauseCheck':'One bounded query over shared6801inventory found6contexts; actualread and originalCore async-cleanup reports are different cause. No exact shared-path/perIDTTL prior established in those windows, not an exhaustive novelty guarantee.','externalValidationReportedByRoot':external})
+ save('source-manifest.json',{'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'role':'New static source author; prior metadata work is not source review proof','rootReportedBaselineOnly':'5fa6a076db90682733c33fd46e1f473f9214d196','GitVerified':False,'files':files,'hashOnlyFiles':[client],'navigationOnlyFiles':[types],'instructionHashOnly':[r for r in pins if r['path'] in ['CODESHELL.md','AGENTS.md']],'metadataFiles':metadata,'sharedHistoryPin':shared,'historyCoverage':'175 machine navigation6801MD/JSON inclarchive excluded64+, cap100; image90/client91 all saved, attachment118 onlyfirst100. One own finite causequery6/6 below180, no source execution. Originalcanonical read windows separately documented.','totals':totals,'unreviewedBoundary':['Attachmentservice filesystem containment helpers520-675 and full887line module not claimed read','Complete image decoders, every valid codec mode and malicious byte handling not certified','ActualIPC/native/account/authority/realfilesystem guarantees not exercised','Root guarded run is separate, not author product execution'],'externalValidationReportedByRoot':external,'ending':'ending.json'})
+ save('validation.json',{'authorProductImports':0,'authorProductHelpers':0,'authorFixtures':0,'authorTestsExecuted':0,'authorUI':0,'authorClockExperiments':0,'authorNative':0,'authorModels':0,'authorNetwork':0,'authorGit':0,'productChanges':0,'oldFailedDirections':'SKIP; no own reattempt of legacy-native-history stage, SOF3 fixture, NDJSON/timer or other previous failed dynamic work','rootExternalValidationReported':external,'doNotClaimWholeRoundZeroExecution':True})
+ print(json.dumps({'totals':totals,'endingPins':len(ending),'allUnchanged':True,'sharedHistorySame':True,'authorStaticFinding':'ATTACH-R64-01/P2','authorProductExecution':0,'RootReportedSeparateAttempt':1},ensure_ascii=False,indent=2))
+out,err=io.StringIO(),io.StringIO();code=0
+try:
+ with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):main()
+except BaseException:
+ code=1;traceback.print_exc(file=err)
+(P/'prepare-first.stdout').write_text(out.getvalue());(P/'prepare-first.stderr').write_text(err.getvalue())
+save('prepare-first.exit.json',{'exitCode':code,'method':'prepare.py','sha256':h(Path(__file__).read_bytes()),'scope':'Own metadata/capture/ending method, not product execution'})
+print(json.dumps({'exitCode':code,'stdoutBytes':len(out.getvalue().encode()),'stderrBytes':len(err.getvalue().encode())}))

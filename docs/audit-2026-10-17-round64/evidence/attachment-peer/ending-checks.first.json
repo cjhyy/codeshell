@@ -1,0 +1,146 @@
+{
+  "atUTC": "2026-10-17T21:14:39.692565+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "ending": {
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "atUTC": "2026-10-17T21:14:39.681838+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "ending": {
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "atUTC": "2026-10-17T21:14:39.683077+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+      "initialSha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+      "ending": {
+        "bytes": 3358,
+        "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+        "lines": 87,
+        "atUTC": "2026-10-17T21:14:39.683546+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+      "initialSha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+      "ending": {
+        "bytes": 517,
+        "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+        "lines": 11,
+        "atUTC": "2026-10-17T21:14:39.684052+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json",
+      "initialSha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+      "ending": {
+        "bytes": 343,
+        "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+        "lines": 13,
+        "atUTC": "2026-10-17T21:14:39.684326+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "initialSha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "ending": {
+        "bytes": 27944,
+        "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+        "lines": 887,
+        "atUTC": "2026-10-17T21:14:39.684854+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "initialSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "ending": {
+        "bytes": 13388,
+        "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+        "lines": 391,
+        "atUTC": "2026-10-17T21:14:39.685464+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "initialSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "ending": {
+        "bytes": 55140,
+        "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+        "lines": 1247,
+        "atUTC": "2026-10-17T21:14:39.686211+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "initialSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "ending": {
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "lines": 1892,
+        "atUTC": "2026-10-17T21:14:39.687132+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "initialSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "ending": {
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "lines": 7330,
+        "atUTC": "2026-10-17T21:14:39.688251+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "initialSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "ending": {
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lines": 2622,
+        "atUTC": "2026-10-17T21:14:39.689056+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/attachment-service.test.ts",
+      "initialSha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "ending": {
+        "bytes": 17409,
+        "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+        "lines": 551,
+        "atUTC": "2026-10-17T21:14:39.689551+00:00"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round174-server-attachments/cause-history.json",
+      "kind": "shared cause metadata byte check only",
+      "bytes": 4883,
+      "sha256": "8efcdc72c6cc560c1989409319bc066d202073bd9c0fd41aa618809efc0faec9",
+      "unchanged": true
+    }
+  ],
+  "allUnchanged": true,
+  "sourceBodyReread": false
+}

@@ -1,0 +1,1064 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "rootReportedBranch": "codex/audit/auth-panel-attachments-round64-20261018",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/server/src/hub/auth-http.ts",
+      "bytes": 11306,
+      "lines": 290,
+      "sha256": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+      "initialPinAtUTC": "2026-10-17T21:04:57.839625+00:00",
+      "initialSemanticReadSha256": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          290
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          290
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          290
+        ]
+      ],
+      "semanticReadLines": 290,
+      "displayedLines": 290,
+      "sourceKind": "product",
+      "scope": "Complete physical source through EOF; ordinary bootstrap/setup/login, source/global/concurrency admission counters, cookie rotation, authenticate/status/list/revoke/logout, origin/token parsing, body read limits/timeout/disconnect cleanup and typed/generic error responses. Not an attack campaign or runtime certificate.",
+      "fullReadReachedEOF": true,
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "oldOverlap": "Old auth-round7 lifecycle and file-mutex-quality-round19 auth lock scopes overlap. Their report commit/path references do not provide a current per-file SHA/full proof; no first-read or unique-new-coverage claim."
+    },
+    {
+      "path": "packages/server/src/hub/auth-store.ts",
+      "bytes": 13376,
+      "lines": 415,
+      "sha256": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+      "initialPinAtUTC": "2026-10-17T21:04:57.840018+00:00",
+      "initialSemanticReadSha256": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          415
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          415
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          415
+        ]
+      ],
+      "semanticReadLines": 415,
+      "displayedLines": 415,
+      "sourceKind": "product",
+      "scope": "Complete physical source through EOF; initialize, setup/login preflight and locked recheck, grant/rotation/expiry/oldest-session removal, authentication/read throttling, list/revoke/revokeAll, strict storage read/write/finally, and record validation. Real stores, crypto, filesystem/locks/accounts and restoration are not executed or universally certified.",
+      "fullReadReachedEOF": true,
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "oldOverlap": "Old auth-round7 lifecycle and file-mutex-quality-round19 auth lock scopes overlap. Their report commit/path references do not provide a current per-file SHA/full proof; no first-read or unique-new-coverage claim."
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "bytes": 66162,
+      "lines": 1690,
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "initialPinAtUTC": "2026-10-17T21:08:45.113329+00:00",
+      "initialSemanticReadSha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          189,
+          206
+        ],
+        [
+          276,
+          290
+        ],
+        [
+          779,
+          797
+        ],
+        [
+          842,
+          859
+        ],
+        [
+          878,
+          883
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          189,
+          206
+        ],
+        [
+          276,
+          290
+        ],
+        [
+          779,
+          797
+        ],
+        [
+          842,
+          859
+        ],
+        [
+          878,
+          883
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          185,
+          215
+        ],
+        [
+          255,
+          294
+        ],
+        [
+          775,
+          820
+        ],
+        [
+          842,
+          887
+        ]
+      ],
+      "semanticReadLines": 76,
+      "displayedLines": 163,
+      "sourceKind": "product",
+      "scope": "Selected actual HubAuth creation/onRevoke, periodic session revalidation, auth route before responses.track, protected API/WS authentication and per-message check. Adjacent publishing/upload/worker lines are display only; not full Host/security enforcement certification.",
+      "fullReadReachedEOF": false,
+      "navigationLineRanges": [
+        [
+          36,
+          36
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          192,
+          192
+        ],
+        [
+          195,
+          195
+        ],
+        [
+          278,
+          279
+        ],
+        [
+          681,
+          681
+        ],
+        [
+          687,
+          687
+        ],
+        [
+          782,
+          782
+        ],
+        [
+          784,
+          784
+        ],
+        [
+          789,
+          789
+        ],
+        [
+          817,
+          817
+        ],
+        [
+          842,
+          842
+        ],
+        [
+          844,
+          844
+        ],
+        [
+          880,
+          880
+        ],
+        [
+          1115,
+          1115
+        ],
+        [
+          1419,
+          1419
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          36,
+          36
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          681,
+          681
+        ],
+        [
+          687,
+          687
+        ],
+        [
+          817,
+          817
+        ],
+        [
+          1115,
+          1115
+        ],
+        [
+          1419,
+          1419
+        ]
+      ],
+      "oldOverlap": "Necessary selected contract reading; no first-read/unique coverage claim."
+    },
+    {
+      "path": "packages/web/app/auth.ts",
+      "bytes": 8128,
+      "lines": 252,
+      "sha256": "445fba9915b52707efd00d278028619c2b4342019b01258e3170b48697e6f6cb",
+      "initialPinAtUTC": "2026-10-17T21:08:45.111735+00:00",
+      "initialSemanticReadSha256": "445fba9915b52707efd00d278028619c2b4342019b01258e3170b48697e6f6cb",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          72,
+          105
+        ],
+        [
+          122,
+          141
+        ],
+        [
+          196,
+          205
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          72,
+          105
+        ],
+        [
+          122,
+          141
+        ],
+        [
+          196,
+          205
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          61,
+          141
+        ],
+        [
+          196,
+          205
+        ]
+      ],
+      "semanticReadLines": 64,
+      "displayedLines": 91,
+      "sourceKind": "product",
+      "scope": "Selected actual same-origin JSON POST/status helper, error propagation and non-cloud status projection. Adjacent Desktop helper and unselected cloud branch are outside semantic scope.",
+      "fullReadReachedEOF": false,
+      "navigationLineRanges": [
+        [
+          14,
+          14
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          87,
+          87
+        ],
+        [
+          99,
+          100
+        ],
+        [
+          133,
+          133
+        ],
+        [
+          136,
+          139
+        ],
+        [
+          142,
+          143
+        ],
+        [
+          146,
+          147
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          192,
+          192
+        ],
+        [
+          198,
+          201
+        ],
+        [
+          204,
+          204
+        ],
+        [
+          215,
+          217
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          14,
+          14
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          142,
+          143
+        ],
+        [
+          146,
+          147
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          192,
+          192
+        ],
+        [
+          215,
+          217
+        ]
+      ],
+      "oldOverlap": "Necessary selected contract reading; no first-read/unique coverage claim."
+    },
+    {
+      "path": "packages/web/app/AuthGate.tsx",
+      "bytes": 12795,
+      "lines": 355,
+      "sha256": "7a58c8a31ea00b2a8c305b39e85a190f6ecef9aadcc7c21b44e2a4790331981f",
+      "initialPinAtUTC": "2026-10-17T21:08:45.112644+00:00",
+      "initialSemanticReadSha256": "7a58c8a31ea00b2a8c305b39e85a190f6ecef9aadcc7c21b44e2a4790331981f",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          114,
+          145
+        ],
+        [
+          192,
+          224
+        ],
+        [
+          289,
+          348
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          114,
+          145
+        ],
+        [
+          192,
+          224
+        ],
+        [
+          289,
+          348
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          114,
+          145
+        ],
+        [
+          192,
+          224
+        ],
+        [
+          289,
+          348
+        ]
+      ],
+      "semanticReadLines": 125,
+      "displayedLines": 125,
+      "sourceKind": "product",
+      "scope": "Selected normal Hub submit/refresh state protection, accepted UI fields and error/busy cleanup. Adjacent cloud guards visible, without auditing cloud-account mechanisms or mounting React.",
+      "fullReadReachedEOF": false,
+      "navigationLineRanges": [
+        [
+          18,
+          20
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          37,
+          39
+        ],
+        [
+          42,
+          44
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          57,
+          57
+        ],
+        [
+          59,
+          60
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          68,
+          69
+        ],
+        [
+          71,
+          71
+        ],
+        [
+          73,
+          74
+        ],
+        [
+          76,
+          79
+        ],
+        [
+          81,
+          81
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          114,
+          117
+        ],
+        [
+          119,
+          119
+        ],
+        [
+          123,
+          123
+        ],
+        [
+          125,
+          125
+        ],
+        [
+          130,
+          130
+        ],
+        [
+          132,
+          132
+        ],
+        [
+          135,
+          135
+        ],
+        [
+          170,
+          173
+        ],
+        [
+          177,
+          178
+        ],
+        [
+          183,
+          184
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          192,
+          192
+        ],
+        [
+          194,
+          196
+        ],
+        [
+          201,
+          201
+        ],
+        [
+          204,
+          206
+        ],
+        [
+          209,
+          209
+        ],
+        [
+          215,
+          215
+        ],
+        [
+          217,
+          218
+        ],
+        [
+          222,
+          223
+        ],
+        [
+          231,
+          232
+        ],
+        [
+          268,
+          268
+        ],
+        [
+          279,
+          279
+        ],
+        [
+          283,
+          283
+        ],
+        [
+          289,
+          291
+        ],
+        [
+          293,
+          293
+        ],
+        [
+          297,
+          297
+        ],
+        [
+          301,
+          301
+        ],
+        [
+          322,
+          323
+        ],
+        [
+          326,
+          327
+        ],
+        [
+          331,
+          331
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          347,
+          348
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          18,
+          20
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          37,
+          39
+        ],
+        [
+          42,
+          44
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          57,
+          57
+        ],
+        [
+          59,
+          60
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          68,
+          69
+        ],
+        [
+          71,
+          71
+        ],
+        [
+          73,
+          74
+        ],
+        [
+          76,
+          79
+        ],
+        [
+          81,
+          81
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          170,
+          173
+        ],
+        [
+          177,
+          178
+        ],
+        [
+          183,
+          184
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          231,
+          232
+        ],
+        [
+          268,
+          268
+        ],
+        [
+          279,
+          279
+        ],
+        [
+          283,
+          283
+        ]
+      ],
+      "oldOverlap": "Necessary selected contract reading; no first-read/unique coverage claim."
+    },
+    {
+      "path": "packages/server/src/hub/auth-store.test.ts",
+      "bytes": 8011,
+      "lines": 176,
+      "sha256": "2ad72e595f1fb729ceb0d10779de96be1b32e9182c414fbff7b39a0e2916bf08",
+      "initialPinAtUTC": "2026-10-17T21:08:45.114158+00:00",
+      "initialSemanticReadSha256": "2ad72e595f1fb729ceb0d10779de96be1b32e9182c414fbff7b39a0e2916bf08",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          21,
+          97
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          21,
+          97
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          21,
+          97
+        ]
+      ],
+      "semanticReadLines": 77,
+      "displayedLines": 77,
+      "sourceKind": "test-declaration",
+      "scope": "Selected existing declarations for one-time bootstrap/restart, setup/login concurrency, rotation/revocation/fixed expiry and session cap. No tests/crypto/timers/filesystem fixtures run.",
+      "fullReadReachedEOF": false,
+      "navigationLineRanges": [
+        [
+          20,
+          21
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          115,
+          115
+        ],
+        [
+          140,
+          140
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          20,
+          20
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          115,
+          115
+        ],
+        [
+          140,
+          140
+        ]
+      ],
+      "oldOverlap": "Necessary selected contract reading; no first-read/unique coverage claim."
+    },
+    {
+      "path": "packages/server/src/hub/auth-http.test.ts",
+      "bytes": 15160,
+      "lines": 372,
+      "sha256": "6956d5352d6f5b00c8f95c819f78634d3e8130085460b02634c421bfe9eb435a",
+      "initialPinAtUTC": "2026-10-17T21:08:45.113745+00:00",
+      "initialSemanticReadSha256": "6956d5352d6f5b00c8f95c819f78634d3e8130085460b02634c421bfe9eb435a",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          92,
+          148
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          92,
+          148
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          92,
+          148
+        ]
+      ],
+      "semanticReadLines": 57,
+      "displayedLines": 57,
+      "sourceKind": "test-declaration",
+      "scope": "Selected existing normal status/setup/login/cookie/bearer/list/revoke/logout declaration. No HTTP/server/network/test fixture run.",
+      "fullReadReachedEOF": false,
+      "navigationLineRanges": [
+        [
+          68,
+          69
+        ],
+        [
+          92,
+          92
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          245,
+          245
+        ],
+        [
+          255,
+          255
+        ],
+        [
+          313,
+          313
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          68,
+          69
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          245,
+          245
+        ],
+        [
+          255,
+          255
+        ],
+        [
+          313,
+          313
+        ]
+      ],
+      "oldOverlap": "Necessary selected contract reading; no first-read/unique coverage claim."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialPinAtUTC": "2026-10-17T21:04:57.837996+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLines": 0,
+      "displayedLines": 0,
+      "sourceKind": "instruction",
+      "fullReadReachedEOF": false,
+      "scope": "Unchanged previously read instructions, hash-only reuse; no new instruction semantic lines."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialPinAtUTC": "2026-10-17T21:04:57.839150+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLines": 0,
+      "displayedLines": 0,
+      "sourceKind": "instruction",
+      "fullReadReachedEOF": false,
+      "scope": "Unchanged previously read instructions, hash-only reuse; no new instruction semantic lines."
+    }
+  ],
+  "counts": {
+    "sourceRows": 9,
+    "productFullFiles": 2,
+    "productSelectedFiles": 3,
+    "testSelectedFiles": 2,
+    "instructionHashOnlyFiles": 2,
+    "productFullReadLines": 705,
+    "productSelectedReadLines": 265,
+    "productSemanticLines": 970,
+    "testDeclarationLines": 134,
+    "sourceAndTestDisplayedLines": 1218
+  },
+  "metadataFiles": [
+    {
+      "path": "docs/review-2026-10-12/auth-round7.md",
+      "bytes": 13793,
+      "lines": 102,
+      "sha256": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914",
+      "pinAtUTC": "2026-10-17T21:06:34.231267+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+      "bytes": 13135,
+      "lines": 57,
+      "sha256": "6940a2c615572bc0e0955b3f962337a44393fc1715ec5a3f7b37f387390a6dde",
+      "pinAtUTC": "2026-10-17T21:06:34.233499+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-mutex-round19.md",
+      "bytes": 13952,
+      "lines": 96,
+      "sha256": "40a33225154448ecf505dade3a27b7c6abefaac3e936a999704cf19b8a072886",
+      "pinAtUTC": "2026-10-17T21:06:34.234347+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "bytes": 80193,
+      "sha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61",
+      "pinAtUTC": "2026-10-17T21:06:34.235431+00:00"
+    }
+  ],
+  "sharedHistory": {
+    "path": "/tmp/codeshell-audit-round175-settings-flags/history-batch.json",
+    "bytes": 1853203,
+    "sha256": "10b4d36a66e4b47e0a1edb838f60a9e0c3334f934c279df3175df31599653b83",
+    "pinAtUTC": "2026-10-17T21:06:16.071914+00:00"
+  },
+  "oldGateSemanticScope": {
+    "auth-round7.md": [
+      [
+        1,
+        45
+      ],
+      [
+        89,
+        102
+      ]
+    ],
+    "file-mutex-quality-round19.md": [
+      [
+        5,
+        15
+      ],
+      [
+        19,
+        23
+      ],
+      [
+        31,
+        31
+      ],
+      [
+        53,
+        57
+      ]
+    ],
+    "totalSelectedPriorReportLines": 81,
+    "originalInventoryObjects": "2 compact original /module_inventory groups; target /paths/8 and /paths/9 only, no per-file SHA or scope; 187/188 inventoried paths are not semantic reads.",
+    "file-mutex-round19.md": "hash-only; original intended range exceeded EOF96 and no body emitted for this file"
+  },
+  "meaning": "Full/selected means bounded physical source reading, not all behaviors validated, all enforcement certified, first reading or unique coverage. Display-only adjacent lines and navigation-only matches are not added to semantic counts. Existing test declarations are not executions.",
+  "productExecutions": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0
+}

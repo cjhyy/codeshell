@@ -1,0 +1,7 @@
+18: export type PanelAppArchiveFetch = (
+23: export interface GitHubPanelAppArchiveSource {
+28: function githubArchiveUrl(source: GitHubPanelAppArchiveSource): URL {
+36:   const ref = source.ref || "HEAD";
+42:     `https://codeload.github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/zip/${encodedRef}`,
+52: export async function downloadGitHubPanelAppArchive(
+58:   if (typeof fetchImpl !== "function") {

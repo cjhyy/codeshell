@@ -1,0 +1,18 @@
+1168:     if (hasImages && attachments.some((img) => !img.path)) {
+1169:       setAttachmentError(t("chat.attachment.missingPath"));
+1170:       return;
+1171:     }
+1172:     const engineText = loopInvocation ? buildLoopCommandPrompt(loopInvocation.rawArguments) : text;
+1173:     const withLocalFiles = buildMessageWithLocalFilePaths(
+1174:       engineText,
+1175:       localFilePaths,
+1176:       t("chat.composer.localFilePaths"),
+1177:     );
+1178:     // Anchors (diff/browser/file comments) are prepended as a structured block
+1179:     // so the model can pin each comment to its exact location.
+1180:     const withAnchors = encodeAnchorsForWire(withLocalFiles, anchors);
+1181:     const displayWithLocalFiles = buildMessageWithLocalFilePaths(
+1182:       text,
+1183:       localFilePaths,
+1184:       t("chat.composer.localFilePaths"),
+1185:     );

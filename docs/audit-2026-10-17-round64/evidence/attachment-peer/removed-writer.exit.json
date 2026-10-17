@@ -1,0 +1,1 @@
+{"argv": ["rg", "-l", "removedFromDraft", "packages"], "exitCode": 0}

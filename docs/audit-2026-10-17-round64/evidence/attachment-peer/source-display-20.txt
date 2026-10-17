@@ -1,0 +1,15 @@
+355:         });
+356:       }
+357:       if (sessionMessageTargets.length > 0) {
+358:         opts.sessionMessageTargets = sessionMessageTargets;
+359:       }
+360:     }
+361:     window.codeshell.registerBrowserSessionBucket({
+362:       sessionId: engineSessionId,
+363:       bucket,
+364:       partition: browserPartitionForBucket(bucket),
+365:     });
+366:     if (sendOpts.attachments && sendOpts.attachments.length > 0) {
+367:       opts.attachments = sendOpts.attachments;
+368:     }
+369:     if (sendPermissionMode !== null) {

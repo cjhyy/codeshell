@@ -1,0 +1,22 @@
+{
+  "baseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "main": "2bbb517b615a6035e1c68fa8cac13f0b6f3a1eb2",
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/core/src/capability-control/service.literal-override.test.ts",
+    "packages/core/src/capability-control/service.test.ts",
+    "packages/core/src/capability-control/service.ts",
+    "packages/desktop/scripts/composer-operation-diagnostics.mjs",
+    "packages/desktop/scripts/composer-operation-diagnostics.test.mjs",
+    "packages/desktop/scripts/e2e-composer-reference-operations.mjs",
+    "packages/desktop/scripts/e2e-updater-packaged.mjs",
+    "packages/desktop/scripts/electron-test-watchdog.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+    "packages/desktop/scripts/windows-nsis-process-roles.mjs",
+    "packages/desktop/scripts/windows-nsis-process-roles.test.mjs",
+    "packages/desktop/src/renderer/i18n/ns/misc.ts",
+    "packages/desktop/src/renderer/updater/UpdaterBanner.tsx"
+  ],
+  "productRuns": 0
+}

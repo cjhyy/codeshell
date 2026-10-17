@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "lines": 887,
+      "pinnedAtUTC": "2026-10-17T21:11:41.983758+00:00",
+      "timing": "before own body/navigation"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "lines": 391,
+      "pinnedAtUTC": "2026-10-17T21:11:53.462646+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "lines": 1247,
+      "pinnedAtUTC": "2026-10-17T21:12:02.908467+00:00",
+      "timing": "before own body/navigation"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "lines": 1892,
+      "pinnedAtUTC": "2026-10-17T21:12:02.992249+00:00",
+      "timing": "before own body/navigation"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "lines": 7330,
+      "pinnedAtUTC": "2026-10-17T21:12:03.079476+00:00",
+      "timing": "before own body/navigation"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lines": 2622,
+      "pinnedAtUTC": "2026-10-17T21:12:27.926833+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/server/src/attachment-service.test.ts",
+      "bytes": 17409,
+      "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "lines": 551,
+      "pinnedAtUTC": "2026-10-17T21:12:32.746482+00:00",
+      "timing": "before own navigation snippets"
+    }
+  ]
+}

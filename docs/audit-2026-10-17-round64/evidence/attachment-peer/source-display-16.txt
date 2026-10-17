@@ -1,0 +1,44 @@
+16:   DRAFT_ATTACHMENT_TTL_MS,
+18:   SENT_ATTACHMENT_TTL_MS,
+19:   cleanupAttachments,
+43: describe("attachment-service", () => {
+54:   test("writes a png data URL under .code-shell/attachments/<sessionId>", async () => {
+78:   test("reuses the same file for the same hash in one session", async () => {
+101:   test("stages mobile raw bytes and source files through the canonical attachment path", async () => {
+129:   test("stages IM files under the Pet session attachment root", async () => {
+151:   test("accepts structurally valid PNG, JPEG, GIF, and WebP bytes", async () => {
+166:   test("strips bytes after JPEG EOI before staging while keeping strict probing", async () => {
+197:   test("does not strip trailing bytes from non-JPEG image formats", async () => {
+211:   test("rejects truncated or malformed image structures for every allowed MIME", async () => {
+236:   test("rejects declared MIME that does not match the actual image bytes", async () => {
+259:   test("rejects unsafe session ids", async () => {
+283:   test("rejects unsupported data URL MIME", async () => {
+296:   test("rejects decoded image data URLs above the main-process size cap", async () => {
+311:   test("rejects a pre-existing symlink attachments root", async () => {
+334:   test("rejects a pre-existing symlink attachment session directory", async () => {
+357:   test("rejects a pre-existing symlink file matching the attachment hash", async () => {
+385:   test("rejects a non-file entry matching the attachment hash", async () => {
+406:   test("rejects oversized attachment metadata before writing a manifest", async () => {
+420:   test("writes .code-shell/.gitignore without touching the repo root gitignore", async () => {
+434:   test("listRecentAttachments returns sent manifest entries only", async () => {
+451:   test("cleanup removes expired draft and sent files by TTL", async () => {
+452:     const draft = await stageImageDataUrl({
+454:       sessionId: "sid-draft",
+460:     const sent = await stageImageDataUrl({
+462:       sessionId: "sid-sent",
+468:     await markAttachmentsSent(cwd, "sid-sent", [sent]);
+470:     const tooEarly = await cleanupAttachments({
+472:       now: draft.createdAt + DRAFT_ATTACHMENT_TTL_MS - 1,
+476:     const draftCleanup = await cleanupAttachments({
+478:       now: draft.createdAt + DRAFT_ATTACHMENT_TTL_MS + 1,
+480:     expect(draftCleanup.removed).toContain(draft.absPath);
+481:     expect(existsSync(draft.absPath)).toBe(false);
+482:     expect(existsSync(sent.absPath)).toBe(true);
+484:     const sentCleanup = await cleanupAttachments({
+486:       now: Date.now() + SENT_ATTACHMENT_TTL_MS + 1,
+488:     expect(sentCleanup.removed).toContain(sent.absPath);
+489:     expect(existsSync(sent.absPath)).toBe(false);
+492:   test("session cleanup removes only the target session", async () => {
+510:     const result = await cleanupAttachments({ cwd, sessionId: "one" });
+516:   test("cleanup ignores manifest paths outside the attachments root", async () => {
+546:     const result = await cleanupAttachments({ cwd, now: Date.now() + DRAFT_ATTACHMENT_TTL_MS + 1 });

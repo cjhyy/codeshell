@@ -1,0 +1,20 @@
+3:   checkInstalledPanelAppUpdate,
+4:   checkSelectedPanelAppUpdate,
+16: type Installation = Pick<InstalledPanelApp, "id" | "version" | "source" | "lastUpdated">;
+19:   return JSON.stringify([app.id, app.version, app.source, app.lastUpdated]);
+29:   const cache = new Map<string, { key: string; expires: number; result: PanelAppUpdateCheck }>();
+39:       currentVersion: app?.version ?? "",
+41:       sourceKind:
+42:         typeof app?.source === "object"
+44:           : app?.source?.toLowerCase().endsWith(".zip")
+54:       cache.delete(id);
+55:       // The old promise may finish, but may no longer populate the cache.
+67:         cache.delete(id);
+73:       const cached = cache.get(id);
+74:       if (!force && cached?.key === key && cached.expires > now()) return cached.result;
+88:                 result.currentVersion !== installed.version
+100:               cache.delete(id);
+101:               cache.set(id, {
+106:               while (cache.size > MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value!);
+122:   check: checkInstalledPanelAppUpdate,
+135:       return checkSelectedPanelAppUpdate(selected);

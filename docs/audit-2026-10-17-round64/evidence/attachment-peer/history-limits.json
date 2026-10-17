@@ -1,0 +1,18 @@
+{
+  "sharedCauseInput": {
+    "path": "/tmp/codeshell-audit-round174-server-attachments/cause-history.json",
+    "bytes": 4883,
+    "sha256": "8efcdc72c6cc560c1989409319bc066d202073bd9c0fd41aa618809efc0faec9",
+    "pinnedAtUTC": "2026-10-17T21:12:19.213590+00:00",
+    "timing": "before own parsing"
+  },
+  "scope": "One finite shared-inventory query: MD lines and recursive JSON values, archive-inclusive, formal64+ absent; no source/fixture execution",
+  "pattern": "cleanupAttachments|latestAttachmentState|DRAFT_ATTACHMENT_TTL_MS|SENT_ATTACHMENT_TTL_MS|(?:same|shared|dedup).{0,100}(?:file|path|attachment).{0,100}(?:TTL|expir|clean)|(?:共享|同.{0,10}(?:哈希|hash)).{0,100}(?:附件|文件).{0,100}(?:清理|过期|TTL)",
+  "inventoryDocuments": 6801,
+  "totalMatches": 6,
+  "cap": 180,
+  "retained": 6,
+  "errors": [],
+  "ownReview": "Personally read six retained value windows; unrelated Core async cleanup and cookie expiry, plus repeated historical context windows. Some original values are window-truncated; no whole canonical historical reports claimed. No precise same-cause found in this finite query; Root174 owns shared history method.",
+  "oldOverlap": "Current attachment service/test and ChatView may have prior full/selected scopes; this is concrete new-case targeted overlap, not new unique coverage or global coverage migration. No new million-scalar scan or old failed dynamic retry."
+}

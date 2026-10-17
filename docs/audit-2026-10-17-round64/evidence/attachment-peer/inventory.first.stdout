@@ -1,0 +1,13 @@
+docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log
+docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts
+docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json
+packages/desktop/src/renderer/tool-cards/AttachmentCard.native-paths.test.tsx
+packages/desktop/src/renderer/tool-cards/attachments.ts
+packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx
+packages/desktop/src/renderer/tool-cards/AttachmentCard.media.test.tsx
+packages/desktop/src/renderer/tool-cards/attachments.test.ts
+packages/desktop/src/renderer/chat/attachments.ts
+packages/desktop/src/renderer/chat/attachments.test.ts
+packages/desktop/src/renderer/attachmentSession.test.ts
+packages/desktop/src/renderer/attachmentSession.ts
+packages/desktop/src/shared/pet-chat-attachments.ts

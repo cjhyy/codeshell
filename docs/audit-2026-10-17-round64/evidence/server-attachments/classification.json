@@ -1,0 +1,40 @@
+{
+  "authorStaticFindings": 1,
+  "proposedFormalIDs": [
+    "ATTACH-R64-01"
+  ],
+  "newCandidates": [],
+  "newRelated": [],
+  "RootControlsFormalPromotion": true,
+  "oldExcluded": [
+    {
+      "id": "BYTES-R14-C1",
+      "cause": "SOF3/lossless vs unconditionalDQT precondition",
+      "disposition": "Same old candidate; no decoder validity/downstream support proof newly obtained, not promoted or counted anew"
+    },
+    {
+      "id": "R20/S5",
+      "cause": "Hub20MiB admission versus10MiB image staging",
+      "disposition": "Known different cause excluded"
+    },
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "disposition": "R17 same-SHA explicitfull; no body read"
+    }
+  ],
+  "oldCauseCheck": "One bounded query over shared6801inventory found6contexts; actualread and originalCore async-cleanup reports are different cause. No exact shared-path/perIDTTL prior established in those windows, not an exhaustive novelty guarantee.",
+  "externalValidationReportedByRoot": {
+    "executor": "Root only, not this author",
+    "attemptsReported": 1,
+    "stateReported": "Completed",
+    "exitCodeReported": 0,
+    "passReported": 1,
+    "expectReported": 11,
+    "failReported": 0,
+    "skipReported": 0,
+    "fixturePath": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+    "rawLogReported": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+    "independentlyReadOrRunByAuthor": false,
+    "scopeReported": "Actualstage same-sid existing valid PNG -> two IDs same path -> markSentB -> supported cleanup.now around24h -> shared path/recentB gone; distinct-sid sent same PNG preserved. Only Root-owned temporary FS, no Date replacement, UI, network or user resources."
+  }
+}

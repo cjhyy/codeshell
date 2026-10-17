@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts"
+  ],
+  "exitCode": 0,
+  "streams": "Original stdout and stderr merged by OS pipe before capture; no posthoc ordering reconstruction.",
+  "attempt": 1,
+  "rerun": false
+}

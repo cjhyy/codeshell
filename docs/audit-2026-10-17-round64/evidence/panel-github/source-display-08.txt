@@ -1,0 +1,37 @@
+25: describe("Panel App version discovery", () => {
+70:       subdir: "panels/video-studio",
+82:   test("checks only the recorded GitHub manifest at HEAD and uses the installed version", async () => {
+105:   test("uses the recorded ref and safely encodes branch/path segments", async () => {
+109:       ref: "release/next",
+110:       subdir: "panels/video #1",
+150:   test("does not use a stale registry version when the installed manifest is invalid", async () => {
+158:   test("rejects a different panel ID", async () => {
+179:   test("network failure is reported without throwing", async () => {
+194:     { kind: "git", url: "https://github.com/example/panels", subdir: "../other" },
+206:   test("local directory checks read only manifests and preserve registry/source and package bytes", async () => {
+226:   test("ZIP sources remain an unsupported manual review path", async () => {
+237:   test("installed update identity reads the target manifest without walking missing or broken app assets", async () => {
+249:         subdir: "panels/video-studio",
+257:   test("parent-directory installations find their unique local panel without inspecting assets", async () => {
+267:   test("a genuinely installed source-root symlink keeps working for version checks, including a .zip suffix", async () => {
+287:   test("ambiguous parent-directory installations cannot silently choose one local panel", async () => {
+298:   test("local discovery budget exhaustion cannot report the first panel as the unique match", async () => {
+311:     record({ kind: "git", url: "https://github.com/example/panels.git", ref: "main" });
+328:   test("legacy GitHub parent-directory sources resolve a unique manifest with no archive download", async () => {
+351:   test("GitHub fallback only searches beneath the originally selected parent subdirectory", async () => {
+356:       ref: "main",
+357:       subdir: "panels",
+380:   test("ambiguous or truncated GitHub discovery cannot claim an update", async () => {
+396:   test("GitHub discovery has a bounded depth and directory budget", async () => {
+411:   test("GitHub discovery does not count directories inside an already identified panel root", async () => {
+424:   test("the GitHub fallback shares the timeout across direct lookup and directory discovery", async () => {
+439:   test("a directory ending in .zip is still checked as a local folder", async () => {
+451:   test("missing local sources are errors", async () => {
+456:   test("rejects local manifest symlinks", async () => {
+464:   test("unknown and unsafe panel IDs return errors", async () => {
+469:   test("oversized local manifests fail within the same byte budget", async () => {
+481:   test("oversized GitHub Content-Length fails before reading the body", async () => {
+494:   test("oversized chunked GitHub responses fail without trusting Content-Length", async () => {
+504:   test("truncated Content-Length is an error", async () => {
+514:   test("fetch timeout also works when the fetch implementation ignores cancellation", async () => {
+526:   test("the same timeout bounds a stalled response body and cancels its reader", async () => {

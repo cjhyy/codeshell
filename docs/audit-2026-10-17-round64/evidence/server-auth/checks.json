@@ -1,0 +1,55 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "counts": {
+    "sourceRows": 9,
+    "productFullFiles": 2,
+    "productSelectedFiles": 3,
+    "testSelectedFiles": 2,
+    "instructionHashOnlyFiles": 2,
+    "productFullReadLines": 705,
+    "productSelectedReadLines": 265,
+    "productSemanticLines": 970,
+    "testDeclarationLines": 134,
+    "sourceAndTestDisplayedLines": 1218
+  },
+  "reportLinks": [
+    {
+      "target": "lifecycle-review.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "target": "history-projection.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "target": "diagnostics.json",
+      "exists": true
+    }
+  ],
+  "allLinksExist": true,
+  "sourceExcerptRangeObjectsChecked": 16,
+  "sourceExcerptBytesAndHashesValid": true,
+  "endingAllSame": true,
+  "fullTargetEOFs": [
+    "auth-http.ts:290",
+    "auth-store.ts:415"
+  ],
+  "productExecutions": 0,
+  "gitCalls": 0
+}

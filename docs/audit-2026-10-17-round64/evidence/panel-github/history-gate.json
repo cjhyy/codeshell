@@ -1,0 +1,33 @@
+{
+  "sharedBatch": "history-projection.json",
+  "historicalFiles": 6801,
+  "recursiveJSONValueScalarsMachineVisited": 5060759,
+  "ownFullCorpusSemanticRead": false,
+  "excludedFormalAtOrAbove": 64,
+  "capPerTarget": 100,
+  "counts": {
+    "packages/core/src/panel-apps/github-ref.ts": 89,
+    "packages/core/src/panel-apps/github-manifest.ts": 89,
+    "packages/core/src/panel-apps/github-request.ts": 96,
+    "packages/core/src/panel-apps/update-check.ts": 89,
+    "packages/core/src/panel-apps/source.ts": 131
+  },
+  "canonicalPersonallyRead": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "scope": "only five target claim objects, scope/hash/range/provenance navigation, not whole document; original source row below authoritative"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/source-manifest.json",
+      "jsonPointer": "/files/10",
+      "scope": "whole original source row: same SHA source.ts selected-incidental1–45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/794",
+      "scope": "whole inventory row: github-ref bytes/lines/SHA only, no semantic scope"
+    }
+  ],
+  "gate": "No explicit original same-SHA full established in bounded retained matches. Proceeded targeted ordinary data algorithms, not a first-read/unread guarantee. source.ts131 matches cap100 incomplete; other four all retained. Loaded-module archives and relative-import manifests are incidental, not pass/full; old failures not reopened.",
+  "newCauseSearch": "No normal new candidate established, so no new-cause full-history rescan. Shared path/SHA values are navigation, not complete old finding prose review; no claim whole historical corpus independently read."
+}

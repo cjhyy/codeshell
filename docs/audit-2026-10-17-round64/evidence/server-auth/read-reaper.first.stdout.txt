@@ -1,0 +1,14 @@
+281:           void hubAuth
+282:             .authenticate(auth.request)
+283:             .then((session) => {
+284:               if (!session) ws.close(4401, "session expired");
+285:             })
+286:             .catch(() => ws.close(4401, "session unavailable"));
+287:         }
+288:       }, opts.authRecheckMs ?? 5_000)
+289:     : undefined;
+290:   authReaper?.unref?.();
+291: 
+292:   const deletePendingWorkerResponse = (requestId: string): void => {
+293:     const route = pendingWorkerResponses.get(requestId);
+294:     if (!route) return;

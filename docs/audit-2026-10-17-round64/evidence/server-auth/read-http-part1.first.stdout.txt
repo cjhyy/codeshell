@@ -1,0 +1,162 @@
+ORIGINAL COMPACT {"document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json", "pointer": "/module_inventory/84740d56", "keys": ["production_source_files", "paths", "group_counts"], "production_source_files": 187, "selectedPathPointers": {"/paths/8": "packages/server/src/hub/auth-http.ts", "/paths/9": "packages/server/src/hub/auth-store.ts"}, "hasPerFileShaOrReadScope": false}
+ORIGINAL COMPACT {"document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json", "pointer": "/module_inventory/a66f4ef2", "keys": ["production_source_files", "paths", "group_counts"], "production_source_files": 188, "selectedPathPointers": {"/paths/8": "packages/server/src/hub/auth-http.ts", "/paths/9": "packages/server/src/hub/auth-store.ts"}, "hasPerFileShaOrReadScope": false}
+
+OLD QUALITY MISSING INTENDED WINDOWS
+19: file-mutex 默认 [50](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:50) 30,000ms；[62–64](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:62) sleepSync 直接 Atomics.wait；[95–112](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:95) 捕获全部 lockSync 错误，不筛 ELOCKED，EACCES 也同步重试直到 deadline。Promise/async 不会把此代码移入 worker。
+20: 
+21: lazy wrapper [65–77](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/lockfile.ts:65) 调 proper-lockfile 4.1.2。依赖 [lib/lockfile.js:46–49](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/lockfile.js:46) 对非 EEXIST 原错立即回传；live lock [67–69](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/lockfile.js:67) 才转 ELOCKED。adapter [5–20/43–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/adapter.js:5) 用真实 sync fs 并原样抛错。无谓权限重试由仓库外层引入；正常控制的 native mkdir EEXIST 与外层捕获 ELOCKED 应明确区分。
+22: 
+23: Headless [715–780](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:715) 同一 Node createServer callback 处理 /health（719）、environment（742）和 session API（751）；WS upgrade [1216–1217](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:1216) 也在该 server。无需 AUTH 的 /health 仍等同一个 JS 事件循环，定时器和 JS 消息处理也无法进展。这不等于 OS 网络停止或独立 agent worker 计算停止，不能冒称实际所有任务超时。
+31: Auth setup/login [127–129/146–153](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:127) 在锁前 await scrypt，mutate 锁内仅同步 read/validate/write/finally release。这不是该 writer 的同进程 async-holder deadlock，不能借 CODESHELL 警告另造一个发现。
+53: 84740 与 a66f 的 file-mutex、lockfile wrapper、HubAuthStore/auth-http、SessionTitlesStore/session-management 产品源码无差异；latest 既有 dist 的真实入口、默认30秒和 retry 与 src 对应。本审计未 build，两基线动态适用以作者/root 收据为准，不用源码一致冒充双基线执行。精确行号按 latest。
+54: 
+55: 与 R43 Token 拒写缺反馈、R71 项目重命名乐观 UI、R65 目录 EACCES 冒充空树独立：UI feedback 修复不去掉明确非争用错误的同步重试；本项缺 Host 可用性。第十八轮非文件 title registry 500 是取得锁后 strict read 拒绝，其 Bun EACCES 诊断只是调查线索，不能当成已证明 native title锁的重复发现。第十七轮 fresh title parent EACCES 在 mkdir(anchor) 前置失败，不冲突。
+56: 
+57: 最小修复是只为真正可重试的 ELOCKED 保留争用重试，明确权限/存储 acquisition 错误立即回传；若 Host 还要在正常争用时保持响应，应使用有界非阻塞 acquisition 或隔离同步锁工作。保留认证、跨进程 read-modify-write、真实 parent/anchor 检查、标题 CAS、严格 registry、finally release、同稿重试，不能故障时无锁写入或跳过认证。
+
+SOURCE packages/server/src/hub/auth-http.ts RANGE1-145
+1: import type { IncomingMessage, ServerResponse } from "node:http";
+2: import {
+3:   HubAuthError,
+4:   HubAuthStore,
+5:   type HubLoginInput,
+6:   type HubSession,
+7:   type HubSessionGrant,
+8: } from "./auth-store.js";
+9: 
+10: export const HUB_SESSION_COOKIE = "cs_hub_session";
+11: const MAX_BODY_BYTES = 8 * 1024;
+12: const LOGIN_WINDOW_MS = 60_000;
+13: const MAX_ATTEMPT_SOURCES = 1_024;
+14: 
+15: export interface HubAuthOptions {
+16:   dataDir: string;
+17:   /** Trusted external URL, also used behind a TLS-terminating reverse proxy. */
+18:   publicOrigin?: string;
+19:   onRevoke?: (sessionId: string) => void;
+20:   now?: () => number;
+21:   sessionTtlMs?: number;
+22:   maxLoginAttempts?: number;
+23: }
+24: 
+25: export interface HubAuth {
+26:   bootstrapToken?: string;
+27:   store: HubAuthStore;
+28:   handle(req: IncomingMessage, res: ServerResponse): Promise<boolean>;
+29:   authenticate(req: IncomingMessage): Promise<HubSession | null>;
+30:   isOriginAllowed(req: IncomingMessage): boolean;
+31: }
+32: 
+33: /** Shared single-user HTTP authentication; no Electron or worker dependency. */
+34: export async function createHubAuth(options: HubAuthOptions): Promise<HubAuth> {
+35:   const now = options.now ?? Date.now;
+36:   const origin = options.publicOrigin ? normalizeOrigin(options.publicOrigin) : undefined;
+37:   const secureCookie = origin?.startsWith("https:") ?? false;
+38:   const maxLoginAttempts = options.maxLoginAttempts ?? 10;
+39:   if (!Number.isSafeInteger(maxLoginAttempts) || maxLoginAttempts < 1) {
+40:     throw new Error("Hub login attempt limit must be positive");
+41:   }
+42:   const store = new HubAuthStore(options);
+43:   const bootstrapToken = store.initialize();
+44:   const attempts = new Map<string, { count: number; resetAt: number }>();
+45:   let activeLogins = 0;
+46:   let globalAttempts = { count: 0, resetAt: now() + LOGIN_WINDOW_MS };
+47: 
+48:   function isOriginAllowed(req: IncomingMessage): boolean {
+49:     const requestOrigin = req.headers.origin;
+50:     const fetchSite = req.headers["sec-fetch-site"];
+51:     if (fetchSite === "cross-site") return false;
+52:     const expected = origin ?? requestOriginFromHost(req);
+53:     if (expected === undefined) return false;
+54:     // Address-bar navigation and noreferrer links omit Origin and report "none".
+55:     // Permit only read-only top-level navigation; writes, fetches and socket
+56:     // upgrades still use the existing same-origin/native-client checks.
+57:     if (requestOrigin === undefined)
+58:       return (
+59:         fetchSite === undefined ||
+60:         fetchSite === "same-origin" ||
+61:         (fetchSite === "none" &&
+62:           (req.method === "GET" || req.method === "HEAD") &&
+63:           req.headers["sec-fetch-mode"] === "navigate" &&
+64:           req.headers["sec-fetch-dest"] === "document")
+65:       );
+66:     if (typeof requestOrigin !== "string" || requestOrigin === "null") return false;
+67:     return requestOrigin === expected;
+68:   }
+69: 
+70:   function takeAttempt(req: IncomingMessage): string {
+71:     const time = now();
+72:     for (const [key, bucket] of attempts) {
+73:       if (bucket.resetAt <= time) attempts.delete(key);
+74:     }
+75:     if (globalAttempts.resetAt <= time)
+76:       globalAttempts = { count: 0, resetAt: time + LOGIN_WINDOW_MS };
+77:     // Proxy forwarding headers are intentionally not trusted for rate limits.
+78:     const key = req.socket.remoteAddress ?? "unknown";
+79:     let bucket = attempts.get(key);
+80:     if (!bucket) {
+81:       if (attempts.size >= MAX_ATTEMPT_SOURCES)
+82:         throw new HubAuthError(429, "Too many login attempts; retry in one minute");
+83:       bucket = { count: 0, resetAt: time + LOGIN_WINDOW_MS };
+84:       attempts.set(key, bucket);
+85:     }
+86:     if (bucket.count >= maxLoginAttempts || globalAttempts.count >= 100 || activeLogins >= 4) {
+87:       throw new HubAuthError(429, "Too many login attempts; retry in one minute");
+88:     }
+89:     bucket.count += 1;
+90:     globalAttempts.count += 1;
+91:     return key;
+92:   }
+93: 
+94:   function setSessionCookie(res: ServerResponse, token: string, maxAge: number): void {
+95:     res.setHeader(
+96:       "Set-Cookie",
+97:       `${HUB_SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secureCookie ? "; Secure" : ""}`,
+98:     );
+99:   }
+100: 
+101:   function completeLogin(res: ServerResponse, grant: HubSessionGrant): void {
+102:     for (const sessionId of grant.revokedSessionIds) options.onRevoke?.(sessionId);
+103:     setSessionCookie(res, grant.token, Math.floor(store.sessionTtlMs / 1_000));
+104:     json(res, 200, { authenticated: true, session: grant.session });
+105:   }
+106: 
+107:   async function authenticate(req: IncomingMessage): Promise<HubSession | null> {
+108:     return store.authenticate(readHubSessionToken(req));
+109:   }
+110: 
+111:   async function handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+112:     const path = (req.url ?? "/").split("?", 1)[0];
+113:     if (path !== "/api/v1/auth" && !path.startsWith("/api/v1/auth/")) return false;
+114:     res.setHeader("Cache-Control", "no-store");
+115:     res.setHeader("X-Content-Type-Options", "nosniff");
+116:     try {
+117:       const method = req.method ?? "GET";
+118:       if (method !== "GET" && method !== "HEAD" && !isOriginAllowed(req)) {
+119:         throw new HubAuthError(403, "Request origin is not allowed");
+120:       }
+121:       if (path === "/api/v1/auth/status" && method === "GET") {
+122:         const session = await authenticate(req);
+123:         json(res, 200, {
+124:           initialized: store.isInitialized(),
+125:           authenticated: !!session,
+126:           ...(session ? { session } : {}),
+127:         });
+128:         return true;
+129:       }
+130:       if ((path === "/api/v1/auth/setup" || path === "/api/v1/auth/login") && method === "POST") {
+131:         const key = takeAttempt(req);
+132:         activeLogins += 1;
+133:         try {
+134:           const body = await readJsonBody(req);
+135:           const input = body as unknown as HubLoginInput & { token: string };
+136:           const grant = path.endsWith("/setup")
+137:             ? await store.setup(input)
+138:             : await store.login(input, readHubSessionToken(req));
+139:           attempts.delete(key);
+140:           completeLogin(res, grant);
+141:         } finally {
+142:           activeLogins -= 1;
+143:         }
+144:         return true;
+145:       }

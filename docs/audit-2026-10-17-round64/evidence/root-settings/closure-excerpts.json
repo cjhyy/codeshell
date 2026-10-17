@@ -1,0 +1,1320 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "totalLines": 1139,
+      "selectedLineRanges": [
+        [
+          325,
+          439
+        ],
+        [
+          915,
+          934
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          325,
+          439
+        ],
+        [
+          915,
+          934
+        ]
+      ],
+      "lines": [
+        {
+          "line": 325,
+          "text": "    if (readProject) {"
+        },
+        {
+          "line": 326,
+          "text": "      const projectPath = this.tryProjectSettingsPath(this.cwd, \"settings.json\");"
+        },
+        {
+          "line": 327,
+          "text": "      if (projectPath)"
+        },
+        {
+          "line": 328,
+          "text": "        this.applyConfigMigration(projectPath, \"project\", options?.persistMigrations);"
+        },
+        {
+          "line": 329,
+          "text": "    }"
+        },
+        {
+          "line": 330,
+          "text": ""
+        },
+        {
+          "line": 331,
+          "text": "    // Workspace-trust gate: an untrusted project must not influence execution"
+        },
+        {
+          "line": 332,
+          "text": "    // through dangerous fields committed into its own .code-shell/settings.*."
+        },
+        {
+          "line": 333,
+          "text": "    // Strip them from the project/local layers (after migration re-read the"
+        },
+        {
+          "line": 334,
+          "text": "    // files, so we filter the final data) before merge. See"
+        },
+        {
+          "line": 335,
+          "text": "    // DANGEROUS_PROJECT_FIELDS and the `projectTrusted` ctor arg."
+        },
+        {
+          "line": 336,
+          "text": "    if (!this.projectTrusted) {"
+        },
+        {
+          "line": 337,
+          "text": "      for (const [index, source] of this.sources.entries()) {"
+        },
+        {
+          "line": 338,
+          "text": "        if (source.name !== \"project\" && source.name !== \"local\") continue;"
+        },
+        {
+          "line": 339,
+          "text": "        const data = { ...source.data };"
+        },
+        {
+          "line": 340,
+          "text": "        for (const field of DANGEROUS_PROJECT_FIELDS) {"
+        },
+        {
+          "line": 341,
+          "text": "          if (field in data) delete data[field];"
+        },
+        {
+          "line": 342,
+          "text": "        }"
+        },
+        {
+          "line": 343,
+          "text": "        this.sources[index] = Object.freeze({ ...source, data });"
+        },
+        {
+          "line": 344,
+          "text": "      }"
+        },
+        {
+          "line": 345,
+          "text": "    }"
+        },
+        {
+          "line": 346,
+          "text": ""
+        },
+        {
+          "line": 347,
+          "text": "    // Deep merge"
+        },
+        {
+          "line": 348,
+          "text": "    const raw = this.deepMerge();"
+        },
+        {
+          "line": 349,
+          "text": ""
+        },
+        {
+          "line": 350,
+          "text": "    // Auto-migrate legacy models[] in the user settings file. Runs directly"
+        },
+        {
+          "line": 351,
+          "text": "    // on the user-scope file (not the merged result), because the merge"
+        },
+        {
+          "line": 352,
+          "text": "    // collapses provenance and the migration needs to write back to a"
+        },
+        {
+          "line": 353,
+          "text": "    // single physical file. Gated on readUser: under non-full scope we must"
+        },
+        {
+          "line": 354,
+          "text": "    // not read — let alone rewrite — the host's ~/.code-shell/settings.json."
+        },
+        {
+          "line": 355,
+          "text": "    const userPath = join(this.userConfigDir(), \"settings.json\");"
+        },
+        {
+          "line": 356,
+          "text": "    if (readUser && resolveConfigPath(userPath) === userPath) {"
+        },
+        {
+          "line": 357,
+          "text": "      try {"
+        },
+        {
+          "line": 358,
+          "text": "        // Read-only loads must retain preceding in-memory version migrations."
+        },
+        {
+          "line": 359,
+          "text": "        // Ordinary loads preserve their existing disk reread before model migration."
+        },
+        {
+          "line": 360,
+          "text": "        if (options?.persistMigrations !== false) this.clearSourceOrigin(\"user\");"
+        },
+        {
+          "line": 361,
+          "text": "        const userSource = this.sources.find((source) => source.name === \"user\");"
+        },
+        {
+          "line": 362,
+          "text": "        const userRaw ="
+        },
+        {
+          "line": 363,
+          "text": "          options?.persistMigrations === false ? userSource?.data : parseConfigFile(userPath);"
+        },
+        {
+          "line": 364,
+          "text": "        if (!userRaw) throw new Error(\"invalid user settings\");"
+        },
+        {
+          "line": 365,
+          "text": "        const result = migrateModels({"
+        },
+        {
+          "line": 366,
+          "text": "          providers: (userRaw.providers as never) ?? [],"
+        },
+        {
+          "line": 367,
+          "text": "          models: (userRaw.models as never) ?? [],"
+        },
+        {
+          "line": 368,
+          "text": "        });"
+        },
+        {
+          "line": 369,
+          "text": "        if (result.changed) {"
+        },
+        {
+          "line": 370,
+          "text": "          const migrated = {"
+        },
+        {
+          "line": 371,
+          "text": "            ...userRaw,"
+        },
+        {
+          "line": 372,
+          "text": "            providers: result.providers,"
+        },
+        {
+          "line": 373,
+          "text": "            models: result.models,"
+        },
+        {
+          "line": 374,
+          "text": "          };"
+        },
+        {
+          "line": 375,
+          "text": "          const sanitized = sanitizeSettingsObject(migrated);"
+        },
+        {
+          "line": 376,
+          "text": "          // Atomic write (tmp+rename) — a concurrent load must not see a"
+        },
+        {
+          "line": 377,
+          "text": "          // half-written file. File exists here (existsSync guard above)."
+        },
+        {
+          "line": 378,
+          "text": "          if (options?.persistMigrations !== false) {"
+        },
+        {
+          "line": 379,
+          "text": "            this.writeBackup(userPath);"
+        },
+        {
+          "line": 380,
+          "text": "            this.atomicWriteJson(userPath, sanitized);"
+        },
+        {
+          "line": 381,
+          "text": "          }"
+        },
+        {
+          "line": 382,
+          "text": "          // Re-deep-merge with the migrated user data so the validate"
+        },
+        {
+          "line": 383,
+          "text": "          // call sees the new shape rather than the legacy one."
+        },
+        {
+          "line": 384,
+          "text": "          this.replaceSource(\"user\", sanitized, userSource?.origin);"
+        },
+        {
+          "line": 385,
+          "text": "          const remerged = this.deepMerge();"
+        },
+        {
+          "line": 386,
+          "text": "          return this.validateMerged(remerged);"
+        },
+        {
+          "line": 387,
+          "text": "        }"
+        },
+        {
+          "line": 388,
+          "text": "      } catch {"
+        },
+        {
+          "line": 389,
+          "text": "        // Migration is best-effort — fall through to normal validate."
+        },
+        {
+          "line": 390,
+          "text": "      }"
+        },
+        {
+          "line": 391,
+          "text": "    }"
+        },
+        {
+          "line": 392,
+          "text": ""
+        },
+        {
+          "line": 393,
+          "text": "    return this.validateMerged(raw);"
+        },
+        {
+          "line": 394,
+          "text": "  }"
+        },
+        {
+          "line": 395,
+          "text": ""
+        },
+        {
+          "line": 396,
+          "text": "  /**"
+        },
+        {
+          "line": 397,
+          "text": "   * Run the version-based migrations (migrate-config.ts MIGRATIONS) against a"
+        },
+        {
+          "line": 398,
+          "text": "   * single physical settings file. Best-effort: any read/parse/write error"
+        },
+        {
+          "line": 399,
+          "text": "   * falls through silently and the original source data is used as-is."
+        },
+        {
+          "line": 400,
+          "text": "   * Writes back (with a .bak, like the models[] migration above) ONLY when a"
+        },
+        {
+          "line": 401,
+          "text": "   * step changed actual content — the configVersion stamp alone doesn't"
+        },
+        {
+          "line": 402,
+          "text": "   * justify touching the file. On write-back the in-memory source is updated"
+        },
+        {
+          "line": 403,
+          "text": "   * so this load() already sees the migrated shape."
+        },
+        {
+          "line": 404,
+          "text": "   */"
+        },
+        {
+          "line": 405,
+          "text": "  private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {"
+        },
+        {
+          "line": 406,
+          "text": "    if (resolveConfigPath(path) !== path) return;"
+        },
+        {
+          "line": 407,
+          "text": "    try {"
+        },
+        {
+          "line": 408,
+          "text": "      const source = this.sources.find((s) => s.name === sourceName);"
+        },
+        {
+          "line": 409,
+          "text": "      // The opt-in read-only path migrates its actual same-buffer load. Ordinary"
+        },
+        {
+          "line": 410,
+          "text": "      // loads retain their historical reread, but cannot retain the old origin."
+        },
+        {
+          "line": 411,
+          "text": "      const paired = !persist && source?.origin !== undefined;"
+        },
+        {
+          "line": 412,
+          "text": "      if (!paired) this.clearSourceOrigin(sourceName);"
+        },
+        {
+          "line": 413,
+          "text": "      const parsed = paired ? source.data : parseConfigFile(path);"
+        },
+        {
+          "line": 414,
+          "text": "      if (!parsed || typeof parsed !== \"object\" || Array.isArray(parsed)) return;"
+        },
+        {
+          "line": 415,
+          "text": "      const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);"
+        },
+        {
+          "line": 416,
+          "text": "      const result = migrateConfig(raw);"
+        },
+        {
+          "line": 417,
+          "text": "      if (!result.changed) return;"
+        },
+        {
+          "line": 418,
+          "text": "      // Compare content with the version stamp normalized away — stamp-only"
+        },
+        {
+          "line": 419,
+          "text": "      // changes are not persisted."
+        },
+        {
+          "line": 420,
+          "text": "      const stripStamp = (c: Record<string, unknown>): Record<string, unknown> => {"
+        },
+        {
+          "line": 421,
+          "text": "        const { [CONFIG_VERSION_KEY]: _v, ...rest } = c;"
+        },
+        {
+          "line": 422,
+          "text": "        return rest;"
+        },
+        {
+          "line": 423,
+          "text": "      };"
+        },
+        {
+          "line": 424,
+          "text": "      if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;"
+        },
+        {
+          "line": 425,
+          "text": "      // Atomic write (tmp+rename) so a concurrent load can't read a half-written"
+        },
+        {
+          "line": 426,
+          "text": "      // migrated file — matches the normal save path (atomicWriteJson). The file"
+        },
+        {
+          "line": 427,
+          "text": "      // exists here (existsSync guard above), so the recursive mkdir is a no-op."
+        },
+        {
+          "line": 428,
+          "text": "      const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);"
+        },
+        {
+          "line": 429,
+          "text": "      if (persist) {"
+        },
+        {
+          "line": 430,
+          "text": "        this.writeBackup(path);"
+        },
+        {
+          "line": 431,
+          "text": "        this.atomicWriteJson(path, sanitized);"
+        },
+        {
+          "line": 432,
+          "text": "      }"
+        },
+        {
+          "line": 433,
+          "text": "      this.replaceSource(sourceName, sanitized, paired ? source.origin : undefined);"
+        },
+        {
+          "line": 434,
+          "text": "    } catch {"
+        },
+        {
+          "line": 435,
+          "text": "      // Best-effort — fall through to normal merge/validate."
+        },
+        {
+          "line": 436,
+          "text": "    }"
+        },
+        {
+          "line": 437,
+          "text": "  }"
+        },
+        {
+          "line": 438,
+          "text": ""
+        },
+        {
+          "line": 439,
+          "text": "  /**"
+        },
+        {
+          "line": 915,
+          "text": "            this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);"
+        },
+        {
+          "line": 916,
+          "text": "            break;"
+        },
+        {
+          "line": 917,
+          "text": "          }"
+        },
+        {
+          "line": 918,
+          "text": "        }"
+        },
+        {
+          "line": 919,
+          "text": "      }"
+        },
+        {
+          "line": 920,
+          "text": "    }"
+        },
+        {
+          "line": 921,
+          "text": "    // `path` is the canonical .json path for this layer. When it's absent but"
+        },
+        {
+          "line": 922,
+          "text": "    // a sibling settings.yaml/.yml exists, read the YAML instead (JSON wins"
+        },
+        {
+          "line": 923,
+          "text": "    // when both exist — JSON is the write-back format, YAML is hand-written)."
+        },
+        {
+          "line": 924,
+          "text": "    const resolved = resolveConfigPath(path);"
+        },
+        {
+          "line": 925,
+          "text": "    if (!resolved) return;"
+        },
+        {
+          "line": 926,
+          "text": "    const data = parseConfigFile(resolved);"
+        },
+        {
+          "line": 927,
+          "text": "    if (data) this.sources.push({ name, priority, data });"
+        },
+        {
+          "line": 928,
+          "text": "  }"
+        },
+        {
+          "line": 929,
+          "text": ""
+        },
+        {
+          "line": 930,
+          "text": "  private deepMerge(): Record<string, unknown> {"
+        },
+        {
+          "line": 931,
+          "text": "    let result: Record<string, unknown> = {};"
+        },
+        {
+          "line": 932,
+          "text": "    for (const source of this.sources) {"
+        },
+        {
+          "line": 933,
+          "text": "      result = merge(result, source.data);"
+        },
+        {
+          "line": 934,
+          "text": "    }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/hooks/configured-tool-hooks.ts",
+      "bytes": 5392,
+      "sha256": "6ce05b375c7afefc51383308eeeb81522d16e3650fb3a228a3c2ed506e7aafac",
+      "totalLines": 150,
+      "selectedLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "import { lstatSync } from \"node:fs\";"
+        },
+        {
+          "line": 2,
+          "text": "import { join } from \"node:path\";"
+        },
+        {
+          "line": 3,
+          "text": "import type { SettingsManager } from \"../settings/manager.js\";"
+        },
+        {
+          "line": 4,
+          "text": "import { userHome, type SettingsScope } from \"../settings/manager.js\";"
+        },
+        {
+          "line": 5,
+          "text": "import { listPluginHooksForHost, matcherAccepts } from \"../plugins/loadPluginHooks.js\";"
+        },
+        {
+          "line": 6,
+          "text": "import type { PluginHookSource } from \"../plugins/loadPluginHooks.js\";"
+        },
+        {
+          "line": 7,
+          "text": "import type { SettingsHookOrigin } from \"../settings/hook-provenance.js\";"
+        },
+        {
+          "line": 8,
+          "text": "import { installedPluginsPath } from \"../plugins/installedPlugins.js\";"
+        },
+        {
+          "line": 9,
+          "text": "import { shellHookMatches } from \"./shell-runner.js\";"
+        },
+        {
+          "line": 10,
+          "text": "import type { HookEventName } from \"./events.js\";"
+        },
+        {
+          "line": 11,
+          "text": "import { sha256 } from \"../runtime/constrained-process/resources.js\";"
+        },
+        {
+          "line": 12,
+          "text": ""
+        },
+        {
+          "line": 13,
+          "text": "export const TOOL_HOOK_EVENTS = ["
+        },
+        {
+          "line": 14,
+          "text": "  \"pre_tool_use\","
+        },
+        {
+          "line": 15,
+          "text": "  \"on_permission_check\","
+        },
+        {
+          "line": 16,
+          "text": "  \"on_tool_start\","
+        },
+        {
+          "line": 17,
+          "text": "  \"on_tool_end\","
+        },
+        {
+          "line": 18,
+          "text": "  \"post_tool_use\","
+        },
+        {
+          "line": 19,
+          "text": "] as const satisfies readonly HookEventName[];"
+        },
+        {
+          "line": 20,
+          "text": ""
+        },
+        {
+          "line": 21,
+          "text": "export interface ConfiguredToolHook {"
+        },
+        {
+          "line": 22,
+          "text": "  id: string;"
+        },
+        {
+          "line": 23,
+          "text": "  event: HookEventName;"
+        },
+        {
+          "line": 24,
+          "text": "  protocol: \"settings\" | \"plugin\";"
+        },
+        {
+          "line": 25,
+          "text": "  priority: 50 | 80;"
+        },
+        {
+          "line": 26,
+          "text": "  command: string;"
+        },
+        {
+          "line": 27,
+          "text": "  timeoutMs: number;"
+        },
+        {
+          "line": 28,
+          "text": "  cwd?: string;"
+        },
+        {
+          "line": 29,
+          "text": "  pluginInstallPath?: string;"
+        },
+        {
+          "line": 30,
+          "text": "  source?: PluginHookSource | SettingsHookOrigin;"
+        },
+        {
+          "line": 31,
+          "text": "}"
+        },
+        {
+          "line": 32,
+          "text": ""
+        },
+        {
+          "line": 33,
+          "text": "function fileIdentity(path: string): unknown {"
+        },
+        {
+          "line": 34,
+          "text": "  try {"
+        },
+        {
+          "line": 35,
+          "text": "    const info = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 36,
+          "text": "    if (info.isSymbolicLink()) throw new Error(\"Hook authority cannot use a symlink\");"
+        },
+        {
+          "line": 37,
+          "text": "    // A configuration directory's unrelated state children are not policy."
+        },
+        {
+          "line": 38,
+          "text": "    // Pin traversal/replacement/permissions; the actual known config files"
+        },
+        {
+          "line": 39,
+          "text": "    // below retain their complete identity, including timestamps and size."
+        },
+        {
+          "line": 40,
+          "text": "    if (info.isDirectory()) return [path, info.dev, info.ino, info.mode].map(String);"
+        },
+        {
+          "line": 41,
+          "text": "    return [path, info.dev, info.ino, info.mode, info.size, info.mtimeNs, info.ctimeNs].map(String);"
+        },
+        {
+          "line": 42,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 43,
+          "text": "    if ((error as NodeJS.ErrnoException).code === \"ENOENT\") return [path, \"absent\"];"
+        },
+        {
+          "line": 44,
+          "text": "    throw error;"
+        },
+        {
+          "line": 45,
+          "text": "  }"
+        },
+        {
+          "line": 46,
+          "text": "}"
+        },
+        {
+          "line": 47,
+          "text": ""
+        },
+        {
+          "line": 48,
+          "text": "/**"
+        },
+        {
+          "line": 49,
+          "text": " * Selection only. Never borrows Engine handlers or runs commands. Preserve the"
+        },
+        {
+          "line": 50,
+          "text": " * existing settings/plugin matcher, disable, approval and priority contracts."
+        },
+        {
+          "line": 51,
+          "text": " */"
+        },
+        {
+          "line": 52,
+          "text": "export function prepareConfiguredToolHooks(options: {"
+        },
+        {
+          "line": 53,
+          "text": "  settings: SettingsManager;"
+        },
+        {
+          "line": 54,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 55,
+          "text": "  settingsScope: SettingsScope;"
+        },
+        {
+          "line": 56,
+          "text": "  disabledPlugins: string[];"
+        },
+        {
+          "line": 57,
+          "text": "  disabledPluginHooks: string[];"
+        },
+        {
+          "line": 58,
+          "text": "  toolName: string;"
+        },
+        {
+          "line": 59,
+          "text": "}) {"
+        },
+        {
+          "line": 60,
+          "text": "  const events = new Set<HookEventName>(TOOL_HOOK_EVENTS);"
+        },
+        {
+          "line": 61,
+          "text": "  const definitions = options.settings.get().hooks ?? [];"
+        },
+        {
+          "line": 62,
+          "text": "  const origins = options.settings.getHookOrigins();"
+        },
+        {
+          "line": 63,
+          "text": "  const plugins = listPluginHooksForHost(options.disabledPlugins);"
+        },
+        {
+          "line": 64,
+          "text": "  const descriptors: ConfiguredToolHook[] = [];"
+        },
+        {
+          "line": 65,
+          "text": "  for (const [index, hook] of definitions.entries()) {"
+        },
+        {
+          "line": 66,
+          "text": "    if ("
+        },
+        {
+          "line": 67,
+          "text": "      !hook.disabled &&"
+        },
+        {
+          "line": 68,
+          "text": "      events.has(hook.event as HookEventName) &&"
+        },
+        {
+          "line": 69,
+          "text": "      shellHookMatches(hook, {"
+        },
+        {
+          "line": 70,
+          "text": "        eventName: hook.event as HookEventName,"
+        },
+        {
+          "line": 71,
+          "text": "        data: { toolName: options.toolName },"
+        },
+        {
+          "line": 72,
+          "text": "      })"
+        },
+        {
+          "line": 73,
+          "text": "    )"
+        },
+        {
+          "line": 74,
+          "text": "      descriptors.push({"
+        },
+        {
+          "line": 75,
+          "text": "        id: `settings:${index}:${sha256(JSON.stringify(hook))}`,"
+        },
+        {
+          "line": 76,
+          "text": "        event: hook.event as HookEventName,"
+        },
+        {
+          "line": 77,
+          "text": "        protocol: \"settings\","
+        },
+        {
+          "line": 78,
+          "text": "        priority: 50,"
+        },
+        {
+          "line": 79,
+          "text": "        command: hook.command,"
+        },
+        {
+          "line": 80,
+          "text": "        timeoutMs: Math.min(hook.timeout_ms ?? 60000, 60000),"
+        },
+        {
+          "line": 81,
+          "text": "        ...(hook.cwd === undefined ? {} : { cwd: hook.cwd }),"
+        },
+        {
+          "line": 82,
+          "text": "        ...(origins[index] === undefined ? {} : { source: origins[index] }),"
+        },
+        {
+          "line": 83,
+          "text": "      });"
+        },
+        {
+          "line": 84,
+          "text": "  }"
+        },
+        {
+          "line": 85,
+          "text": "  for (const [index, hook] of plugins.entries()) {"
+        },
+        {
+          "line": 86,
+          "text": "    if ("
+        },
+        {
+          "line": 87,
+          "text": "      hook.disabled ||"
+        },
+        {
+          "line": 88,
+          "text": "      options.disabledPluginHooks.includes(hook.key) ||"
+        },
+        {
+          "line": 89,
+          "text": "      ![\"approved\", \"legacy\"].includes(hook.approval) ||"
+        },
+        {
+          "line": 90,
+          "text": "      !events.has(hook.event) ||"
+        },
+        {
+          "line": 91,
+          "text": "      !matcherAccepts(hook.event, hook.matcher, {"
+        },
+        {
+          "line": 92,
+          "text": "        eventName: hook.event,"
+        },
+        {
+          "line": 93,
+          "text": "        data: { toolName: options.toolName },"
+        },
+        {
+          "line": 94,
+          "text": "      })"
+        },
+        {
+          "line": 95,
+          "text": "    )"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/operation-reader.ts",
+      "bytes": 8855,
+      "sha256": "70e90c38ccae3a4e336adf45c7be582e63b405cba347428a16c372b3012f2c6f",
+      "totalLines": 227,
+      "selectedLineRanges": [
+        [
+          25,
+          60
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          25,
+          60
+        ]
+      ],
+      "lines": [
+        {
+          "line": 25,
+          "text": "/**"
+        },
+        {
+          "line": 26,
+          "text": " * A user-triggered Host read, independent of any Engine's transient run mode."
+        },
+        {
+          "line": 27,
+          "text": " * It composes current user rules, profile resolution and builtin controls. No"
+        },
+        {
+          "line": 28,
+          "text": " * Engine, model, Session mutation, arbitrary action or approval bypass exists."
+        },
+        {
+          "line": 29,
+          "text": " */"
+        },
+        {
+          "line": 30,
+          "text": "export function createGithubOperationReader(options: {"
+        },
+        {
+          "line": 31,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 32,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 33,
+          "text": "  sessionProfile?: string;"
+        },
+        {
+          "line": 34,
+          "text": "  /** Trusted Host settings authority, including current global deny rules. */"
+        },
+        {
+          "line": 35,
+          "text": "  settingsScope: SettingsScope;"
+        },
+        {
+          "line": 36,
+          "text": "  /** Intersection with the proven original credential scope. */"
+        },
+        {
+          "line": 37,
+          "text": "  credentialScope?: SettingsScope;"
+        },
+        {
+          "line": 38,
+          "text": "  assertAuthorized(): void;"
+        },
+        {
+          "line": 39,
+          "text": "  approveRead(action: GithubReconcileRead, target: string): Promise<boolean>;"
+        },
+        {
+          "line": 40,
+          "text": "  signal: AbortSignal;"
+        },
+        {
+          "line": 41,
+          "text": "  hooks?: HookRegistry;"
+        },
+        {
+          "line": 42,
+          "text": "  /** Trusted native Host custody only; never supplied by model/renderer input. */"
+        },
+        {
+          "line": 43,
+          "text": "  hookProcesses?: OperationHookProcesses;"
+        },
+        {
+          "line": 44,
+          "text": "}) {"
+        },
+        {
+          "line": 45,
+          "text": "  const policy = () => {"
+        },
+        {
+          "line": 46,
+          "text": "    const settings = new SettingsManager(options.cwd, options.settingsScope, true);"
+        },
+        {
+          "line": 47,
+          "text": "    settings.load(undefined, { persistMigrations: false, hookOrigins: true });"
+        },
+        {
+          "line": 48,
+          "text": "    const profile = resolveRunProfileState({"
+        },
+        {
+          "line": 49,
+          "text": "      sessionWorkspaceProfile: options.sessionProfile,"
+        },
+        {
+          "line": 50,
+          "text": "      cwd: options.cwd,"
+        },
+        {
+          "line": 51,
+          "text": "      settings,"
+        },
+        {
+          "line": 52,
+          "text": "    });"
+        },
+        {
+          "line": 53,
+          "text": "    const builtinLists = effectiveBuiltinLists("
+        },
+        {
+          "line": 54,
+          "text": "      settings.get().agent.enabledBuiltinTools ?? [],"
+        },
+        {
+          "line": 55,
+          "text": "      settings.get().agent.disabledBuiltinTools ?? [],"
+        },
+        {
+          "line": 56,
+          "text": "      effectiveProjectOverrides(settings, options.cwd, profile.sessionProfileOverrides)?.builtin,"
+        },
+        {
+          "line": 57,
+          "text": "    );"
+        },
+        {
+          "line": 58,
+          "text": "    const disabled = builtinLists.disabledBuiltinTools.includes(\"LinkAction\");"
+        },
+        {
+          "line": 59,
+          "text": "    const disabledLists = computeEffectiveDisabledLists("
+        },
+        {
+          "line": 60,
+          "text": "      settings,"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-host.ts",
+      "bytes": 8479,
+      "sha256": "fb6ea16d81e31e137730974e32b556c251315181f5dca734fc5283d36b4b1aa2",
+      "totalLines": 215,
+      "selectedLineRanges": [
+        [
+          140,
+          180
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          140,
+          180
+        ]
+      ],
+      "lines": [
+        {
+          "line": 140,
+          "text": "            }"
+        },
+        {
+          "line": 141,
+          "text": "          const plan = match(hook, context);"
+        },
+        {
+          "line": 142,
+          "text": "          if ("
+        },
+        {
+          "line": 143,
+          "text": "            !plan ||"
+        },
+        {
+          "line": 144,
+          "text": "            (plan !== \"inline\" &&"
+        },
+        {
+          "line": 145,
+          "text": "              (cache.get(plan) === \"invalid\" ||"
+        },
+        {
+          "line": 146,
+          "text": "                (typeof cache.get(plan) === \"object\" &&"
+        },
+        {
+          "line": 147,
+          "text": "                  (cache.get(plan) as CapturedPlan).state === \"invalid\")))"
+        },
+        {
+          "line": 148,
+          "text": "          )"
+        },
+        {
+          "line": 149,
+          "text": "            throw new Error(\"Configured Hook plan unavailable\");"
+        },
+        {
+          "line": 150,
+          "text": "        }"
+        },
+        {
+          "line": 151,
+          "text": "      },"
+        },
+        {
+          "line": 152,
+          "text": "      resolveClosure(hook, context) {"
+        },
+        {
+          "line": 153,
+          "text": "        const plan = match(hook, context);"
+        },
+        {
+          "line": 154,
+          "text": "        if (!plan) return undefined;"
+        },
+        {
+          "line": 155,
+          "text": "        if (plan === \"inline\") return {};"
+        },
+        {
+          "line": 156,
+          "text": "        let record = cache.get(plan);"
+        },
+        {
+          "line": 157,
+          "text": "        if (record === \"invalid\" || record === \"capturing\")"
+        },
+        {
+          "line": 158,
+          "text": "          throw new Error(\"Hook plan custody unavailable\");"
+        },
+        {
+          "line": 159,
+          "text": "        if (!record) {"
+        },
+        {
+          "line": 160,
+          "text": "          cache.set(plan, \"capturing\");"
+        },
+        {
+          "line": 161,
+          "text": "          try {"
+        },
+        {
+          "line": 162,
+          "text": "            const assertSourceCustody = createHookSourceCustody(hook);"
+        },
+        {
+          "line": 163,
+          "text": "            const assertCustody = () => {"
+        },
+        {
+          "line": 164,
+          "text": "              assertNativeState();"
+        },
+        {
+          "line": 165,
+          "text": "              assertSourceCustody();"
+        },
+        {
+          "line": 166,
+          "text": "            };"
+        },
+        {
+          "line": 167,
+          "text": "            const grants = plan.files.map((file) => {"
+        },
+        {
+          "line": 168,
+          "text": "              const path ="
+        },
+        {
+          "line": 169,
+          "text": "                plan.source.kind === \"plugin\""
+        },
+        {
+          "line": 170,
+          "text": "                  ? join(plan.source.installPath, file.source)"
+        },
+        {
+          "line": 171,
+          "text": "                  : file.source;"
+        },
+        {
+          "line": 172,
+          "text": "              if (!credentialPolicy) throw new Error(\"Native Hook state custody unavailable\");"
+        },
+        {
+          "line": 173,
+          "text": "              assertHookResourceNotCredential(path, credentialPolicy);"
+        },
+        {
+          "line": 174,
+          "text": "              if (resolve(path) !== path || realpathSync(path) !== path)"
+        },
+        {
+          "line": 175,
+          "text": "                throw new Error(\"Hook resource path is not canonical\");"
+        },
+        {
+          "line": 176,
+          "text": "              return {"
+        },
+        {
+          "line": 177,
+          "text": "                path,"
+        },
+        {
+          "line": 178,
+          "text": "                name: file.name,"
+        },
+        {
+          "line": 179,
+          "text": "                expectedBytes: file.bytes,"
+        },
+        {
+          "line": 180,
+          "text": "                expectedSha256: file.sha256,"
+        }
+      ]
+    }
+  ]
+}

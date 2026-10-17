@@ -1,0 +1,15 @@
+2: import { readdir } from "node:fs/promises";
+4: import { PANEL_APP_MANIFEST_FILE } from "./manifest.js";
+7: export const MAX_PANEL_DISCOVERY_DEPTH = 4;
+8: export const MAX_PANEL_DISCOVERY_DIRECTORIES = 512;
+9: const MAX_PANEL_DISCOVERY_RESULTS = 16;
+17:   const pending = [{ directory, depth: 0 }];
+18:   let visited = 0;
+21:     visited < MAX_PANEL_DISCOVERY_DIRECTORIES &&
+22:     found.length < MAX_PANEL_DISCOVERY_RESULTS
+25:     visited += 1;
+30:     if (current.depth >= MAX_PANEL_DISCOVERY_DEPTH) continue;
+31:     const entries = await readdir(current.directory, { withFileTypes: true });
+33:       if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") {
+36:       if (pending.length + visited >= MAX_PANEL_DISCOVERY_DIRECTORIES) {
+41:       pending.push({ directory: join(current.directory, entry.name), depth: current.depth + 1 });

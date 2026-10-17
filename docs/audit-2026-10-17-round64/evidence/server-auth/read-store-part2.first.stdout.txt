@@ -1,0 +1,207 @@
+209:     ) {
+210:       throw new HubAuthError(401, "Invalid initialization token");
+211:     }
+212:   }
+213: 
+214:   private grant(record: AuthRecord, deviceName: string, replaceToken?: string): HubSessionGrant {
+215:     const now = this.now();
+216:     const replacedHash =
+217:       replaceToken && TOKEN_PATTERN.test(replaceToken) ? hashToken(replaceToken) : null;
+218:     const revokedSessionIds: string[] = [];
+219:     record.sessions = record.sessions.filter((row) => {
+220:       const remove =
+221:         row.expiresAt <= now ||
+222:         (replacedHash !== null && safeHashEqual(row.tokenHash, replacedHash));
+223:       if (remove) revokedSessionIds.push(row.id);
+224:       return !remove;
+225:     });
+226:     if (record.sessions.length >= this.maxSessions) {
+227:       record.sessions.sort((a, b) => a.lastSeenAt - b.lastSeenAt);
+228:       revokedSessionIds.push(record.sessions.shift()!.id);
+229:     }
+230:     const token = randomToken();
+231:     const session: SessionRecord = {
+232:       id: randomUUID(),
+233:       deviceName,
+234:       tokenHash: hashToken(token),
+235:       createdAt: now,
+236:       lastSeenAt: now,
+237:       expiresAt: now + this.sessionTtlMs,
+238:     };
+239:     record.sessions.push(session);
+240:     return { token, session: this.toPublic(record, session), revokedSessionIds };
+241:   }
+242: 
+243:   private toPublic(record: AuthRecord, session: SessionRecord): HubSession {
+244:     return {
+245:       id: session.id,
+246:       username: record.account!.username,
+247:       deviceName: session.deviceName,
+248:       createdAt: session.createdAt,
+249:       lastSeenAt: session.lastSeenAt,
+250:       expiresAt: session.expiresAt,
+251:     };
+252:   }
+253: 
+254:   private mutate<R>(mutation: (record: AuthRecord) => { result: R; changed: boolean }): R {
+255:     this.ensureDirectory();
+256:     const release = acquireFileLock(this.filePath);
+257:     try {
+258:       const record = this.read()!;
+259:       const { result, changed } = mutation(record);
+260:       if (changed) this.write(record);
+261:       return result;
+262:     } finally {
+263:       release();
+264:     }
+265:   }
+266: 
+267:   private ensureDirectory(): void {
+268:     const parent = dirname(this.filePath);
+269:     mkdirSync(parent, { recursive: true, mode: 0o700 });
+270:     const metadata = lstatSync(parent);
+271:     if (!metadata.isDirectory() || metadata.isSymbolicLink())
+272:       throw new Error("Invalid Hub auth directory");
+273:     chmodSync(parent, 0o700);
+274:   }
+275: 
+276:   private read(allowMissing = false): AuthRecord | undefined {
+277:     let descriptor: number | undefined;
+278:     try {
+279:       const metadata = lstatSync(this.filePath);
+280:       if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > MAX_STORE_BYTES) {
+281:         throw new Error("Invalid Hub auth file");
+282:       }
+283:       descriptor = openSync(this.filePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+284:       const opened = fstatSync(descriptor);
+285:       if (!opened.isFile() || opened.size > MAX_STORE_BYTES)
+286:         throw new Error("Invalid Hub auth file");
+287:       const record: unknown = JSON.parse(readFileSync(descriptor, "utf8"));
+288:       if (!isAuthRecord(record)) throw new Error("Invalid Hub auth record");
+289:       return record;
+290:     } catch (error) {
+291:       if (allowMissing && (error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+292:       // A malformed or missing established store must never reopen bootstrap.
+293:       throw new Error("Hub authentication store is unavailable or corrupt", { cause: error });
+294:     } finally {
+295:       if (descriptor !== undefined) closeSync(descriptor);
+296:     }
+297:   }
+298: 
+299:   private write(record: AuthRecord): void {
+300:     const serialized = JSON.stringify(record, null, 2);
+301:     if (Buffer.byteLength(serialized) > MAX_STORE_BYTES)
+302:       throw new Error("Hub auth store limit exceeded");
+303:     const temp = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
+304:     try {
+305:       writeFileSync(temp, serialized, { encoding: "utf8", flag: "wx", mode: 0o600 });
+306:       renameSync(temp, this.filePath);
+307:     } finally {
+308:       rmSync(temp, { force: true });
+309:     }
+310:   }
+311: }
+312: 
+313: function validateLoginInput(input: HubLoginInput): { username: string; deviceName: string } {
+314:   if (
+315:     !isLabel(input.username, 64) ||
+316:     typeof input.password !== "string" ||
+317:     input.password.length < 12 ||
+318:     input.password.length > 256
+319:   ) {
+320:     throw new HubAuthError(
+321:       400,
+322:       "Use a username of 1–64 characters and a password of 12–256 characters",
+323:     );
+324:   }
+325:   if (input.deviceName !== undefined && !isLabel(input.deviceName, 100)) {
+326:     throw new HubAuthError(400, "Device name must contain 1–100 characters");
+327:   }
+328:   return { username: input.username.trim(), deviceName: input.deviceName?.trim() ?? "Browser" };
+329: }
+330: 
+331: function randomToken(): string {
+332:   return randomBytes(32).toString("base64url");
+333: }
+334: 
+335: function hashToken(token: string): string {
+336:   return createHash("sha256").update(token).digest("hex");
+337: }
+338: 
+339: function safeHashEqual(a: string, b: string): boolean {
+340:   return (
+341:     HASH_PATTERN.test(a) &&
+342:     HASH_PATTERN.test(b) &&
+343:     timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"))
+344:   );
+345: }
+346: 
+347: function hashPassword(password: string, salt: string): Promise<string> {
+348:   return new Promise((resolve, reject) => {
+349:     scrypt(password, salt, 32, SCRYPT_OPTIONS, (error, key) => {
+350:       if (error) reject(error);
+351:       else resolve(key.toString("hex"));
+352:     });
+353:   });
+354: }
+355: 
+356: function isLabel(value: unknown, max: number): value is string {
+357:   return (
+358:     typeof value === "string" &&
+359:     value.trim().length > 0 &&
+360:     value.length <= max &&
+361:     !/[\u0000-\u001f\u007f]/.test(value)
+362:   );
+363: }
+364: 
+365: function isTimestamp(value: unknown): value is number {
+366:   return Number.isSafeInteger(value) && (value as number) >= 0;
+367: }
+368: 
+369: function isAuthRecord(value: any): value is AuthRecord {
+370:   if (
+371:     !value ||
+372:     value.version !== 1 ||
+373:     !Array.isArray(value.sessions) ||
+374:     value.sessions.length > MAX_SESSIONS
+375:   )
+376:     return false;
+377:   if (value.account === null) {
+378:     return (
+379:       typeof value.bootstrapTokenHash === "string" &&
+380:       HASH_PATTERN.test(value.bootstrapTokenHash) &&
+381:       value.sessions.length === 0
+382:     );
+383:   }
+384:   const account = value.account;
+385:   if (
+386:     !account ||
+387:     value.bootstrapTokenHash !== null ||
+388:     !isLabel(account.username, 64) ||
+389:     !HASH_PATTERN.test(account.passwordHash) ||
+390:     !/^[a-f0-9]{32}$/.test(account.passwordSalt) ||
+391:     !isTimestamp(account.createdAt)
+392:   )
+393:     return false;
+394:   const ids = new Set<string>();
+395:   const hashes = new Set<string>();
+396:   return value.sessions.every((session: any) => {
+397:     if (
+398:       !session ||
+399:       !/^[a-f0-9-]{36}$/.test(session.id) ||
+400:       !isLabel(session.deviceName, 100) ||
+401:       !HASH_PATTERN.test(session.tokenHash) ||
+402:       !isTimestamp(session.createdAt) ||
+403:       !isTimestamp(session.lastSeenAt) ||
+404:       !isTimestamp(session.expiresAt) ||
+405:       session.expiresAt <= session.createdAt ||
+406:       session.lastSeenAt < session.createdAt ||
+407:       ids.has(session.id) ||
+408:       hashes.has(session.tokenHash)
+409:     )
+410:       return false;
+411:     ids.add(session.id);
+412:     hashes.add(session.tokenHash);
+413:     return true;
+414:   });
+415: }

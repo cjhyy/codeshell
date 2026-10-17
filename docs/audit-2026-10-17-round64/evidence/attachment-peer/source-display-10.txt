@@ -1,0 +1,26 @@
+928:     mime?: string;
+929:     dataUrl: string;
+930:     origin: InputAttachmentOrigin;
+931:     quickChatClaimId?: string;
+932:   }) =>
+933:     ipcRenderer.invoke("attachments:stageImageDataUrl", payload) as Promise<InputAttachmentMeta>,
+934:   cleanupAttachments: (payload: { cwd: string; sessionId?: string; now?: number }) =>
+935:     ipcRenderer.invoke("attachments:cleanup", payload) as Promise<{
+936:       removed: string[];
+937:       sessionsRemoved: string[];
+938:     }>,
+939:   inspectAttachments: (payload: { cwd: string; sessionId?: string }) =>
+940:     ipcRenderer.invoke("attachments:inspect", payload) as Promise<InputAttachmentMeta[]>,
+941:   markAttachmentsSent: (payload: {
+942:     cwd: string;
+943:     sessionId: string;
+944:     attachments: InputAttachmentMeta[];
+945:     quickChatClaimId?: string;
+946:   }) => ipcRenderer.invoke("attachments:markSent", payload) as Promise<{ ok: true }>,
+947:   /**
+948:    * Save an image (data: URL) to a user-chosen location via a save dialog.
+949:    * Returns the saved path, or null if the user cancelled.
+950:    */
+951:   saveImage: (src: string, opts?: { name?: string; mime?: string }) =>
+952:     ipcRenderer.invoke("images:save", src, opts) as Promise<string | null>,
+953:   undoFiles: (cwd: string, paths: string[]) => ipcRenderer.invoke("files:undo", cwd, paths),

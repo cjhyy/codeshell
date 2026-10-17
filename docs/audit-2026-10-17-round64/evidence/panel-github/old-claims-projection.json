@@ -1,0 +1,1063 @@
+[
+  {
+    "path": "packages/core/src/panel-apps/github-manifest.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-manifest.ts"
+    ],
+    "origin": "list-scalar",
+    "provenance": [
+      {
+        "historyRow": 198,
+        "jsonPointer": "/source_inventory/396"
+      },
+      {
+        "historyRow": 1119,
+        "jsonPointer": "/files/471"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/final/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/final/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3193,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/final/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3202,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/415"
+      },
+      {
+        "historyRow": 3212,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/415"
+      }
+    ],
+    "claimId": "C003365"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-manifest.ts",
+    "sourceHashFields": {
+      "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-manifest.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1350,
+        "jsonPointer": "/files/792"
+      }
+    ],
+    "claimId": "C003366"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-ref.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-ref.ts"
+    ],
+    "origin": "list-scalar",
+    "provenance": [
+      {
+        "historyRow": 198,
+        "jsonPointer": "/source_inventory/397"
+      },
+      {
+        "historyRow": 1119,
+        "jsonPointer": "/files/473"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/final/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/final/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3193,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/final/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3202,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/416"
+      },
+      {
+        "historyRow": 3212,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/416"
+      }
+    ],
+    "claimId": "C003369"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-ref.ts",
+    "sourceHashFields": {
+      "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-ref.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1350,
+        "jsonPointer": "/files/794"
+      }
+    ],
+    "claimId": "C003370"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-request.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-request.ts"
+    ],
+    "origin": "list-scalar",
+    "provenance": [
+      {
+        "historyRow": 198,
+        "jsonPointer": "/source_inventory/398"
+      },
+      {
+        "historyRow": 1119,
+        "jsonPointer": "/files/450"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/final/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/final/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3193,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/final/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3202,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/144"
+      },
+      {
+        "historyRow": 3212,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/144"
+      }
+    ],
+    "claimId": "C003371"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-request.ts",
+    "sourceHashFields": {
+      "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-request.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1349,
+        "jsonPointer": "/rankedCandidates/9"
+      },
+      {
+        "historyRow": 1350,
+        "jsonPointer": "/files/795"
+      }
+    ],
+    "claimId": "C003372"
+  },
+  {
+    "path": "packages/core/src/panel-apps/github-request.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/github-archive.ts",
+      "packages/core/src/panel-apps/github-request.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 2790,
+        "jsonPointer": "/relativeImports/300"
+      },
+      {
+        "historyRow": 2791,
+        "jsonPointer": "/relativeImports/128"
+      }
+    ],
+    "claimId": "C003373"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "explicit-nonsemantic-or-hash-only",
+    "scopeFields": {
+      "coverage": "selected-incidental"
+    },
+    "rangeFields": {
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ]
+    },
+    "rangeBoundsValidForCurrent": true,
+    "roleBoundaryFields": {
+      "purpose": "source navigation disclosed URL normalizer text; no authority/network audit or invocation",
+      "initialBeforeSemanticRead": true
+    },
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1924,
+        "jsonPointer": "/files/10"
+      }
+    ],
+    "claimId": "C003461"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "explicit-nonsemantic-or-hash-only",
+    "scopeFields": {
+      "coverage": "selected-incidental"
+    },
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1939,
+        "jsonPointer": "/checks/10"
+      }
+    ],
+    "claimId": "C003462"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "explicit-nonsemantic-or-hash-only",
+    "scopeFields": {
+      "coverage": "selected-incidental"
+    },
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1944,
+        "jsonPointer": "/navigationChecks/0"
+      }
+    ],
+    "claimId": "C003463"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "list-scalar",
+    "provenance": [
+      {
+        "historyRow": 198,
+        "jsonPointer": "/source_inventory/408"
+      },
+      {
+        "historyRow": 1119,
+        "jsonPointer": "/files/472"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/final/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/final/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3193,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/final/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3202,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/145"
+      },
+      {
+        "historyRow": 3212,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/145"
+      }
+    ],
+    "claimId": "C003464"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1350,
+        "jsonPointer": "/files/812"
+      }
+    ],
+    "claimId": "C003465"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {
+      "purpose": "before selected ordinary DTO / list producer mapping read; authority implementation excluded"
+    },
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1922,
+        "jsonPointer": "/files/0"
+      },
+      {
+        "historyRow": 1924,
+        "jsonPointer": "/files/10/initialFilesystemPin"
+      }
+    ],
+    "claimId": "C003466"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "currentSha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "mainSha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1944,
+        "jsonPointer": "/files/8"
+      }
+    ],
+    "claimId": "C003467"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/installer.ts",
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 2790,
+        "jsonPointer": "/relativeImports/289"
+      },
+      {
+        "historyRow": 2791,
+        "jsonPointer": "/relativeImports/117"
+      }
+    ],
+    "claimId": "C003468"
+  },
+  {
+    "path": "packages/core/src/panel-apps/source.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/paths.ts",
+      "packages/core/src/panel-apps/source.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 2790,
+        "jsonPointer": "/relativeImports/298"
+      },
+      {
+        "historyRow": 2791,
+        "jsonPointer": "/relativeImports/126"
+      }
+    ],
+    "claimId": "C003469"
+  },
+  {
+    "path": "packages/core/src/panel-apps/update-check.ts",
+    "sourceHashFields": {},
+    "hashBinding": "no-same-object-sha",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/update-check.ts"
+    ],
+    "origin": "list-scalar",
+    "provenance": [
+      {
+        "historyRow": 198,
+        "jsonPointer": "/source_inventory/409"
+      },
+      {
+        "historyRow": 1119,
+        "jsonPointer": "/files/466"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3125,
+        "jsonPointer": "/final/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3135,
+        "jsonPointer": "/final/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3193,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3196,
+        "jsonPointer": "/final/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3202,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3209,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/414"
+      },
+      {
+        "historyRow": 3212,
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/414"
+      }
+    ],
+    "claimId": "C003472"
+  },
+  {
+    "path": "packages/core/src/panel-apps/update-check.ts",
+    "sourceHashFields": {
+      "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b"
+    },
+    "hashBinding": "current-same-object",
+    "coverageKind": "incidental-path-or-pin-object",
+    "scopeFields": {},
+    "rangeFields": {},
+    "rangeBoundsValidForCurrent": false,
+    "roleBoundaryFields": {},
+    "sourcePathIncludesLocator": false,
+    "directSourcePathsInObject": [
+      "packages/core/src/panel-apps/update-check.ts"
+    ],
+    "origin": "object-scalar-field",
+    "provenance": [
+      {
+        "historyRow": 1350,
+        "jsonPointer": "/files/814"
+      }
+    ],
+    "claimId": "C003473"
+  }
+]

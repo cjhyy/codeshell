@@ -1,0 +1,153 @@
+ACTUAL AUTH TEST FILENAMES ['packages/server/src/hub/auth-http.test.ts', 'packages/server/src/hub/auth-store.test.ts']
+
+NAV 0
+36:import { createHubAuth } from "../hub/auth-http.js";
+100:  /** Session revocation/expiry sweep interval; defaults to 5 seconds. */
+105:  /** Test/host tuning; production defaults to a 5-second sweep. */
+192:      ? await createHubAuth({
+195:          onRevoke: (sessionId) => {
+278:        leases.sweep();
+279:        void uploads?.sweep().catch(() => {});
+681:        owner: async (req) => (await hubAuth.authenticate(req))?.id ?? null,
+687:        ownerId: async (req) => (await hubAuth.authenticate(req))?.id,
+782:      if (await hubAuth.handle(req, res)) return;
+784:        const session = await hubAuth.authenticate(req);
+789:        if (!hubAuth.isOriginAllowed(req)) {
+817:            async () => !!(await hubAuth.authenticate(req)),
+842:    const session = hubAuth ? await hubAuth.authenticate(req) : undefined;
+844:      ? !!session && hubAuth.isOriginAllowed(req)
+880:        if (hubAuth && !(await hubAuth.authenticate(req))) {
+1115:            if (ws.readyState !== ws.OPEN || !(await hubAuth.authenticate(req))) return;
+1419:    ...(hubAuth?.bootstrapToken ? { bootstrapToken: hubAuth.bootstrapToken } : {}),
+
+
+NAV 1
+packages/web/app/AuthGate.tsx:18:  | "setup"
+packages/web/app/AuthGate.tsx:19:  | "login"
+packages/web/app/AuthGate.tsx:20:  | "cloud-login"
+packages/web/app/AuthGate.tsx:31:export function AuthGate({ setupToken }: { setupToken: string }) {
+packages/web/app/AuthGate.tsx:37:  const [password, setPassword] = React.useState("");
+packages/web/app/AuthGate.tsx:38:  const [deviceName, setDeviceName] = React.useState("");
+packages/web/app/AuthGate.tsx:39:  const [token, setToken] = React.useState(setupToken);
+packages/web/app/AuthGate.tsx:42:  const [logoutError, setLogoutError] = React.useState("");
+packages/web/app/AuthGate.tsx:43:  const logoutPending = React.useRef(false);
+packages/web/app/AuthGate.tsx:44:  const loginPending = React.useRef(false);
+packages/web/app/AuthGate.tsx:54:  const acceptStatus = React.useCallback((status: AuthStatus | null) => {
+packages/web/app/AuthGate.tsx:57:      status === null
+packages/web/app/AuthGate.tsx:59:        : status.authenticated
+packages/web/app/AuthGate.tsx:60:          ? sessionKey(status.session, status.cloudSession)
+packages/web/app/AuthGate.tsx:66:    cloudModeRef.current = status?.mode === "cloud-account";
+packages/web/app/AuthGate.tsx:68:    setCloudSession(status?.cloudSession);
+packages/web/app/AuthGate.tsx:69:    setSession(status?.session);
+packages/web/app/AuthGate.tsx:71:      status === null
+packages/web/app/AuthGate.tsx:73:        : status.mode === "cloud-account"
+packages/web/app/AuthGate.tsx:74:          ? status.authenticated
+packages/web/app/AuthGate.tsx:76:            : "cloud-login"
+packages/web/app/AuthGate.tsx:77:          : !status.initialized
+packages/web/app/AuthGate.tsx:78:            ? "setup"
+packages/web/app/AuthGate.tsx:79:            : status.authenticated
+packages/web/app/AuthGate.tsx:81:              : "login",
+packages/web/app/AuthGate.tsx:85:    if (status?.initialized) setToken("");
+packages/web/app/AuthGate.tsx:95:    setState(cloudModeRef.current ? "cloud-login" : "login");
+packages/web/app/AuthGate.tsx:104:  // A closed dialog may still finish a request for this login. It must remain
+packages/web/app/AuthGate.tsx:105:  // effective within that identity, but cannot revoke a later login's view.
+packages/web/app/AuthGate.tsx:114:    // Focus/visibility refreshes are read-only. They cannot supersede a user's
+packages/web/app/AuthGate.tsx:115:    // pending login/setup POST before its cookie and identity arrive.
+packages/web/app/AuthGate.tsx:116:    if (logoutPending.current || loginPending.current) return;
+packages/web/app/AuthGate.tsx:117:    const revision = ++authRevision.current;
+packages/web/app/AuthGate.tsx:119:      const status = await readAuthStatus();
+packages/web/app/AuthGate.tsx:123:        revision === authRevision.current &&
+packages/web/app/AuthGate.tsx:125:        status?.mode !== "cloud-account"
+packages/web/app/AuthGate.tsx:130:      if (revision === authRevision.current) acceptStatus(status);
+packages/web/app/AuthGate.tsx:132:      if (!mounted.current || revision !== authRevision.current) return;
+packages/web/app/AuthGate.tsx:135:        ((cause instanceof ApiError && cause.status === 401) ||
+packages/web/app/AuthGate.tsx:170:  const logoutCloud = async () => {
+packages/web/app/AuthGate.tsx:171:    if (logoutPending.current || !cloudModeRef.current) return;
+packages/web/app/AuthGate.tsx:172:    logoutPending.current = true;
+packages/web/app/AuthGate.tsx:173:    const revision = ++authRevision.current;
+packages/web/app/AuthGate.tsx:177:      const result = await post<{ revoked?: boolean }>("/api/v1/auth/logout");
+packages/web/app/AuthGate.tsx:178:      if (!mounted.current || revision !== authRevision.current) return;
+packages/web/app/AuthGate.tsx:183:      if (!mounted.current || revision !== authRevision.current) return;
+packages/web/app/AuthGate.tsx:184:      if (cause instanceof ApiError && cause.status === 401) authLost();
+packages/web/app/AuthGate.tsx:187:      logoutPending.current = false;
+packages/web/app/AuthGate.tsx:192:  const submit = async (event: React.FormEvent) => {
+packages/web/app/AuthGate.tsx:194:    if (busy || loginPending.current || cloudModeRef.current) return;
+packages/web/app/AuthGate.tsx:195:    loginPending.current = true;
+packages/web/app/AuthGate.tsx:196:    const revision = ++authRevision.current;
+packages/web/app/AuthGate.tsx:201:        `/api/v1/auth/${state === "setup" ? "setup" : "login"}`,
+packages/web/app/AuthGate.tsx:204:          password,
+packages/web/app/AuthGate.tsx:205:          deviceName: deviceName.trim() || undefined,
+packages/web/app/AuthGate.tsx:206:          ...(state === "setup" ? { token: token.trim() } : {}),
+packages/web/app/AuthGate.tsx:209:      if (!mounted.current || revision !== authRevision.current) return;
+packages/web/app/AuthGate.tsx:215:      if (!mounted.current || revision !== authRevision.current) return;
+packages/web/app/AuthGate.tsx:217:      if (cause instanceof ApiError && cause.status === 409) {
+packages/web/app/AuthGate.tsx:218:        loginPending.current = false;
+packages/web/app/AuthGate.tsx:222:      loginPending.current = false;
+packages/web/app/AuthGate.tsx:223:      if (mounted.current && revision === authRevision.current) setBusy(false);
+packages/web/app/AuthGate.tsx:231:          error: logoutError,
+packages/web/app/AuthGate.tsx:232:          onLogout: () => void logoutCloud(),
+packages/web/app/AuthGate.tsx:268:        {state === "checking" ? <p role="status">正在连接你的工作空间…</p> : null}
+packages/web/app/AuthGate.tsx:279:        {state === "cloud-login" ? (
+packages/web/app/AuthGate.tsx:283:            {error ? <p role="status">{error}</p> : null}
+packages/web/app/AuthGate.tsx:289:        {state === "setup" || state === "login" ? (
+packages/web/app/AuthGate.tsx:290:          <form onSubmit={(event) => void submit(event)}>
+packages/web/app/AuthGate.tsx:291:            <h1>{state === "setup" ? "创建管理员账号" : "登录工作空间"}</h1>
+packages/web/app/AuthGate.tsx:293:              {state === "setup"
+packages/web/app/AuthGate.tsx:297:            {state === "setup" ? (
+packages/web/app/AuthGate.tsx:301:                  type="password"
+packages/web/app/AuthGate.tsx:322:                type="password"
+packages/web/app/AuthGate.tsx:323:                autoComplete={state === "setup" ? "new-password" : "current-password"}
+packages/web/app/AuthGate.tsx:326:                minLength={state === "setup" ? 12 : undefined}
+packages/web/app/AuthGate.tsx:327:                value={password}
+packages/web/app/AuthGate.tsx:331:            {state === "setup" ? <small>密码至少 12 个字符。</small> : null}
+packages/web/app/AuthGate.tsx:338:                value={deviceName}
+packages/web/app/AuthGate.tsx:347:            <button className="send" type="submit" disabled={busy}>
+packages/web/app/AuthGate.tsx:348:              {busy ? "正在连接…" : state === "setup" ? "创建并进入" : "登录"}
+packages/web/app/auth.ts:14:  deviceName: string;
+packages/web/app/auth.ts:26:/** Public scoped identity only; it is never a Hub login or a bearer credential. */
+packages/web/app/auth.ts:40:  deviceName: string;
+packages/web/app/auth.ts:58:    readonly status: number,
+packages/web/app/auth.ts:87:  const response = await fetch(
+packages/web/app/auth.ts:99:      error ?? body.message ?? `请求失败（${response.status}）`,
+packages/web/app/auth.ts:100:      response.status,
+packages/web/app/auth.ts:133:    const status = await api<Record<string, unknown>>("/api/v1/auth/status");
+packages/web/app/auth.ts:136:      !status ||
+packages/web/app/auth.ts:137:      typeof status.initialized !== "boolean" ||
+packages/web/app/auth.ts:138:      typeof status.authenticated !== "boolean" ||
+packages/web/app/auth.ts:139:      (status.mode !== undefined && status.mode !== "cloud-account")
+packages/web/app/auth.ts:142:    if (status.mode === "cloud-account") {
+packages/web/app/auth.ts:143:      if (!status.initialized || (!status.authenticated && status.session !== undefined))
+packages/web/app/auth.ts:146:      if (status.authenticated) {
+packages/web/app/auth.ts:147:        const value = status.session as Record<string, unknown> | undefined;
+packages/web/app/auth.ts:156:              !url.password &&
+packages/web/app/auth.ts:192:        authenticated: status.authenticated,
+packages/web/app/auth.ts:198:      initialized: status.initialized,
+packages/web/app/auth.ts:199:      authenticated: status.authenticated,
+packages/web/app/auth.ts:200:      ...(status.host === "hub" || status.host === "desktop" ? { host: status.host } : {}),
+packages/web/app/auth.ts:201:      ...(status.session ? { session: status.session as AuthSession } : {}),
+packages/web/app/auth.ts:204:    if (error instanceof ApiError && error.status === 404) return null;
+packages/web/app/auth.ts:215:  const token = fragment.get("setup") ?? "";
+packages/web/app/auth.ts:216:  if (fragment.has("setup")) {
+packages/web/app/auth.ts:217:    fragment.delete("setup");
+
+
+NAV 2
+packages/server/src/hub/auth-store.test.ts:20:describe("HubAuthStore", () => {
+packages/server/src/hub/auth-store.test.ts:21:  test("bootstrap survives restart, is disclosed once, and cannot be reused", async () => {
+packages/server/src/hub/auth-store.test.ts:48:  test("concurrent setup has exactly one winner and concurrent logins preserve sessions", async () => {
+packages/server/src/hub/auth-store.test.ts:65:  test("login rotates the presented session, revocation is immediate across instances, and expiry is fixed", async () => {
+packages/server/src/hub/auth-store.test.ts:85:  test("bounds persistent sessions and revokes the oldest when issuing beyond the limit", async () => {
+packages/server/src/hub/auth-store.test.ts:98:  test("rejects bad credentials and weak or malformed input", async () => {
+packages/server/src/hub/auth-store.test.ts:115:  test("malformed, oversized, deleted, or symlinked stores fail closed", async () => {
+packages/server/src/hub/auth-store.test.ts:140:  test("cross-process bootstrap and login writes share the core file lock", async () => {
+packages/server/src/hub/auth-http.test.ts:68:describe("Hub authentication HTTP", () => {
+packages/server/src/hub/auth-http.test.ts:69:  test("requires HTTPS for external origins and rejects unconfigured non-loopback hosts", async () => {
+packages/server/src/hub/auth-http.test.ts:92:  test("initializes, restores cookie and bearer sessions, rotates login, lists devices, revokes and logs out", async () => {
+packages/server/src/hub/auth-http.test.ts:149:  test("rejects cross-origin writes and HTML forms, using configured origin behind HTTPS proxy", async () => {
+packages/server/src/hub/auth-http.test.ts:184:  test("rate limits incorrect login attempts and permits retry after the window", async () => {
+packages/server/src/hub/auth-http.test.ts:200:  test("rejects malformed and oversized JSON, including chunked bodies", async () => {
+packages/server/src/hub/auth-http.test.ts:229:  test("expired sessions fail and corrupt state returns a generic error without reopening setup", async () => {
+packages/server/src/hub/auth-http.test.ts:245:  test("initialization stays single-use and unknown routes never bypass auth", async () => {
+packages/server/src/hub/auth-http.test.ts:255:test("origin-less top-level read navigation is allowed without weakening writes, fetches or explicit Origin checks", async () => {
+packages/server/src/hub/auth-http.test.ts:313:test("authenticated browser navigation opens the Hub process directory and downloads with the same cookie", async () => {
+

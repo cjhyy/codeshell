@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/codeshell-audit-round172-server-auth/read-old-gate.py", line 12, in <module>
+    lines=(root/p).read_text().splitlines();rs=rs or [[1,len(lines)]];assert all(1<=a<=z<=len(lines) for a,z in rs)
+                                                                             ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

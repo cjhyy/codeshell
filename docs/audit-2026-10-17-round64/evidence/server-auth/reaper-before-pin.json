@@ -1,0 +1,11 @@
+{
+  "path": "packages/server/src/serve/headless-server.ts",
+  "bytes": 66162,
+  "lines": 1690,
+  "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+  "pinAtUTC": "2026-10-17T21:10:10.470097+00:00",
+  "range": [
+    281,
+    294
+  ]
+}

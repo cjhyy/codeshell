@@ -1,0 +1,16 @@
+{
+  "sharedNavigation": {"documents":6801,"excludedFormalAtOrAbove":64,"capPerTarget":100,"imageMatches":90,"imageRetained":90,"attachmentMatches":118,"attachmentRetained":100,"clientIDMatches":91,"clientIDRetained":91,"machineNavigationNotSemanticCoverage":true},
+  "actualCanonicalWindows": [
+    {"path":"docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json","pointers":["/files/2","/files/3"],"decision":"Same current hashes and bytes only; these objects alone do not establish full semantic coverage."},
+    {"path":"docs/audit-2026-10-17-round14/bytes.md","lines":[[1,32]],"decision":"Parser and stage/sanitizer old selected overlap; BYTES-R14-C1 is the existing SOF3/DQT candidate with unproven sample decoding/normal downstream support, not a new issue."},
+    {"path":"docs/audit-2026-10-17-round14/evidence/bytes-candidates.json","pointers":["/candidates/0"],"decision":"Original old candidate retained, not rerun, promoted or counted anew."},
+    {"path":"docs/audit-2026-10-17-round17/evidence/root-source-manifest.json","pointers":["/files/2"],"decision":"Same-SHA client-message-id explicit full source reading; exclude current product body."},
+    {"path":"docs/audit-2026-10-17-round17/fingerprint.md","lines":[[1,22]],"decision":"Confirms full helper reading and bounded client-ID purpose; no own collision experiment or new client-ID review."},
+    {"path":"docs/review-2026-10-12/resource-quality-round8.md","lines":[[20,34]],"decision":"R20/S5 upload admission20MiB/staging10MiB is a different known cause; not shared-file/per-ID TTL."},
+    {"path":"docs/review-2026-10-12/server-round1.md","lines":[[48,62]],"decision":"Same old late upload size-admission cause excluded."},
+    {"path":"docs/archive/todo/review-master-2026-07-08.md","lines":[[36,41]],"decision":"Original Core manageAsync cleanup-pass issue differs from attachment backing-file retention; adjacent MCP retained-file-cap issue also differs."},
+    {"path":"docs/archive/todo/review-tests-deps-2026-07-08.md","lines":[[35,41]],"decision":"Original Core context regression gap, not same attachment TTL cause."}
+  ],
+  "causeQuery": {"artifact":"cause-history.json","documents":6801,"totalMatches":6,"retained":6,"cap":180,"parseErrors":0,"datedInputDrift":0,"actualContextsRead":6,"limitation":"One regex query over MD lines and individual recursive JSON values, with bounded context windows; no exact shared-path/per-ID TTL prior established in these windows. Not a proof that all possible wording or historical causes were exhaustively reviewed."},
+  "catalogNavigation": {"path":"docs/audit-2026-10-17-round61/recorded-findings-catalog.json","matchingOriginalIDs":["SWC-03","CHD02","ATT-R9-01","DESKTOP-R52-01"],"decision":"Filtered original records are different causes; not a current unresolved-state reassessment."}
+}

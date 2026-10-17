@@ -1,0 +1,362 @@
+{
+  "baselineReportedByRoot": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "files": [
+    {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "bytes": 8082,
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "totalLines": 238,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          238
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          238
+        ]
+      ],
+      "semanticLines": 238,
+      "displayedLines": 238,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "totalLines": 1139,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          260,
+          525
+        ],
+        [
+          893,
+          970
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          260,
+          525
+        ],
+        [
+          880,
+          970
+        ]
+      ],
+      "semanticLines": 344,
+      "displayedLines": 357,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-custody.ts",
+      "bytes": 3460,
+      "sha256": "ca8631e3c422002f7874c3b474b05e4ce49704996ecee961fe9596864f12bd69",
+      "totalLines": 82,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          10
+        ],
+        [
+          31,
+          38
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "semanticLines": 18,
+      "displayedLines": 45,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    },
+    {
+      "path": "packages/core/src/hooks/configured-tool-hooks.ts",
+      "bytes": 5392,
+      "sha256": "6ce05b375c7afefc51383308eeeb81522d16e3650fb3a228a3c2ed506e7aafac",
+      "totalLines": 150,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          31
+        ],
+        [
+          48,
+          83
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "semanticLines": 67,
+      "displayedLines": 95,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    },
+    {
+      "path": "packages/core/src/links/operation-reader.ts",
+      "bytes": 8855,
+      "sha256": "70e90c38ccae3a4e336adf45c7be582e63b405cba347428a16c372b3012f2c6f",
+      "totalLines": 227,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          25,
+          52
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          25,
+          60
+        ]
+      ],
+      "semanticLines": 28,
+      "displayedLines": 36,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-host.ts",
+      "bytes": 8479,
+      "sha256": "fb6ea16d81e31e137730974e32b556c251315181f5dca734fc5283d36b4b1aa2",
+      "totalLines": 215,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          152,
+          166
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          140,
+          180
+        ]
+      ],
+      "semanticLines": 15,
+      "displayedLines": 41,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "totalLines": 887,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          121,
+          124
+        ],
+        [
+          174,
+          295
+        ],
+        [
+          356,
+          385
+        ],
+        [
+          420,
+          475
+        ],
+        [
+          875,
+          887
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          475
+        ],
+        [
+          850,
+          887
+        ]
+      ],
+      "semanticLines": 225,
+      "displayedLines": 513,
+      "purpose": "Settings snapshot/hash/merge/selection actual ordinary producer-consumer algorithms; attachment row is Root independent causal review for its one guarded reproduction, not a second unique finding or entire-module certification."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/server/src/hub/auth-http.ts",
+      "bytes": 11306,
+      "sha256": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+      "lines": 290,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/server/src/hub/auth-store.ts",
+      "bytes": 13376,
+      "sha256": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+      "lines": 415,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.ts",
+      "bytes": 5668,
+      "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+      "lines": 134,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-manifest.ts",
+      "bytes": 7723,
+      "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+      "lines": 210,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-request.ts",
+      "bytes": 501,
+      "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+      "lines": 12,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.ts",
+      "bytes": 6600,
+      "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+      "lines": 171,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "lines": 96,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/server/src/image-byte-probe.ts",
+      "bytes": 12022,
+      "sha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+      "lines": 326,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "lines": 887,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "bytes": 257,
+      "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17",
+      "lines": 8,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "bytes": 6075,
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef",
+      "lines": 134,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/settings/personalization.ts",
+      "bytes": 736,
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea",
+      "lines": 20,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    },
+    {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "bytes": 8082,
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "lines": 238,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "hash-only-query-source-pin"
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "instruction-hash-only-same-SHA-carry-forward"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "scope": "Query/source byte pin only; no product semantic reading.",
+      "coverage": "instruction-hash-only-same-SHA-carry-forward"
+    }
+  ],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+      "bytes": 2765,
+      "sha256": "939bca1e6f008f3a3df10ae14db96207c7bd9641547e12df3c8022c1e96c57ae",
+      "coverage": "historical-metadata-selected",
+      "scope": "Original selected objects/old mapper and named-file scope passages actually read; no product reading inferred from the metadata."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/settings.md",
+      "bytes": 11043,
+      "sha256": "8a4ab7ddf090f8bf811aba57139210b0f8e7477c3d2cf8fae85bad64a252f044",
+      "coverage": "historical-metadata-selected",
+      "scope": "Original selected objects/old mapper and named-file scope passages actually read; no product reading inferred from the metadata."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/coverage.md",
+      "bytes": 2416,
+      "sha256": "0436b66da789e8784767f40b9fb7070447a0f08e69832f9b37541fdfcd8be084",
+      "coverage": "historical-metadata-selected",
+      "scope": "Original selected objects/old mapper and named-file scope passages actually read; no product reading inferred from the metadata."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "bytes": 99596,
+      "sha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "coverage": "historical-metadata-selected",
+      "scope": "Original selected objects/old mapper and named-file scope passages actually read; no product reading inferred from the metadata."
+    }
+  ],
+  "sharedHistory": {
+    "path": "/tmp/codeshell-audit-round175-settings-flags/history-batch.json",
+    "bytes": 1853203,
+    "sha256": "10b4d36a66e4b47e0a1edb838f60a9e0c3334f934c279df3175df31599653b83",
+    "historyFiles": 6801,
+    "jsonValueScalarsVisited": 5060759
+  },
+  "scope": "Root source audit, no global coverage migration. Current code full denotes its declared static purpose, not OS/authority/concurrency correctness.",
+  "productRuns": {
+    "settingsModules": 0,
+    "attachmentGuardedShard": 1
+  },
+  "gitCertified": false
+}

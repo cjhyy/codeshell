@@ -1,0 +1,251 @@
+{
+  "atUTC": "2026-10-17T21:10:50.719765+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "ending": {
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "atUTC": "2026-10-17T21:10:50.684847+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "ending": {
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "atUTC": "2026-10-17T21:10:50.686442+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.test.ts",
+      "initialSha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+      "ending": {
+        "bytes": 6304,
+        "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+        "lines": 180,
+        "atUTC": "2026-10-17T21:10:50.688198+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-request.ts",
+      "initialSha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+      "ending": {
+        "bytes": 501,
+        "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+        "lines": 12,
+        "atUTC": "2026-10-17T21:10:50.688811+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.test.ts",
+      "initialSha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+      "ending": {
+        "bytes": 21387,
+        "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+        "lines": 546,
+        "atUTC": "2026-10-17T21:10:50.689887+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.ts",
+      "initialSha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+      "ending": {
+        "bytes": 6600,
+        "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+        "lines": 171,
+        "atUTC": "2026-10-17T21:10:50.690507+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-manifest.ts",
+      "initialSha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+      "ending": {
+        "bytes": 7723,
+        "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+        "lines": 210,
+        "atUTC": "2026-10-17T21:10:50.691159+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "initialSha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "ending": {
+        "bytes": 3214,
+        "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+        "lines": 96,
+        "atUTC": "2026-10-17T21:10:50.691723+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.ts",
+      "initialSha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+      "ending": {
+        "bytes": 5668,
+        "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+        "lines": 134,
+        "atUTC": "2026-10-17T21:10:50.692198+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "initialSha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "ending": {
+        "bytes": 43723,
+        "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+        "lines": 1228,
+        "atUTC": "2026-10-17T21:10:50.693297+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-update-service.ts",
+      "initialSha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+      "ending": {
+        "bytes": 4655,
+        "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+        "lines": 138,
+        "atUTC": "2026-10-17T21:10:50.694710+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-archive.ts",
+      "initialSha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+      "ending": {
+        "bytes": 5725,
+        "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+        "lines": 156,
+        "atUTC": "2026-10-17T21:10:50.695968+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/discovery.ts",
+      "initialSha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+      "ending": {
+        "bytes": 2357,
+        "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+        "lines": 64,
+        "atUTC": "2026-10-17T21:10:50.696681+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/manifest.ts",
+      "initialSha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+      "ending": {
+        "bytes": 8174,
+        "sha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+        "lines": 272,
+        "atUTC": "2026-10-17T21:10:50.697456+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "initialSha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "ending": {
+        "bytes": 27608,
+        "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+        "lines": 864,
+        "atUTC": "2026-10-17T21:10:50.698310+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/core/src/panel-apps/index.ts",
+      "initialSha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "ending": {
+        "bytes": 1851,
+        "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+        "lines": 66,
+        "atUTC": "2026-10-17T21:10:50.698916+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/desktop/src/main/project-panel-ipc.ts",
+      "initialSha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+      "ending": {
+        "bytes": 11658,
+        "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+        "lines": 308,
+        "atUTC": "2026-10-17T21:10:50.699619+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-install-service.ts",
+      "initialSha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+      "ending": {
+        "bytes": 3540,
+        "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+        "lines": 114,
+        "atUTC": "2026-10-17T21:10:50.700209+00:00"
+      },
+      "unchanged": true,
+      "productBodyReread": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "unchanged": true,
+      "kind": "historical metadata byte check only"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/source-manifest.json",
+      "bytes": 21325,
+      "sha256": "eb2b52b21f7a9402be3a879a3cfd5a168e5eaf2ebb09ad33c25b25793e7eebed",
+      "unchanged": true,
+      "kind": "historical metadata byte check only"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "unchanged": true,
+      "kind": "historical metadata byte check only"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round175-settings-flags/history-batch.json",
+      "bytes": 1853203,
+      "sha256": "10b4d36a66e4b47e0a1edb838f60a9e0c3334f934c279df3175df31599653b83",
+      "unchanged": true,
+      "kind": "historical metadata byte check only"
+    }
+  ],
+  "allUnchanged": true,
+  "noProductBodyReread": true
+}

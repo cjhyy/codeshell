@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "lines": 1247,
+      "atUTC": "2026-10-17T21:09:50.377274+00:00",
+      "beforeBodyAndLineNavigation": true
+    }
+  ]
+}

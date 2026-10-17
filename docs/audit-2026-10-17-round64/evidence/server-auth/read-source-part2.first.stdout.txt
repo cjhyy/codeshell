@@ -1,0 +1,357 @@
+
+SOURCE packages/server/src/hub/auth-http.ts
+146:       const session = await authenticate(req);
+147:       if (!session) throw new HubAuthError(401, "Authentication required");
+148:       if (path === "/api/v1/auth/sessions" && method === "GET") {
+149:         json(res, 200, {
+150:           sessions: store.listSessions().map((row) => ({ ...row, current: row.id === session.id })),
+151:         });
+152:         return true;
+153:       }
+154:       if (path === "/api/v1/auth/logout" && method === "POST") {
+155:         await readJsonBody(req);
+156:         store.revoke(session.id);
+157:         options.onRevoke?.(session.id);
+158:         setSessionCookie(res, "", 0);
+159:         json(res, 200, { ok: true });
+160:         return true;
+161:       }
+162:       const revokeMatch = /^\/api\/v1\/auth\/sessions\/([a-f0-9-]{36})$/.exec(path);
+163:       if (revokeMatch && method === "DELETE") {
+164:         if (!store.revoke(revokeMatch[1]!)) throw new HubAuthError(404, "Session not found");
+165:         options.onRevoke?.(revokeMatch[1]!);
+166:         if (revokeMatch[1] === session.id) setSessionCookie(res, "", 0);
+167:         json(res, 200, { ok: true });
+168:         return true;
+169:       }
+170:       throw new HubAuthError(404, "Auth endpoint not found");
+171:     } catch (error) {
+172:       const status = error instanceof HubAuthError ? error.statusCode : 503;
+173:       if (status === 429) res.setHeader("Retry-After", "60");
+174:       json(res, status, {
+175:         error: error instanceof HubAuthError ? error.message : "Authentication service unavailable",
+176:       });
+177:     }
+178:     return true;
+179:   }
+180: 
+181:   return { bootstrapToken, store, handle, authenticate, isOriginAllowed };
+182: }
+183: 
+184: /** Authorization wins over cookies; malformed bearer headers fail closed. */
+185: export function readHubSessionToken(req: Pick<IncomingMessage, "headers">): string | undefined {
+186:   if (req.headers.authorization !== undefined) {
+187:     const match = /^Bearer ([A-Za-z0-9_-]{43})$/i.exec(req.headers.authorization);
+188:     return match?.[1];
+189:   }
+190:   const entries = req.headers.cookie
+191:     ?.split(";")
+192:     .map((entry) => entry.trim())
+193:     .filter((entry) => entry.startsWith(`${HUB_SESSION_COOKIE}=`));
+194:   if (!entries || entries.length !== 1) return undefined;
+195:   const token = entries[0]!.slice(HUB_SESSION_COOKIE.length + 1);
+196:   return /^[A-Za-z0-9_-]{43}$/.test(token) ? token : undefined;
+197: }
+198: 
+199: function normalizeOrigin(input: string): string {
+200:   const url = new URL(input);
+201:   if (
+202:     !["http:", "https:"].includes(url.protocol) ||
+203:     (url.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) ||
+204:     url.username ||
+205:     url.password ||
+206:     url.pathname !== "/" ||
+207:     url.search ||
+208:     url.hash
+209:   ) {
+210:     throw new Error(
+211:       "Hub public origin must use HTTPS (HTTP allowed only on loopback) without credentials, path, query, or fragment",
+212:     );
+213:   }
+214:   return url.origin;
+215: }
+216: 
+217: function requestOriginFromHost(req: IncomingMessage): string | undefined {
+218:   const host = req.headers.host;
+219:   if (!host || /[\s/\\@?#]/.test(host)) return undefined;
+220:   const protocol = (req.socket as { encrypted?: boolean }).encrypted ? "https" : "http";
+221:   try {
+222:     return normalizeOrigin(`${protocol}://${host}`);
+223:   } catch {
+224:     return undefined;
+225:   }
+226: }
+227: 
+228: function json(res: ServerResponse, statusCode: number, body: unknown): void {
+229:   if (res.destroyed || res.writableEnded) return;
+230:   res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
+231:   res.end(JSON.stringify(body));
+232: }
+233: 
+234: function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+235:   const contentType = req.headers["content-type"]?.split(";", 1)[0]?.trim().toLowerCase();
+236:   if (contentType !== "application/json")
+237:     throw new HubAuthError(415, "Content-Type must be application/json");
+238:   if (Number(req.headers["content-length"] ?? 0) > MAX_BODY_BYTES)
+239:     throw new HubAuthError(413, "Auth request is too large");
+240:   return new Promise((resolve, reject) => {
+241:     const chunks: Buffer[] = [];
+242:     let bytes = 0;
+243:     const timer = setTimeout(() => fail(new HubAuthError(408, "Auth request timed out")), 10_000);
+244:     timer.unref();
+245:     function cleanup(): void {
+246:       clearTimeout(timer);
+247:       req.off("data", onData);
+248:       req.off("end", onEnd);
+249:       req.off("aborted", onAborted);
+250:       req.off("error", onError);
+251:     }
+252:     function fail(error: Error): void {
+253:       cleanup();
+254:       // Aborting a Node request can emit error after aborted. Keep a listener
+255:       // after detaching body readers so a disconnected client cannot crash the host.
+256:       req.once("error", () => {});
+257:       req.resume();
+258:       reject(error);
+259:     }
+260:     function onData(chunk: Buffer): void {
+261:       bytes += chunk.length;
+262:       if (bytes > MAX_BODY_BYTES) {
+263:         fail(new HubAuthError(413, "Auth request is too large"));
+264:         return;
+265:       }
+266:       chunks.push(chunk);
+267:     }
+268:     function onEnd(): void {
+269:       cleanup();
+270:       try {
+271:         const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+272:         if (!value || typeof value !== "object" || Array.isArray(value))
+273:           throw new Error("not an object");
+274:         resolve(value as Record<string, unknown>);
+275:       } catch {
+276:         reject(new HubAuthError(400, "Request body must be a JSON object"));
+277:       }
+278:     }
+279:     function onAborted(): void {
+280:       fail(new HubAuthError(400, "Auth request aborted"));
+281:     }
+282:     function onError(): void {
+283:       fail(new HubAuthError(400, "Unable to read auth request"));
+284:     }
+285:     req.on("data", onData);
+286:     req.once("end", onEnd);
+287:     req.once("aborted", onAborted);
+288:     req.once("error", onError);
+289:   });
+290: }
+
+SOURCE packages/server/src/hub/auth-store.ts
+1: import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
+2: import {
+3:   chmodSync,
+4:   closeSync,
+5:   constants,
+6:   fstatSync,
+7:   lstatSync,
+8:   mkdirSync,
+9:   openSync,
+10:   readFileSync,
+11:   renameSync,
+12:   rmSync,
+13:   writeFileSync,
+14: } from "node:fs";
+15: import { dirname, join } from "node:path";
+16: import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
+17: 
+18: export const HUB_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
+19: const MAX_SESSIONS = 64;
+20: const MAX_STORE_BYTES = 128 * 1024;
+21: const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+22: const HASH_PATTERN = /^[a-f0-9]{64}$/;
+23: const SCRYPT_OPTIONS = { N: 32_768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+24: 
+25: export interface HubSession {
+26:   id: string;
+27:   username: string;
+28:   deviceName: string;
+29:   createdAt: number;
+30:   lastSeenAt: number;
+31:   expiresAt: number;
+32: }
+33: 
+34: interface SessionRecord extends Omit<HubSession, "username"> {
+35:   tokenHash: string;
+36: }
+37: 
+38: interface AccountRecord {
+39:   username: string;
+40:   passwordHash: string;
+41:   passwordSalt: string;
+42:   createdAt: number;
+43: }
+44: 
+45: interface AuthRecord {
+46:   version: 1;
+47:   bootstrapTokenHash: string | null;
+48:   account: AccountRecord | null;
+49:   sessions: SessionRecord[];
+50: }
+51: 
+52: export interface HubLoginInput {
+53:   username: string;
+54:   password: string;
+55:   deviceName?: string;
+56: }
+57: 
+58: export interface HubSessionGrant {
+59:   token: string;
+60:   session: HubSession;
+61:   revokedSessionIds: string[];
+62: }
+63: 
+64: export class HubAuthError extends Error {
+65:   constructor(
+66:     public readonly statusCode: number,
+67:     message: string,
+68:   ) {
+69:     super(message);
+70:   }
+71: }
+72: 
+73: export class HubAuthStore {
+74:   readonly filePath: string;
+75:   readonly sessionTtlMs: number;
+76:   private readonly now: () => number;
+77:   private readonly maxSessions: number;
+78: 
+79:   constructor(options: {
+80:     dataDir: string;
+81:     now?: () => number;
+82:     sessionTtlMs?: number;
+83:     maxSessions?: number;
+84:   }) {
+85:     this.filePath = join(options.dataDir, "hub", "auth.json");
+86:     this.now = options.now ?? Date.now;
+87:     this.sessionTtlMs = options.sessionTtlMs ?? HUB_SESSION_TTL_MS;
+88:     this.maxSessions = options.maxSessions ?? MAX_SESSIONS;
+89:     if (!Number.isSafeInteger(this.sessionTtlMs) || this.sessionTtlMs < 1_000) {
+90:       throw new Error("Hub session lifetime must be at least 1,000 milliseconds");
+91:     }
+92:     if (
+93:       !Number.isSafeInteger(this.maxSessions) ||
+94:       this.maxSessions < 1 ||
+95:       this.maxSessions > MAX_SESSIONS
+96:     ) {
+97:       throw new Error(`Hub session limit must be between 1 and ${MAX_SESSIONS}`);
+98:     }
+99:   }
+100: 
+101:   /** Only the process that creates the store receives the one-time secret. */
+102:   initialize(): string | undefined {
+103:     this.ensureDirectory();
+104:     const release = acquireFileLock(this.filePath);
+105:     try {
+106:       const current = this.read(true);
+107:       if (current) {
+108:         chmodSync(this.filePath, 0o600);
+109:         return undefined;
+110:       }
+111:       const token = randomToken();
+112:       this.write({ version: 1, bootstrapTokenHash: hashToken(token), account: null, sessions: [] });
+113:       return token;
+114:     } finally {
+115:       release();
+116:     }
+117:   }
+118: 
+119:   isInitialized(): boolean {
+120:     return this.read()!.account !== null;
+121:   }
+122: 
+123:   async setup(input: HubLoginInput & { token: string }): Promise<HubSessionGrant> {
+124:     const normalized = validateLoginInput(input);
+125:     this.checkBootstrap(this.read()!, input.token);
+126:     const salt = randomBytes(16).toString("hex");
+127:     // Never await with the synchronous cross-process lock held.
+128:     const passwordHash = await hashPassword(input.password, salt);
+129:     return this.mutate((record) => {
+130:       this.checkBootstrap(record, input.token);
+131:       record.account = {
+132:         username: normalized.username,
+133:         passwordHash,
+134:         passwordSalt: salt,
+135:         createdAt: this.now(),
+136:       };
+137:       record.bootstrapTokenHash = null;
+138:       return { result: this.grant(record, normalized.deviceName), changed: true };
+139:     });
+140:   }
+141: 
+142:   async login(input: HubLoginInput, replaceToken?: string): Promise<HubSessionGrant> {
+143:     const normalized = validateLoginInput(input);
+144:     const account = this.read()!.account;
+145:     if (!account) throw new HubAuthError(401, "Invalid username or password");
+146:     const candidate = await hashPassword(input.password, account.passwordSalt);
+147:     if (
+148:       !safeHashEqual(candidate, account.passwordHash) ||
+149:       normalized.username !== account.username
+150:     ) {
+151:       throw new HubAuthError(401, "Invalid username or password");
+152:     }
+153:     return this.mutate((record) => {
+154:       if (!record.account || !safeHashEqual(record.account.passwordHash, account.passwordHash)) {
+155:         throw new HubAuthError(401, "Invalid username or password");
+156:       }
+157:       return { result: this.grant(record, normalized.deviceName, replaceToken), changed: true };
+158:     });
+159:   }
+160: 
+161:   authenticate(token: string | undefined): HubSession | null {
+162:     if (!token || !TOKEN_PATTERN.test(token)) return null;
+163:     return this.mutate((record) => {
+164:       const now = this.now();
+165:       const tokenHash = hashToken(token);
+166:       const session = record.sessions.find((row) => safeHashEqual(row.tokenHash, tokenHash));
+167:       if (!record.account || !session || session.expiresAt <= now || session.createdAt > now) {
+168:         return { result: null, changed: false };
+169:       }
+170:       // Persist activity at most once per minute; validation always reads disk.
+171:       const changed = now - session.lastSeenAt >= 60_000;
+172:       if (changed) session.lastSeenAt = now;
+173:       return { result: this.toPublic(record, session), changed };
+174:     });
+175:   }
+176: 
+177:   listSessions(): HubSession[] {
+178:     const record = this.read()!;
+179:     const now = this.now();
+180:     return record.sessions
+181:       .filter((session) => session.expiresAt > now && session.createdAt <= now)
+182:       .map((session) => this.toPublic(record, session))
+183:       .sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+184:   }
+185: 
+186:   /** Offline restore must not resurrect sessions revoked after the snapshot. */
+187:   revokeAllSessions(): void {
+188:     this.mutate((record) => {
+189:       record.sessions = [];
+190:       return { result: undefined, changed: true };
+191:     });
+192:   }
+193: 
+194:   revoke(id: string): boolean {
+195:     return this.mutate((record) => {
+196:       const index = record.sessions.findIndex((session) => session.id === id);
+197:       if (index < 0) return { result: false, changed: false };
+198:       record.sessions.splice(index, 1);
+199:       return { result: true, changed: true };
+200:     });
+201:   }
+202: 
+203:   private checkBootstrap(record: AuthRecord, token: string): void {
+204:     if (record.account) throw new HubAuthError(409, "Hub has already been initialized");
+205:     if (
+206:       typeof token !== "string" ||
+207:       !TOKEN_PATTERN.test(token) ||
+208:       !safeHashEqual(hashToken(token), record.bootstrapTokenHash!)

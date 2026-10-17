@@ -1,0 +1,70 @@
+{
+  "atUTC": "2026-10-17T21:14:57.866653+00:00",
+  "scope": "Own metadata freeze only, not product test",
+  "sourceRangeRows": 7,
+  "sourceRangesWithinEOF": true,
+  "endingPins21Same": true,
+  "sharedHistorySame": true,
+  "authorProductExecution": 0,
+  "authorGit": 0,
+  "separateRootRunReportedNotAuthorRun": true,
+  "singleRootProposalID": "ATTACH-R64-01",
+  "linkCount": 11,
+  "links": [
+    {
+      "document": "report.md",
+      "target": "findings.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "classification.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "validation.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "canonical-target-objects.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "historical-decisions.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "shared-target-projection.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "cause-history.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "source-manifest.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "source-excerpts.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "ending.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "artifact-receipt.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    }
+  ]
+}

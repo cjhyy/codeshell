@@ -1,0 +1,39 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "result": "Finite static negative after complete HTTP/store source lifecycle and error-branch reading, with concrete selected consumers.",
+  "existingCauseExclusions": [
+    {
+      "reference": "docs/review-2026-10-12/auth-round7.md:3,89",
+      "oldCauses": [
+        "R03 ACK duplication",
+        "R32 quota/secret persistence failure",
+        "R38 HTTP logout black hole"
+      ],
+      "meaning": "Not recounted or declared repaired; old dynamic experiments are not rerun."
+    },
+    {
+      "reference": "docs/review-2026-10-12/file-mutex-quality-round19.md:5,11–23,31,53–57",
+      "oldCause": "FM19-1 auth lock acquisition retries EACCES synchronously",
+      "meaning": "Same old acquisition/availability cause not reported anew; no permission/lock/process experiment."
+    }
+  ],
+  "unpromotedLead": {
+    "topic": "bootstrap undisclosed again after restart",
+    "disposition": "Not a new bug: original creator-only comment and selected existing declaration explicitly require initialize return undefined on restart while original token remains valid. No contrary normal recovery contract established."
+  },
+  "notClaimed": [
+    "current auth is universally secure/correct",
+    "all storage/process/clock/real account/network states covered",
+    "old runtime tests pass again",
+    "all historical causes exhausted",
+    "new unique source coverage"
+  ],
+  "productExecutions": 0
+}

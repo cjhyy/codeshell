@@ -1,0 +1,29 @@
+[
+  {
+    "path": "docs/review-2026-10-12/auth-round7.md",
+    "bytes": 13793,
+    "lines": 102,
+    "sha256": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914",
+    "pinAtUTC": "2026-10-17T21:06:34.231267+00:00"
+  },
+  {
+    "path": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+    "bytes": 13135,
+    "lines": 57,
+    "sha256": "6940a2c615572bc0e0955b3f962337a44393fc1715ec5a3f7b37f387390a6dde",
+    "pinAtUTC": "2026-10-17T21:06:34.233499+00:00"
+  },
+  {
+    "path": "docs/review-2026-10-12/file-mutex-round19.md",
+    "bytes": 13952,
+    "lines": 96,
+    "sha256": "40a33225154448ecf505dade3a27b7c6abefaac3e936a999704cf19b8a072886",
+    "pinAtUTC": "2026-10-17T21:06:34.234347+00:00"
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+    "bytes": 80193,
+    "sha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61",
+    "pinAtUTC": "2026-10-17T21:06:34.235431+00:00"
+  }
+]

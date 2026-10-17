@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "bytes": 17704,
+      "sha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:12:06.352837+00:00"
+    },
+    {
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "bytes": 31084,
+      "sha256": "b0a44fd46a8e3d23b3d5e11453e44f4d6a9ede3023739342da85ca855b1a8059",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:12:06.353818+00:00"
+    }
+  ]
+}

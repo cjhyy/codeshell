@@ -1,0 +1,1803 @@
+{
+  "schema": "source-rows-with-explicit-body-nav-display-unions",
+  "atUTC": "2026-10-17T21:10:50.719186+00:00",
+  "rootReportedBaseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "gitCertified": false,
+  "purpose": "prep173 ordinary Panel App GitHub source/ref/manifest/version data review; finite static scope",
+  "summary": {
+    "sourceAndInstructionPins": 18,
+    "semanticProductFiles": 11,
+    "productSemanticLines": 1009,
+    "testDeclarationFiles": 2,
+    "testDeclarationLines": 246,
+    "fullTargetFiles": 5,
+    "bodyDisplayLines": 1255,
+    "allDisplayedUnionLines": 1341,
+    "navigationOnlyFiles": 3,
+    "hashOnlyFiles": 2,
+    "productExecution": 0,
+    "testExecution": 0,
+    "Git": 0
+  },
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "totalLines": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [],
+      "allDisplayedLineCount": 0,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T21:05:08.643707+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "atUTC": "2026-10-17T21:10:50.684847+00:00"
+      },
+      "scope": "byte hash only, no new body"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "totalLines": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [],
+      "allDisplayedLineCount": 0,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T21:05:08.645237+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "atUTC": "2026-10-17T21:10:50.686442+00:00"
+      },
+      "scope": "byte hash only, no new body"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.test.ts",
+      "bytes": 6304,
+      "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+      "totalLines": 180,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          35,
+          81
+        ]
+      ],
+      "semanticLineCount": 47,
+      "bodyDisplayLineRanges": [
+        [
+          35,
+          81
+        ]
+      ],
+      "bodyDisplayLineCount": 47,
+      "navigationLineRanges": [
+        [
+          35,
+          36
+        ],
+        [
+          38,
+          38
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          72,
+          73
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          115,
+          115
+        ],
+        [
+          124,
+          124
+        ],
+        [
+          127,
+          127
+        ],
+        [
+          132,
+          132
+        ],
+        [
+          138,
+          138
+        ],
+        [
+          145,
+          145
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          170,
+          170
+        ]
+      ],
+      "navigationLineCount": 24,
+      "allDisplayedLineRanges": [
+        [
+          35,
+          81
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          115,
+          115
+        ],
+        [
+          124,
+          124
+        ],
+        [
+          127,
+          127
+        ],
+        [
+          132,
+          132
+        ],
+        [
+          138,
+          138
+        ],
+        [
+          145,
+          145
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          170,
+          170
+        ]
+      ],
+      "allDisplayedLineCount": 64,
+      "testDeclarationOnly": true,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/github-ref.test.ts",
+        "bytes": 6304,
+        "lineCount": 180,
+        "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+        "pinnedAtUTC": "2026-10-17T21:05:08.645920+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 6304,
+        "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+        "lines": 180,
+        "atUTC": "2026-10-17T21:10:50.688198+00:00"
+      },
+      "scope": "existing test declarations only; no execution"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-request.ts",
+      "bytes": 501,
+      "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+      "totalLines": 12,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "semanticLineCount": 12,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "bodyDisplayLineCount": 12,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "allDisplayedLineCount": 12,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/github-request.ts",
+        "bytes": 501,
+        "lineCount": 12,
+        "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+        "pinnedAtUTC": "2026-10-17T21:05:08.646469+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 501,
+        "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+        "lines": 12,
+        "atUTC": "2026-10-17T21:10:50.688811+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.test.ts",
+      "bytes": 21387,
+      "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+      "totalLines": 546,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          82,
+          149
+        ],
+        [
+          308,
+          438
+        ]
+      ],
+      "semanticLineCount": 199,
+      "bodyDisplayLineRanges": [
+        [
+          82,
+          149
+        ],
+        [
+          308,
+          438
+        ]
+      ],
+      "bodyDisplayLineCount": 199,
+      "navigationLineRanges": [
+        [
+          25,
+          25
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          109,
+          110
+        ],
+        [
+          150,
+          150
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          179,
+          179
+        ],
+        [
+          194,
+          194
+        ],
+        [
+          206,
+          206
+        ],
+        [
+          226,
+          226
+        ],
+        [
+          237,
+          237
+        ],
+        [
+          249,
+          249
+        ],
+        [
+          257,
+          257
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          287,
+          287
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          311,
+          311
+        ],
+        [
+          328,
+          328
+        ],
+        [
+          351,
+          351
+        ],
+        [
+          356,
+          357
+        ],
+        [
+          380,
+          380
+        ],
+        [
+          396,
+          396
+        ],
+        [
+          411,
+          411
+        ],
+        [
+          424,
+          424
+        ],
+        [
+          439,
+          439
+        ],
+        [
+          451,
+          451
+        ],
+        [
+          456,
+          456
+        ],
+        [
+          464,
+          464
+        ],
+        [
+          469,
+          469
+        ],
+        [
+          481,
+          481
+        ],
+        [
+          494,
+          494
+        ],
+        [
+          504,
+          504
+        ],
+        [
+          514,
+          514
+        ],
+        [
+          526,
+          526
+        ]
+      ],
+      "navigationLineCount": 37,
+      "allDisplayedLineRanges": [
+        [
+          25,
+          25
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          82,
+          150
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          179,
+          179
+        ],
+        [
+          194,
+          194
+        ],
+        [
+          206,
+          206
+        ],
+        [
+          226,
+          226
+        ],
+        [
+          237,
+          237
+        ],
+        [
+          249,
+          249
+        ],
+        [
+          257,
+          257
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          287,
+          287
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          308,
+          439
+        ],
+        [
+          451,
+          451
+        ],
+        [
+          456,
+          456
+        ],
+        [
+          464,
+          464
+        ],
+        [
+          469,
+          469
+        ],
+        [
+          481,
+          481
+        ],
+        [
+          494,
+          494
+        ],
+        [
+          504,
+          504
+        ],
+        [
+          514,
+          514
+        ],
+        [
+          526,
+          526
+        ]
+      ],
+      "allDisplayedLineCount": 223,
+      "testDeclarationOnly": true,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/update-check.test.ts",
+        "bytes": 21387,
+        "lineCount": 546,
+        "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+        "pinnedAtUTC": "2026-10-17T21:05:08.647383+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 21387,
+        "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+        "lines": 546,
+        "atUTC": "2026-10-17T21:10:50.689887+00:00"
+      },
+      "scope": "existing test declarations only; no execution"
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.ts",
+      "bytes": 6600,
+      "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+      "totalLines": 171,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          171
+        ]
+      ],
+      "semanticLineCount": 171,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          171
+        ]
+      ],
+      "bodyDisplayLineCount": 171,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          171
+        ]
+      ],
+      "allDisplayedLineCount": 171,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/update-check.ts",
+        "bytes": 6600,
+        "lineCount": 171,
+        "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+        "pinnedAtUTC": "2026-10-17T21:05:08.647826+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 6600,
+        "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+        "lines": 171,
+        "atUTC": "2026-10-17T21:10:50.690507+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-manifest.ts",
+      "bytes": 7723,
+      "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+      "totalLines": 210,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          210
+        ]
+      ],
+      "semanticLineCount": 210,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          210
+        ]
+      ],
+      "bodyDisplayLineCount": 210,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          210
+        ]
+      ],
+      "allDisplayedLineCount": 210,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/github-manifest.ts",
+        "bytes": 7723,
+        "lineCount": 210,
+        "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+        "pinnedAtUTC": "2026-10-17T21:05:08.648239+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 7723,
+        "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+        "lines": 210,
+        "atUTC": "2026-10-17T21:10:50.691159+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "totalLines": 96,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          96
+        ]
+      ],
+      "semanticLineCount": 96,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          96
+        ]
+      ],
+      "bodyDisplayLineCount": 96,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          96
+        ]
+      ],
+      "allDisplayedLineCount": 96,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/source.ts",
+        "bytes": 3214,
+        "lineCount": 96,
+        "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+        "pinnedAtUTC": "2026-10-17T21:05:08.648668+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 3214,
+        "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+        "lines": 96,
+        "atUTC": "2026-10-17T21:10:50.691723+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified",
+      "knownOverlap": {
+        "original": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/source-manifest.json#/files/10",
+        "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+        "coverage": "selected-incidental",
+        "ranges": [
+          [
+            1,
+            45
+          ]
+        ],
+        "notFirstReadClaim": true
+      }
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.ts",
+      "bytes": 5668,
+      "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+      "totalLines": 134,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          134
+        ]
+      ],
+      "semanticLineCount": 134,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          134
+        ]
+      ],
+      "bodyDisplayLineCount": 134,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          134
+        ]
+      ],
+      "allDisplayedLineCount": 134,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/github-ref.ts",
+        "bytes": 5668,
+        "lineCount": 134,
+        "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+        "pinnedAtUTC": "2026-10-17T21:05:08.648928+00:00",
+        "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+      },
+      "ending": {
+        "bytes": 5668,
+        "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+        "lines": 134,
+        "atUTC": "2026-10-17T21:10:50.692198+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "bytes": 43723,
+      "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "totalLines": 1228,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          104,
+          112
+        ],
+        [
+          210,
+          237
+        ],
+        [
+          261,
+          290
+        ],
+        [
+          940,
+          964
+        ]
+      ],
+      "semanticLineCount": 92,
+      "bodyDisplayLineRanges": [
+        [
+          104,
+          112
+        ],
+        [
+          210,
+          237
+        ],
+        [
+          261,
+          290
+        ],
+        [
+          940,
+          964
+        ]
+      ],
+      "bodyDisplayLineCount": 92,
+      "navigationLineRanges": [
+        [
+          27,
+          27
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          108,
+          108
+        ],
+        [
+          111,
+          112
+        ],
+        [
+          127,
+          127
+        ],
+        [
+          133,
+          134
+        ],
+        [
+          143,
+          143
+        ],
+        [
+          148,
+          148
+        ],
+        [
+          167,
+          167
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          185,
+          185
+        ],
+        [
+          210,
+          211
+        ],
+        [
+          220,
+          220
+        ],
+        [
+          222,
+          222
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          239,
+          239
+        ],
+        [
+          244,
+          244
+        ],
+        [
+          261,
+          261
+        ],
+        [
+          269,
+          269
+        ],
+        [
+          276,
+          277
+        ],
+        [
+          281,
+          282
+        ],
+        [
+          285,
+          286
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          303,
+          304
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          312,
+          312
+        ],
+        [
+          365,
+          365
+        ],
+        [
+          586,
+          586
+        ],
+        [
+          610,
+          610
+        ],
+        [
+          615,
+          615
+        ],
+        [
+          659,
+          659
+        ],
+        [
+          821,
+          821
+        ],
+        [
+          952,
+          952
+        ],
+        [
+          954,
+          954
+        ],
+        [
+          964,
+          964
+        ],
+        [
+          1021,
+          1021
+        ],
+        [
+          1150,
+          1150
+        ]
+      ],
+      "navigationLineCount": 44,
+      "allDisplayedLineRanges": [
+        [
+          27,
+          27
+        ],
+        [
+          104,
+          112
+        ],
+        [
+          127,
+          127
+        ],
+        [
+          133,
+          134
+        ],
+        [
+          143,
+          143
+        ],
+        [
+          148,
+          148
+        ],
+        [
+          167,
+          167
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          185,
+          185
+        ],
+        [
+          210,
+          237
+        ],
+        [
+          239,
+          239
+        ],
+        [
+          244,
+          244
+        ],
+        [
+          261,
+          290
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          303,
+          304
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          312,
+          312
+        ],
+        [
+          365,
+          365
+        ],
+        [
+          586,
+          586
+        ],
+        [
+          610,
+          610
+        ],
+        [
+          615,
+          615
+        ],
+        [
+          659,
+          659
+        ],
+        [
+          821,
+          821
+        ],
+        [
+          940,
+          964
+        ],
+        [
+          1021,
+          1021
+        ],
+        [
+          1150,
+          1150
+        ]
+      ],
+      "allDisplayedLineCount": 116,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/installer.ts",
+        "bytes": 43723,
+        "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+        "lines": 1228,
+        "pinnedAtUTC": "2026-10-17T21:08:57.566083+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 43723,
+        "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+        "lines": 1228,
+        "atUTC": "2026-10-17T21:10:50.693297+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-update-service.ts",
+      "bytes": 4655,
+      "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+      "totalLines": 138,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          138
+        ]
+      ],
+      "semanticLineCount": 138,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          138
+        ]
+      ],
+      "bodyDisplayLineCount": 138,
+      "navigationLineRanges": [
+        [
+          3,
+          4
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          41,
+          42
+        ],
+        [
+          44,
+          44
+        ],
+        [
+          54,
+          55
+        ],
+        [
+          67,
+          67
+        ],
+        [
+          73,
+          74
+        ],
+        [
+          88,
+          88
+        ],
+        [
+          100,
+          101
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          122,
+          122
+        ],
+        [
+          135,
+          135
+        ]
+      ],
+      "navigationLineCount": 20,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          138
+        ]
+      ],
+      "allDisplayedLineCount": 138,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/main/panel-app-update-service.ts",
+        "bytes": 4655,
+        "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+        "lines": 138,
+        "pinnedAtUTC": "2026-10-17T21:08:57.631530+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 4655,
+        "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+        "lines": 138,
+        "atUTC": "2026-10-17T21:10:50.694710+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified",
+      "note": "Read command requested1–140; actual EOF138 captured; selected actual consumer/cache purpose, no authority validation claim."
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-archive.ts",
+      "bytes": 5725,
+      "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+      "totalLines": 156,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          23,
+          49
+        ]
+      ],
+      "semanticLineCount": 27,
+      "bodyDisplayLineRanges": [
+        [
+          23,
+          49
+        ]
+      ],
+      "bodyDisplayLineCount": 27,
+      "navigationLineRanges": [
+        [
+          18,
+          18
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          28,
+          28
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          58,
+          58
+        ]
+      ],
+      "navigationLineCount": 7,
+      "allDisplayedLineRanges": [
+        [
+          18,
+          18
+        ],
+        [
+          23,
+          49
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          58,
+          58
+        ]
+      ],
+      "allDisplayedLineCount": 30,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/github-archive.ts",
+        "bytes": 5725,
+        "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+        "lines": 156,
+        "pinnedAtUTC": "2026-10-17T21:09:16.897699+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 5725,
+        "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+        "lines": 156,
+        "atUTC": "2026-10-17T21:10:50.695968+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/core/src/panel-apps/discovery.ts",
+      "bytes": 2357,
+      "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+      "totalLines": 64,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "semanticLineCount": 64,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "bodyDisplayLineCount": 64,
+      "navigationLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          17,
+          18
+        ],
+        [
+          21,
+          22
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          30,
+          31
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          41,
+          41
+        ]
+      ],
+      "navigationLineCount": 15,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "allDisplayedLineCount": 64,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/discovery.ts",
+        "bytes": 2357,
+        "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+        "lines": 64,
+        "pinnedAtUTC": "2026-10-17T21:09:16.948752+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 2357,
+        "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+        "lines": 64,
+        "atUTC": "2026-10-17T21:10:50.696681+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified",
+      "note": "Read command requested1–70; actual EOF64 captured. selected dependency purpose retained; not upgraded from displayed full physical file."
+    },
+    {
+      "path": "packages/core/src/panel-apps/manifest.ts",
+      "bytes": 8174,
+      "sha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+      "totalLines": 272,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          121,
+          121
+        ],
+        [
+          170,
+          172
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          194,
+          194
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          272,
+          272
+        ]
+      ],
+      "navigationLineCount": 9,
+      "allDisplayedLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          121,
+          121
+        ],
+        [
+          170,
+          172
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          194,
+          194
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          272,
+          272
+        ]
+      ],
+      "allDisplayedLineCount": 9,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/manifest.ts",
+        "bytes": 8174,
+        "sha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+        "lines": 272,
+        "pinnedAtUTC": "2026-10-17T21:09:17.012045+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 8174,
+        "sha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+        "lines": 272,
+        "atUTC": "2026-10-17T21:10:50.697456+00:00"
+      },
+      "scope": "navigation only, not full semantic coverage"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27608,
+      "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "totalLines": 864,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [
+        [
+          469,
+          470
+        ],
+        [
+          472,
+          472
+        ]
+      ],
+      "navigationLineCount": 3,
+      "allDisplayedLineRanges": [
+        [
+          469,
+          470
+        ],
+        [
+          472,
+          472
+        ]
+      ],
+      "allDisplayedLineCount": 3,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/index.ts",
+        "bytes": 27608,
+        "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+        "lines": 864,
+        "pinnedAtUTC": "2026-10-17T21:09:17.072906+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 27608,
+        "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+        "lines": 864,
+        "atUTC": "2026-10-17T21:10:50.698310+00:00"
+      },
+      "scope": "navigation only, not full semantic coverage"
+    },
+    {
+      "path": "packages/core/src/panel-apps/index.ts",
+      "bytes": 1851,
+      "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "totalLines": 66,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [
+        [
+          60,
+          61
+        ],
+        [
+          66,
+          66
+        ]
+      ],
+      "navigationLineCount": 3,
+      "allDisplayedLineRanges": [
+        [
+          60,
+          61
+        ],
+        [
+          66,
+          66
+        ]
+      ],
+      "allDisplayedLineCount": 3,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/core/src/panel-apps/index.ts",
+        "bytes": 1851,
+        "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+        "lines": 66,
+        "pinnedAtUTC": "2026-10-17T21:09:17.133448+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 1851,
+        "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+        "lines": 66,
+        "atUTC": "2026-10-17T21:10:50.698916+00:00"
+      },
+      "scope": "navigation only, not full semantic coverage"
+    },
+    {
+      "path": "packages/desktop/src/main/project-panel-ipc.ts",
+      "bytes": 11658,
+      "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+      "totalLines": 308,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          48,
+          60
+        ],
+        [
+          185,
+          199
+        ]
+      ],
+      "semanticLineCount": 28,
+      "bodyDisplayLineRanges": [
+        [
+          48,
+          60
+        ],
+        [
+          185,
+          199
+        ]
+      ],
+      "bodyDisplayLineCount": 28,
+      "navigationLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          57,
+          57
+        ],
+        [
+          190,
+          190
+        ],
+        [
+          194,
+          195
+        ]
+      ],
+      "navigationLineCount": 6,
+      "allDisplayedLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          48,
+          60
+        ],
+        [
+          185,
+          199
+        ]
+      ],
+      "allDisplayedLineCount": 30,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/main/project-panel-ipc.ts",
+        "bytes": 11658,
+        "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+        "lines": 308,
+        "pinnedAtUTC": "2026-10-17T21:09:31.452304+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 11658,
+        "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+        "lines": 308,
+        "atUTC": "2026-10-17T21:10:50.699619+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-install-service.ts",
+      "bytes": 3540,
+      "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+      "totalLines": 114,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          48,
+          60
+        ],
+        [
+          88,
+          101
+        ],
+        [
+          105,
+          114
+        ]
+      ],
+      "semanticLineCount": 37,
+      "bodyDisplayLineRanges": [
+        [
+          48,
+          60
+        ],
+        [
+          88,
+          101
+        ],
+        [
+          105,
+          114
+        ]
+      ],
+      "bodyDisplayLineCount": 37,
+      "navigationLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          99,
+          99
+        ],
+        [
+          113,
+          113
+        ]
+      ],
+      "navigationLineCount": 4,
+      "allDisplayedLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          48,
+          60
+        ],
+        [
+          88,
+          101
+        ],
+        [
+          105,
+          114
+        ]
+      ],
+      "allDisplayedLineCount": 38,
+      "testDeclarationOnly": false,
+      "testExecution": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/main/panel-app-install-service.ts",
+        "bytes": 3540,
+        "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+        "lines": 114,
+        "pinnedAtUTC": "2026-10-17T21:09:31.496446+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 3540,
+        "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+        "lines": 114,
+        "atUTC": "2026-10-17T21:10:50.700209+00:00"
+      },
+      "scope": "ordinary source/ref/version/discovery/cache data algorithms; adjacent I/O/native/authority not certified"
+    }
+  ]
+}

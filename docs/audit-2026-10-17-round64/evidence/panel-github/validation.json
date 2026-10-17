@@ -1,0 +1,21 @@
+{
+  "mode": "static-only",
+  "productFunctions": 0,
+  "imports": 0,
+  "fixtures": 0,
+  "testsExecuted": 0,
+  "testDeclarationsRead": 246,
+  "Git": 0,
+  "buildInstallRelease": 0,
+  "networkHTTP": 0,
+  "nativeElectron": 0,
+  "realUserDataOrConfig": 0,
+  "ownMetadataTools": "Python standard library JSON/byte hashes/range accounting and rg file inventory only; read-source/nav-source are owned audit metadata/source-display methods, not product imports.",
+  "notClaimed": [
+    "real GitHub URL/ref/HTTP compatibility",
+    "current GitHub remote contents",
+    "actual timeout/cancellation scheduling",
+    "FS/custody/permission/security enforcement",
+    "full repository coverage or absence of bugs"
+  ]
+}

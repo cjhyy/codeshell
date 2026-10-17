@@ -1,0 +1,31 @@
+{
+  "metadataFailures": 0,
+  "productFailures": 0,
+  "truncatedMetadataDisplays": [
+    {
+      "order": 1,
+      "toolReportedOriginalTokens": 6907,
+      "toolReportedOutputLines": 163,
+      "rawCapturedBeforeDisplay": false,
+      "savedCompleteRetainedInput": "history-projection.json"
+    },
+    {
+      "order": 2,
+      "toolReportedOriginalTokens": 4544,
+      "toolReportedOutputLines": 72,
+      "rawCapturedBeforeDisplay": false,
+      "savedCompleteRetainedInput": "history-projection.json"
+    }
+  ],
+  "limitedClaimDisplay": {
+    "note": "Later old-claim object display intentionally sliced each serialized object to1500 characters; complete projected objects saved, authoritative original source row then printed whole. Not a full-read claim for giant provenance arrays."
+  },
+  "sourceDisplays": {
+    "allSavedBeforeToolPrint": true,
+    "files": "source-display-01.txt through source-display-25.txt",
+    "truncated": false,
+    "requestedUpperBoundsClampedToActualEOF": true
+  },
+  "initialRawInventory": "inventory.first.stdout/.stderr/.exit.json; consumer-inventory.first.* captured before print. Two later filename-only rg calls emitted in conversation only; no invented raw artifact.",
+  "metadataRecaptureIsNotProductRetry": true
+}

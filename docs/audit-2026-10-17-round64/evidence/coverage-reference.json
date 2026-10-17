@@ -1,0 +1,12 @@
+{
+  "source": "docs/audit-2026-10-17-round63/evidence/root-coverage62/unified-current-index.json",
+  "throughRound": 62,
+  "originalPaths": 4643,
+  "full": 368,
+  "selected": 377,
+  "unknown": 3898,
+  "notFull": 4275,
+  "currentRound63And64NotUnioned": true,
+  "wholeRepositoryRemaining": null,
+  "scope": "Dated prior semantic coverage reference only; current source SHA binding pending at integration, no new semantic read or coverage transition."
+}

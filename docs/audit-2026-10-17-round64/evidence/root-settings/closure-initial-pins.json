@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "totalLines": 1139,
+      "timing": "Before this rendering; prior grep navigation and manager earlier body recorded separately."
+    },
+    {
+      "path": "packages/core/src/hooks/configured-tool-hooks.ts",
+      "bytes": 5392,
+      "sha256": "6ce05b375c7afefc51383308eeeb81522d16e3650fb3a228a3c2ed506e7aafac",
+      "totalLines": 150,
+      "timing": "Before this rendering; prior grep navigation and manager earlier body recorded separately."
+    },
+    {
+      "path": "packages/core/src/links/operation-reader.ts",
+      "bytes": 8855,
+      "sha256": "70e90c38ccae3a4e336adf45c7be582e63b405cba347428a16c372b3012f2c6f",
+      "totalLines": 227,
+      "timing": "Before this rendering; prior grep navigation and manager earlier body recorded separately."
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-host.ts",
+      "bytes": 8479,
+      "sha256": "fb6ea16d81e31e137730974e32b556c251315181f5dca734fc5283d36b4b1aa2",
+      "totalLines": 215,
+      "timing": "Before this rendering; prior grep navigation and manager earlier body recorded separately."
+    }
+  ]
+}

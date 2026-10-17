@@ -1,0 +1,509 @@
+
+SOURCE packages/server/src/serve/headless-server.ts KIND product
+185:   // eslint-disable-next-line prefer-const
+186:   let links: ReturnType<typeof createLinkHttp> | undefined;
+187:   // eslint-disable-next-line prefer-const
+188:   let panels: ReturnType<typeof createPanelHttp> | undefined;
+189:   const tabAuth = new Map<WebSocket, { sessionId: string; request: IncomingMessage }>();
+190:   const hubAuth =
+191:     opts.authMode === "hub"
+192:       ? await createHubAuth({
+193:           dataDir: opts.dataDir,
+194:           publicOrigin: opts.publicOrigin,
+195:           onRevoke: (sessionId) => {
+196:             responses.cancelOwner(sessionId);
+197:             mcp?.cancelOwner(sessionId);
+198:             configuration?.cancelOwner(sessionId);
+199:             links?.cancelOwner(sessionId);
+200:             panels?.cancelOwner(sessionId);
+201:             for (const [ws, auth] of tabAuth) {
+202:               if (auth.sessionId === sessionId) ws.close(4401, "session revoked");
+203:             }
+204:           },
+205:         })
+206:       : undefined;
+207:   const uploads = hubAuth ? new HubUploads(join(opts.dataDir, "uploads"), workspaceCwd) : undefined;
+208:   await uploads?.ready();
+209:   const pendingWorkerResponses = new Map<
+210:     string,
+211:     {
+212:       tab: WebSocket;
+213:       originalId: string | number;
+214:       tabId: number;
+215:       insertedAt: number;
+255: 
+256:   const notify = (method: string, params: unknown): void => {
+257:     broadcast(JSON.stringify({ jsonrpc: "2.0", method, params }));
+258:   };
+259:   const publishStream = (sessionId: string, event: unknown): boolean => {
+260:     let cursor;
+261:     try {
+262:       cursor = runReplay.append(sessionId, event);
+263:     } catch {
+264:       log("stream.coverage_unavailable", { sessionId });
+265:       return false;
+266:     }
+267:     notify("agent/streamEvent", {
+268:       sessionId,
+269:       event,
+270:       hubSequence: cursor.sequence,
+271:       hubEpoch: cursor.epoch,
+272:     });
+273:     return true;
+274:   };
+275:   const leases = new ApprovalLeases((lease) => notify("serve/approvalLease", lease));
+276:   const authReaper = hubAuth
+277:     ? setInterval(() => {
+278:         leases.sweep();
+279:         void uploads?.sweep().catch(() => {});
+280:         for (const [ws, auth] of tabAuth) {
+775:         hubJson(res, 404, { error: "API endpoint not found" });
+776:       }
+777:       return;
+778:     }
+779:     if (hubAuth) {
+780:       if (await links?.handlePublic(req, res)) return;
+781:       if (await panels?.handleAssets(req, res)) return;
+782:       if (await hubAuth.handle(req, res)) return;
+783:       if (pathname.startsWith("/api/")) {
+784:         const session = await hubAuth.authenticate(req);
+785:         if (!session) {
+786:           hubJson(res, 401, { error: "login required" });
+787:           return;
+788:         }
+789:         if (!hubAuth.isOriginAllowed(req)) {
+790:           hubJson(res, 403, { error: "origin rejected" });
+791:           return;
+792:         }
+793:         if (closing) {
+794:           hubJson(res, 503, { error: "server is closing" });
+795:           return;
+796:         }
+797:         responses.track(session.id, res);
+798:         if (pathname === "/api/v1/environment" && req.method === "GET") {
+799:           hubJson(res, 200, environment);
+800:           return;
+801:         }
+802:         if (await configuration!.handle(req, res)) return;
+803:         if (await links!.handle(req, res)) return;
+804:         if (await panels!.handle(req, res)) return;
+805:         if (await skills!.handle(req, res)) return;
+806:         if (await mcp!.handle(req, res)) return;
+807:         if (await sessionManagement!.handle(req, res)) return;
+808:         if (await files!.handle(req, res)) return;
+809:         if (await modelTraces!.handle(req, res)) return;
+810:         const upload = /^\/api\/v1\/uploads\/([^/]+)$/.exec(pathname);
+811:         if (upload && req.method === "PUT") {
+812:           await uploads!.accept(
+813:             upload[1]!,
+814:             session.id,
+815:             req,
+816:             res,
+817:             async () => !!(await hubAuth.authenticate(req)),
+818:           );
+819:           return;
+820:         }
+842:     const session = hubAuth ? await hubAuth.authenticate(req) : undefined;
+843:     const allowed = hubAuth
+844:       ? !!session && hubAuth.isOriginAllowed(req)
+845:       : passcode.allows(req as never);
+846:     if (pathname !== "/ws" || !allowed) {
+847:       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+848:       socket.destroy();
+849:       return;
+850:     }
+851:     if (tabs.size >= 64) {
+852:       socket.write("HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n");
+853:       socket.destroy();
+854:       return;
+855:     }
+856:     const tabId = nextTabId++;
+857:     wss.handleUpgrade(req, socket, head, (ws) => {
+858:       tabs.add(ws);
+859:       if (session) tabAuth.set(ws, { sessionId: session.id, request: req });
+860:       const holderId = String(tabId);
+861:       if (hubAuth) {
+862:         sendToTab(
+863:           ws,
+864:           JSON.stringify({ jsonrpc: "2.0", method: "serve/hello", params: { tabId: holderId } }),
+865:           "hello",
+866:         );
+867:         sendToTab(
+868:           ws,
+869:           JSON.stringify({
+870:             jsonrpc: "2.0",
+871:             method: "serve/approvalSnapshot",
+872:             params: { approvals: leases.snapshot() },
+873:           }),
+874:           "approval-snapshot",
+875:         );
+876:       }
+877:       log("tab.connected", { tabs: tabs.size });
+878:       const handleMessage = async (data: unknown): Promise<void> => {
+879:         if (ws.readyState !== ws.OPEN) return;
+880:         if (hubAuth && !(await hubAuth.authenticate(req))) {
+881:           ws.close(4401, "session expired");
+882:           return;
+883:         }
+884:         if (webSocketPayloadBytes(data) > 1024 * 1024) {
+885:           log("tab.frame_dropped", { reason: "payload too large" });
+886:           ws.close(1009, "payload too large");
+887:           return;
+
+SOURCE packages/web/app/auth.ts KIND product
+61:   ) {
+62:     super(message);
+63:   }
+64: }
+65: 
+66: export class InvalidAuthStatusError extends Error {
+67:   constructor() {
+68:     super("服务端返回了无效的登录状态，请稍后重试。");
+69:   }
+70: }
+71: 
+72: export async function api<T>(path: string, init: RequestInit = {}, scope?: ApiScope): Promise<T> {
+73:   const workspaceHeaders = scope ? apiWorkspaceHeaders(scope.workspace) : apiWorkspaceHeaders();
+74:   const request = { ...init };
+75:   if (
+76:     Object.keys(workspaceHeaders).length &&
+77:     !isControlPlaneUrl(path) &&
+78:     !isProjectUrl(path) &&
+79:     !path.includes("workspace=")
+80:   ) {
+81:     const headers = new Headers(init.headers);
+82:     for (const [name, value] of Object.entries(workspaceHeaders)) {
+83:       if (!headers.has(name)) headers.set(name, value);
+84:     }
+85:     request.headers = headers;
+86:   }
+87:   const response = await fetch(
+88:     scope ? apiUrl(path, scope.workspace, scope.projectId) : apiUrl(path, ""),
+89:     {
+90:       ...request,
+91:       credentials: "same-origin",
+92:       cache: "no-store",
+93:     },
+94:   );
+95:   const body = await response.json().catch(() => ({}));
+96:   if (!response.ok) {
+97:     const error = typeof body.error === "string" ? body.error : body.error?.message;
+98:     throw new ApiError(
+99:       error ?? body.message ?? `请求失败（${response.status}）`,
+100:       response.status,
+101:       typeof body.code === "string" ? body.code : undefined,
+102:       typeof body.retryAfterMs === "number" ? body.retryAfterMs : undefined,
+103:     );
+104:   }
+105:   return body as T;
+106: }
+107: 
+108: /** Called only after the existing paired WebSocket has authenticated this device. */
+109: export async function ensureDesktopHttpSession(credentials: {
+110:   deviceId: string;
+111:   secretHash: string;
+112: }): Promise<AuthSession> {
+113:   const result = await post<{ authenticated: boolean; session?: AuthSession }>(
+114:     "/api/v1/desktop/session",
+115:     credentials,
+116:   );
+117:   if (!result.authenticated || !result.session)
+118:     throw new ApiError("桌面连接已失效，请重新配对。", 401);
+119:   return result.session;
+120: }
+121: 
+122: export function post<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
+123:   return api(path, {
+124:     method: "POST",
+125:     headers: { "Content-Type": "application/json" },
+126:     body: JSON.stringify(body),
+127:   });
+128: }
+129: 
+130: /** A 404 explicitly identifies the legacy passcode-only host. Other failures stay gated. */
+131: export async function readAuthStatus(): Promise<AuthStatus | null> {
+132:   try {
+133:     const status = await api<Record<string, unknown>>("/api/v1/auth/status");
+134:     const invalid = () => new InvalidAuthStatusError();
+135:     if (
+136:       !status ||
+137:       typeof status.initialized !== "boolean" ||
+138:       typeof status.authenticated !== "boolean" ||
+139:       (status.mode !== undefined && status.mode !== "cloud-account")
+140:     )
+141:       throw invalid();
+196:     }
+197:     return {
+198:       initialized: status.initialized,
+199:       authenticated: status.authenticated,
+200:       ...(status.host === "hub" || status.host === "desktop" ? { host: status.host } : {}),
+201:       ...(status.session ? { session: status.session as AuthSession } : {}),
+202:     };
+203:   } catch (error) {
+204:     if (error instanceof ApiError && error.status === 404) return null;
+205:     throw error;
+
+SOURCE packages/web/app/AuthGate.tsx KIND product
+114:     // Focus/visibility refreshes are read-only. They cannot supersede a user's
+115:     // pending login/setup POST before its cookie and identity arrive.
+116:     if (logoutPending.current || loginPending.current) return;
+117:     const revision = ++authRevision.current;
+118:     try {
+119:       const status = await readAuthStatus();
+120:       // An origin that declared Account ownership cannot downgrade to Hub/legacy
+121:       // authority during a restart, upgrade or stale service-worker response.
+122:       if (
+123:         revision === authRevision.current &&
+124:         cloudModeRef.current &&
+125:         status?.mode !== "cloud-account"
+126:       ) {
+127:         authLost();
+128:         return;
+129:       }
+130:       if (revision === authRevision.current) acceptStatus(status);
+131:     } catch (cause) {
+132:       if (!mounted.current || revision !== authRevision.current) return;
+133:       if (
+134:         cloudModeRef.current &&
+135:         ((cause instanceof ApiError && cause.status === 401) ||
+136:           cause instanceof InvalidAuthStatusError)
+137:       ) {
+138:         authLost();
+139:         return;
+140:       }
+141:       // A server restart must not erase an active view or its unsent draft.
+142:       if (stateRef.current === "authenticated" || stateRef.current === "legacy") return;
+143:       setState("error");
+144:       setError(cause instanceof Error ? cause.message : "无法连接服务端");
+145:     }
+192:   const submit = async (event: React.FormEvent) => {
+193:     event.preventDefault();
+194:     if (busy || loginPending.current || cloudModeRef.current) return;
+195:     loginPending.current = true;
+196:     const revision = ++authRevision.current;
+197:     setBusy(true);
+198:     setError("");
+199:     try {
+200:       const result = await post<{ authenticated: boolean; session: AuthSession }>(
+201:         `/api/v1/auth/${state === "setup" ? "setup" : "login"}`,
+202:         {
+203:           username: username.trim(),
+204:           password,
+205:           deviceName: deviceName.trim() || undefined,
+206:           ...(state === "setup" ? { token: token.trim() } : {}),
+207:         },
+208:       );
+209:       if (!mounted.current || revision !== authRevision.current) return;
+210:       if (!result.authenticated) throw new Error("登录失败，请重试。");
+211:       setPassword("");
+212:       setToken("");
+213:       acceptStatus({ initialized: true, authenticated: true, session: result.session });
+214:     } catch (cause) {
+215:       if (!mounted.current || revision !== authRevision.current) return;
+216:       setError(cause instanceof Error ? cause.message : "登录失败，请重试。");
+217:       if (cause instanceof ApiError && cause.status === 409) {
+218:         loginPending.current = false;
+219:         void check();
+220:       }
+221:     } finally {
+222:       loginPending.current = false;
+223:       if (mounted.current && revision === authRevision.current) setBusy(false);
+224:     }
+289:         {state === "setup" || state === "login" ? (
+290:           <form onSubmit={(event) => void submit(event)}>
+291:             <h1>{state === "setup" ? "创建管理员账号" : "登录工作空间"}</h1>
+292:             <p>
+293:               {state === "setup"
+294:                 ? "首次启动需要服务端提供的初始化令牌。创建后，可在其他设备使用此账号登录。"
+295:                 : "连接服务端，继续你的会话与任务。"}
+296:             </p>
+297:             {state === "setup" ? (
+298:               <label>
+299:                 初始化令牌
+300:                 <input
+301:                   type="password"
+302:                   autoComplete="off"
+303:                   required
+304:                   value={token}
+305:                   onChange={(e) => setToken(e.target.value)}
+306:                 />
+307:               </label>
+308:             ) : null}
+309:             <label>
+310:               用户名
+311:               <input
+312:                 autoComplete="username"
+313:                 required
+314:                 maxLength={64}
+315:                 value={username}
+316:                 onChange={(e) => setUsername(e.target.value)}
+317:               />
+318:             </label>
+319:             <label>
+320:               密码
+321:               <input
+322:                 type="password"
+323:                 autoComplete={state === "setup" ? "new-password" : "current-password"}
+324:                 required
+325:                 maxLength={256}
+326:                 minLength={state === "setup" ? 12 : undefined}
+327:                 value={password}
+328:                 onChange={(e) => setPassword(e.target.value)}
+329:               />
+330:             </label>
+331:             {state === "setup" ? <small>密码至少 12 个字符。</small> : null}
+332:             <label>
+333:               设备名称 <span>（可选）</span>
+334:               <input
+335:                 autoComplete="off"
+336:                 maxLength={100}
+337:                 placeholder="例如：我的笔记本"
+338:                 value={deviceName}
+339:                 onChange={(e) => setDeviceName(e.target.value)}
+340:               />
+341:             </label>
+342:             {error ? (
+343:               <p className="form-error" role="alert">
+344:                 {error}
+345:               </p>
+346:             ) : null}
+347:             <button className="send" type="submit" disabled={busy}>
+348:               {busy ? "正在连接…" : state === "setup" ? "创建并进入" : "登录"}
+
+SOURCE packages/server/src/hub/auth-store.test.ts KIND test-declaration
+21:   test("bootstrap survives restart, is disclosed once, and cannot be reused", async () => {
+22:     const dataDir = directory();
+23:     const store = new HubAuthStore({ dataDir });
+24:     const token = store.initialize()!;
+25:     expect(token).toHaveLength(43);
+26:     expect(store.initialize()).toBeUndefined();
+27:     const restarted = new HubAuthStore({ dataDir });
+28:     expect(restarted.initialize()).toBeUndefined();
+29:     await expect(restarted.setup({ ...credentials, token: "x".repeat(43) })).rejects.toThrow(
+30:       "Invalid initialization token",
+31:     );
+32:     const grant = await restarted.setup({ ...credentials, token });
+33:     expect(store.isInitialized()).toBe(true);
+34:     expect(store.authenticate(grant.token)?.username).toBe("admin");
+35:     await expect(store.setup({ ...credentials, token })).rejects.toThrow(
+36:       "already been initialized",
+37:     );
+38:     const raw = readFileSync(store.filePath, "utf8");
+39:     expect(raw).not.toContain(token);
+40:     expect(raw).not.toContain(grant.token);
+41:     expect(raw).not.toContain(credentials.password);
+42:     expect(JSON.parse(raw).bootstrapTokenHash).toBeNull();
+43:     expect(statSync(store.filePath).mode & 0o777).toBe(0o600);
+44:     expect(statSync(join(dataDir, "hub")).mode & 0o777).toBe(0o700);
+45:     expect(store.listSessions()[0]).not.toHaveProperty("tokenHash");
+46:   });
+47: 
+48:   test("concurrent setup has exactly one winner and concurrent logins preserve sessions", async () => {
+49:     const store = new HubAuthStore({ dataDir: directory() });
+50:     const token = store.initialize()!;
+51:     const setup = await Promise.allSettled([
+52:       store.setup({ ...credentials, token }),
+53:       store.setup({ ...credentials, token }),
+54:     ]);
+55:     expect(setup.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+56:     const grants = await Promise.all(
+57:       Array.from({ length: 5 }, (_, i) =>
+58:         store.login({ ...credentials, deviceName: `Device ${i}` }),
+59:       ),
+60:     );
+61:     expect(store.listSessions()).toHaveLength(6);
+62:     for (const grant of grants) expect(store.authenticate(grant.token)?.id).toBe(grant.session.id);
+63:   });
+64: 
+65:   test("login rotates the presented session, revocation is immediate across instances, and expiry is fixed", async () => {
+66:     let now = 10_000;
+67:     const dataDir = directory();
+68:     const store = new HubAuthStore({ dataDir, now: () => now, sessionTtlMs: 2_000 });
+69:     const token = store.initialize()!;
+70:     const first = await store.setup({ ...credentials, token });
+71:     const second = await store.login(credentials, first.token);
+72:     expect(second.revokedSessionIds).toEqual([first.session.id]);
+73:     expect(store.authenticate(first.token)).toBeNull();
+74:     const peer = new HubAuthStore({ dataDir, now: () => now });
+75:     peer.initialize();
+76:     expect(peer.authenticate(second.token)?.id).toBe(second.session.id);
+77:     expect(store.revoke(second.session.id)).toBe(true);
+78:     expect(peer.authenticate(second.token)).toBeNull();
+79:     const third = await store.login(credentials);
+80:     now += 2_000;
+81:     expect(store.authenticate(third.token)).toBeNull();
+82:     expect(store.listSessions()).toEqual([]);
+83:   });
+84: 
+85:   test("bounds persistent sessions and revokes the oldest when issuing beyond the limit", async () => {
+86:     let now = 10_000;
+87:     const store = new HubAuthStore({ dataDir: directory(), maxSessions: 2, now: () => now });
+88:     const first = await store.setup({ ...credentials, token: store.initialize()! });
+89:     now += 1_000;
+90:     await store.login(credentials);
+91:     now += 1_000;
+92:     const third = await store.login(credentials);
+93:     expect(third.revokedSessionIds).toEqual([first.session.id]);
+94:     expect(store.listSessions()).toHaveLength(2);
+95:     expect(store.authenticate(first.token)).toBeNull();
+96:   });
+97: 
+
+SOURCE packages/server/src/hub/auth-http.test.ts KIND test-declaration
+92:   test("initializes, restores cookie and bearer sessions, rotates login, lists devices, revokes and logs out", async () => {
+93:     const { auth, revoked, api } = await start();
+94:     expect(await (await api("status")).json()).toEqual({
+95:       initialized: false,
+96:       authenticated: false,
+97:     });
+98:     expect((await api("sessions")).status).toBe(401);
+99:     const setup = await api("setup", "POST", { ...credentials, token: auth.bootstrapToken });
+100:     expect(setup.status).toBe(200);
+101:     const firstCookie = cookieFrom(setup);
+102:     const firstSession = (await setup.json()).session;
+103:     expect(setup.headers.get("set-cookie")).toContain("HttpOnly; SameSite=Strict");
+104:     expect(setup.headers.get("cache-control")).toBe("no-store");
+105:     expect(firstSession).not.toHaveProperty("tokenHash");
+106:     const bearer = firstCookie.slice(HUB_SESSION_COOKIE.length + 1);
+107:     expect(
+108:       (
+109:         await (
+110:           await api("status", "GET", undefined, undefined, { Authorization: `Bearer ${bearer}` })
+111:         ).json()
+112:       ).authenticated,
+113:     ).toBe(true);
+114:     expect(
+115:       (
+116:         await (
+117:           await api("status", "GET", undefined, firstCookie, { Authorization: "Bearer invalid" })
+118:         ).json()
+119:       ).authenticated,
+120:     ).toBe(false);
+121:     const login = await api("login", "POST", credentials, firstCookie);
+122:     expect(login.status).toBe(200);
+123:     const secondCookie = cookieFrom(login);
+124:     const secondSession = (await login.json()).session;
+125:     expect(secondCookie).not.toBe(firstCookie);
+126:     expect(revoked).toEqual([firstSession.id]);
+127:     expect((await (await api("status", "GET", undefined, firstCookie)).json()).authenticated).toBe(
+128:       false,
+129:     );
+130:     const other = await api("login", "POST", { ...credentials, deviceName: "Phone" });
+131:     const otherCookie = cookieFrom(other);
+132:     const otherSession = (await other.json()).session;
+133:     const listed = (await (await api("sessions", "GET", undefined, secondCookie)).json()).sessions;
+134:     expect(listed).toHaveLength(2);
+135:     expect(listed.find((row: any) => row.id === secondSession.id).current).toBe(true);
+136:     expect(listed.find((row: any) => row.id === otherSession.id).current).toBe(false);
+137:     expect(
+138:       (await api(`sessions/${otherSession.id}`, "DELETE", undefined, secondCookie)).status,
+139:     ).toBe(200);
+140:     expect(revoked).toContain(otherSession.id);
+141:     expect((await api("sessions", "GET", undefined, otherCookie)).status).toBe(401);
+142:     const logout = await api("logout", "POST", {}, secondCookie);
+143:     expect(logout.status).toBe(200);
+144:     expect(logout.headers.get("set-cookie")).toContain("Max-Age=0");
+145:     expect(revoked).toContain(secondSession.id);
+146:     expect((await api("sessions", "GET", undefined, secondCookie)).status).toBe(401);
+147:   });
+148: 

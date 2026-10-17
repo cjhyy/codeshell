@@ -1,0 +1,6 @@
+19:   createProjectPanelAppUpdateService,
+36:       updates: ReturnType<typeof createProjectPanelAppUpdateService>;
+57:       updates: createProjectPanelAppUpdateService(cwd),
+190:     "panel-apps:checkUpdate",
+194:         throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
+195:       return desktopPanelManager(cwd).updates.check(id, force === true);

@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "docs/review-2026-10-12/resource-quality-round8.md",
+      "bytes": 11479,
+      "sha256": "144f503bca6049c11ef1eca2faa108998d2d0ef5a4eafaaca3ea0946e9913975",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:07:05.991260+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "bytes": 11399,
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:07:05.993091+00:00"
+    }
+  ]
+}

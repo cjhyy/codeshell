@@ -1,0 +1,6 @@
+{
+  "exitCode": 0,
+  "method": "cause-query.py",
+  "sha256": "729378b0fab2394e54b29275b053ad9bbb94d1537ce9495dba3a55e33f78eb49",
+  "scope": "Own one targeted historical metadata query, not source/fixture/product runtime"
+}

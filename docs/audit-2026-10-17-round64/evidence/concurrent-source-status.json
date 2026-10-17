@@ -1,0 +1,11 @@
+{
+  "findingId": "MCP-R61-01",
+  "readBaseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "currentMain": "2bbb517b615a6035e1c68fa8cac13f0b6f3a1eb2",
+  "status": "Original dotted-path writer replaced by literal record-key mutation in current source.",
+  "readScope": "Root actually read the bounded diff; this artifact is a later preservation of that diff, not invented first output or a full current-file audit.",
+  "sourcePath": "packages/core/src/capability-control/service.ts",
+  "runtimeRevalidated": false,
+  "currentIssueClosedCertified": false,
+  "coverageDisposition": "Old full scope loses current-SHA certification; current byte-rebound index conservatively unknown, no partial diff promoted to full."
+}

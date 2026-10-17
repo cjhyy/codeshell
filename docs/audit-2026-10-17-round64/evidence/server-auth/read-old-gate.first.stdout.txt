@@ -1,0 +1,163 @@
+
+REPORT docs/review-2026-10-12/auth-round7.md TOTAL 102 RANGES [[1, 102]]
+1: # 第七轮：Hub / paired 身份与连接生命周期复查
+2: 
+3: 结论：**正式新增 0 项**。本轮覆盖的正常到期、撤销、设备删除、同浏览器多页签、重新配对及连接重试路径具有明确保护和恢复入口。R03 ACK 重复、R32 配额下 secret 持久化失败、R38 logout HTTP 黑洞不重复计入；主报告 R01–R50 已去重，R50 为麦克风权限路径，与此域无交集。
+4: 
+5: ## 冻结与验证方式
+6: 
+7: - 工作区 `/Users/admin/.codex/worktrees/review-latest-20261012/codeshell`，HEAD `a66f4ef291f304ee4df9da8095a90671d9a8f140`，分支 `codex/review/latest-20261012`。
+8: - 已读 CODESHELL.md；只读产品和既有 dist，不 install/build/clean。最后 `git status --short` 仅有主代理正在整合的 `?? docs/review-2026-10-12/`。
+9: - 自定义文件全部位于本目录。guarded runner 分别生成隔离 HOME / 应用状态并清除继承凭据。所有 Host / Core 动态导入前安装精确 `http://127.0.0.1:<fixturePort>` network guard；WS 构造也逐次检查同一 loopback origin。浏览器用实际组件和 Hooks，加内存 DOM / WebSocket / HTTP 响应 fixture，无外部网络。
+10: - 真实 Hub/paired fixture 直接导入已构建 `packages/server/dist/`；真实 Hub auth store、cookie、WS、HTTP、设备 registry 均被调用。没有 `agent/run` 或付费模型调用，Hub worker generation 保持 0；占位 worker 如意外执行会立即报错。
+11: - **13 tests、87 个 Bun expect、0 failures、0 skips**。另有原生 Node 下载 fixture 自身的 assert，未混入 Bun expect 数量。
+12: 
+13: ```sh
+14: node scripts/run-bun-test-shard.mjs --timeout 30000 /tmp/codeshell-review-20261012-auth-round7/auth-lifecycle.test.ts /tmp/codeshell-review-20261012-auth-round7/native-download.test.ts
+15: node scripts/run-bun-test-shard.mjs --timeout 30000 /tmp/codeshell-review-20261012-auth-round7/browser-recovery.test.tsx
+16: ```
+17: 
+18: 分别运行是有意的：两个 shard 的精确 origin 不同，不能在一个共享进程中替换 network guard。
+19: 
+20: ## 已验证正常边界
+21: 
+22: ### 1. Hub 撤销、logout 和同 cookie 多页签
+23: 
+24: 可达操作：登录 Hub，在同浏览器打开两个 tab；另一独立登录在设备会话列表撤销该登录，或当前登录正常退出。
+25: 
+26: 生产链：
+27: 
+28: - [auth-http.ts:154](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:154) logout 删除 session，触发 onRevoke，清 cookie；同文件 162–167 设备会话 DELETE 也触发同一 callback。
+29: - [headless-server.ts:193](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:193) 以 sessionId 取消 HTTP / MCP / configuration / Link / Panel owner，并关闭该 session 的全部 WS（4401）；741 行将真实 HTTP response 归属到登录 session。
+30: - [protocol.ts:169](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/protocol.ts:169) 4401/4403 关闭会 emit auth loss 并停止自动重连；[useHubController.tsx:327](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/useHubController.tsx:327) 接入 AuthGate。
+31: - [AuthGate.tsx:69](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/AuthGate.tsx:69) 展示“登录已过期或此设备已被撤销，请重新登录。”，保留正常登录入口。
+32: 
+33: 真实结果：同 cookie 两条已打开 WS 均收到 4401；旧 cookie API 为 401，另一登录的 WS 和 API 仍可用。上述预期拒绝不计缺陷。
+34: 
+35: ### 2. Hub cookie 轮换、到期与多 tab 恢复
+36: 
+37: 可达操作：带当前 cookie 再次登录；登录会话到期后重新登录；另一 tab 已产生有效的新共享 cookie，再切回旧 tab。
+38: 
+39: - [auth-store.ts:214](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:214) grant 删除 supplied replaceToken 对应会话及已过期会话，返回 revokedSessionIds；[auth-http.ts:101](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:101) 将轮换释放到真实 WS/HTTP callback。
+40: - [auth-store.ts:161](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 每次鉴权重读磁盘并检查 expiresAt；[headless-server.ts:274](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:274) 默认每 5 秒重查已打开 WS，823 行每条入站 WS message 再鉴权。
+41: - [AuthGate.tsx:39](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/AuthGate.tsx:39) 请求 revision 保护，focus/visible 重新读取 status；临时 status 网络/503 错误保留已认证页面。收到新的有效共享 cookie 后，focus 可回到 ProjectsGate，无需再输账号。
+42: 
+43: 真实结果：重新登录得到新 sessionId，旧 WS 4401、旧 cookie 401。对本 fixture 的一个持久会话合规调整时间戳模拟到期后，已打开 WS 被 sweep 关闭为 4401，status.authenticated=false，新登录恢复 API 200。浏览器实际 AuthGate 测试确认撤销文案、共享新 cookie 的 focus 恢复，以及临时检查失败时保留 active view。
+44: 
+45: 限定：生产 30 天 TTL 未真实等待，fixture 只调整隔离 auth.json 的时间戳，不改全局时钟；WS sweep 测试使用 20ms 调参。没有声称所有已经开始的长 HTTP 操作仅因自然到期都被即时取消。
+46: 
+47: ### 3. Desktop HTTP 会话续期不破坏正常多 tab
+48: 
+49: 可达操作：两个 tab 复用同配对设备；WS 重连重新兑换 cookie；30 分钟 HTTP 会话到期但 paired WS 仍在线。
+50: 
+51: - [http-api.ts:379](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/desktop-web/http-api.ts:379) 同 device + 有效 cookie 复用 token 和 sessionId，仅延长 expiresAt，避免取消正在进行的 owner-scoped 探测 / 授权；到期后 principal 221–223 删除旧 owner，重新 exchange 可创建新 owner。
+52: - [DesktopApp.tsx:40](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/DesktopApp.tsx:40) WS online 或 authRevision 改变后 exchange 配对凭据；[DesktopApp.tsx:181](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/DesktopApp.tsx:181) configuration 的 401 调用 retryAuth，focus/visible 在 195–209 行触发刷新。
+53: 
+54: 真实结果：短 TTL/注入时钟 fixture 中，到期前跨 tab handshake 保持相同 cookie/owner，未调用 onSessionRevoked；自然到期后旧 cookie 401，paired WS 保持在线，再 exchange 得到新 owner 和 API 200。实际 DesktopApp Hook 测试显示 focus 遇到一次 401 后自动完成第二次 exchange，保持同 WS 和未发送 draft，无需新 QR。排除了“WS 在线而短期 HTTP cookie 到期后永久失效”的候选。
+55: 
+56: ### 4. Desktop 设置删除设备后旧连接全部失效，同浏览器可重新扫码
+57: 
+58: 可达操作：桌面设置 → 高级 → 可信设备 → 删除；旧浏览器扫描新二维码。
+59: 
+60: - [AdvancedSections.tsx:1763](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/settings/AdvancedSections.tsx:1763) 设置 UI 调用 removeDevice；[index.ts:5498](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:5498) 先 hard delete 设备记录，再调用 remote.revokeDevice。
+61: - [remote-host-manager.ts:580](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/mobile-remote/remote-host-manager.ts:580) 取消该 device 上传和 Web API owner，release/terminate 全部对应 WS；[http-api.ts:349](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/desktop-web/http-api.ts:349) 删除 device 的全部浏览器 cookie owner。
+62: - [trusted-device-store.ts:42](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/mobile-remote/trusted-device-store.ts:42) 配对以 stable secret get-or-create；112 行 remove 真正删记录，因此 UI 删除后不会留下被 revoked 的 zombie row 阻止相同浏览器重新配对。
+63: - [remote-host-manager.ts:421](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/mobile-remote/remote-host-manager.ts:421) 真实 QR token → pair.complete → store.addDevice；466 行 auth.device 重新鉴权。
+64: 
+65: 真实结果：同 device 的两个旧 WS 均关闭，旧 cookie API 401；另一 device 的 WS/API 继续正常。相同 secret 使用新真实 QR token 配对成功，得到新 deviceId，随后 auth.device 和 HTTP exchange 均成功。
+66: 
+67: 限定：native Electron 设置 UI 没有启动，测试执行其已核对的同一两步后端删除链。显式 revoke API 会保留 revoked row，要求管理员 remove 后再配对；这个区别是生产 store 的明确策略，设置中的正常删除流程走 hard delete，未将策略性拒绝当作 bug。
+68: 
+69: ### 5. 未完成 HTTP 撤销、文件句柄清理与其他登录隔离
+70: 
+71: 可达操作：浏览器已开始下载文件，管理员撤销该设备登录/配对设备，或该登录正常退出。
+72: 
+73: - [session-http-responses.ts:7](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/session-http-responses.ts:7) cancelOwner destroy 实际 response；17–32 行跟踪 finish/close，覆盖 handler 返回后仍继续的响应。
+74: - [http-api.ts:195](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/desktop-web/http-api.ts:195) Desktop cancelSession / dropSession 共享此响应清理；Hub 对应 headless-server.ts:193–201。
+75: - [files.ts:250](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/files.ts:250) stream pipeline 被 response destroy 中断，270–273 行最终释放 source / retained parent 文件句柄。
+76: 
+77: 原生 Node 真实下载结果：96MiB 文件在 revoke/logout 后均不完整（complete=false、postRevokeTail=false、timedOut=false），四次撤销分别只读到约 1.3–1.8MiB 已进入管道的字节；被撤销的真实 FileHandle 全部 fd=-1。另一登录的并行 96MiB 下载完成，后续小文件仍可读；已经返回 accepted 的 fixture 后台 Promise 不被 HTTP logout 取消。撤销后的新下载 401。
+78: 
+79: 证据 `native-desktop-observed.log` / `native-hub-observed.log`。脚本基于仓库已有 `tests/fixtures/download-revocation.mjs`，仅移除构建步骤、改为当前 dist，并在 Core/Host 导入前加入 exact-origin guard。
+80: 
+81: ### 6. 连接错误的用户恢复入口
+82: 
+83: - [useRemoteSocket.ts:89](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/hooks/useRemoteSocket.ts:89) paired WS 断线 jitter/backoff；103 行允许 focus/visible/online 抢先重连，124–141 行 CONNECTING 超时 watchdog；177–178 行忽略旧 socket 晚到事件，56–64 行 generation 限制过期发送。
+84: - [useRemoteSocket.ts:74](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/hooks/useRemoteSocket.ts:74) 显式 logout 清 deviceId，关闭本 tab WS，并阻止自动重连；稳定 secret 保留以允许后续正常配对。
+85: - [DesktopApp.tsx:68](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/DesktopApp.tsx:68) 初始 HTTP handshake 失败显示真实错误、“重试”和“重新配对”。实际组件测试：一次 503 后点击“重试”成功进入 Workbench，不需新 QR。
+86: - [protocol.ts:174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/protocol.ts:174) Hub 认证撤销停止 retry；普通 1006 传输关闭进入 backoff retry。实际 client 测试分别验证两类。
+87: - [AuthGate.tsx:134](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/AuthGate.tsx:134) 初始连接错误提供“重试连接”；已认证页面临时检查失败保留现有页面（39–50 行）。
+88: 
+89: 配对 HTTP logout 本身保留 device pairing 和其他已认证 paired WS 是明确分层契约（http-api.ts:409–413；仓库已有“logout preserves pairing”测试）；浏览器退出还调用本地 app.logout 关闭本 tab WS。此轮不把“HTTP logout 没有撤销整个可信设备”计成缺陷。已有 R38 的 HTTP logout 永不 settle 场景仍属独立问题，不被本轮成功响应对照否定。
+90: 
+91: ## 证据与局限
+92: 
+93: - `server-final.log`：8 tests / 61 expects / 0 failures。
+94: - `browser-recovery.log`：5 tests / 26 expects / 0 failures。
+95: - `auth-lifecycle-observed.json`、`browser-recovery-observed.json`：核心状态观察，无 bearer token、cookie 或凭据输出。
+96: - `auth-lifecycle.test.ts`、`native-download.test.ts`、`download-revocation.mjs`、`browser-recovery.test.tsx`：全部复现源。
+97: - `discarded-bun-download-attempt.log`：初版以 Bun HTTP incoming.pause 模拟下载暂停时，它仍会预缓冲完整文件，因此两项断言失败。改用仓库原生 Node fixture 后四次 revoke/logout 全部通过；该文件是测试环境纠偏记录，不是产品缺陷证据。
+98: - 浏览器层验证实际 React 函数/Hook 返回的文案、按钮 handler 和状态；没有运行完整真实浏览器视觉布局。没有覆盖外部隧道、真实账号、网络代理、付费模型或安全攻击。
+99: 
+100: ## 主审便携复核
+101: 
+102: 本附录前文 `/tmp` 路径是代理原始记录。最终脚本已复制到 [`reproductions/auth-round7/`](reproductions/auth-round7/)，转换为仓库相对导入，并在 `84740d56` 与 `a66f4ef2` 分别通过 guarded runner。原生 Node 下载子进程额外经 `run-isolated-node-smoke.mjs` 隔离入口执行。最终计数与上文一致；新快照日志另存 `validation/latest-a66f4ef2/`。
+
+REPORT docs/review-2026-10-12/file-mutex-quality-round19.md TOTAL 57 RANGES [[1, 57]]
+1: # 第十九轮 file-mutex 独立只读质量审计
+2: 
+3: 本审计新增测试、原生进程和网络实验执行均为 **0**。已读冻结 latest a66f4ef291f304ee4df9da8095a90671d9a8f140 的 CODESHELL、源码、已有 dist、作者原生脚本及主报告 R01–R76。只写本文，未改产品、构建、fixture、主报告或 goal，未创建代理。
+4: 
+5: **冻结结论：支持保留单项 FM19-1/P2 Host availability 候选。生产首因是正式标题 PATCH → HubAuth.authenticate → acquireFileLock(data/hub/auth.json) → data/hub.lock 的真实 EACCES → file-mutex 无差别同步重试；没有抵达 SessionTitlesStore 的锁。** 已只读核对最终[作者报告](file-mutex-round19.md)、[source](validation/file-mutex-round19/file-mutex-host.mjs)、[native log](validation/original-file-mutex-round19/native-host.log)、[observations](validation/original-file-mutex-round19/native-observations.json) 和 [cleanup receipt](validation/original-file-mutex-round19/post-run-cleanup.json)：作者原生 Node 1 个成功 fixture / 38 assertions / Completed / exit0；本审计执行0，root后续双基线另计。四份未完成诊断不算通过或新增缺陷。不扩大成 P1、安全攻击、无限挂死、标题/历史损坏或所有文件权限失败。
+6: 
+7: ## 正式入口和首个生产门禁
+8: 
+9: 实际 HubSessions 标题 form [304–306](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:304) 调 mutate；[165–178](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:165) 同步防重后发 PATCH。Headless [188–192](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:188) 用 opts.dataDir 创建真实 HubAuth；[723–751](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:723) 先在 728 authenticate，再做 Origin 等检查，751 才转发 sessionManagement.handle。作者没有跳过认证以强行抵达 title store。回答/审批/模型不参与本轮。
+10: 
+11: 实际 callback [auth-http.ts:107–108](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-http.ts:107) 调 store.authenticate。HubAuthStore [85](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:85) filePath 为 dataDir/hub/auth.json；[161–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:161) 对格式有效 token 调 mutate。即使一分钟内无需持久化 lastSeenAt，也先取得锁：mutate [254–263](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:254) ensureDirectory → acquireFileLock → read/validate → 按 changed 写入 → finally release。lastSeenAt 写节流不能排除 acquisition。
+12: 
+13: Core acquireFileLock [73–76](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:73) 锁 dirname(file)，所以 sibling 为 dataDir/hub.lock。Auth ensureDirectory [267–273](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:267) 仅确保/chmod hub 子目录 0700，不修 dataDir parent。启动和 setup 已建立 hub 后，当前非 root Host 可读/遍历 dataDir 却不可新建 entry（自有 parent chmod 0500），正常带 Cookie 的请求便可在 auth lock mkdir EACCES。
+14: 
+15: AUTH 先于标题 handler，因此动态响应应为 Headless 外层 [778–779](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:778) 的 HTTP 500 “server request failed”，不能引用 title handler 的中文 500。标题 anchor 是否预建不是该 native auth 故障的必要前提；先成功保存标题只是正常控制/持久基线。不能把 auth 锁收据写成 title acquisition 收据，亦不另计标题锁发现。未绕过 Cookie/Origin/ownership；不据 token 格式校验次序推导匿名安全攻击。
+16: 
+17: ## 根因、同进程范围和超时反证
+18: 
+19: file-mutex 默认 [50](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:50) 30,000ms；[62–64](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:62) sleepSync 直接 Atomics.wait；[95–112](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:95) 捕获全部 lockSync 错误，不筛 ELOCKED，EACCES 也同步重试直到 deadline。Promise/async 不会把此代码移入 worker。
+20: 
+21: lazy wrapper [65–77](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/lockfile.ts:65) 调 proper-lockfile 4.1.2。依赖 [lib/lockfile.js:46–49](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/lockfile.js:46) 对非 EEXIST 原错立即回传；live lock [67–69](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/lockfile.js:67) 才转 ELOCKED。adapter [5–20/43–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/adapter.js:5) 用真实 sync fs 并原样抛错。无谓权限重试由仓库外层引入；正常控制的 native mkdir EEXIST 与外层捕获 ELOCKED 应明确区分。
+22: 
+23: Headless [715–780](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:715) 同一 Node createServer callback 处理 /health（719）、environment（742）和 session API（751）；WS upgrade [1216–1217](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:1216) 也在该 server。无需 AUTH 的 /health 仍等同一个 JS 事件循环，定时器和 JS 消息处理也无法进展。这不等于 OS 网络停止或独立 agent worker 计算停止，不能冒称实际所有任务超时。
+24: 
+25: 最终脚本故障期间只追加 /health，避免并发第二个需 AUTH 的 ENV 再产生第二次锁等待；ENV 在权限修复后控制。动态范围只能是一份 auth acquisition 故障、一份独立健康请求和 Host timer gap，不是测遍全 API。故障持续时后续认证可再进相同 retry 是源码关系，不是无限挂死实验。
+26: 
+27: session readBody [424–434](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/session-management.ts:424) 的 10 秒 timer 尚未在首 AUTH 之前创建，亦只保护 body 收取，不能终止本次 acquisition。file-mutex/Auth mutation 无 signal 参数；UI AbortController 取消客户端等待不会让同步等待中的服务端取消回调提前运行。该取消边界是源码结论，脚本没有动态点击 UI Cancel。
+28: 
+29: ## 正常保护、恢复和 P 级
+30: 
+31: Auth setup/login [127–129/146–153](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:127) 在锁前 await scrypt，mutate 锁内仅同步 read/validate/write/finally release。这不是该 writer 的同进程 async-holder deadlock，不能借 CODESHELL 警告另造一个发现。
+32: 
+33: 正常跨进程争用仍须允许：作者自有 Node holder 对 data/hub 实际 acquireLockOnPath，短暂持有后 finally release；另一进程 timer 能继续，Host 随后成功。不能用同进程 await-delay 冒充另一进程释放，也不能删锁、失败后无锁写入或任意缩短正常竞争预算。
+34: 
+35: deadline 后错误经 Headless catch 返回，事件循环恢复；权限修复后原 Cookie 的 ENV 和同一 title/expectedTitle 请求应及时成功。native fixture 不渲染 HubSessions，只能动态证明 HTTP 同稿重试；实际 UI 的错误/保稿/解除 busy 是 [HubSessions:187–205](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:187) 静态接线，第十八轮已有该 UI 500 保稿正常控制，不能称本轮 browser UI E2E。
+36: 
+37: 建议 **P2**：正常轻量请求在窄存储故障下使局部 acquisition 错误放大为整个 Headless Host 约 30 秒停顿，超出局部保存反馈 P3。保留非 root、真实 parent 拒写、单次有界及恢复条件；没有历史/消息丢失、模型费用、crash 或权限绕过，不升 P1。失败请求未抵达 title mutation，最终确断言原 title bytes 不变；同稿成功不能扩大成磁盘完全故障的一般恢复保证。
+38: 
+39: ## 观测、隔离、失败诊断及最终计数
+40: 
+41: 维护 run-isolated-node-smoke 提供 private HOME，fixture 拒绝 root；各 mode 在 Core/Host import 前装 exact owned loopback guard，Host/holder 再 deny direct net/tls，parent 只对 owned origin HTTP。actual HubAuth/setup、Headless Node HTTP、Core lock util 和普通标题存储被执行；Host/holder 是自有 Node child，“无 agent worker”不等于“无子进程”。已核 bridge.hasChild/generation、child exit/close、closedNormally 收据；未用模型/provider/CLI/真实用户账号。Node22、Electron、Linux/Windows、其他 errno/整盘只读不在本次动态覆盖，锁前 mkdir/chmod 即失败的故障不能套入这份 30 秒结论。
+42: 
+43: observer 经 createRequire(Core lockfile.js) → resolve(proper-lockfile) → 其 require(graceful-fs) 取得真实依赖实例，只包装 mkdirSync。它委托原方法，返回原结果或重新 throw 同一个 error，仅记录自有 title/auth lockPath；首 EACCES receipt 写到 denied data 之外的 owned 根。parent 对新建 owned 根 realpathSync，使过滤与 proper-lockfile canonical target 一致，未改产品 realpath。无 Date.now/sleep/预算/lockSync 结果/权限模拟；少量观测 I/O不能解释 30 秒，精确开销不在范围。
+44: 
+45: parent 与 Host 不同进程，parent interval 可继续；首次真实 auth EACCES 后才发 /health，Host 20ms timer gap 独立佐证 JS 阻塞，避免仅凭客户端排队推断。finally 接 catch、abort/allSettled outstanding requests，修权限，关闭并 await children，删 owned目录，isolator 最后删 HOME；仍须最终清理收据。
+46: 
+47: 前四份诊断全部保留且不计成功：前三轮先后调整 node:fs observer 到实际 graceful-fs 实例、规范化 owned 路径，最初只盯 title lock 的过滤又漏掉生产首因 AUTH；second/third 的 8 个断言仅为 setup/正常保存控制。第四份实际客户端 ECONNRESET 诊断也保留，尚未取得完整候选收据，不另列产品发现或把其具体网络成因当作已证明。最终客户端每个 fetch 增加 Connection: close，固定新连接以排除旧连接池干扰；仅改变客户端请求 header，没有改 Host timeout、认证、锁或30秒产品等待。正常 exit0 cleanup 与失败记录 closedNormally=false 不矛盾，不能将 AbortError 写成产品 native crash。
+48: 
+49: 最终收据为 Node v25.8.1 / macOS arm64 / UID501。真实 auth sibling mkdir EACCES 803次；标题请求 500，30,015.75ms；首 EACCES 后另发的 /health 200，30,009.79ms；Host 20ms timer gap 30,021.95ms，parent timer 295 ticks。修权限后 ENV 200/6.80ms、同稿标题200/17.42ms。正常另进程持有 auth 锁350ms 后释放，标题请求200/377.39ms，native EEXIST11次；generated title保持。Host/holder均close exit0、signal null，failure=null、closedNormally=true，multiple bridge snapshots无worker/generation0。38项是 fixture 的 check/equal 对 Node assert 调用逐项计数，非 Bun test/expect；不增加 Bun文件/测试/断言汇总。cleanup receipt另证 owned root和isolated root均已删除、精确fixture进程检索无残留；这些post-run检查不混入38。
+50: 
+51: ## 基线、去重和建议
+52: 
+53: 84740 与 a66f 的 file-mutex、lockfile wrapper、HubAuthStore/auth-http、SessionTitlesStore/session-management 产品源码无差异；latest 既有 dist 的真实入口、默认30秒和 retry 与 src 对应。本审计未 build，两基线动态适用以作者/root 收据为准，不用源码一致冒充双基线执行。精确行号按 latest。
+54: 
+55: 与 R43 Token 拒写缺反馈、R71 项目重命名乐观 UI、R65 目录 EACCES 冒充空树独立：UI feedback 修复不去掉明确非争用错误的同步重试；本项缺 Host 可用性。第十八轮非文件 title registry 500 是取得锁后 strict read 拒绝，其 Bun EACCES 诊断只是调查线索，不能当成已证明 native title锁的重复发现。第十七轮 fresh title parent EACCES 在 mkdir(anchor) 前置失败，不冲突。
+56: 
+57: 最小修复是只为真正可重试的 ELOCKED 保留争用重试，明确权限/存储 acquisition 错误立即回传；若 Host 还要在正常争用时保持响应，应使用有界非阻塞 acquisition 或隔离同步锁工作。保留认证、跨进程 read-modify-write、真实 parent/anchor 检查、标题 CAS、严格 registry、finally release、同稿重试，不能故障时无锁写入或跳过认证。

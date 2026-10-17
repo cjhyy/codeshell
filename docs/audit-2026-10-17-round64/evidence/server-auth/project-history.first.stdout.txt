@@ -1,0 +1,22 @@
+BATCH {"atUTC": "2026-10-17T21:05:46.882389+00:00", "excludedFormalAtOrAbove": 64, "historyFiles": 6801, "jsonValueScalarsVisited": 5060759, "capPerTarget": 100, "errors": [], "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading.", "productExecution": 0, "sharedBatch": {"path": "/tmp/codeshell-audit-round175-settings-flags/history-batch.json", "bytes": 1853203, "sha256": "10b4d36a66e4b47e0a1edb838f60a9e0c3334f934c279df3175df31599653b83", "pinAtUTC": "2026-10-17T21:06:16.071914+00:00"}, "counts": {"packages/server/src/hub/auth-http.ts": 72, "packages/server/src/hub/auth-store.ts": 78}}
+
+TARGET packages/server/src/hub/auth-http.ts TOTAL 72 SAVED 72
+{"document": "docs/audit-2026-10-17-round63/evidence/panel-resource-clone/canonical-old-gate.json", "locations": ["/objects/3/originalObject/paths/8", "/objects/4/originalObject/paths/8"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json", "locations": ["/hits/41/text", "/hits/48/text"]}
+{"document": "docs/review-2026-10-12/auth-round7.md", "locations": [28, 39]}
+{"document": "docs/review-2026-10-12/file-mutex-quality-round19.md", "locations": [11]}
+{"document": "docs/review-2026-10-12/validation/original-file-mutex-round19/quality-audit.md", "locations": [11]}
+{"document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json", "locations": ["/module_inventory/84740d56/paths/8", "/module_inventory/a66f4ef2/paths/8"]}
+allUniqueDocuments 32 suppressed groups are machine locator inventory/coverage/preflight only, not semantic read claims
+
+TARGET packages/server/src/hub/auth-store.ts TOTAL 78 SAVED 78
+{"document": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json", "locations": ["/hits/all_429/64/context", "/hits/all_429/74/context"]}
+{"document": "docs/audit-2026-10-17-round63/evidence/panel-resource-clone/canonical-old-gate.json", "locations": ["/objects/3/originalObject/paths/9", "/objects/4/originalObject/paths/9"]}
+{"document": "docs/review-2026-10-12/auth-round7.md", "locations": [39, 40]}
+{"document": "docs/review-2026-10-12/file-mutex-quality-round19.md", "locations": [11, 13, 31]}
+{"document": "docs/review-2026-10-12/file-mutex-round19.md", "locations": [18, 96]}
+{"document": "docs/review-2026-10-12/validation/original-file-mutex-round19/quality-audit.md", "locations": [11, 13, 31]}
+{"document": "docs/review-2026-10-12/validation/original-file-mutex-round19/report.md", "locations": [16]}
+{"document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json", "locations": ["/module_inventory/84740d56/paths/9", "/module_inventory/a66f4ef2/paths/9"]}
+{"document": "docs/todo/codeshell-hub-iteration-design.md", "locations": [360]}
+allUniqueDocuments 33 suppressed groups are machine locator inventory/coverage/preflight only, not semantic read claims

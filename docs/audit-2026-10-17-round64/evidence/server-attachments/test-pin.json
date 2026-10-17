@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/attachment-service.test.ts",
+      "bytes": 17409,
+      "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "lines": 551,
+      "atUTC": "2026-10-17T21:07:30.118324+00:00",
+      "beforeBodyAndLineNavigation": true
+    }
+  ]
+}

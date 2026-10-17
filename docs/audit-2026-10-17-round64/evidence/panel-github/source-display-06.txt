@@ -1,0 +1,44 @@
+27: import { normalizeGitPanelAppSource } from "./source.js";
+104: export interface GitPanelAppSourceInput {
+108:   subdir?: string;
+111: export type PanelAppSourceInput = LocalPanelAppSourceInput | GitPanelAppSourceInput;
+112: export type InstalledPanelAppSource = string | GitPanelAppSourceInput;
+127:   source: { kind: PanelAppSourceInput["kind"]; label: string };
+133:   subdir: string;
+134:   source: GitPanelAppSourceInput;
+143:   subdir: string;
+148:   source: GitPanelAppSourceInput;
+167:   source: InstalledPanelAppSource;
+178:   source: GitPanelAppSourceInput;
+185:   source: GitPanelAppSourceInput;
+210: function normalizedGitSourceKey(input: GitPanelAppSourceInput): string {
+211:   return JSON.stringify(normalizeGitPanelAppSource(input));
+220:   input: GitPanelAppSourceInput,
+222:   const source = normalizeGitPanelAppSource(input);
+229:     await extractZipSubdirectory(archivePath, extractedRoot, source.subdir);
+239:   input: GitPanelAppSourceInput,
+244:       source: opened.source,
+261:   input: GitPanelAppSourceInput,
+269:           "check the repository, branch, or optional search subdirectory",
+276:       const subdir = joinedPanelAppSubdirectory(opened.source.subdir, nested);
+277:       const label = subdir ?? ".";
+281:           subdir: label,
+282:           source: {
+285:             ...(opened.source.ref ? { ref: opened.source.ref } : {}),
+286:             ...(subdir ? { subdir } : {}),
+298:           subdir: label,
+303:     panels.sort((left, right) => left.subdir.localeCompare(right.subdir));
+304:     issues.sort((left, right) => left.subdir.localeCompare(right.subdir));
+308:           .map((issue) => `${issue.subdir}: ${issue.error}`)
+312:     return { source: opened.source, panels, issues };
+365:   input: GitPanelAppSourceInput,
+586:   const source = input.kind === "git" ? normalizeGitPanelAppSource(input) : input;
+610:     source: {
+615:               source.subdir ? `/${source.subdir}` : ""
+659:     return normalizeGitPanelAppSource(record.source);
+821: /** Stage under the operation lock; no retained address appears before the Host commit guard. */
+952:         ? normalizeGitPanelAppSource({
+954:             ...(options.recordedRef ? { ref: options.recordedRef } : {}),
+964:           source: storedSource,
+1021:       source: storedSource,
+1150:     source: record.source,

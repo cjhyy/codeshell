@@ -1,0 +1,76 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "bytes": 43723,
+      "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "lines": 1228,
+      "pinnedAtUTC": "2026-10-17T21:08:57.566083+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-update-service.ts",
+      "bytes": 4655,
+      "sha256": "b3ebe26fc83b294a02302fbfcc2df60e68886149d310a5954b677d52682ffc98",
+      "lines": 138,
+      "pinnedAtUTC": "2026-10-17T21:08:57.631530+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-archive.ts",
+      "bytes": 5725,
+      "sha256": "6a575b49a280a7bf30d7e9946b3bff685ea6000a58321d09347944407aac1f51",
+      "lines": 156,
+      "pinnedAtUTC": "2026-10-17T21:09:16.897699+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/core/src/panel-apps/discovery.ts",
+      "bytes": 2357,
+      "sha256": "586265ed934750c1213ba6bfbbc493f1d9f96278ff0e057ad52fa1ee70355fa2",
+      "lines": 64,
+      "pinnedAtUTC": "2026-10-17T21:09:16.948752+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/core/src/panel-apps/manifest.ts",
+      "bytes": 8174,
+      "sha256": "c3b7e4cc1af0fc52a69802b2f6b782dfb8d13acd2e74f3eecd884bca8bae37a5",
+      "lines": 272,
+      "pinnedAtUTC": "2026-10-17T21:09:17.012045+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27608,
+      "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "lines": 864,
+      "pinnedAtUTC": "2026-10-17T21:09:17.072906+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/core/src/panel-apps/index.ts",
+      "bytes": 1851,
+      "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "lines": 66,
+      "pinnedAtUTC": "2026-10-17T21:09:17.133448+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/project-panel-ipc.ts",
+      "bytes": 11658,
+      "sha256": "3f9d3bb78d6fc04ca1e2c8f3ca66d026168c2bbc573761fcb9b1875eb7521d84",
+      "lines": 308,
+      "pinnedAtUTC": "2026-10-17T21:09:31.452304+00:00",
+      "timing": "before own navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-install-service.ts",
+      "bytes": 3540,
+      "sha256": "b64f8571081827812d71520b3aa1985ab7eb272212e8d474de9aa4745ddecccb",
+      "lines": 114,
+      "pinnedAtUTC": "2026-10-17T21:09:31.496446+00:00",
+      "timing": "before own navigation snippets"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+11: import { titleFromWire } from "../chat/attachments";
+200:       attachments?: InputAttachmentMeta[];
+315:       attachments?: InputAttachmentMeta[];
+341:         .map((candidate) => ({
+366:     if (sendOpts.attachments && sendOpts.attachments.length > 0) {
+367:       opts.attachments = sendOpts.attachments;
+394:     if (opts.cwd && opts.attachments && opts.attachments.length > 0) {
+399:           attachments: opts.attachments,
+402:           window.codeshell.log("attachments.mark_sent_failed", {
+445:             .map((target) => `- ${target.title}: ${target.sessionId} (${target.workspaceRoot})`)
+467:             attachments: opts.attachments,
+562:     sendOpts: { attachments?: InputAttachmentMeta[]; displayText?: string } = {},
+565:     const attachments = sendOpts.attachments ?? [];
+566:     if ((!prompt && attachments.length === 0) || session.status !== "ready") return;
+594:       attachments?: InputAttachmentMeta[];
+606:     if (attachments.length > 0) opts.attachments = attachments;
+625:     if (cwd && attachments.length > 0) {
+630:           attachments,
+634:           window.codeshell.log("quick_chat.attachments.mark_sent_failed", {
+732:           .steer(engineSessionId, item.text, item.id, item.clientMessageId, item.attachments)
+752:                 attachments: item.attachments,
+779:         attachments,
+795:       if (text !== null) send(text, { bucket: activeBucket, attachments, displayText });
+820:     if (item.text || (item.attachments?.length ?? 0) > 0) {
+824:         attachments: item.attachments,
+840:       attachments?: InputAttachmentMeta[];
+848:     const attachments = queueOpts.attachments?.filter(Boolean) ?? [];
+849:     if (!trimmed && !displayText && attachments.length === 0) return;
+858:     if (attachments.length > 0) {
+859:       toast({ message: t("chat.queue.attachmentsDeferred") });
+863:         attachments,
+889:       attachments?: InputAttachmentMeta[];
+897:         attachments: forceOpts.attachments,
+906:     const ids = (queuedInputs[activeBucket] ?? []).map((i) => i.id);
