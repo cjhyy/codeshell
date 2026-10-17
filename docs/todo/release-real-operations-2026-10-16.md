@@ -15,8 +15,9 @@ post-uninstaller absence gate. The new complete metadata observation finds an em
 ordinary installation directory at that time; the cause remains unconfirmed. Cache
 cleanup and final OS restoration are not reached. See the
 [CI24 actual record](#ci24--actual-platform-results-and-empty-uninstall-directory).
-A minimal production NSIS working-directory repair is being prepared; no source
-repair or fresh native validation is claimed yet.
+The minimal production NSIS working-directory repair is committed and its combined
+local gates pass; fresh CI25 native validation remains pending. See the
+[CI25 local preparation](#ci25--production-uninstaller-working-directory-candidate).
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2646,3 +2647,46 @@ summaries remain retained. `nsis-output-field-correction.json` SHA-256 is
 The independent output-correction peer preserves the earlier 82-check peer and
 has SHA-256 `b39c552b80110a05e31945561e0803cdb354edf90ca092f6561261cc377f5ddf`
 (`independent-panel-nsis-output-correction-peer.json`); it performs no rerun.
+
+## CI25 — production uninstaller working-directory candidate
+
+Candidate `950cacea117d501b58e03e00c240ea14ebf537df`, based on CI24 source
+`9a2d118502fe184dc0271360f97c8fdbe06deb01`, adds the supported fixed-basename
+NSIS include `nsis-uninstaller-init.nsh` under the strictly bound `build` resources
+directory. Its 176-byte LF macro uses only `customUnInit` and `SetOutPath "$TEMP"`.
+The locked electron-builder 25.1.8 template invokes it after uninstall-mode
+initialization and before the existing removal path. This is a source-supported
+repair candidate; CI24's observed empty directory alone does not prove the runtime
+working directory or the exact cause of its failed removal.
+
+The three default-resource absence checks remain byte-identical. The original six
+NSIS settings, installer arguments, 16 phases, installed/replaced UI 13+13, OS/cache
+checks, normal-exit, birth custody, HOME gates and budgets remain unchanged. The
+runner records the known include's actual size/SHA-256 in
+`source.nsisUninstallerInit` and checks the same bytes after package construction.
+Existing production-configuration negative data rejects an alternate include path
+and an array value. The default `installer.nsh` proposal was discarded because the
+actual preflight explicitly requires that default resource to be absent.
+
+Author source proof `codeshell-nsis-uninstaller-working-directory-proof-20261018/verified-source-summary.json`
+has SHA-256 `47a9a9a4f1857d87ca57c6c030afe9d8a548fe7379500297e150b2840dc86e97`.
+The independent source-only peer passes 32 checks, zero failures, without running
+tests or native code; `independent-panel-source-peer.json` has SHA-256
+`251d3cb17d820ebc28ee1e7d957e7cd0b6d2c616a90624d90293b49bcc37f071`.
+
+Root's combined local gates at source `950cacea117d501b58e03e00c240ea14ebf537df`
+pass the actual full thirty-file Bun shard: 417 tests/3,502 expectations, zero
+failures/skips. Nine pure Node files pass all 140 tests with zero failures, skips or
+cancellations. Fresh checks cover all fourteen workspace types and four safe
+Desktop bundles: main, preload, renderer and mobile. Three changed MJS files pass
+syntax and zero-warning ESLint; package JSON and those MJS files pass formatting,
+with engine-bypass and diff checks also passing. The frozen combined proof
+`ci25-frozen-combined-local-gates-20261018.json` has SHA-256
+`0bc77d94949ce12af0f72ab0c21bda777f6192b3ea4e9fb50caab9ad5666e740`.
+
+These local tests and compilation are separate from native operations. No local
+browser, App, installer, PowerShell, process query or provider validation is run for
+this candidate. CI25 has not yet executed; all four runtime scopes and the actual
+Windows install/replacement/uninstall gate remain pending. CI24 still fails the
+unchanged uninstall absence predicate. Historical unknown GC, Setup, inode drift,
+revoked CI21 custody and discovery-incident consequences remain unresolved.
