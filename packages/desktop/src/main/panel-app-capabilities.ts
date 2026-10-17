@@ -120,6 +120,7 @@ export function desktopPanelCapabilities(
     host: "desktop" as const,
     availableMethods: methods,
     capabilities: {
+      packageAssets: { wasm: true, fetch: "package" },
       ...panelRuntimeCapabilities({
         process: permitted.has("process"),
         cookieProcess: taskCookies,

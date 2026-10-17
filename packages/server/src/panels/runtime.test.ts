@@ -74,6 +74,7 @@ async function fixture(
       join(installPath, "app", "nested", "part.mjs"),
       'export const label = "module loaded";',
     ),
+    writeFile(join(installPath, "app", "engine.wasm"), Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])),
     writeFile(join(installPath, "secret.json"), '{"outsideEntry":"do not serve"}'),
     writeFile(join(cwd, "notes.txt"), "host workspace notes"),
   ]);
@@ -503,7 +504,10 @@ describe("Panel HTTP runtime", () => {
     expect(csp).toContain(`script-src ${f.url}/api/v1/panel-assets/`);
     expect(csp).toContain("sandbox allow-scripts allow-downloads;");
     expect(csp).not.toContain("allow-same-origin");
-    expect(csp).toContain("connect-src 'none'");
+    const assetSource = f.url + grant.src.slice(0, grant.src.indexOf("/app/") + 1);
+    expect(csp).toContain(`connect-src ${assetSource};`);
+    expect(csp).toContain("'wasm-unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain(`frame-ancestors ${f.url}`);
     expect(response.headers.get("permissions-policy")).toContain("microphone=()");
     for (const name of ["main.mjs", "nested/part.mjs"]) {
@@ -523,6 +527,31 @@ describe("Panel HTTP runtime", () => {
     });
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-methods")).toBe("GET, HEAD, OPTIONS");
+  });
+
+  test("Wasm assets retain scoped CORS, content verification and grant revocation", async () => {
+    const f = await fixture();
+    const grant = await f.prepare();
+    expect(grant.context.capabilities).toMatchObject({
+      packageAssets: { wasm: true, fetch: "package" },
+    });
+    const url = f.url + grant.src.replace("index.html", "engine.wasm");
+    const response = await fetch(url, { headers: { Origin: "null" } });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/wasm");
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    const bytes = await response.arrayBuffer();
+    expect(WebAssembly.validate(bytes)).toBe(true);
+    const head = await fetch(url, { method: "HEAD" });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+    await writeFile(
+      join(f.installPath, "app", "engine.wasm"),
+      Buffer.from([0, 97, 115, 109, 2, 0, 0, 0]),
+    );
+    expect((await fetch(url)).status).toBe(409);
+    expect((await fetch(url)).status).toBe(404);
   });
 
   test("injects the SDK before scripts in HTML fragments and pages without a head", async () => {

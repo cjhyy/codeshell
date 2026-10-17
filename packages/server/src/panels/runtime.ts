@@ -128,6 +128,7 @@ const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json",
   ".md": "text/markdown; charset=utf-8",
@@ -1287,6 +1288,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         locale: typeof input.locale === "string" ? input.locale.slice(0, 32) : "zh-CN",
         apiVersion: panelRuntimeApiVersion,
         capabilities: {
+          packageAssets: { wasm: true, fetch: "package" },
           modelTraces: { writeOnly: true, coverage: "logical-input", ...panelModelTraceLimits },
           ...panelRuntimeCapabilities({
             process: app.permissions.includes("process"),
@@ -2238,7 +2240,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             "Content-Security-Policy",
             "default-src 'none'; script-src " +
               assetSource +
-              "; style-src " +
+              " 'wasm-unsafe-eval'; style-src " +
               assetSource +
               " 'unsafe-inline'; img-src " +
               assetSource +
@@ -2246,7 +2248,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               assetSource +
               " blob:; font-src " +
               assetSource +
-              " data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
+              " data:; connect-src " +
+              assetSource +
+              "; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
               resourceOrigin,
           );
           response.setHeader(

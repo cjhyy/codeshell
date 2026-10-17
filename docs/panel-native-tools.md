@@ -27,6 +27,20 @@ events per minute. These methods grant no history, credential or policy access.
 Discover methods from capabilities; older Hosts can run the model operation
 without recording. Model/provider and retry policy remain Panel-owned.
 
+## Browser Wasm assets
+
+An installed Panel may include `.wasm` files under its browser asset tree. They
+are reviewed and hashed with the rest of the package, served as `application/wasm`,
+and retain the existing package size, path and revision checks. Discover support
+through `context.capabilities.packageAssets.wasm`; older Hosts do not advertise it.
+
+Browser loaders may fetch from their own package asset scope. Desktop limits this
+to the guest's `cspanel:` origin, and Web limits it to the current grant's asset
+URL prefix. External network destinations remain blocked. CSP permits
+`wasm-unsafe-eval`, while JavaScript `unsafe-eval`, arbitrary blob scripts and Node
+access remain disabled. Wasm does not grant native process or workspace access.
+Choose graceful browser-rendering fallback when Wasm or WebGL is unavailable.
+
 ## Reviewed entries
 
 The optional manifest field `nativeEntries` maps up to 16 names to

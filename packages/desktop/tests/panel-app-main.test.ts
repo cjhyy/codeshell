@@ -98,6 +98,12 @@ describeIsolated("Panel App protocol", () => {
     const schemes = panelAppElectronMock.privilegedSchemeRegistrations[0];
     expect(schemes.map(({ scheme }) => scheme)).toEqual(["csmedia", "cspanel", "cstheme"]);
     expect(schemes.every(({ privileges }) => privileges?.standard && privileges.secure)).toBe(true);
+    expect(schemes.find(({ scheme }) => scheme === "cspanel")?.privileges).toMatchObject({
+      supportFetchAPI: true,
+      corsEnabled: true,
+    });
+    for (const scheme of ["csmedia", "cstheme"])
+      expect(schemes.find((value) => value.scheme === scheme)?.privileges.supportFetchAPI).toBe(false);
   });
 
   test("serves declared static assets with strict security headers", async () => {
@@ -105,7 +111,7 @@ describeIsolated("Panel App protocol", () => {
     const html = await panelAppElectronMock.protocolHandler!(new Request(prepared.src));
     expect(html.status).toBe(200);
     expect(await html.text()).toContain("safe");
-    expect(html.headers.get("content-security-policy")).toContain("connect-src 'none'");
+    expect(html.headers.get("content-security-policy")).toContain("connect-src 'self'");
     expect(html.headers.get("content-security-policy")).toContain("frame-src 'self'");
     expect(html.headers.get("x-content-type-options")).toBe("nosniff");
 
@@ -114,6 +120,29 @@ describeIsolated("Panel App protocol", () => {
     );
     expect(script.status).toBe(200);
     expect(script.headers.get("content-type")).toContain("text/javascript");
+  });
+
+  test("serves package Wasm bytes without granting unsafe-eval or remote fetch", async () => {
+    const prepared = await arrange("wasmhost");
+    const bytes = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
+    writeFileSync(join(root, "panels", "dashboard", "engine.wasm"), bytes);
+    const response = await panelAppElectronMock.protocolHandler!(
+      new Request("cspanel://wasmhost/panels/dashboard/engine.wasm"),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/wasm");
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    const html = await panelAppElectronMock.protocolHandler!(new Request(prepared.src));
+    const csp = html.headers.get("content-security-policy")!;
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-eval'");
+    expect(csp).not.toContain("https:");
+    expect(csp).not.toContain("worker-src blob:");
+    const head = await panelAppElectronMock.protocolHandler!(
+      new Request("cspanel://wasmhost/panels/dashboard/engine.wasm", { method: "HEAD" }),
+    );
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
   });
 
   test("serves installed MP3 and WAV files with audio MIME types and strict headers", async () => {
@@ -131,7 +160,7 @@ describeIsolated("Panel App protocol", () => {
       expect(audio.status).toBe(200);
       expect(audio.headers.get("content-type")).toBe(mime);
       expect(audio.headers.get("x-content-type-options")).toBe("nosniff");
-      expect(audio.headers.get("content-security-policy")).toContain("connect-src 'none'");
+      expect(audio.headers.get("content-security-policy")).toContain("connect-src 'self'");
       expect(Buffer.from(await audio.arrayBuffer())).toEqual(bytes);
       const head = await panelAppElectronMock.protocolHandler!(
         new Request(url, { method: "HEAD" }),
@@ -328,8 +357,8 @@ describeIsolated("Panel App protocol", () => {
     expect(directives.get("media-src")).toEqual(["'self'", "blob:"]);
     expect(directives.get("img-src")).toEqual(["'self'", "data:", "blob:"]);
     expect(directives.get("default-src")).toEqual(["'self'"]);
-    expect(directives.get("script-src")).toEqual(["'self'"]);
-    expect(directives.get("connect-src")).toEqual(["'none'"]);
+    expect(directives.get("script-src")).toEqual(["'self'", "'wasm-unsafe-eval'"]);
+    expect(directives.get("connect-src")).toEqual(["'self'"]);
     expect(directives.get("frame-src")).toEqual(["'self'"]);
     expect(directives.get("object-src")).toEqual(["'none'"]);
     expect(directives.get("form-action")).toEqual(["'none'"]);
