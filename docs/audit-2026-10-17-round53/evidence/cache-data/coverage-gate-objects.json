@@ -1,0 +1,794 @@
+{
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "documentSha256": "37ab3b5d4ce268623ce57065af587d5476f4f340ca31ad5e16d0cc5966edc7f2",
+      "pointer": "/sourceChecks/16",
+      "originalObjectKeys": [
+        "prep",
+        "path",
+        "sha256",
+        "note"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json",
+      "documentSha256": "52d3db58b66d4f6eb41edb7c532ccac9f085027f49ff5cde63ce9f0afe1019c0",
+      "pointer": "/sources/5",
+      "originalObjectKeys": [
+        "path",
+        "sha256",
+        "bytes",
+        "readScope",
+        "readRanges"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "bytes": 970,
+        "readScope": "full"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+      "pointer": "/files/21",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentSha256",
+        "mainSha256",
+        "currentBytes",
+        "mainBytes",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob",
+        "currentWorkingTreeMatchesMain"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+      "pointer": "/priorPrepHashOnlyChecks/16",
+      "originalObjectKeys": [
+        "prep",
+        "path",
+        "sha256",
+        "note"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+      "pointer": "/matches/prompt/86",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt",
+        "wholeValueCharacters"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-16/inventory.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "files": 2506,
+              "markdown": 1240,
+              "json": 1266,
+              "stringLeaves": 426716,
+              "scalarLeaves": 609556,
+              "parseErrors": 0
+            },
+            "limitations": [
+              "All recursive MD lines and JSON scalar values searched, not JSON keys.",
+              "Snapshot is per-file metadata read, not a Git-verified global atomic source freeze. Root may still be integrating round25.",
+              "Keyword matching and bounded hit contexts guide selected review; they do not establish semantic exhaustion."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+      "pointer": "/matches/prompt/171",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt",
+        "wholeValueCharacters"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "files": 2506,
+              "markdown": 1240,
+              "json": 1266,
+              "stringLeaves": 426716,
+              "scalarLeaves": 609556,
+              "parseErrors": 0
+            },
+            "limitations": [
+              "All recursive MD lines and JSON scalar values searched, not JSON keys.",
+              "Snapshot is per-file metadata read, not a Git-verified global atomic source freeze. Root may still be integrating round25.",
+              "Keyword matching and bounded hit contexts guide selected review; they do not establish semantic exhaustion."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+      "pointer": "/matches/prompt/173",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt",
+        "wholeValueCharacters"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "files": 2506,
+              "markdown": 1240,
+              "json": 1266,
+              "stringLeaves": 426716,
+              "scalarLeaves": 609556,
+              "parseErrors": 0
+            },
+            "limitations": [
+              "All recursive MD lines and JSON scalar values searched, not JSON keys.",
+              "Snapshot is per-file metadata read, not a Git-verified global atomic source freeze. Root may still be integrating round25.",
+              "Keyword matching and bounded hit contexts guide selected review; they do not establish semantic exhaustion."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+      "pointer": "/matches/prompt/174",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt",
+        "wholeValueCharacters"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "files": 2506,
+              "markdown": 1240,
+              "json": 1266,
+              "stringLeaves": 426716,
+              "scalarLeaves": 609556,
+              "parseErrors": 0
+            },
+            "limitations": [
+              "All recursive MD lines and JSON scalar values searched, not JSON keys.",
+              "Snapshot is per-file metadata read, not a Git-verified global atomic source freeze. Root may still be integrating round25.",
+              "Keyword matching and bounded hit contexts guide selected review; they do not establish semantic exhaustion."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+      "pointer": "/matches/prompt/178",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt",
+        "wholeValueCharacters"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round25/source-manifest.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "files": 2506,
+              "markdown": 1240,
+              "json": 1266,
+              "stringLeaves": 426716,
+              "scalarLeaves": 609556,
+              "parseErrors": 0
+            },
+            "limitations": [
+              "All recursive MD lines and JSON scalar values searched, not JSON keys.",
+              "Snapshot is per-file metadata read, not a Git-verified global atomic source freeze. Root may still be integrating round25.",
+              "Keyword matching and bounded hit contexts guide selected review; they do not establish semantic exhaustion."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+      "pointer": "/matches/prompt/179",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt",
+        "wholeValueCharacters"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round25/source-manifest.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "files": 2506,
+              "markdown": 1240,
+              "json": 1266,
+              "stringLeaves": 426716,
+              "scalarLeaves": 609556,
+              "parseErrors": 0
+            },
+            "limitations": [
+              "All recursive MD lines and JSON scalar values searched, not JSON keys.",
+              "Snapshot is per-file metadata read, not a Git-verified global atomic source freeze. Root may still be integrating round25.",
+              "Keyword matching and bounded hit contexts guide selected review; they do not establish semantic exhaustion."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "pointer": "/files/364",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256",
+        "status",
+        "currentFullClaimVariants",
+        "currentSelectedClaimVariants",
+        "currentSelectedUnionLines",
+        "currentSelectedUnionRanges",
+        "priorVersionClaimVariants",
+        "currentPinOnlyVariants",
+        "claimVariants",
+        "claims"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "lines": 43,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+      "pointer": "/rankedCandidates/177",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256",
+        "coverageStatus",
+        "currentFullClaimVariants",
+        "currentSelectedUnionLines",
+        "priorVersionClaimVariants",
+        "claimVariants",
+        "runtimeImportLines",
+        "typeOnlyImportLineCount",
+        "requiresRootSourceReadAndBoundaryReview"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "lines": 43,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "pointer": "/files/955",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "lines": 43,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4393",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4394",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4395",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4396",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4397",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4398",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/4399",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "pointer": "/files/1267",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "status",
+        "currentExplicitFullClaimIds",
+        "currentExplicitSelectedClaimIds",
+        "currentSelectedUnionLines",
+        "claimIds",
+        "claimKindCounts"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "lines": 43
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Current TS/TSX filesystem bytes joined to conservative explicit historical JSON row claims. No-row is unknown, never unread. MD-only full is not exhaustive here; all later source candidates still need precise MD+JSON prior-cause/full gate. Pending tmp semantic reads are not backfilled."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "pointer": "/files/1267",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "lines": 43
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Current repository rg-visible TS/TSX filesystem paths, respecting normal repository ignore rules, excluding .git/node_modules. Not a Git tracked set or semantic read. All source bytes used only for SHA/length/byte-splitlines count; no source text displayed, parsed or executed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "pointer": "/files/1267",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "initial49ShaMatches",
+        "blockedBy49EndingOverlay",
+        "coverageStatus"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "lines": 43
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Same49 rg-visible TS/TSX filesystem filter, normal repo ignores; not Git tracked inventory. Bytes used solely for SHA/length/linecount; no source body decoded/displayed/executed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+      "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+      "pointer": "/files/5",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobSha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+      "pointer": "/files/63",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/prompt/section-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    }
+  ],
+  "count": 25,
+  "metadataProjectionOnly": true,
+  "notSemanticCoverageClaimsOrGuaranteedCanonical": true
+}

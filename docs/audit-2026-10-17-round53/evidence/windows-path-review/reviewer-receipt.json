@@ -1,0 +1,133 @@
+{
+  "frozenUTC": "2026-10-17T18:02:08.964327+00:00",
+  "directory": "/tmp/codeshell-audit-round113-windows-tool-path-review",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 11888,
+      "sha256": "c21c28238718597989d516e8386d7e6c3db7ac70dbd7ea99b7d08cb5b4890a94"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1648,
+      "sha256": "5d3a3f7c8124c29b6fbaebe8746c3493809ef7479316c8390e4b73f64951d50d"
+    },
+    {
+      "path": "consumer-filename-inventory.json",
+      "bytes": 329,
+      "sha256": "c083ef3e081b290238e997996c5d713a6a1a4227c1e6fd5d9c95a9fe1b6606c8"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 820,
+      "sha256": "dfb6c0dfa9e52968e1593c8ceaa82eed905a5834c2c612fdf044bb572d2c5964"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 196026,
+      "sha256": "4f5c78742e47fb77c0943e7936a008307bc7f5967a68a211df8a9a42732f5893"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2093,
+      "sha256": "21ad4f7453d2dd9c31b694a78583a268736e8beba55ee9d3f46ce64bea39e97a"
+    },
+    {
+      "path": "first-locator-note.json",
+      "bytes": 577,
+      "sha256": "66bebd294abb83fce2c31480dbc01c81603edbb562bb124ab9b99dd9a6be205f"
+    },
+    {
+      "path": "focused-history.json",
+      "bytes": 49446,
+      "sha256": "d2e4079ac75ed9d8a26bed61893ff296c08d3525528324caa5c0a1a2367e64d5"
+    },
+    {
+      "path": "focused-selected.json",
+      "bytes": 5223,
+      "sha256": "c8d0e7a0cdcd4839ef8a5fbeb7b5ef7ee187e14060a48cf5a4fe4dd836b041f9"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 762,
+      "sha256": "4f90e588f05b84438bb97170d432c00d88c86f8c1846d720f9045934e3bbab70"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 258483,
+      "sha256": "e2f7c8ae24c70d2aa76822519c66e4dd59534e98f5a783a58bde7cced49c36af"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 7615,
+      "sha256": "d01ae2c6907a667f303199283a3451c254e838865efa4e35c11861649296be17"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1037307,
+      "sha256": "1820808939ef782b84589329edf1bfa33745ff7fec8ee103053be3676b7633e9"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1079,
+      "sha256": "7255f484f74989e2cf032f84b0009c63f403720ec5a0306aace97e7eb69d374c"
+    },
+    {
+      "path": "producer-navigation.json",
+      "bytes": 1941,
+      "sha256": "527cfbc3da4366c0e1eb6a61495a43fdcf384048cc62c4d12d02bf4680773a9e"
+    },
+    {
+      "path": "review.md",
+      "bytes": 5476,
+      "sha256": "dc894fb86f9747eeaa02d1fda5f7f22e249be2a7d619e42ef33b3d261964ca8a"
+    },
+    {
+      "path": "source-display-pins.json",
+      "bytes": 1969,
+      "sha256": "92e56739c793133c05ef75df86e6750279561ba74703526b3c452c72b703601a"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 12449,
+      "sha256": "adb7fc420ac7ecf99c4b4822aa9068e65acedb27aca20cd1db513d38c0366e11"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11836,
+      "sha256": "7c990c22a7ce21c445390b859c589c06d6316ead5de02e6661a6bcf865b2a182"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 566,
+      "sha256": "e4ce0863387911fa623ade6c5a07248024d118443baab7a16f741d11a7cd6523"
+    },
+    {
+      "path": "support-navigation.json",
+      "bytes": 1535,
+      "sha256": "3dcf8aea3ef5fe0f6529b072799f2fc0fe6f701852cd47d47ccf6b0f6a775fa0"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 775,
+      "sha256": "0775a029346fae413cbcb54acedc30ece7396ef60f658825179d3bd42249297c"
+    },
+    {
+      "path": "windows-cli-filename-inventory.json",
+      "bytes": 230,
+      "sha256": "b7ef4667f149881b3b0e4401769410b9a8bcdec67e5150d1984b07e6097f2023"
+    }
+  ],
+  "role": "Independenttargetedsource reviewofknownRootWindowsdisplaylead;notblind/noRoot111packetread",
+  "newIndependentId": null,
+  "parentPlannedFormalId": "TUI-R53-02",
+  "productSemanticLines": 87,
+  "contractMetadataLines": 3,
+  "full": 0,
+  "selectedProductFiles": 4,
+  "testDeclarations": 0,
+  "productExecutions": 0,
+  "Git": 0,
+  "reportLocalLinks": 15
+}

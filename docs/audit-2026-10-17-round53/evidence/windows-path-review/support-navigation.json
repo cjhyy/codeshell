@@ -1,0 +1,26 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "file_path|schema|resolve\\(|normalize|isAbsolute",
+        "packages/core/src/tool-system/builtin/read.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "8:import { extname, isAbsolute, relative, resolve, sep } from \"node:path\";\n30:      file_path: { type: \"string\", description: \"Absolute path to the file to read\" },\n34:    required: [\"file_path\"],\n51:  const rawPath = args.file_path as string;\n52:  if (!rawPath) return \"Error: file_path is required\";\n54:  const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "windows|Windows|bun-windows|target:",
+        ".github/workflows/release.yml"
+      ],
+      "exitCode": 0,
+      "stdout": "139:      # Don't cancel the other OS builds if one fails — a red Windows build\n148:          # windows-latest now ships VS 2026. The locked electron-builder chain\n151:          - os: windows-2022\n152:            artifact: windows\n184:      # historical copy command is not portable to the Windows runner.\n263:            windows) runtime_dir=\"dist/win-unpacked/resources/runtimes\" ;;\n275:            windows) test -f packages/desktop/dist/latest.yml ;;\n329:          自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。\n332:          - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。\n",
+      "stderr": ""
+    }
+  ]
+}

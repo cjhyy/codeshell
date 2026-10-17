@@ -1,0 +1,3149 @@
+{
+  "pin": {
+    "path": "packages/web/src/lib/userMessageDisplay.ts",
+    "bytes": 5926,
+    "lines": 164,
+    "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+    "pinnedBeforeBodyUTC": "2026-10-17T17:49:38.985881+00:00"
+  },
+  "historyCohort": "history-inventory.json; same frozen input bytes freshly checked before fallback scan",
+  "queryTotals": {
+    "exact-path": 211,
+    "basename": 854,
+    "sha256": 56
+  },
+  "capPerQuery": 100,
+  "hits": {
+    "exact-path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2412",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/candidates.json",
+        "pointer": "/candidates/2/source/0/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/candidates.json",
+        "pointer": "/candidates/2/source/1/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+        "pointer": "/0/source/0/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+        "pointer": "/0/source/1/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/5/text",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/13/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/14/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/22/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/26/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/27/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/33/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/36/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/37/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/42/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/43/text",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/44/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/45/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/46/text",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/47/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/53/text",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/55/text",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/56/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/57/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/58/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/59/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/60/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/61/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/64/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/65/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/66/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/68/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/69/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/70/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "pointer": "/files/3/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/files/59/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/workerSourceChecks/3/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/web.md",
+        "line": 7,
+        "text": "状态：**静态候选，验证 SKIP，无严重级别**。位置：[userMessageDisplay.ts:85](../../packages/web/src/lib/userMessageDisplay.ts:85)、[userMessageDisplay.ts:97](../../packages/web/src/lib/userMessageDisplay.ts:97)。普通用户仅请求解释如下 XML，且没有真实附件或 `displayText`："
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/42/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/49/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/149/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/1/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/4/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/5/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/7/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/8/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/13/excerpt",
+        "text": "type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/14/excerpt",
+        "text": "ader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/19/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/20/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/23/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/25/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/26/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/29/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/31/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/32/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/34/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/35/excerpt",
+        "text": "/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/36/excerpt",
+        "text": "red projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/37/excerpt",
+        "text": ". [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/38/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/39/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/40/excerpt",
+        "text": "/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/41/excerpt",
+        "text": "red projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/42/excerpt",
+        "text": ". [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/43/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/46/excerpt",
+        "text": "type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/47/excerpt",
+        "text": "ader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/48/excerpt",
+        "text": "/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/49/excerpt",
+        "text": "red projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/50/excerpt",
+        "text": ". [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/51/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/52/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/53/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/54/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/55/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/56/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/58/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/59/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/60/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/61/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/62/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/63/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/64/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/65/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/66/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/67/excerpt",
+        "text": "状态：**静态候选，验证 SKIP，无严重级别**。位置：[userMessageDisplay.ts:85](../../packages/web/src/lib/userMessageDisplay.ts:85)、[userMessageDisplay.ts:97](../../packages/web/src/lib/userMessageDisplay.ts:97)。普通用户仅请求解释如下 XML，且没有真实附件或 `displayText`："
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/68/excerpt",
+        "text": "状态：**静态候选，验证 SKIP，无严重级别**。位置：[userMessageDisplay.ts:85](../../packages/web/src/lib/userMessageDisplay.ts:85)、[userMessageDisplay.ts:97](../../packages/web/src/lib/userMessageDisplay.ts:97)。普通用户仅请求解释如下 XML，且没有真实附件或 `displayText`："
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/69/excerpt",
+        "text": "状态：**静态候选，验证 SKIP，无严重级别**。位置：[userMessageDisplay.ts:85](../../packages/web/src/lib/userMessageDisplay.ts:85)、[userMessageDisplay.ts:97](../../packages/web/src/lib/userMessageDisplay.ts:97)。普通用户仅请求解释如下 XML，且没有真实附件或 `displayText`："
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/70/excerpt",
+        "text": "**静态候选，验证 SKIP，无严重级别**。位置：[userMessageDisplay.ts:85](../../packages/web/src/lib/userMessageDisplay.ts:85)、[userMessageDisplay.ts:97](../../packages/web/src/lib/userMessageDisplay.ts:97)。普通用户仅请求解释如下 XML，且没有真实附件或 `displayText`："
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/117/excerpt",
+        "text": "type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/118/excerpt",
+        "text": "ader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/125/excerpt",
+        "text": "type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/126/excerpt",
+        "text": "ader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/137/excerpt",
+        "text": "type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/138/excerpt",
+        "text": "ader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/140/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/146/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/159/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/160/excerpt",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    ],
+    "basename": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2412",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "pointer": "/matches/52/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "pointer": "/matches/65/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/candidates.json",
+        "pointer": "/candidates/2/source/0/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/candidates.json",
+        "pointer": "/candidates/2/source/1/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/review-web.md",
+        "line": 8,
+        "text": "- 只读 `userMessageDisplay.ts` 与既有 `transcriptReplay.test.ts:104–121`：file 分支要求 absolutePath/origin，目录分支直接移除匹配块，imagePaths 与 image block 数量取 max，因此普通 XML 误识别的静态推演有源码依据。现有测试仅给 ordinary attached-file XML 控制；没有把它当作本轮目录/图片路径运行结果。最终正文由显式 displayText 覆盖、原始 transcript 不受显示投影修改，报告已清楚限制这些差异。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+        "pointer": "/0/source/0/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+        "pointer": "/0/source/1/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/patterns/projection",
+        "text": "transcriptUserDisplay|userMessageDisplay|attached-directory|attached-image-paths|普通.{0,12}XML|user.written.{0,12}XML"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/1/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/2/text",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/3/text",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/5/text",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/6/text",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/8/text",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/10/text",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/11/text",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/13/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/14/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/20/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/21/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/22/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/24/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/26/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/27/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/30/text",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/31/text",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/33/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/34/text",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/36/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/37/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/42/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/43/text",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/44/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/45/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/46/text",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/47/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/49/text",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/50/text",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/53/text",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/55/text",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/56/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/57/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/58/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/59/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/60/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/61/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/62/text",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/64/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/65/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/66/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/68/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/69/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/70/text",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "pointer": "/files/3/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/files/59/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/workerSourceChecks/3/path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/web.md",
+        "line": 7,
+        "text": "状态：**静态候选，验证 SKIP，无严重级别**。位置：[userMessageDisplay.ts:85](../../packages/web/src/lib/userMessageDisplay.ts:85)、[userMessageDisplay.ts:97](../../packages/web/src/lib/userMessageDisplay.ts:97)。普通用户仅请求解释如下 XML，且没有真实附件或 `displayText`："
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/web.md",
+        "line": 30,
+        "text": "聚焦失败原因：自有 fixture 的相对 import 写为 `../../../../packages/...`，多向上一级，Bun 无法加载 userMessageDisplay.ts。它尚未执行任何测试体或产品断言，是**支架定位错误**，不是 Bun、依赖或产品错误。原 fixture 保留原样，整个 user-display 聚焦方向 SKIP，候选不能升级；准备源码中的其他控制、replay/reducer 验证和观察日志均未执行。roomHistory 是独立既有基线，成功统计只计 8 tests / 9 expect；失败加载显示的 “Ran 1 test” 单独归档，不能算成功覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/102/context",
+        "text": "走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/103/context",
+        "text": "走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/104/context",
+        "text": "走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/105/context",
+        "text": "走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/139/context",
+        "text": "走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/154/context",
+        "text": "走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/candidates.json",
+        "pointer": "/candidates/2/relatedHistoricalRecordsExcluded/4",
+        "text": "round14 failed userMessageDisplay dynamic direction"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-candidates.json",
+        "pointer": "/0/relatedHistoricalRecordsExcluded/4",
+        "text": "round14 failed userMessageDisplay dynamic direction"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/15/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/16/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/28/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/29/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/30/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/31/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/37/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/review-mappers.md",
+        "line": 12,
+        "text": "- 历史 assistant 的 completed 边界与旧重复 turn_complete 区分清楚。旧 Codex MCP summary、AskUser/reducer/Question、非数组 history 修复、parallel id pairing，以及 round14 失败的 userMessageDisplay 方向都明确排除，没有通过混合 shard、筛选或替代入口恢复。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/mappers.md",
+        "line": 11,
+        "text": "明确排除 `extractAskUserOptions` / AskUser、streamReducer、hooks/UI 动态、Question/multiselect、旧 Codex MCP summary parser、round14 已失败的 userMessageDisplay 动态方向。现有 [messageMappers.test.ts](../../packages/web/src/lib/messageMappers.test.ts) 混含 reducer 与 AskUser，**没有执行该文件或通过筛选恢复其混合方向**。不构造 null、未知 role、恶意 payload 或没有普通 producer 的记录来新增缺陷。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/mappers.md",
+        "line": 43,
+        "text": "旧非数组 room history 修复、旧 top-level Engine 重复 turn_complete、旧并行工具 id-pairing、旧 Codex MCP summary，以及 round14 userMessageDisplay 失败方向均不作为新增项或通过数。详见 [dedup](evidence/mappers-dedup.json)、[supplement](evidence/mappers-dedup-supplement.json)、[validation](evidence/mappers-validation.json)、[source pins](evidence/mappers-source-manifest.json) 与 [artifact receipt](evidence/mappers-artifact-receipt.json)。这些 source pins 限定已读范围，不代表全文件/整个包或转移依赖覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/43/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/44/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/45/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/46/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/48/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/49/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/70/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/71/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/72/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/80/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/81/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/exact/93/context",
+        "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/21/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/22/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/40/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/41/context",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/42/context",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/43/context",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/44/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/45/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/46/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/47/context",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/48/context",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      }
+    ],
+    "sha256": [
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "pointer": "/files/3/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/files/59/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/workerSourceChecks/3/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1047/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1047/claims/0/sourceSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/212/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4077/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+        "pointer": "/metadataOnlyRankingCandidates/2/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+        "pointer": "/metadataOnlyRankingCandidates/2/datedCoverageRows/0/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+        "pointer": "/metadataOnlyRankingCandidates/2/datedCoverageRows/0/claims/0/sourceSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/4/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/4/finishSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+        "pointer": "/files/24/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+        "pointer": "/files/24/currentSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+        "pointer": "/files/24/mainSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+        "pointer": "/hashOnlyChecks/14/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16498/sourceHashFields/frozenSourceSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16498/sourceHashFields/inspectedMainSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16499/sourceHashFields/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16499/sourceHashFields/finishSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16500/sourceHashFields/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16503/sourceHashFields/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16504/sourceHashFields/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16504/sourceHashFields/currentSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16504/sourceHashFields/mainSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16505/sourceHashFields/latestSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16505/sourceHashFields/initialSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16506/sourceHashFields/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/4400/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/4400/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/4401/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "pointer": "/sources/3/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "pointer": "/files/96/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "pointer": "/sources/7/frozenSourceSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "pointer": "/sources/7/inspectedMainSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "pointer": "/files/105/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+        "pointer": "/sources/20/latestSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+        "pointer": "/sources/20/initialSha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+        "pointer": "/sourceManifest/28/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "pointer": "/sourceManifest/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+        "pointer": "/sourceManifest/28/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "pointer": "/sourceManifest/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+        "pointer": "/sourceManifest/28/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+        "pointer": "/sourceManifest/28/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+        "pointer": "/sourceManifest/28/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+        "pointer": "/sourceManifest/28/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+        "pointer": "/sourceManifest/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+        "pointer": "/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+        "pointer": "/sourceManifest/49/primary84740/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+        "pointer": "/sourceManifest/49/latesta66f/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+        "pointer": "/runs/0/sourceManifest/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+        "pointer": "/runs/1/sourceManifest/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "pointer": "/sourceManifest/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+        "pointer": "/49/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+        "pointer": "/sourceManifest/49/primary84740/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+        "pointer": "/sourceManifest/49/latesta66f/sha256",
+        "text": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    ]
+  },
+  "directSourceRows": [
+    {
+      "document": "docs/audit-2026-10-17-round14/candidates.json",
+      "pointer": "/candidates/2/source/0",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "line": 85
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/candidates.json",
+      "pointer": "/candidates/2/source/1",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "line": 97
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+      "pointer": "/0/source/0",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "line": 85
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+      "pointer": "/0/source/1",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "line": 97
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/13",
+      "row": {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$.sources[7].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/14",
+      "row": {
+        "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$.files[105].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/22",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[2412]",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/26",
+      "row": {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "location": "$.files[96].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/27",
+      "row": {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "location": "$.sources[3].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/33",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/36",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/37",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/42",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/44",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/45",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+        "location": "$[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/47",
+      "row": {
+        "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+        "location": "$.sources[20].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/56",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/57",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/58",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+        "location": "$[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/59",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+        "location": "$.runs[0].sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/60",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+        "location": "$.runs[1].sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/61",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/64",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "$.module_inventory.84740d56.paths[184]",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/65",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "$.module_inventory.a66f4ef2.paths[185]",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/66",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/68",
+      "row": {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/69",
+      "row": {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "pointer": "/matches/projection/70",
+      "row": {
+        "path": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+      "pointer": "/files/3",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "gitBlobSha": "38f38026b764afb3c42744f1886e96b297d18ea5",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "currentEqualsFrozen": true,
+        "lines": 164
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "pointer": "/files/59",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "pointer": "/workerSourceChecks/3",
+      "row": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/1",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][2412]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/4",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/candidates.json",
+        "location": "$[\"candidates\"][2][\"source\"][0][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/5",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/candidates.json",
+        "location": "$[\"candidates\"][2][\"source\"][1][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/7",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+        "location": "$[0][\"source\"][0][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/8",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-candidates.json",
+        "location": "$[0][\"source\"][1][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/19",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][13][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/20",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][14][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/23",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][22][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/25",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][26][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/26",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][27][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/29",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][33][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/31",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][36][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/32",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][37][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/34",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][42][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/38",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][44][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/39",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][45][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/43",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][47][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/51",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][56][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/52",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][57][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/53",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][58][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/54",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][59][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/55",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][60][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/56",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][61][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/58",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][64][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/59",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][65][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/60",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][66][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/61",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][68][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/62",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][69][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/63",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$[\"matches\"][\"projection\"][70][\"text\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/64",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "location": "$[\"files\"][3][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/65",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "$[\"files\"][59][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/66",
+      "row": {
+        "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][3][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/140",
+      "row": {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "location": "$[\"sources\"][3][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/146",
+      "row": {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "location": "$[\"files\"][96][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/159",
+      "row": {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$[\"sources\"][7][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/160",
+      "row": {
+        "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$[\"files\"][105][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/177",
+      "row": {
+        "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+        "location": "$[\"sources\"][20][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/179",
+      "row": {
+        "path": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+        "location": "$[\"sourceManifest\"][28][\"path\"]",
+        "excerpt": "packages/web/src/lib/userMessageDisplay.ts",
+        "wholeValueCharacters": 42
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/1047",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "lines": 164,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][59]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][96]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][105]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][28]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][28]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                "jsonLocation": "$[49]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                "jsonLocation": "$[49]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "pointer": "/rankedCandidates/212",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "lines": 164,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "coverageStatus": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 1,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 1,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/4077",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "lines": 164,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+      "pointer": "/metadataOnlyRankingCandidates/2",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "lineCount": 164,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "datedStatus": "current-sha-pin-only-no-semantic-coverage",
+        "datedCoverageRows": [
+          {
+            "path": "packages/web/src/lib/userMessageDisplay.ts",
+            "bytes": 5926,
+            "lines": 164,
+            "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+            "status": "current-sha-pin-only-no-semantic-coverage",
+            "currentFullClaimVariants": 0,
+            "currentSelectedClaimVariants": 0,
+            "currentSelectedUnionLines": 0,
+            "currentSelectedUnionRanges": [],
+            "priorVersionClaimVariants": 0,
+            "currentPinOnlyVariants": 1,
+            "claimVariants": 1,
+            "claims": [
+              {
+                "sourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+                "matchesCurrentFilesystem": true,
+                "coverageKind": "scope-unknown-pin-only",
+                "rawCoverageLabel": null,
+                "selectedLineRanges": [],
+                "validRangeBoundsForCurrentFile": true,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                    "jsonLocation": "$[\"files\"][3]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][59]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                    "jsonLocation": "$[\"workerSourceChecks\"][3]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                    "jsonLocation": "$[\"sources\"][3]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][96]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][105]"
+                  },
+                  {
+                    "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+                    "jsonLocation": "$[\"sourceManifest\"][28]"
+                  },
+                  {
+                    "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+                    "jsonLocation": "$[\"sourceManifest\"][28]"
+                  },
+                  {
+                    "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                    "jsonLocation": "$[49]"
+                  },
+                  {
+                    "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                    "jsonLocation": "$[49]"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+      "pointer": "/metadataOnlyRankingCandidates/2/datedCoverageRows/0",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "lines": 164,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][59]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][96]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][105]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][28]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][28]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                "jsonLocation": "$[49]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                "jsonLocation": "$[49]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/4",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "lineCount": 164,
+        "coverage": "hash-only selection/exclusion metadata; zero body read",
+        "selectedLineRanges": [],
+        "coveredLineCount": 0,
+        "initialPinArtifact": "replacement-selection-metadata.json",
+        "initialPinUTC": "2026-10-17T13:53:32.853804+00:00",
+        "finishBytes": 5926,
+        "finishSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "matchesInitialPin": true,
+        "selectionRole": "Metadata ranking only, not an active or replacement semantic leaf"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "pointer": "/files/24",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "currentBytes": 5926,
+        "currentSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "mainBytes": 5926,
+        "mainSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "pointer": "/hashOnlyChecks/14",
+      "row": {
+        "manifest": "shortcut-hints-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "coverage": "hash-only selection/exclusion metadata; zero body read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16498",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "frozenSourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+          "inspectedMainSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-full",
+        "scopeFields": {
+          "readScope": "full"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 2737,
+            "jsonPointer": "/sources/7"
+          }
+        ],
+        "claimId": "C016499"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16499",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+          "finishSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "coverage": "hash-only selection/exclusion metadata; zero body read"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 2372,
+            "jsonPointer": "/hashOnlyFiles/4"
+          }
+        ],
+        "claimId": "C016500"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16500",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "coverage": "hash-only selection/exclusion metadata; zero body read"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {
+          "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+        },
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 2404,
+            "jsonPointer": "/hashOnlyChecks/14"
+          }
+        ],
+        "claimId": "C016501"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16501",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "list-scalar",
+        "provenance": [
+          {
+            "historyRow": 198,
+            "jsonPointer": "/source_inventory/2412"
+          },
+          {
+            "historyRow": 1184,
+            "jsonPointer": "/paths/68"
+          },
+          {
+            "historyRow": 3390,
+            "jsonPointer": "/module_inventory/84740d56/paths/184"
+          },
+          {
+            "historyRow": 3390,
+            "jsonPointer": "/module_inventory/a66f4ef2/paths/185"
+          }
+        ],
+        "claimId": "C016502"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16502",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 432,
+            "jsonPointer": "/candidates/2/source/0"
+          },
+          {
+            "historyRow": 432,
+            "jsonPointer": "/candidates/2/source/1"
+          },
+          {
+            "historyRow": 470,
+            "jsonPointer": "/0/source/0"
+          },
+          {
+            "historyRow": 470,
+            "jsonPointer": "/0/source/1"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/13"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/14"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/22"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/26"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/27"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/33"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/36"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/37"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/42"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/44"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/45"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/47"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/56"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/57"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/58"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/59"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/60"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/61"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/64"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/65"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/66"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/68"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/69"
+          },
+          {
+            "historyRow": 471,
+            "jsonPointer": "/matches/projection/70"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/1"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/4"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/5"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/7"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/8"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/19"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/20"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/23"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/25"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/26"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/29"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/31"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/32"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/34"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/38"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/39"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/43"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/51"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/52"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/53"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/54"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/55"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/56"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/58"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/59"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/60"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/61"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/62"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/63"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/64"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/65"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/66"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/140"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/146"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/159"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/160"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/177"
+          },
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/user-display/179"
+          },
+          {
+            "historyRow": 3330,
+            "jsonPointer": "/sourceManifest/49"
+          },
+          {
+            "historyRow": 3347,
+            "jsonPointer": "/sourceManifest/49"
+          }
+        ],
+        "claimId": "C016503"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16503",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 474,
+            "jsonPointer": "/files/3"
+          },
+          {
+            "historyRow": 479,
+            "jsonPointer": "/files/59"
+          },
+          {
+            "historyRow": 479,
+            "jsonPointer": "/workerSourceChecks/3"
+          },
+          {
+            "historyRow": 1348,
+            "jsonPointer": "/files/1047"
+          },
+          {
+            "historyRow": 1349,
+            "jsonPointer": "/rankedCandidates/212"
+          },
+          {
+            "historyRow": 1350,
+            "jsonPointer": "/files/4077"
+          },
+          {
+            "historyRow": 2369,
+            "jsonPointer": "/metadataOnlyRankingCandidates/2"
+          },
+          {
+            "historyRow": 2369,
+            "jsonPointer": "/metadataOnlyRankingCandidates/2/datedCoverageRows/0"
+          },
+          {
+            "historyRow": 2612,
+            "jsonPointer": "/files/96"
+          },
+          {
+            "historyRow": 2745,
+            "jsonPointer": "/files/105"
+          },
+          {
+            "historyRow": 3085,
+            "jsonPointer": "/sourceManifest/28"
+          },
+          {
+            "historyRow": 3093,
+            "jsonPointer": "/sourceManifest/49"
+          },
+          {
+            "historyRow": 3143,
+            "jsonPointer": "/sourceManifest/28"
+          },
+          {
+            "historyRow": 3150,
+            "jsonPointer": "/sourceManifest/49"
+          },
+          {
+            "historyRow": 3280,
+            "jsonPointer": "/sourceManifest/28"
+          },
+          {
+            "historyRow": 3281,
+            "jsonPointer": "/sourceManifest/28"
+          },
+          {
+            "historyRow": 3289,
+            "jsonPointer": "/sourceManifest/28"
+          },
+          {
+            "historyRow": 3290,
+            "jsonPointer": "/sourceManifest/28"
+          },
+          {
+            "historyRow": 3327,
+            "jsonPointer": "/sourceManifest/49"
+          },
+          {
+            "historyRow": 3329,
+            "jsonPointer": "/49"
+          },
+          {
+            "historyRow": 3338,
+            "jsonPointer": "/runs/0/sourceManifest/49"
+          },
+          {
+            "historyRow": 3338,
+            "jsonPointer": "/runs/1/sourceManifest/49"
+          },
+          {
+            "historyRow": 3342,
+            "jsonPointer": "/sourceManifest/49"
+          },
+          {
+            "historyRow": 3346,
+            "jsonPointer": "/49"
+          }
+        ],
+        "claimId": "C016504"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16504",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+          "currentSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+          "mainSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 2404,
+            "jsonPointer": "/files/24"
+          }
+        ],
+        "claimId": "C016505"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16505",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "latestSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+          "initialSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 3026,
+            "jsonPointer": "/sources/20"
+          }
+        ],
+        "claimId": "C016506"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16506",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sourceHashFields": {
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "review": "whole-file"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/userMessageDisplay.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 2602,
+            "jsonPointer": "/sources/3"
+          }
+        ],
+        "claimId": "C016507"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4400",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "lines": 164,
+        "status": "current-sha-explicit-full-object",
+        "currentExplicitFullClaimIds": [
+          "C016499"
+        ],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C016499",
+          "C016500",
+          "C016501",
+          "C016502",
+          "C016503",
+          "C016504",
+          "C016505",
+          "C016506",
+          "C016507"
+        ],
+        "claimKindCounts": {
+          "explicit-full": 1,
+          "explicit-nonsemantic-or-hash-only": 2,
+          "incidental-path-or-pin-object": 5,
+          "scope-unknown": 1
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4400",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "lines": 164
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4401",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "lines": 164,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "carryable-explicit-full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/3",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "pointer": "/files/96",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "pointer": "/sources/7",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 5926,
+        "lines": 164,
+        "frozenSourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "inspectedMainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "pointer": "/files/105",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "bytes": 5926,
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+      "pointer": "/sources/20",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "latestSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "initialSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+      "pointer": "/sourceManifest/28",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+      "pointer": "/sourceManifest/28",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+      "pointer": "/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+      "pointer": "/sourceManifest/28",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+      "pointer": "/sourceManifest/28",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+      "pointer": "/sourceManifest/28",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+      "pointer": "/sourceManifest/28",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+      "pointer": "/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+      "pointer": "/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+      "pointer": "/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "primary84740": {
+          "exists": true,
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "latesta66f": {
+          "exists": true,
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "sameHash": true
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+      "pointer": "/runs/0/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+      "pointer": "/runs/1/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+      "pointer": "/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+      "pointer": "/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+      }
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+      "pointer": "/sourceManifest/49",
+      "row": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "primary84740": {
+          "exists": true,
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "latesta66f": {
+          "exists": true,
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+        },
+        "sameHash": true
+      }
+    }
+  ]
+}

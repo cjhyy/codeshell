@@ -1,0 +1,54 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "formatToolArgs|ToolCallStart",
+        "packages/tui/src/ui/components/ToolCall.tsx"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "stdout": "22:  formatToolArgs,\n34:// ─── ToolCallStart ──────────────────────────────────────────────────\n36:interface ToolCallStartProps {\n42:export function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {\n43:  const argsStr = formatToolArgs(toolName, args);\n"
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "formatToolArgs|tool_call_start|class TextRenderer",
+        "packages/tui/src/cli/output/renderer.ts"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "stdout": "8:  formatToolArgs,\n21:export class TextRenderer implements OutputRenderer {\n59:        const argsStr = formatToolArgs(tc.toolName, tc.args);\n"
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "Windows|PowerShell|Windows|Linux|macOS",
+        "README.md"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "stdout": "20:  <a href=\".github/workflows/release.yml\"><img src=\"https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555\" alt=\"macOS, Windows, and Linux\" /></a>\n140:- **Shell / execution**: `Bash`, `BashOutput`, `KillShell`, `ListShells`, `PowerShell`, `REPL`, `Sleep`\n"
+    },
+    {
+      "command": [
+        "rg",
+        "--files",
+        "packages/core/src",
+        "packages/coding/src"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "selectedFilenames": [
+        "packages/core/src/panel-apps/paths.ts",
+        "packages/core/src/plugins/installer/paths.ts",
+        "packages/core/src/themes/paths.ts",
+        "packages/core/src/tool-system/builtin/read.ts"
+      ],
+      "filenameOnly": true
+    }
+  ]
+}

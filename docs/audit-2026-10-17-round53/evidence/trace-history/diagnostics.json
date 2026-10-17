@@ -1,0 +1,47 @@
+{
+  "firstNonzero": {
+    "toolChunk": "bb8b81",
+    "exitCode": 2,
+    "stage": "filename-only navigation after successful target source displays",
+    "commands": [
+      "sed -n 1,117p packages/server/src/model-trace-history.ts",
+      "sed -n 202,242p packages/server/src/model-trace-history.ts",
+      "rg --files packages/server -g *model*trace*",
+      "rg -l createModelTraceHistory|validateModelTrace(Query|Id)|validateTraceEvent packages/server/src packages/server/test packages/server/tests packages/desktop/src 2>/dev/null"
+    ],
+    "actualSearchArgv": [
+      "rg",
+      "-l",
+      "createModelTraceHistory|validateModelTrace(Query|Id)|validateTraceEvent",
+      "packages/server/src",
+      "packages/server/test",
+      "packages/server/tests",
+      "packages/desktop/src"
+    ],
+    "stderrSuppressedInOriginalCommand": true,
+    "note": "Guessed server/test and server/tests were not filename-confirmed. rg exit2 is metadata-navigation error, not product execution; source displays succeeded. No stderr claim. Subsequent source work uses actual filenames only."
+  },
+  "unconfirmedFilenameProbe": {
+    "toolChunk": "38fb73",
+    "path": "packages/desktop/src/renderer/model-traces/ModelTracesView.tsx",
+    "result": "PATH_NOT_FOUND, no source bytes/pin or source reading obtained; process exit0",
+    "actualFilenameDiscoveryToolChunk": "a4b60c"
+  },
+  "truncations": [
+    {
+      "toolChunk": "4579c5",
+      "exitCode": 0,
+      "originalTokenCount": 8262,
+      "maxOutputTokens": 6500,
+      "actualMeaning": "82 compact old-cause rows output was truncated in the middle; omitted content not claimed as read. Full machine contexts already saved."
+    },
+    {
+      "toolChunk": "677501",
+      "exitCode": 0,
+      "originalTokenCount": 4239,
+      "maxOutputTokens": 4000,
+      "actualMeaning": "Selected metadata contexts output was truncated. Do not claim all8 requested contexts complete; R49/R50 canonical reports had already been read separately in a6830a."
+    }
+  ],
+  "rawOutputStatus": "Original tool transcript is authoritative. No independently saved full raw stdout/stderr file is claimed; metadata JSON records actual chunks/exit/truncation facts. No product command or product rerun occurred."
+}

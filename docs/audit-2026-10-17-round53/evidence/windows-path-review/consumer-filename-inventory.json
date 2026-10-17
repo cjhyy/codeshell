@@ -1,0 +1,16 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "class TextRenderer|formatToolArgs",
+    "packages/tui/src"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "packages/tui/src/cli/output/renderer.ts",
+    "packages/tui/src/cli/output/terminal-ui.ts",
+    "packages/tui/src/ui/components/ToolCall.tsx"
+  ],
+  "filenameOnly": true
+}

@@ -1,0 +1,22 @@
+{
+  "oldCanonical": "docs/archive/review-2026-05-30/findings.json",
+  "oldPointer": "/123",
+  "oldRow": {
+    "file": "packages/core/src/tool-system/builtin/glob.ts",
+    "line": "87-91",
+    "category": "simplify",
+    "severity": "low",
+    "confidence": "medium",
+    "title": "Inconsistent output formatting for glob results over 200 matches",
+    "detail": "When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent output: small result sets start with 'N files matched:' but large result sets do not. Additionally, line 89 uses '... and X more files' which should use singular 'file' when X=1.",
+    "fix": "Always prepend the match count header regardless of count. Move line 91's header before the conditional, or build the header after the conditional logic."
+  },
+  "oldR7Reference": "docs/audit-2026-10-17-round7/files.md:22",
+  "distinction": "Old123 is producer >200 missing header and singular/plural inconsistency. New lead is current CLI/TUI consumer treating ordinary serialized header/no-match status as file rows; occurs with1positive or0 matches, independent of >200 producer formatting. Fixing producer to always prepend header leaves CLI count wrong.",
+  "otherExcluded": [
+    "R14 UTIL-R14-R1/oldDESKTOP-R12-01 UTF16 truncation",
+    "R14 Read byte/unit unsupported contract lead",
+    "R21 JSONsummary/NDJSONtimer and oldTUI failed dynamic directions"
+  ],
+  "noveltyLimit": "15 precise retained contexts fully read, not all-history semantic absence proof."
+}

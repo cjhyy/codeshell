@@ -1,0 +1,24 @@
+{
+  "id": "TUI-R111-C1",
+  "priority": "P3",
+  "title": "Glob结果摘要把标题或无匹配提示算作文件，显示错误数量",
+  "status": "static-confirmed proposal; pending independent112 final freeze",
+  "primaryLocation": {
+    "path": "packages/tui/src/cli/output/renderer.ts",
+    "line": 145,
+    "endLine": 146
+  },
+  "condition": "Ordinary successful Glob search with1matchingfile, or zero matches in ordinary TUI ToolCallResult without error/compact retry.",
+  "expected": "1file for one real file and0files for no match.",
+  "actual": "Core positive output is numeric header plus1path. CLI counts2nonempty lines. Core zero output is one status sentence; TUI filters only numeric header and counts it as1file in both collapsed and expanded modes.",
+  "impact": "Visible Glob file count is inaccurate; original result text and actual search bytes are preserved. No claim search omission, fs ordering, data loss or actual runtime observation.",
+  "counterexamples": [
+    "TUI positive<=200 results strips numeric header and counts actual rows correctly.",
+    "Tool error branch is separate and not this trigger.",
+    "Core compactOutput has same shape but no actual current consumer found; it is not used to establish reachability.",
+    "terminal-ui local formatToolArgs is distinct from the Core import."
+  ],
+  "fixDirection": "Parse the known header/empty/truncation statuses or use structured result counts; derive displayed count from actual matched entries instead of all nonempty text lines.",
+  "independentReview": "112 separate author targeted source review of same lead; not blind/full unique review.",
+  "productRuns": 0
+}

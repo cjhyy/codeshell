@@ -1,0 +1,27 @@
+{
+  "createdAt": "2026-10-17T17:59:45.332351+00:00",
+  "metadataCommandErrors": 0,
+  "productExecutionFailures": 0,
+  "outputTruncations": [
+    {
+      "toolChunk": "cc9592",
+      "exitCode": 0,
+      "maxOutputTokens": 4800,
+      "reportedOriginalTokenCount": 29078,
+      "reportedOutputLines": 90,
+      "scope": "Historical source-row and broad cause context presentation; source products not executed",
+      "limit": "Original tool result is the retained first presentation; no byte-original stdout file captured. Broad glob substring also recalled global; counts are not exact-cause absence."
+    },
+    {
+      "toolChunk": "921764",
+      "exitCode": 0,
+      "maxOutputTokens": 4500,
+      "reportedOriginalTokenCount": 9745,
+      "reportedOutputLines": 84,
+      "scope": "Focused history previews and CLI original source rows presentation",
+      "limit": "Full focused contexts saved in JSON; bounded matched windows subsequently selected without rerunning products."
+    }
+  ],
+  "querySupplement": "Word-boundary Glob query is an additional narrower metadata query, not a product retry or silent rewrite of first broad results. Exact helper-name query and literal zero-result string each return0 in frozen cohort.",
+  "additionalCanonicalGateTiming": "CLI was pinned before selected source body; its additional historical source-row lookup is later and is not backdated."
+}

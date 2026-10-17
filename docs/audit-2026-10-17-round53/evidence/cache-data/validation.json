@@ -1,0 +1,23 @@
+{
+  "formal": 0,
+  "candidate": 0,
+  "newRelated": 0,
+  "productHelpersFunctionsImportsExecuted": 0,
+  "testsFixturesLanguageExperimentsRun": 0,
+  "ReactDOMClockTimerNativeNetworkModelGitRun": 0,
+  "realCacheOrUserSettingsRead": 0,
+  "sourceWrites": 0,
+  "sectionSourceBodyOrNavigationLines": 0,
+  "testBodiesDeclarationsRead": 0,
+  "metadataFatalErrors": [],
+  "toolOutputTruncations": [],
+  "observedCompletedCommandExits": 0,
+  "metadataPatternLimitation": {
+    "originalPattern": "readCache|writeCache|isStale|\\.models|CachedModel",
+    "note": "Optional .models navigation alternative used an overescaped literal-dot pattern. readCache/writeCache/isStale/CachedModel alternatives suppliedtheactualusedcalllocators. Originalnavigationpreserved; do notclaimallpropertymatchesor rerun/expandmodelpool."
+  },
+  "methodDraftNote": "FallbacktemplateOUTlabel wascorrected beforeexecution backtoexactassigneddir; no outsidefilewrite orfailedrun.",
+  "metadataExecutionOnly": "OwnstdPythonJSON/scalar/hash/rangeauditmethods andrgfilename/nav; no product/repositorymethods executed.",
+  "noFailedDirectionRestored": true,
+  "fallbackInventoryReceiptInterpretation": "model-history inventoryExitCode0 is copied/carried from successful primaryrg inventory via helper placeholder; no second freshinventory command ran. Outer fallbackmetadata parser run completedexit0 observedfd1fd1. Same5150 paths/bytes verified ending."
+}

@@ -1,0 +1,83 @@
+{
+  "createdAt": "2026-10-17T17:55:10.194383+00:00",
+  "objects": [
+    {
+      "document": "docs/archive/review-2026-05-30/findings.json",
+      "bytes": 222261,
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "pointer": "/123",
+      "row": {
+        "file": "packages/core/src/tool-system/builtin/glob.ts",
+        "line": "87-91",
+        "category": "simplify",
+        "severity": "low",
+        "confidence": "medium",
+        "title": "Inconsistent output formatting for glob results over 200 matches",
+        "detail": "When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent output: small result sets start with 'N files matched:' but large result sets do not. Additionally, line 89 uses '... and X more files' which should use singular 'file' when X=1.",
+        "fix": "Always prepend the match count header regardless of count. Move line 91's header before the conditional, or build the header after the conditional logic."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/files-source-manifest.json",
+      "bytes": 8498,
+      "sha256": "a6989989faee0249cb5e69135ac34a89c2cff68840465f4882b731ea16644c9c",
+      "pointer": "/sources/4",
+      "row": {
+        "path": "packages/core/src/tool-system/builtin/glob.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4080,
+        "lines": 121,
+        "frozenSourceSha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/files-source-manifest.json",
+      "bytes": 8498,
+      "sha256": "a6989989faee0249cb5e69135ac34a89c2cff68840465f4882b731ea16644c9c",
+      "pointer": "/sources/10",
+      "row": {
+        "path": "packages/core/src/tool-system/builtin/glob.test.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4941,
+        "lines": 119,
+        "frozenSourceSha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "bytes": 8621,
+      "sha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+      "pointer": "/sources/4",
+      "row": {
+        "path": "packages/tui/src/ui/components/ToolCall.tsx",
+        "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+        "bytes": 13567,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "readScope": "full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/evidence/jsonoutput-source-manifest.json",
+      "bytes": 5674,
+      "sha256": "5a205fa421fcc7f3889e9217f658db885e4000e0297dc31af63929ec863774ea",
+      "pointer": "/files/0",
+      "row": {
+        "path": "packages/tui/src/cli/output/renderer.ts",
+        "frozenSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+        "currentSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+        "matchesFrozen": true,
+        "bytes": 5744,
+        "lineCount": 163,
+        "ranges": [
+          "1-163 (full source)"
+        ],
+        "kind": "actual JSON class/factory import and calls; Text class and helpers never invoked"
+      }
+    }
+  ],
+  "decision": "Prior same-SHA full static reading exists for core producer, TUI consumer, core test and CLI renderer; this packet is a targeted re-review of a concrete potentially distinct consumer count cause, not new/first full coverage. May30 item123 producer missing header/pluralization above200 is distinct from counting ordinary status lines as matched files."
+}

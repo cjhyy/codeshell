@@ -1,0 +1,8 @@
+{
+  "path": "packages/tui/src/ui/App.tsx",
+  "bytes": 90976,
+  "lines": 2318,
+  "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+  "pinnedBeforeBodyUTC": "2026-10-17T17:54:18.977085+00:00",
+  "purpose": "Ordinary UI renderEntry caller and tool_result DTO mapping only"
+}

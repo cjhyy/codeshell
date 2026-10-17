@@ -1,0 +1,16 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "readCache|writeCache|isStale|\\.models|CachedModel",
+        "packages/core/src/llm/model-fetcher.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "4: * response shapes into a uniform `CachedModel[]`, applies the kind's\n21:  readCache,\n22:  writeCache,\n23:  isStale,\n24:  type CachedModel,\n83:    const cached = readCache(opts.cacheDir, provider.key);\n84:    if (cached && !isStale(cached)) return { ...cached, fromCache: true };\n92:    const path = provider.modelsPath ?? meta.modelsPath;\n123:    const file = writeCache(opts.cacheDir, provider.key, finalModels);\n141:function enrichFromStaticCatalog(kind: ProviderKindName, live: CachedModel[]): CachedModel[] {\n146:  const merged: CachedModel[] = live.map((m) => {\n193:function enrichFromOpenRouterSnapshot(kind: ProviderKindName, models: CachedModel[]): CachedModel[] {\n232:function sortByRecency(models: CachedModel[]): CachedModel[] {\n248:  return [...models].sort((a, b) => {\n257:function normalize(payload: unknown, protocol: ProviderProtocol): CachedModel[] {\n261:      return (p.models ?? []).map((m) => ({ id: m.name, contextLength: 0, maxOutputTokens: 0 }));\n273:      return (p.models ?? []).map((m) => ({\n301:    const models: CachedModel[] = (snapshot.models ?? []).map((m) => ({\n306:    return writeCache(cacheDir, providerKey, models);\n318:  const stale = readCache(cacheDir, providerKey);\n",
+      "stderr": ""
+    }
+  ],
+  "afterDedicatedPin": true
+}

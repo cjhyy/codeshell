@@ -1,0 +1,213 @@
+{
+  "createdAt": "2026-10-17T17:50:10.564339+00:00",
+  "markdown": [
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/report.md",
+      "bytes": 2863,
+      "sha256": "ec4e7be456d8b575ee3e89aa2d736e071ea86aed96a0a0d7a451e9b2550e8e50",
+      "coverage": "selected historical metadata; no product source",
+      "selectedLineRanges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "# Web格式化范围：读前历史全文排除"
+        },
+        {
+          "line": 2,
+          "text": ""
+        },
+        {
+          "line": 3,
+          "text": "本轮 **0正式 / 0候选 / 0新增关联**，两个允许目标均在产品正文前按同版本canonical全文凭据排除；没有换第三个方向，也没有重新审查普通consumer或宣称模块无bug。"
+        },
+        {
+          "line": 4,
+          "text": ""
+        },
+        {
+          "line": 5,
+          "text": "- `packages/web/src/lib/format.ts` 当前140行/5447B，SHA c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33。R20 `evidence/root-source-manifest.json` 的 `/files/10` 同SHA明确“Full static module”；保留原“旧project matching/i18n动态预检未恢复、无import”限制。不是借旧失败方向恢复运行。"
+        },
+        {
+          "line": 6,
+          "text": "- 允许的fallback `packages/server/src/mobile-remote/mobile-history.ts` 当前41行/1458B，SHA258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04。R23 `room-data-source-manifest.json /files/1`同SHA coverage=full、1–41；Root `/files/12`另有Full initial static。旧字段“zero-runtime-import leaf”只是旧作者语境，本轮没有执行它。"
+        },
+        {
+          "line": 7,
+          "text": ""
+        },
+        {
+          "line": 8,
+          "text": "[canonical原object](canonical-coverage-objects.json)保存四份精确元数据对象及历史库存读前pin，其中R5 format whole-file是不同旧SHA，仅作反证，不能单独绑定当前；更晚hash-only/inventory/rank也不抹去有效旧full。不把unknown/no-row/rank视为从未阅读。产品当前仅hash/行数，body语义与显示均0，测试声明0；源码[manifest](source-manifest.json)的files=[]、hashOnlyFiles=2，instruction全文222行另列。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/root-web.md",
+      "bytes": 6450,
+      "sha256": "a88d62bea04cfea633559fc4931752fef6ca77537ecd906f8ab3e72c6b0969fc",
+      "coverage": "selected historical metadata; no product source",
+      "selectedLineRanges": [
+        [
+          27,
+          31
+        ]
+      ],
+      "lines": [
+        {
+          "line": 27,
+          "text": "[去重记录](evidence/root-web-dedup.json) 对前三批及第四批 audit、review、archive 的正文/JSON做定向扫描，另阅读旧 Web priority-and-coverage 与近期分报告。没有找到同根因已确认项。旧 A12 是 headless JSON fallback 混入子代理正文，旧 N02 是 provider 重试保留失败前缀，均不是当前 Web reducer 全局生命周期处理。"
+        },
+        {
+          "line": 28,
+          "text": ""
+        },
+        {
+          "line": 29,
+          "text": "进一步逐记录解析 May30 minified JSON，没有同项；初始全文 regex 的若干命中跨越不同 JSON entries，不作相同 finding。June23 beta audit `:489–490` 记录的是旧 assistant 不封口、先到结果丢失，后者已通过添加 orphan buffer 修复。WEB-R5-02 是当前回填分支未做显示清理的残留差异，原结果不丢失，根因/改动位置不同。July9 protocol review 描述的是主 terminal 与子事件隔离合同及转发，不是当前 Web 同根因已确认 bug。"
+        },
+        {
+          "line": 30,
+          "text": ""
+        },
+        {
+          "line": 31,
+          "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/web.md",
+      "bytes": 8362,
+      "sha256": "3ecb7e29d33ae46a5aa4a30692bbd0245dd82ca6bd628b0cdada44a168ce023e",
+      "coverage": "selected historical metadata; no product source",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "# Round 8: Web ordinary display and attachment metadata"
+        },
+        {
+          "line": 2,
+          "text": ""
+        },
+        {
+          "line": 3,
+          "text": "Frozen product source: `ec0e16bf0068a458abcbaa28225a4c764c24f4de`. This audit changes no product files and confirms two conditional P3 defects on that frozen source. **WEB-R8-01 has since had its exact source condition eliminated by a parallel change on main; WEB-R8-02's source is unchanged.** The first-run tests were not rerun on main. No browser, WebSocket, real server, upload service, native app or model was started."
+        },
+        {
+          "line": 4,
+          "text": ""
+        },
+        {
+          "line": 5,
+          "text": "## WEB-R8-01 [P3] A project rooted at `/` does not own its descendant cwd in the Web projection"
+        },
+        {
+          "line": 6,
+          "text": ""
+        },
+        {
+          "line": 7,
+          "text": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`."
+        },
+        {
+          "line": 8,
+          "text": "- Contract: `projectForCwd` explicitly returns the project whose root owns the cwd, selecting the longest prefix. Existing `format.test.ts` establishes ordinary descendant grouping and V2 secondary-root support. `/` is a valid POSIX absolute directory value for this API; production `ProjectStore.resolvePickedRoot` (`packages/desktop/src/main/project-store.ts:743–760`) checks an existing absolute directory and contains no explicit filesystem-root exclusion. That registration observation is static; the fixture does not register or inspect the operator's filesystem root."
+        },
+        {
+          "line": 9,
+          "text": "- Trigger: supplied project metadata contains primary root `/` (or V2 secondary root `/`) and a session cwd such as `/workspace`, with no more-specific matching registered root."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "coverage": "selected historical metadata; no product source",
+      "selectedLineRanges": [
+        [
+          28,
+          30
+        ]
+      ],
+      "lines": [
+        {
+          "line": 28,
+          "text": "两组均仅通过 `node scripts/run-bun-test-shard.mjs --timeout 30000` 执行。[首次捕获器](evidence/web-run-first.py) 先把 combined stdout/stderr 与退出收据写入文件，再输出 receipt 路径供检查，并拒绝覆盖已存在的首次证据。没有测试重跑。"
+        },
+        {
+          "line": 29,
+          "text": ""
+        },
+        {
+          "line": 30,
+          "text": "聚焦失败原因：自有 fixture 的相对 import 写为 `../../../../packages/...`，多向上一级，Bun 无法加载 userMessageDisplay.ts。它尚未执行任何测试体或产品断言，是**支架定位错误**，不是 Bun、依赖或产品错误。原 fixture 保留原样，整个 user-display 聚焦方向 SKIP，候选不能升级；准备源码中的其他控制、replay/reducer 验证和观察日志均未执行。roomHistory 是独立既有基线，成功统计只计 8 tests / 9 expect；失败加载显示的 “Ran 1 test” 单独归档，不能算成功覆盖。"
+        }
+      ]
+    }
+  ],
+  "jsonObjects": [
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "bytes": 6963,
+      "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "pointer": "/files/10",
+      "selectedObject": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      },
+      "topLevelKeys": [
+        "baseline",
+        "files",
+        "note"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "bytes": 5677,
+      "sha256": "a58f1b00f628f3304ad3cfca03b95bc287d061b15b9402a3ef9f8d8181abb07a",
+      "pointer": "/sources/3",
+      "selectedObject": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "bytes": 11910,
+      "sha256": "c1de0091382dc45f82f9c5424a495bb71374f34423012827a019f98e13e074a9",
+      "pointer": "/sources/7",
+      "selectedObject": {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 5926,
+        "lines": 164,
+        "frozenSourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+        "inspectedMainMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "limitation": "Only explicit original target-row evidence activated. Other displayed locator rows and old cause lines are navigation or context, not new source coverage."
+}

@@ -1,0 +1,125 @@
+{
+  "document": "docs/audit-2026-10-17-round5/prompt.md",
+  "bytes": 8621,
+  "lines": 65,
+  "sha256": "c7de3978cf9795719df125d2555a5ab1ea2cebec99b21273f2555f4772b330db",
+  "selectedLines": [
+    {
+      "line": 1,
+      "text": "# Round 5: Core prompt composition and instruction ordering"
+    },
+    {
+      "line": 2,
+      "text": ""
+    },
+    {
+      "line": 3,
+      "text": "Frozen product commit: `9a421b3e65d5bfe662b78062cb86bd99483a683a`. Read `CODESHELL.md`; no product, dependency, build, Git state, user data, or external service changes. Two first-run guarded shards completed: **6 pass / 33 expect / 0 fail / 0 skipped**. One fresh **P3** finding; one historical duplicate excluded."
+    },
+    {
+      "line": 4,
+      "text": ""
+    },
+    {
+      "line": 5,
+      "text": "## Current contract and callers"
+    },
+    {
+      "line": 6,
+      "text": ""
+    },
+    {
+      "line": 7,
+      "text": "The real implementation is `packages/core/src/prompt/`, with built-in presets in `packages/core/src/preset/index.ts`. Coding contributes its ordinary preset data and `coding.md` section from `packages/coding/src/index.capability.ts:287–354`; there is no `packages/core/src/presets` directory."
+    },
+    {
+      "line": 8,
+      "text": ""
+    },
+    {
+      "line": 9,
+      "text": "- `Engine` constructs a fresh `PromptComposer` at `packages/core/src/engine/engine.ts:3155`; `buildPromptComposerConfig` supplies the composition boundary finder at `:3180–3182`. The coding module registers its finder at `packages/coding/src/index.capability.ts:354`; the finder walks the filesystem for `.git` at `packages/coding/src/capability-runtime.ts:62–69`."
+    },
+    {
+      "line": 10,
+      "text": "- The scanner promises priority order `managed → user → project (root→cwd) → local` at `packages/core/src/prompt/instruction-scanner.ts:53–57`. `combineInstructions` preserves its input order at `:130–135`."
+    },
+    {
+      "line": 11,
+      "text": "- `PromptComposer.getInstructions` calls those two functions at `packages/core/src/prompt/composer.ts:412–416`; `buildUserContextMessage` emits the resulting text at `:155–177`. The Engine consumes that message at `packages/core/src/engine/engine.ts:2424–2431`."
+    },
+    {
+      "line": 12,
+      "text": "- Named sections are module-owned strings that override built-ins when supplied (`packages/core/src/prompt/section-loader.ts:28–35`). `buildPresetSystemPrompt` assembles preset section order and applies tool metadata gates (`packages/core/src/preset/index.ts:270–294`). Composer tool names and behavior have explicit `cacheBreak: true` (`packages/core/src/prompt/composer.ts:322–357`)."
+    },
+    {
+      "line": 13,
+      "text": ""
+    },
+    {
+      "line": 14,
+      "text": "## PROMPT-01 — P3: ancestor local instructions are ordered before descendant project instructions"
+    },
+    {
+      "line": 15,
+      "text": ""
+    },
+    {
+      "line": 16,
+      "text": "**Defect location:** `packages/core/src/prompt/instruction-scanner.ts:108–112`, inside the directory loop at `:92`. The advertised ordering contract is at `:57`; there is no later source-priority sort before the return at `:115`."
+    },
+    {
+      "line": 17,
+      "text": ""
+    },
+    {
+      "line": 18,
+      "text": "**Condition:** a caller supplies a project boundary above `cwd`, an ancestor contains `CODESHELL.local.md`, and a descendant contains `CODESHELL.md`. This is an ordinary supported nested-project configuration; the analogous compat names use the same loop. The latter is a source inspection conclusion, not a second dynamic case."
+    },
+    {
+      "line": 44,
+      "text": "| C-PROMPT-01: custom system prompt coexists with preset sections despite “takes precedence” | **Duplicate; not counted** | `docs/archive/review-2026-05-30/backlog_ided.json` `_id: 36`, and the corresponding `findings.json`, `backlog_confirmed.json`, `low_confirmed.json`, titled “Ambiguous system prompt precedence not enforced.” No new dynamic experiment. |"
+    },
+    {
+      "line": 45,
+      "text": "| C-PROMPT-02: instruction cache could retain edited text when a composer is reused | **No fresh product finding** | Current Engine constructs a new composer per run. In-place cache lifetime alone does not establish a production defect. |"
+    },
+    {
+      "line": 46,
+      "text": "| C-PROMPT-03: section override, tool gating, SectionCache invalidation | **Bounded counterchecks pass** | First-run composition shard: actual built-in presets, contributed section data, reused composer gate changes, explicit cache-break/invalidation semantics. |"
+    },
+    {
+      "line": 47,
+      "text": ""
+    },
+    {
+      "line": 48,
+      "text": "## Validation and evidence limits"
+    },
+    {
+      "line": 49,
+      "text": ""
+    },
+    {
+      "line": 61,
+      "text": "| Total | **6** | **33** | — | **0 failures / 0 skipped** |"
+    },
+    {
+      "line": 62,
+      "text": ""
+    },
+    {
+      "line": 63,
+      "text": "The composition shard dynamically checks actual Core built-in preset assembly, contributed section trimming and order, missing-section error, general-preset browser instruction gating across reused composer calls, and SectionCache reuse/break/invalidation/empty-section behavior. Coding's declaration and its actual markdown are read as source/data and passed to the real section loader; **the coding module, adapters, and Engine are not instantiated**, so this is not a coding-composition runtime receipt."
+    },
+    {
+      "line": 64,
+      "text": ""
+    },
+    {
+      "line": 65,
+      "text": "No fixture, dependency, or platform failure occurred; therefore there is no failed direction or repaired/retried experiment. A separate documentation count-parser assertion failed once; [the assembly note](evidence/prompt-receipt-assembly-note.md) preserves its terminal response and explains the correction from unchanged logs, with no test rerun. No real models, CLI processes, Git commands inside fixtures, network requests, hooks, permissions/auth/security experiments, injection experiments, user data, build, broad test suite, or typecheck. Previously failed CLI/data/recorder/JSON-summary/Discord directions were not revived. All **28/28** source files match the frozen Git blobs in the [source manifest](evidence/prompt-source-manifest.json); per-shard counts, log hashes, and cleanup limits are in [receipts](evidence/prompt-receipts.json). Raw `.log` files may require force-add because the repository ignores logs."
+    }
+  ],
+  "readUTC": "2026-10-17T17:49:08.025095+00:00"
+}

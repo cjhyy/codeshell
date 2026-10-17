@@ -1,0 +1,37 @@
+{
+  "atUTC": "2026-10-17T17:59:38.429722+00:00",
+  "files": [
+    {
+      "path": "freeze-root.py",
+      "bytes": 4347,
+      "sha256": "2c5dbe24edba4fa0718bfb7f9f8e9a8f120bda93042d67b7f0e58fc9bcf92ae2"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 530,
+      "sha256": "6cad0494f6784ed376e2f67ac624de628b3e45a0702194709f8912c9971f91ab"
+    },
+    {
+      "path": "release-before-pin.json",
+      "bytes": 244,
+      "sha256": "8cb2b9dc14dd1f477c65d548c4a3c13c84ea1323d6831c760cdf056ecd63154b"
+    },
+    {
+      "path": "report.md",
+      "bytes": 1774,
+      "sha256": "1acff1f3bb1d9da605720502eae9862f3238be71e0872275688f6deadf069f7a"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 4855,
+      "sha256": "54ffacdbec541978c775ed88d9db2a49515cefeef23c235c234d250da22a0f68"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 2588,
+      "sha256": "fb65e678bfc332092c6f7f911c202f3da949c2e7fd600d778c78d7d34b2d1ecd"
+    }
+  ],
+  "selfExcluded": true,
+  "productRuns": 0
+}

@@ -1,0 +1,141 @@
+{
+  "frozenUTC": "2026-10-17T17:53:53.860121+00:00",
+  "directory": "/tmp/codeshell-audit-round108-section-cache",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "canonical-gate.first.json",
+      "bytes": 3949,
+      "sha256": "e085d2f335e9c758393f13dcf3dc71162fdb5c9a6765c65f14502197caab2653"
+    },
+    {
+      "path": "consumer-filename-inventory.json",
+      "bytes": 283,
+      "sha256": "e692ab66cb897c6585c91d7dba7432b4b5025c8db614123f130dd167b0f65966"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 398,
+      "sha256": "9916c3529676406ea6c18fb98cbcaa86787a631f6f6f6e9657c4f2de5b36a9ba"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 28334,
+      "sha256": "3e01389c9b66428c8858222a06807463dbba60f0ac501dba89fff5150a244066"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1495,
+      "sha256": "a731406414c1ba118345e8196653d3490c36844bd165263ba2399e143f719f99"
+    },
+    {
+      "path": "fallback-history-method.py",
+      "bytes": 7443,
+      "sha256": "5c06a3ea018566d328a4d0d5a7323fced3e9df020949d91e9dc65d08572ae7fa"
+    },
+    {
+      "path": "fallback-initial-pins.json",
+      "bytes": 581,
+      "sha256": "1b24aa810fb150655ce9992bb0a63bb418534f7eaf44186f8936ac0b9839ea72"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 869,
+      "sha256": "05c0792d47e6118aaa2e718620fa17072c1b9fae6f245685405d18028c0b9ea8"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 165396,
+      "sha256": "332680d023fd916bc15d1457b644592f9cc22250f9a8241b8e709bcaee24ea4a"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 7589,
+      "sha256": "f00d206606c40a2426229882c69bc7eaea82c73d1e11ab87640e258cd27d4877"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1037301,
+      "sha256": "a4a1c54014be5e0d6cca11b0a821b3094ce0b0185bcd31ea2735d1cf48df126b"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1169,
+      "sha256": "a03920e889b03d55561ca9286da8988914ff55843c117cd3a2adc29827799123"
+    },
+    {
+      "path": "model-canonical-gate.json",
+      "bytes": 726,
+      "sha256": "a8e8f32b797551c02d62e168beb447119c446f7f877ade291c88588cd53836ad"
+    },
+    {
+      "path": "model-coverage-gate-objects.json",
+      "bytes": 15531,
+      "sha256": "59370915c01e6d41113a17080952fcf9beddbe0ceb57b22ca36586a750953aae"
+    },
+    {
+      "path": "model-history-contexts.json",
+      "bytes": 165342,
+      "sha256": "d3a8936270302d382d0923231fb2405605c84291912e6698ecadf442c1de7aa7"
+    },
+    {
+      "path": "model-history.json",
+      "bytes": 1037359,
+      "sha256": "b4b47e13244b2266f191860e68d4afd05e56e53dfd4b2e533d5401b95247498a"
+    },
+    {
+      "path": "model-original-md-read.json",
+      "bytes": 4855,
+      "sha256": "2f4e9ff4d8a13e8f57017550df06d2b371b85e001336b1a62ae4ca5c807cd85f"
+    },
+    {
+      "path": "producer-navigation.json",
+      "bytes": 1521,
+      "sha256": "d3d04088457bcf48cf6d55fa43574bb72f39a0f856e1846128aa06da09991ccb"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5232,
+      "sha256": "9e56208d2bb147c16e1c20af937bc7ebd43f8fc73b055eb59d48500414f081e4"
+    },
+    {
+      "path": "section-original-md-read.json",
+      "bytes": 6622,
+      "sha256": "e95209b32ec8b5c7bad9089721311fe2ed8df46f5f7b155cf7ec39fc68268f7a"
+    },
+    {
+      "path": "source-display-pins.json",
+      "bytes": 689,
+      "sha256": "72208826729dddea7670cb213bbddea167a7f45ac3f4ba4183edbf6fd9813a94"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 4606,
+      "sha256": "91a8659a25321d6ab065d5fb61679347603311ea932e3df6940eef094740d11b"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 7611,
+      "sha256": "e3cd3d0f89d92b858095c7329670d933c0a14b6890e5848b31acd44c95079094"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1419,
+      "sha256": "2ab6c3ed0cb029e4568754270863024e3cdabbfd4b4103065bb106abd5d9e745"
+    }
+  ],
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "sourceSelectedFiles": 2,
+  "sourceFullFiles": 0,
+  "semanticProductLines": 50,
+  "hashOnlyPrimaryFiles": 1,
+  "testDeclarations": 0,
+  "productExecutions": 0,
+  "Git": 0,
+  "reportLocalLinks": 17,
+  "role": "Bounded ordinarymodelcache DTOauthor; section-cachefull evidenceambiguous retained, nofirstever/globalcoverageclaim"
+}

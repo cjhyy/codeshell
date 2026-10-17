@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "Windows|win32",
+    "packages/tui/src/cli"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "packages/tui/src/cli/commands/builtin/utility-commands.ts"
+  ],
+  "filenameOnly": true
+}

@@ -1,0 +1,136 @@
+{
+  "capturedUTC": "2026-10-17T18:01:22.039054+00:00",
+  "postActualReadCapture": true,
+  "notInitialSnapshotOrNewSemanticRead": true,
+  "files": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "displayedLineRanges": [
+        [
+          1,
+          117
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 117,
+          "text": "/**\n * Shared formatting utilities for tool call display.\n *\n * Used by both:\n * - ui/components/ToolCall.tsx (Ink REPL)\n * - cli/output/renderer.ts (headless text output)\n */\n\nimport { sep } from \"node:path\";\n\n/** Maximum preview lines for tool output. */\nexport const MAX_PREVIEW_LINES = 4;\nexport const MAX_LINE_WIDTH = 88;\n\n/**\n * Argument keys that carry filesystem paths. Values for these keys are\n * relativized against process.cwd() before display so users see\n * \"src/ui/App.tsx\" instead of \"/Users/.../codeshell/src/ui/App.tsx\".\n */\nconst PATH_ARG_KEYS = new Set([\"file_path\", \"path\", \"directory\", \"cwd\"]);\n\n/**\n * Strip the cwd prefix from a path string for display. Paths outside\n * cwd, relative paths, and non-string values are returned unchanged.\n */\nfunction relativizePath(value: string): string {\n  if (!value || !value.startsWith(\"/\")) return value;\n  const cwd = process.cwd();\n  const prefix = cwd.endsWith(sep) ? cwd : cwd + sep;\n  if (value === cwd) return \".\";\n  if (value.startsWith(prefix)) return value.slice(prefix.length);\n  return value;\n}\n\n/** Tool name → display color for the dot indicator. */\nexport const TOOL_DOT_COLORS: Record<string, string> = {\n  Read: \"ansi:blue\",\n  Write: \"ansi:green\",\n  Edit: \"ansi:yellow\",\n  Bash: \"ansi:magenta\",\n  Glob: \"ansi:blue\",\n  Grep: \"ansi:blue\",\n  Agent: \"ansi:cyan\",\n  WebSearch: \"ansi:blue\",\n  WebFetch: \"ansi:blue\",\n  LSP: \"ansi:cyan\",\n  TodoWrite: \"ansi:cyan\",\n};\n\n/** Mapping of tool names to their most informative argument keys. */\nconst TOOL_ARG_KEYS: Record<string, string[]> = {\n  Read: [\"file_path\"],\n  Write: [\"file_path\"],\n  Edit: [\"file_path\"],\n  Glob: [\"pattern\"],\n  Grep: [\"pattern\", \"path\"],\n  Bash: [\"command\"],\n  WebSearch: [\"query\"],\n  WebFetch: [\"url\"],\n  Agent: [\"description\"],\n  TodoWrite: [\"todos\"],\n  Sleep: [\"seconds\"],\n  EnterWorktree: [\"target\", \"slug\"],\n  CronCreate: [\"name\", \"schedule\"],\n  LSP: [\"action\", \"file_path\"],\n  NotebookEdit: [\"action\", \"file_path\"],\n  Config: [\"action\", \"key\"],\n};\n\n/**\n * Strip a leading `cd <dir> && ` (or `; `) so the visible command is the\n * thing the user actually cares about. The cwd prefix is mechanical noise\n * that otherwise eats the entire truncation budget on long absolute paths.\n */\nfunction stripCdPrefix(cmd: string): string {\n  // Matches: cd <path> && rest   |   cd \"<path with spaces>\" && rest   |   cd '...'; rest\n  const m = cmd.match(/^\\s*cd\\s+(?:\"[^\"]*\"|'[^']*'|\\S+)\\s*(?:&&|;)\\s*(.+)$/s);\n  return m ? m[1]!.trim() : cmd;\n}\n\n/**\n * Format tool arguments into a compact one-line summary.\n */\nexport function formatToolArgs(toolName: string, args: Record<string, unknown>): string {\n  const keys = TOOL_ARG_KEYS[toolName] ?? Object.keys(args).slice(0, 2);\n  const parts: string[] = [];\n  for (const k of keys) {\n    const v = args[k];\n    if (v !== undefined && !k.startsWith(\"__\")) {\n      let s = String(v);\n      if (toolName === \"Bash\" && k === \"command\") s = stripCdPrefix(s);\n      else if (PATH_ARG_KEYS.has(k)) s = relativizePath(s);\n      // Bash commands deserve more room than other args — the truncation\n      // budget here used to swallow `git diff …` after a long cd prefix.\n      const max = toolName === \"Bash\" && k === \"command\" ? MAX_LINE_WIDTH : 60;\n      parts.push(truncate(s, max));\n    }\n  }\n  // Read often pages large files via offset/limit — show a range suffix so\n  // back-to-back reads of the same file are visually distinguishable.\n  if (toolName === \"Read\") {\n    const offset = typeof args.offset === \"number\" ? args.offset : undefined;\n    const limit = typeof args.limit === \"number\" ? args.limit : undefined;\n    if (offset !== undefined || limit !== undefined) {\n      const start = offset ?? 1;\n      const end = limit !== undefined ? start + limit - 1 : undefined;\n      parts.push(end !== undefined ? `:${start}-${end}` : `:${start}-`);\n    }\n  }\n  return parts.length > 0 ? parts.join(\" \") : truncate(JSON.stringify(args), 80);\n}\n\n/** Truncate a string to max length with ellipsis. */\nexport function truncate(s: string, max: number): string {\n  return s.length > max ? s.slice(0, max - 1) + \"…\" : s;\n}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "displayedLineRanges": [
+        [
+          36,
+          60
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 36,
+          "end": 60,
+          "text": "interface ToolCallStartProps {\n  toolName: string;\n  args: Record<string, unknown>;\n  nested?: boolean;\n}\n\nexport function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {\n  const argsStr = formatToolArgs(toolName, args);\n  const dotColor = TOOL_DOT_COLORS[toolName] ?? \"ansi:cyan\";\n  const ml = nested ? 3 : 0;\n\n  // Top-level tool blocks get a blank line above them so back-to-back tool\n  // calls don't visually fuse into one wall (matches Claude Code's spacing).\n  // Nested (under Agent) stays tight because the agent block already groups.\n  return (\n    <Box marginLeft={ml} marginTop={nested ? 0 : 1}>\n      <Text color={dotColor}>{\"  ●\"}</Text>\n      <Text bold> {toolName}</Text>\n      <Text dim>\n        {\"  \"}\n        {argsStr}\n      </Text>\n    </Box>\n  );\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "displayedLineRanges": [
+        [
+          21,
+          29
+        ],
+        [
+          45,
+          64
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 21,
+          "end": 29,
+          "text": "export class TextRenderer implements OutputRenderer {\n  private activeAgents = new Set<string>();\n\n  onEvent(event: StreamEvent): void {\n    const agentId = (event as any).agentId as string | undefined;\n    const indent = agentId ? \"    \" : \"\";\n    const prefix = agentId ? chalk.dim(\"│ \") : \"\";\n\n    switch (event.type) {\n"
+        },
+        {
+          "start": 45,
+          "end": 64,
+          "text": "      case \"agent_end\": {\n        const ev = event as any;\n        this.activeAgents.delete(ev.agentId);\n        const endType = ev.agentType ? `[${ev.agentType}] ` : \"\";\n        if (ev.error) {\n          process.stderr.write(`${indent}${chalk.red(\"✗\")} ${chalk.dim(`Agent ${endType}${ev.description}: ${ev.error}`)}\\n`);\n        } else {\n          process.stderr.write(`${indent}${chalk.green(\"✓\")} ${chalk.dim(`Agent ${endType}${ev.description}`)}\\n`);\n        }\n        break;\n      }\n\n      case \"tool_use_start\": {\n        const tc = event.toolCall;\n        const argsStr = formatToolArgs(tc.toolName, tc.args);\n        process.stderr.write(`${indent}${prefix}${chalk.cyan(\"●\")} ${chalk.bold(tc.toolName)} ${chalk.dim(argsStr)}\\n`);\n        break;\n      }\n\n      case \"tool_result\": {\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "sha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "displayedLineRanges": [
+        [
+          20,
+          36
+        ],
+        [
+          49,
+          55
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 20,
+          "end": 36,
+          "text": "    \"For images and binary files, returns path/metadata instead of raw bytes. \" +\n    \"For large text files, consider using Grep first to find the relevant lines.\\n\\n\" +\n    \"Do NOT re-read a file you just edited to verify — Edit/Write would have errored \" +\n    \"if the change failed.\\n\" +\n    \"Do NOT re-read a file (or the same range of a file) you've already read earlier in \" +\n    \"this conversation. The content is already in your context. If you need a different \" +\n    \"part of the file, read a different offset; otherwise decide with what you have.\",\n  inputSchema: {\n    type: \"object\",\n    properties: {\n      file_path: { type: \"string\", description: \"Absolute path to the file to read\" },\n      offset: { type: \"number\", description: \"Line number to start reading from (1-based)\" },\n      limit: { type: \"number\", description: \"Number of lines to read (default: 2000)\" },\n    },\n    required: [\"file_path\"],\n  },\n};\n"
+        },
+        {
+          "start": 49,
+          "end": 55,
+          "text": "\nexport async function readTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {\n  const rawPath = args.file_path as string;\n  if (!rawPath) return \"Error: file_path is required\";\n  const cwd = ctx?.cwd ?? process.cwd();\n  const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);\n\n"
+        }
+      ]
+    },
+    {
+      "path": "README.md",
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "displayedLineRanges": [
+        [
+          15,
+          23
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 15,
+          "end": 23,
+          "text": "<p align=\"center\">\n  <a href=\"https://www.npmjs.com/package/%40cjhyy%2Fcode-shell\"><img src=\"https://img.shields.io/npm/v/%40cjhyy%2Fcode-shell\" alt=\"npm version\" /></a>\n  <a href=\"LICENSE\"><img src=\"https://img.shields.io/badge/license-MIT-blue\" alt=\"MIT license\" /></a>\n  <a href=\"package.json\"><img src=\"https://img.shields.io/badge/node-%3E%3D20.10-339933\" alt=\"Node.js >=20.10\" /></a>\n  <a href=\"tsconfig.json\"><img src=\"https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&amp;logoColor=white\" alt=\"TypeScript\" /></a>\n  <a href=\".github/workflows/release.yml\"><img src=\"https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555\" alt=\"macOS, Windows, and Linux\" /></a>\n</p>\n\n<p align=\"center\">\n"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "displayedLineRanges": [
+        [
+          137,
+          156
+        ],
+        [
+          326,
+          334
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 137,
+          "end": 156,
+          "text": "      contents: read\n    strategy:\n      # Don't cancel the other OS builds if one fails — a red Windows build\n      # shouldn't deprive you of the mac/linux artifacts.\n      fail-fast: false\n      matrix:\n        include:\n          - os: ubuntu-latest\n            artifact: linux\n          - os: macos-latest\n            artifact: mac\n          # windows-latest now ships VS 2026. The locked electron-builder chain\n          # uses node-gyp 9, which recognizes VS 2022 but not VS 2026; retain the\n          # supported native compiler until that toolchain is upgraded together.\n          - os: windows-2022\n            artifact: windows\n    runs-on: ${{ matrix.os }}\n    steps:\n      - uses: actions/checkout@v7\n        with:\n"
+        },
+        {
+          "start": 326,
+          "end": 334,
+          "text": "          case \"$TAG\" in *-*) PRERELEASE=(--prerelease) ;; esac\n\n          cat > /tmp/release-notes.md <<'NOTES'\n          自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。\n\n          **安装包签名说明**:\n          - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。\n          - macOS 未配置 Developer ID 签名密钥时,产物会使用固定 requirement 的 ad-hoc 签名。\n          - 从旧 cdhash ad-hoc 版本升级到固定 requirement 版本时,需要下载 .dmg 手动覆盖安装一次;之后固定 requirement 版本之间可走应用内更新。\n"
+        }
+      ]
+    }
+  ]
+}

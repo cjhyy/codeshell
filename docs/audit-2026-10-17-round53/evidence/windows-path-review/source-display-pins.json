@@ -1,0 +1,83 @@
+{
+  "pins": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "bytes": 6985,
+      "beforeDisplayUTC": "2026-10-17T17:55:53.451202+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          117
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "beforeDisplayUTC": "2026-10-17T17:57:01.496785+00:00",
+      "displayedLineRanges": [
+        [
+          36,
+          60
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "beforeDisplayUTC": "2026-10-17T17:57:01.497336+00:00",
+      "displayedLineRanges": [
+        [
+          21,
+          29
+        ],
+        [
+          45,
+          64
+        ]
+      ]
+    },
+    {
+      "path": "README.md",
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "beforeDisplayUTC": "2026-10-17T17:57:01.498135+00:00",
+      "displayedLineRanges": [
+        [
+          15,
+          23
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "sha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "beforeDisplayUTC": "2026-10-17T17:57:28.395549+00:00",
+      "displayedLineRanges": [
+        [
+          20,
+          36
+        ],
+        [
+          49,
+          55
+        ]
+      ]
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "beforeDisplayUTC": "2026-10-17T17:57:28.397471+00:00",
+      "displayedLineRanges": [
+        [
+          137,
+          156
+        ],
+        [
+          326,
+          334
+        ]
+      ]
+    }
+  ]
+}

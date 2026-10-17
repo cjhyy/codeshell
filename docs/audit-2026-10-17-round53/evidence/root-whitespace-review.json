@@ -1,0 +1,5 @@
+{
+  "exactTrailingWhitespaceLines": {},
+  "allOtherFilesMustPass": true,
+  "scope": "No frozen whitespace exceptions."
+}

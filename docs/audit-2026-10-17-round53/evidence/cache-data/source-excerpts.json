@@ -1,0 +1,50 @@
+{
+  "captureUTC": "2026-10-17T17:52:50.822933+00:00",
+  "afterActualSourceDisplays": true,
+  "notPreReadSnapshotOrAdditionalSemanticRead": true,
+  "files": [
+    {
+      "path": "packages/core/src/llm/model-cache.ts",
+      "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "displayedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 65,
+          "text": "/**\n * Cache file IO for per-provider model lists.\n *\n * One file per provider key under <cacheDir>/<providerKey>.json. TTL is\n * 7 days. Callers decide whether to honor staleness — readCache just\n * reads, isStale just checks. Malformed/missing files yield undefined.\n */\n\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { userHome } from \"../settings/manager.js\";\n\nexport interface CachedModel {\n  id: string;\n  contextLength: number;\n  maxOutputTokens: number;\n}\n\nexport interface ModelCacheFile {\n  fetchedAt: string;\n  providerKey: string;\n  models: CachedModel[];\n}\n\nconst TTL_MS = 7 * 24 * 3600 * 1000;\n\nexport function readCache(cacheDir: string, providerKey: string): ModelCacheFile | undefined {\n  const path = join(cacheDir, `${providerKey}.json`);\n  if (!existsSync(path)) return undefined;\n  try {\n    const raw = readFileSync(path, \"utf-8\");\n    const parsed = JSON.parse(raw) as ModelCacheFile;\n    if (!parsed || !Array.isArray(parsed.models)) return undefined;\n    return parsed;\n  } catch {\n    return undefined;\n  }\n}\n\nexport function writeCache(\n  cacheDir: string,\n  providerKey: string,\n  models: CachedModel[],\n): ModelCacheFile {\n  if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });\n  const payload: ModelCacheFile = {\n    fetchedAt: new Date().toISOString(),\n    providerKey,\n    models,\n  };\n  writeFileSync(join(cacheDir, `${providerKey}.json`), JSON.stringify(payload, null, 2), \"utf-8\");\n  return payload;\n}\n\nexport function isStale(file: ModelCacheFile, now: number = Date.now()): boolean {\n  const ts = Date.parse(file.fetchedAt);\n  if (!Number.isFinite(ts)) return true;\n  return now - ts > TTL_MS;\n}\n\nexport function defaultCacheDir(): string {\n  // userHome() (not raw homedir(), which bun caches at process start) so a\n  // relocated/test HOME redirects the cache dir instead of writing real ~/.code-shell.\n  return join(userHome(), \".code-shell\", \"cache\", \"models\");\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/model-fetcher.ts",
+      "sha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "displayedLineRanges": [
+        [
+          53,
+          86
+        ],
+        [
+          119,
+          128
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 53,
+          "end": 86,
+          "text": "const OPENROUTER_SNAPSHOT = join(HERE, \"..\", \"data\", \"openrouter-models.json\");\n\ninterface RawOpenAIShape {\n  data?: Array<{\n    id: string;\n    context_window?: number;\n    max_completion_tokens?: number;\n    context_length?: number;\n  }>;\n}\ninterface RawOllamaShape {\n  models?: Array<{ name: string }>;\n}\ninterface RawAnthropicShape {\n  data?: Array<{ id: string; context_window?: number; max_output_tokens?: number }>;\n}\ninterface RawGeminiShape {\n  models?: Array<{ name: string; inputTokenLimit?: number; outputTokenLimit?: number }>;\n}\ninterface OpenRouterSnapshotShape {\n  models?: Array<{ id: string; contextLength?: number; maxOutputTokens?: number }>;\n}\n\nexport async function fetchModelList(\n  provider: FetcherProvider,\n  opts: FetchOptions,\n): Promise<FetchResult> {\n  const meta = getKindMeta(provider.kind);\n\n  if (!opts.refresh) {\n    const cached = readCache(opts.cacheDir, provider.key);\n    if (cached && !isStale(cached)) return { ...cached, fromCache: true };\n  }\n\n"
+        },
+        {
+          "start": 119,
+          "end": 128,
+          "text": "    const filtered = raw.filter((m) => meta.chatFilter(m.id));\n    const sorted = sortByRecency(filtered);\n    const enriched = enrichFromStaticCatalog(provider.kind, sorted);\n    const finalModels = enrichFromOpenRouterSnapshot(provider.kind, enriched);\n    const file = writeCache(opts.cacheDir, provider.key, finalModels);\n    return file;\n  } catch (err) {\n    const msg = (err as Error).message || String(err);\n    return errorResult(provider.key, opts.cacheDir, msg, provider.kind);\n  }\n"
+        }
+      ]
+    }
+  ]
+}

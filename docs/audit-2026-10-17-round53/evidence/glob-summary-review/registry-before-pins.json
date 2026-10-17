@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "bytes": 39835,
+      "lines": 1233,
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:55:37.800459+00:00",
+      "purpose": "Ordinary builtin Glob binding/string result DTO boundary only; permission/authority mechanism not audited"
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "bytes": 10363,
+      "lines": 296,
+      "sha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:55:37.801737+00:00",
+      "purpose": "Ordinary builtin Glob binding/string result DTO boundary only; permission/authority mechanism not audited"
+    }
+  ]
+}

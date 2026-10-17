@@ -1,0 +1,18 @@
+{
+  "pins": [
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "bytes": 8099,
+      "lines": 216,
+      "sha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:57:01.458853+00:00"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 15885,
+      "lines": 368,
+      "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:57:01.460559+00:00"
+    }
+  ]
+}

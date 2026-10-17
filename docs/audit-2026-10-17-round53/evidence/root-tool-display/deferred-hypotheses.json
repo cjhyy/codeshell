@@ -1,0 +1,7 @@
+{
+  "windowsPath": "Core26 startsWith slash appears to skip Windows drive paths; pending separate113 platform/input-contract critique, not assigned a second formal ID here.",
+  "unsupported": [
+    "No new Unicode/byte-label item; old cause already retained.",
+    "No >200 globally-newest sorting contract bug; oldR7 unconfirmed candidate preserved."
+  ]
+}

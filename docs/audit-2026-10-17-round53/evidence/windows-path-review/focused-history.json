@@ -1,0 +1,427 @@
+{
+  "readUTC": "2026-10-17T17:59:18.401287+00:00",
+  "scope": "Literal/AND query only over original5150inventory, no newinventory/sourcecode scan.",
+  "queries": [
+    "casefold literal relativizePath",
+    "Windows|win32 AND literal value.startsWith slashguard",
+    "Windows|win32 AND any formatToolArgs/toolDisplay/cwd prefix/路径显示/绝对路径截断"
+  ],
+  "counts": {
+    "relativizePath": 0,
+    "slashGuardWindows": 0,
+    "windowsPathFormatting": 42
+  },
+  "capEach": 40,
+  "retained": {
+    "relativizePath": 0,
+    "slashGuardWindows": 0,
+    "windowsPathFormatting": 40
+  },
+  "errors": [],
+  "contexts": {
+    "relativizePath": [],
+    "slashGuardWindows": [],
+    "windowsPathFormatting": [
+      {
+        "document": "docs/archive/core-complete-review.md",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+        "pointer": "markdown-text",
+        "text": "ime/safe-spawn.ts` 封装安全子进程执行。Hook runner、plugin、git、shell 工具等需要执行外部命令时应优先走这类封装，避免环境变量、cwd、stdio、信号处理不一致。\n\n### 18.4 Utils\n\n`src/utils/**` 是通用工具集合，包括：\n\n- `format.ts`\n- `theme.ts`\n- `toolDisplay.ts`\n- `debug.ts`\n- `env.ts`\n- `envUtils.ts`\n- `execFileNoThrow.ts`\n- `lockfile.ts`\n- `memoize.ts`\n- `semver.ts`\n- `sliceAnsi.ts`\n- `intl.ts`\n- `earlyInput.ts`\n- `systemTheme.ts`\n- `task-sanitizer.ts`\n\n这些工具被 CLI/UI/core 多处复用。修改时要注意它们可能是跨层依赖。\n\n## 19. 状态与成本统计模块\n\n### 19.1 `state.ts`\n\n`src/state.ts` 是 process-wide 状态兼容层，包含：\n\n- sessionId / cwd / projectRoot。\n- interactive/headless 标记。\n- model override。\n- token counters。\n- per-model usage。\n- API duration。\n- lines changed。\n- turn hook/tool/classifier duration。\n- telemetry counter stubs。\n- remote mode",
+        "valueCharacters": 96025,
+        "windowStart": 39722,
+        "windowEnd": 40462,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/archive/core-modules/utils.md",
+        "documentSha256": "f48c0c63c91d00dfa3e6102223f8082da5c58d35e8b02089e468b6e90ef9cdc2",
+        "pointer": "markdown-text",
+        "text": "/Vertex region helpers, `isInProtectedNamespace`). |\n| `earlyInput.ts` | Capture/replay stdin typed before the UI is ready (`startCapturingEarlyInput`/`consumeEarlyInput`/…). |\n| `toolDisplay.ts` | Tool-call display helpers (`formatToolArgs`, `singleLine`, `MAX_LINE_WIDTH`, `TOOL_DOT_COLORS`). |\n| `debug.ts` | `logForDebugging` debug logging. |\n| `sliceAnsi.ts` | ANSI-aware string slicing (default export). |\n| `theme.ts` / `systemTheme.ts` / `theme-xterm` | Theme palette + OS theme detection. |\n\n## 公开接口 / Public API\n\n```ts\n// lockfile.ts — proper-lockfile, loaded lazily\nfunction lock(file: string, options?: LockOptions): Promise<() => Promise<void>>; // returns release fn\nfunction lockSync(file: string, options?: LockOptions): () ",
+        "valueCharacters": 8186,
+        "windowStart": 2348,
+        "windowEnd": 3088,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+        "pointer": "/records/5/matches/0/match",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146567,
+        "windowStart": 46467,
+        "windowEnd": 47207,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+        "pointer": "/records/5/matches/0/context",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146947,
+        "windowStart": 46707,
+        "windowEnd": 47447,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+        "pointer": "/records/9/matches/0/match",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146567,
+        "windowStart": 46467,
+        "windowEnd": 47207,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+        "pointer": "/records/9/matches/0/context",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146947,
+        "windowStart": 46707,
+        "windowEnd": 47447,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+        "pointer": "/records/13/matches/0/match",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146567,
+        "windowStart": 46467,
+        "windowEnd": 47207,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+        "pointer": "/records/13/matches/0/context",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146947,
+        "windowStart": 46707,
+        "windowEnd": 47447,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/77/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/78/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/79/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/80/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/81/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/82/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/149/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 220729,
+        "windowStart": 121736,
+        "windowEnd": 122476,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/153/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 220729,
+        "windowStart": 121736,
+        "windowEnd": 122476,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/user-display/157/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 220729,
+        "windowStart": 121736,
+        "windowEnd": 122476,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "documentSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+        "pointer": "/hits/targets/49/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 116543,
+        "windowStart": 103803,
+        "windowEnd": 104543,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "documentSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+        "pointer": "/hits/targets/56/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 116543,
+        "windowStart": 103803,
+        "windowEnd": 104543,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "documentSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+        "pointer": "/hits/targets/63/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 116543,
+        "windowStart": 103803,
+        "windowEnd": 104543,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "documentSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+        "pointer": "/hits/targets/95/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 116543,
+        "windowStart": 103803,
+        "windowEnd": 104543,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/6/object/match",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146567,
+        "windowStart": 46467,
+        "windowEnd": 47207,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/6/object/context",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146947,
+        "windowStart": 46707,
+        "windowEnd": 47447,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/7/object/match",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146567,
+        "windowStart": 46467,
+        "windowEnd": 47207,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/7/object/context",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146947,
+        "windowStart": 46707,
+        "windowEnd": 47447,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/8/object/match",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146567,
+        "windowStart": 46467,
+        "windowEnd": 47207,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/8/object/context",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 146947,
+        "windowStart": 46707,
+        "windowEnd": 47447,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/9/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/10/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/11/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/12/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/13/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/14/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 145360,
+        "windowStart": 46367,
+        "windowEnd": 47107,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/17/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 220729,
+        "windowStart": 121736,
+        "windowEnd": 122476,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/21/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 220729,
+        "windowStart": 121736,
+        "windowEnd": 122476,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/25/object/excerpt",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 220729,
+        "windowStart": 121736,
+        "windowEnd": 122476,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/50/object/text",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 222261,
+        "windowStart": 122021,
+        "windowEnd": 122761,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/54/object/text",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 222261,
+        "windowStart": 122021,
+        "windowEnd": 122761,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "documentSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+        "pointer": "/objects/58/object/text",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 222261,
+        "windowStart": 122021,
+        "windowEnd": 122761,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "documentSha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2",
+        "pointer": "/hits/logs/3/text",
+        "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+        "valueCharacters": 222261,
+        "windowStart": 122021,
+        "windowEnd": 122761,
+        "boundedWindowNotWholeValue": true
+      }
+    ]
+  }
+}
