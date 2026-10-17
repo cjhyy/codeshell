@@ -1,0 +1,1023 @@
+{
+  "capturedUTC": "2026-10-17T15:18:37.239087+00:00",
+  "scope": "52 static ordinary ContextSettings form/DTO/save/default/threshold text only. No authority/native/model/settings-state execution. Additional previously read core wrappers are selected supporting source, not novel whole-mechanism coverage.",
+  "rootContext": "Root stated baseline4d5e81a27ac0481113bc523bfbf588d10672ef38; agent0Git",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "bytes": 12329,
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "lineCount": 341,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          341
+        ]
+      ],
+      "coveredLineCount": 341,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          341
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          341
+        ]
+      ],
+      "displayedLineCount": 341,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "lines": 341,
+        "capturedUTC": "2026-10-17T15:13:37.817069+00:00",
+        "timing": "before52 product semantic/body read"
+      },
+      "finishFilesystemSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "finishCapturedUTC": "2026-10-17T15:20:20.683468+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "lineCount": 321,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "lines": 321,
+        "capturedUTC": "2026-10-17T15:13:37.817917+00:00",
+        "timing": "before52 product semantic/body read"
+      },
+      "finishFilesystemSha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "finishCapturedUTC": "2026-10-17T15:20:20.684892+00:00",
+      "unchangedFromInitial": true,
+      "role": "fallback-or-adjacent-boundary-not-semantic"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "capturedUTC": "2026-10-17T15:13:37.818619+00:00",
+        "timing": "instruction hash carry; no52 semantic read or invented earlier pin"
+      },
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishCapturedUTC": "2026-10-17T15:20:20.685263+00:00",
+      "unchangedFromInitial": true,
+      "role": "instruction-hash-carry",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "capturedUTC": "2026-10-17T15:13:37.818942+00:00",
+        "timing": "instruction hash carry; no52 semantic read or invented earlier pin"
+      },
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishCapturedUTC": "2026-10-17T15:20:20.685599+00:00",
+      "unchangedFromInitial": true,
+      "role": "instruction-hash-carry",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "lineCount": 29,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "coveredLineCount": 29,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "displayedLineCount": 29,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/desktop/src/renderer/settingsBus.ts",
+        "bytes": 1037,
+        "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+        "lines": 29,
+        "capturedUTC": "2026-10-17T15:15:06.664021+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "finishCapturedUTC": "2026-10-17T15:20:20.686106+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "lineCount": 731,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          297,
+          331
+        ]
+      ],
+      "coveredLineCount": 35,
+      "displayedBodyLineRanges": [
+        [
+          297,
+          331
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        135
+      ],
+      "displayedLineRanges": [
+        [
+          135,
+          135
+        ],
+        [
+          297,
+          331
+        ]
+      ],
+      "displayedLineCount": 36,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/core/src/settings/schema.ts",
+        "bytes": 29767,
+        "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+        "lines": 731,
+        "capturedUTC": "2026-10-17T15:15:06.666045+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "finishCapturedUTC": "2026-10-17T15:20:20.686799+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "lineCount": 1139,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        341,
+        348,
+        385,
+        575,
+        577,
+        650,
+        652,
+        656,
+        658,
+        662,
+        664,
+        667,
+        681,
+        686,
+        738,
+        930,
+        965,
+        1124
+      ],
+      "displayedLineRanges": [
+        [
+          341,
+          341
+        ],
+        [
+          348,
+          348
+        ],
+        [
+          385,
+          385
+        ],
+        [
+          575,
+          575
+        ],
+        [
+          577,
+          577
+        ],
+        [
+          650,
+          650
+        ],
+        [
+          652,
+          652
+        ],
+        [
+          656,
+          656
+        ],
+        [
+          658,
+          658
+        ],
+        [
+          662,
+          662
+        ],
+        [
+          664,
+          664
+        ],
+        [
+          667,
+          667
+        ],
+        [
+          681,
+          681
+        ],
+        [
+          686,
+          686
+        ],
+        [
+          738,
+          738
+        ],
+        [
+          930,
+          930
+        ],
+        [
+          965,
+          965
+        ],
+        [
+          1124,
+          1124
+        ]
+      ],
+      "displayedLineCount": 18,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/core/src/settings/manager.ts",
+        "bytes": 46928,
+        "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+        "lines": 1139,
+        "capturedUTC": "2026-10-17T15:15:06.666950+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "finishCapturedUTC": "2026-10-17T15:20:20.687416+00:00",
+      "unchangedFromInitial": true,
+      "role": "fallback-or-adjacent-boundary-not-semantic"
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "lineCount": 1184,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          228,
+          261
+        ]
+      ],
+      "coveredLineCount": 34,
+      "displayedBodyLineRanges": [
+        [
+          227,
+          262
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        297,
+        310,
+        321,
+        338,
+        355,
+        879,
+        947,
+        975,
+        991,
+        1046,
+        1155
+      ],
+      "displayedLineRanges": [
+        [
+          227,
+          262
+        ],
+        [
+          297,
+          297
+        ],
+        [
+          310,
+          310
+        ],
+        [
+          321,
+          321
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          355,
+          355
+        ],
+        [
+          879,
+          879
+        ],
+        [
+          947,
+          947
+        ],
+        [
+          975,
+          975
+        ],
+        [
+          991,
+          991
+        ],
+        [
+          1046,
+          1046
+        ],
+        [
+          1155,
+          1155
+        ]
+      ],
+      "displayedLineCount": 47,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/core/src/context/compaction.ts",
+        "bytes": 43905,
+        "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+        "lines": 1184,
+        "capturedUTC": "2026-10-17T15:15:06.667589+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "finishCapturedUTC": "2026-10-17T15:20:20.688095+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "lineCount": 867,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          75,
+          97
+        ],
+        [
+          858,
+          864
+        ]
+      ],
+      "coveredLineCount": 30,
+      "displayedBodyLineRanges": [
+        [
+          75,
+          97
+        ],
+        [
+          858,
+          864
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        37,
+        38,
+        47,
+        48,
+        61,
+        168,
+        177,
+        434,
+        471,
+        473,
+        474,
+        475,
+        476,
+        477,
+        552,
+        589,
+        594,
+        595,
+        598,
+        599,
+        600,
+        604,
+        624,
+        625,
+        666,
+        673,
+        841
+      ],
+      "displayedLineRanges": [
+        [
+          37,
+          38
+        ],
+        [
+          47,
+          48
+        ],
+        [
+          61,
+          61
+        ],
+        [
+          75,
+          97
+        ],
+        [
+          168,
+          168
+        ],
+        [
+          177,
+          177
+        ],
+        [
+          434,
+          434
+        ],
+        [
+          471,
+          471
+        ],
+        [
+          473,
+          477
+        ],
+        [
+          552,
+          552
+        ],
+        [
+          589,
+          589
+        ],
+        [
+          594,
+          595
+        ],
+        [
+          598,
+          600
+        ],
+        [
+          604,
+          604
+        ],
+        [
+          624,
+          625
+        ],
+        [
+          666,
+          666
+        ],
+        [
+          673,
+          673
+        ],
+        [
+          841,
+          841
+        ],
+        [
+          858,
+          864
+        ]
+      ],
+      "displayedLineCount": 57,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/core/src/context/manager.ts",
+        "bytes": 34508,
+        "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+        "lines": 867,
+        "capturedUTC": "2026-10-17T15:15:06.668210+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "finishCapturedUTC": "2026-10-17T15:20:20.688702+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "bytes": 5588,
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "lineCount": 133,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          23,
+          41
+        ]
+      ],
+      "coveredLineCount": 19,
+      "displayedBodyLineRanges": [
+        [
+          20,
+          43
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        2,
+        3,
+        4,
+        6,
+        44,
+        52,
+        53,
+        67,
+        80,
+        89,
+        127
+      ],
+      "displayedLineRanges": [
+        [
+          2,
+          4
+        ],
+        [
+          6,
+          6
+        ],
+        [
+          20,
+          44
+        ],
+        [
+          52,
+          53
+        ],
+        [
+          67,
+          67
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          127,
+          127
+        ]
+      ],
+      "displayedLineCount": 35,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/core/src/engine/run-context.ts",
+        "bytes": 5588,
+        "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+        "lines": 133,
+        "capturedUTC": "2026-10-17T15:15:06.668766+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "finishCapturedUTC": "2026-10-17T15:20:20.689294+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+      "bytes": 1430,
+      "sha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+      "lineCount": 45,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          17
+        ]
+      ],
+      "coveredLineCount": 10,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "displayedLineCount": 45,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+        "bytes": 1430,
+        "sha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+        "lines": 45,
+        "capturedUTC": "2026-10-17T15:15:06.669313+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+      "finishCapturedUTC": "2026-10-17T15:20:20.689870+00:00",
+      "unchangedFromInitial": true,
+      "role": "test-declarations-only-no-execution"
+    },
+    {
+      "path": "packages/core/src/context/compaction.ratios.test.ts",
+      "bytes": 2064,
+      "sha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+      "lineCount": 67,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "coveredLineCount": 67,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "displayedLineCount": 67,
+      "initialFilesystemPin": {
+        "artifact": "producer-consumer-initial-pins.json",
+        "path": "packages/core/src/context/compaction.ratios.test.ts",
+        "bytes": 2064,
+        "sha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+        "lines": 67,
+        "capturedUTC": "2026-10-17T15:15:06.669853+00:00",
+        "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+      },
+      "finishFilesystemSha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+      "finishCapturedUTC": "2026-10-17T15:20:20.690415+00:00",
+      "unchangedFromInitial": true,
+      "role": "test-declarations-only-no-execution"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "lineCount": 25,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          20
+        ]
+      ],
+      "coveredLineCount": 7,
+      "displayedBodyLineRanges": [
+        [
+          14,
+          20
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        23
+      ],
+      "displayedLineRanges": [
+        [
+          14,
+          20
+        ],
+        [
+          23,
+          23
+        ]
+      ],
+      "displayedLineCount": 8,
+      "initialFilesystemPin": {
+        "artifact": "save-chain-initial-pins.json",
+        "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+        "bytes": 765,
+        "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+        "lines": 25,
+        "capturedUTC": "2026-10-17T15:15:44.659115+00:00",
+        "timing": "before narrow ordinary user-patch delegation/merge source navigation; authority resolution internals not reviewed"
+      },
+      "finishFilesystemSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "finishCapturedUTC": "2026-10-17T15:20:20.690956+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "lineCount": 275,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          131,
+          137
+        ],
+        [
+          151,
+          156
+        ],
+        [
+          171,
+          215
+        ]
+      ],
+      "coveredLineCount": 58,
+      "displayedBodyLineRanges": [
+        [
+          131,
+          139
+        ],
+        [
+          150,
+          157
+        ],
+        [
+          171,
+          215
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        8,
+        30,
+        31,
+        35,
+        44,
+        48,
+        49,
+        63,
+        86,
+        91,
+        95,
+        96,
+        106,
+        220,
+        235,
+        244,
+        251,
+        254,
+        255,
+        262,
+        265
+      ],
+      "displayedLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          30,
+          31
+        ],
+        [
+          35,
+          35
+        ],
+        [
+          44,
+          44
+        ],
+        [
+          48,
+          49
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          95,
+          96
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          131,
+          139
+        ],
+        [
+          150,
+          157
+        ],
+        [
+          171,
+          215
+        ],
+        [
+          220,
+          220
+        ],
+        [
+          235,
+          235
+        ],
+        [
+          244,
+          244
+        ],
+        [
+          251,
+          251
+        ],
+        [
+          254,
+          255
+        ],
+        [
+          262,
+          262
+        ],
+        [
+          265,
+          265
+        ]
+      ],
+      "displayedLineCount": 83,
+      "initialFilesystemPin": {
+        "artifact": "save-chain-initial-pins.json",
+        "path": "packages/desktop/src/main/settings-service.ts",
+        "bytes": 10247,
+        "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+        "lines": 275,
+        "capturedUTC": "2026-10-17T15:15:44.659976+00:00",
+        "timing": "before narrow ordinary user-patch delegation/merge source navigation; authority resolution internals not reviewed"
+      },
+      "finishFilesystemSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "finishCapturedUTC": "2026-10-17T15:20:20.691709+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          508,
+          537
+        ],
+        [
+          2496,
+          2503
+        ]
+      ],
+      "coveredLineCount": 38,
+      "displayedBodyLineRanges": [
+        [
+          508,
+          537
+        ],
+        [
+          2494,
+          2503
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        188,
+        4452
+      ],
+      "displayedLineRanges": [
+        [
+          188,
+          188
+        ],
+        [
+          508,
+          537
+        ],
+        [
+          2494,
+          2503
+        ],
+        [
+          4452,
+          4452
+        ]
+      ],
+      "displayedLineCount": 42,
+      "initialFilesystemPin": {
+        "artifact": "ratio-route-initial-pin.json",
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210666,
+        "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+        "lines": 5082,
+        "capturedUTC": "2026-10-17T15:16:08.955113+00:00",
+        "timing": "before52 narrow settings-ratio delegation navigation/read, no engine or model invocation"
+      },
+      "finishFilesystemSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "finishCapturedUTC": "2026-10-17T15:20:20.692813+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary-form-dto/source-consumer"
+    }
+  ],
+  "counts": {
+    "rows": 15,
+    "semanticFiles": 11,
+    "fullFiles": 3,
+    "selectedFiles": 8,
+    "navigationOnlyFiles": 1,
+    "hashOnlyFiles": 3,
+    "productSemanticLines": 591,
+    "testDeclarationSemanticLines": 77,
+    "totalSemanticLines": 668,
+    "displayedSourceLines": 808
+  },
+  "displayRule": "Canonical union of already displayed body and navigation singleton snippets. Additional navigation not added twice. Source excerpts preserve actual numbered output.",
+  "metadataBoundary": "settings-service AA99 navigation only located malformed-read/recovery helpers; no body or behavior assessment of that adjacent branch. Source hash/selected scope unchanged."
+}

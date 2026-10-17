@@ -1,0 +1,82 @@
+{
+  "capturedUTC": "2026-10-17T15:22:52.150311+00:00",
+  "count": 15,
+  "links": [
+    {
+      "link": "initial-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-focused.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-decisions.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "producer-consumer-initial-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "save-chain-initial-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "ratio-route-initial-pin.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "source-manifest.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "ending-source-checks.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "source-excerpts.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-finish-check.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "metadata-diagnostics.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "validation.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "artifact-receipt.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "metadata-notes.json",
+      "inside": true,
+      "exists": true
+    }
+  ],
+  "outsideRelativeAliasesNeeded": false
+}

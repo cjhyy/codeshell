@@ -1,0 +1,66 @@
+{
+  "capturedAtUTC": "2026-10-17T15:20:56.928359+00:00",
+  "firstDisplayChunks": [
+    "0717b6",
+    "88bb4c"
+  ],
+  "repeatMetadataOnly": true,
+  "lineNumbers": {
+    "packages/desktop/src/renderer/theme.ts": [
+      1,
+      5,
+      12,
+      13,
+      18,
+      19,
+      22,
+      33,
+      37,
+      43,
+      47,
+      48,
+      64,
+      128,
+      140
+    ],
+    "packages/desktop/src/renderer/installedThemes.ts": [
+      25,
+      47,
+      53,
+      72
+    ],
+    "packages/desktop/src/renderer/settings/SettingsPage.tsx": [
+      47,
+      77,
+      106,
+      169,
+      176,
+      193,
+      194,
+      201,
+      214,
+      382,
+      486,
+      781
+    ],
+    "packages/desktop/src/renderer/theme-packs.ts": [
+      16,
+      53,
+      54,
+      61,
+      76,
+      91,
+      100,
+      119,
+      151,
+      165,
+      174,
+      243,
+      244
+    ],
+    "packages/desktop/src/renderer/settings/AppearanceSection.tsx": [
+      189
+    ]
+  },
+  "policy": "Same bounded navigation regex repeated for line-number inventory only; no new source semantic coverage. Earlier complete tool output remains first evidence."
+}

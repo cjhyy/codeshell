@@ -1,0 +1,49 @@
+{
+  "capturedUTC": "2026-10-17T15:22:52.148891+00:00",
+  "firstSnapshots": [
+    {
+      "original": "report.md",
+      "preserved": "report.first.md",
+      "bytes": 5487,
+      "sha256": "813f0e00981e2493479e152a7cb9d0f1078747ee8201a70e740dd09e569d9e50",
+      "active": false
+    },
+    {
+      "original": "source-manifest.json",
+      "preserved": "source-manifest.first.json",
+      "bytes": 25641,
+      "sha256": "b173f438e07f94429bdda37ce91601171b8e23f48c4b3651b37ea8c299275f14",
+      "active": false
+    },
+    {
+      "original": "history-finish-check.json",
+      "preserved": "history-finish-check.first.json",
+      "bytes": 261,
+      "sha256": "28c786b4a0db0741d9b799ae77a304b7f1ce241acaac1da6f8a0c764bc2fe36d",
+      "active": false
+    },
+    {
+      "original": "artifact-receipt.json",
+      "preserved": "artifact-receipt.first.json",
+      "bytes": 3543,
+      "sha256": "bc9b38902514da411289a9de4d5f9e4a00dfab380cda6f3b1f24a0bcf36a12e5",
+      "active": false
+    }
+  ],
+  "reason": "Before external author freeze: fix report-only identifier whitespace caused by numeric spacing formatter, canonical JSON/excerpts unchanged; Root-directed late ending refresh after external main moved. First real all-same check was correct at its own time; new releaseMD drift preserved, no source-body/product rerun.",
+  "canonicalSourceSha": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+  "canonicalPriorFixLabel": "2dcd041ff",
+  "finalHistoryChanged": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "initialSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e",
+      "endingSha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3",
+      "initialBytes": 212262,
+      "endingBytes": 219241
+    }
+  ],
+  "all15SourcePinsStillMatch": true,
+  "productAttempts": 0,
+  "activeReceipt": "artifact-receipt.json",
+  "inactiveReceipt": "artifact-receipt.first.json"
+}

@@ -1,0 +1,24 @@
+# Future53：Appearance普通偏好DTO静态审查
+
+有限结论为 **0新增 formal / 0 candidate / 0新增 related**。实际选择 `AppearanceSection.tsx`362行的普通主题值、卡片名称、选择/保存与回显范围，没有建立新的普通反例。未审整个主题系统，也不认证UI、导入/删除、系统主题或音频运行正确性。
+
+读前先pin当前SHA `a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3`，再做全历史gate。Appearance path/filename/SHA各9，原始对象为库存或R39明确hash-only；没有在该gate找到同SHA旧full证据，不宣称历史从未读。备用LogsView经真实rg定位于renderer/logs；R6原manifest明确 `full; bucket/filter/loading/copy/read projection`、355行、同SHA，强于R28 pin-only，因此备用正文0。两次先前错误位置猜测都只为metadata miss/exit0，原initial和[first diagnostics](metadata-diagnostics.first.json)保留，没有改原件。
+
+## 普通值链与反证
+
+- Appearance24–30区分installed普通作者字符串和builtin i18n键；installedThemes31–35/42保留id/name并明确标installed；theme-packs118–128/141–142给出稳定ID/name/source合同。因此没有仅凭任意名字相似或测试手造记录推出显示/来源错误。
+- Appearance34–50的light/dark/system选项在112–116写同一Theme值，118–125保存pack ID并通知同窗口；theme5–20、33–49的load/save使用对应的两个localStorage键。pack loader只保留可解析ID，否则回default，builtin default与lookup来自theme-packs165–180/243–245。这里只评普通可接受值，不模拟Storage权限失败。
+- Appearance53–55由load取初值，64–94的refresh回调再读当时保存值，并按相应storage keys更新state。211把builtin与当前缓存列表合并，225–247与287–328按同一ID显示pressed/name，并把实际卡片ID交给choose。没有从当前所读正常数据流建立列表分页丢失、选择值被错误映射或字面名称被当翻译键的新反例。
+- SettingsPage781是真实Appearance caller。两份现有测试声明（同一个test文件）分别表达builtin选择保存/样式和installed列表意图；只读声明和相关断言，没有render、DOM、点击、存储写入或测试执行。手造test DTO不充当真实主进程producer证明。
+
+`applyTheme`/`applyThemePack`仅追到调用/入口导航；不跟进系统主题解析、DOM/CSS渲染机制。Appearance127起导入/删除、96–110焦点、329起删除按钮、359音频入口及ThemePack复杂媒体字段的相邻显示均不提升为语义覆盖；未追Host安装、权限或实际媒体。ThemePackPreview本体保持hash-only。正常installed cache的入库/ID唯一性、导入来源/custody以及异步失败时序没有被此有限negative覆盖。
+
+## 范围与时点
+
+[source manifest](source-manifest.json) 共6 selected rows，**336语义行=265产品+71测试**，713显示行（含更宽邻接与完整导航union），0全文语义claim。Appearance本体只166语义/333显示，不是362full；2 hash-only产品路径、2 instruction哈希另列。读前pin在正文/导航前；[excerpts](source-excerpts.json)是读后同SHA快照，不重复算新阅读，未独立采集的精确display wall-clock为null。10个source/instruction结束bytes/SHA全同。
+
+[history](history.json) 的原时点 **3979=1399MD+2580JSON，1328416strings/2001326scalars，169 exact archive/_archive，0parse**；含冻结43，排44–53（含Root要求的mutable44/future52–53）。递归JSON只查value scalars，不把keys当值。普通主题查询93/cap80/retained80，只解释已列filtered有限窗口；未宣称读完所有contexts或历史语义穷尽。原scope/review/full证据优先于排名/no-row，旧R6 rejected与历史pass不作当前运行证明，旧失败方向不重启。
+
+[ending checks](ending-checks.json) 保留真实漂移：历史集合仍3979，无新增/移除，但release TODO从212262B/f654cd5e…变为219241B/1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3，不能说整个历史字节未变。原Root-reported4d5 baseline与3979不倒写；后来Root报告c466 docs-only及0b174967 begin、release TODO/isolated smoke脚本incoming只是外部上下文，没有读该脚本或Git。整体metadata与限制见 [history decisions](history-decisions.json)、[classification](classification.json)、[validation](validation.json)。
+
+0产品/helper/import/fixture/测试/React/UI/浏览器/音频/系统主题/native/网络/Git运行，源码只读，仅本exact tmp写入。标准库文件/JSON/hash/正则metadata不调用产品代码。完整冻结见 [receipt](artifact-receipt.json)。

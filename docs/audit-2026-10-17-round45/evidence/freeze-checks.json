@@ -1,0 +1,51 @@
+{
+  "expectedCount": 9,
+  "checks": [
+    {
+      "path": "evidence/context-frontier/report.md",
+      "bytes": 6297,
+      "sha256": "1ac0219d701a70815e19be269273e04659cde3d982e5507afeee5451839cd533"
+    },
+    {
+      "path": "evidence/context-frontier/source-manifest.json",
+      "bytes": 25735,
+      "sha256": "69de34a23a8d07d2688e092688fef8d3cae6c762ac4d09dcda4ea5cfe7461fd5"
+    },
+    {
+      "path": "evidence/context-frontier/artifact-receipt.json",
+      "bytes": 4511,
+      "sha256": "c7f1a2f53b39219810032eb49ac6af7b77044948845772897e8b48d64f64e2d8"
+    },
+    {
+      "path": "evidence/context-review/review.md",
+      "bytes": 3991,
+      "sha256": "0b115860f545a844d143587aac6508e5eb706fd27eb7ab17761ae3b468364466"
+    },
+    {
+      "path": "evidence/context-review/source-manifest.json",
+      "bytes": 15265,
+      "sha256": "54dcdc4529366c3eaa277604835046dd52ef79baf2601b5727613f071c4349fa"
+    },
+    {
+      "path": "evidence/context-review/reviewer-receipt.json",
+      "bytes": 3509,
+      "sha256": "47111243273e8f1203bbc31f9ac31a48452d9eeba84d54e4b39bdd4aa50a2baf"
+    },
+    {
+      "path": "evidence/appearance-frontier/report.md",
+      "bytes": 4716,
+      "sha256": "208db21a308667bc81dcc0e91830aabc36045ef270b47a07d47cf7d457f6b0bd"
+    },
+    {
+      "path": "evidence/appearance-frontier/source-manifest.json",
+      "bytes": 11255,
+      "sha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4"
+    },
+    {
+      "path": "evidence/appearance-frontier/artifact-receipt.json",
+      "bytes": 3367,
+      "sha256": "7d51a3b3708e303306ca1575a4fc4dbd32395ccd9399658d0825034ee1a400e5"
+    }
+  ],
+  "inactiveFirstSnapshots": "Preserved verbatim as metadata diagnostics; only final named receipts authoritative."
+}

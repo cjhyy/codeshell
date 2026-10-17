@@ -1,0 +1,122 @@
+{
+  "frozenUTC": "2026-10-17T15:18:11.808779+00:00",
+  "directory": "/tmp/codeshell-audit-round52-context-review",
+  "files": [
+    {
+      "path": "cause-history-method.py",
+      "bytes": 2656,
+      "sha256": "f8cc671f8f6cb4b57e201de900bcd632ec5c5ad68fe345d273e8f1cba44bb980"
+    },
+    {
+      "path": "cause-history.json",
+      "bytes": 5174,
+      "sha256": "c2d93da0691c4fe8bac20c96ed423d1297d3262eddb9720d233bbdf17f94f1ff"
+    },
+    {
+      "path": "chain-pins.json",
+      "bytes": 2088,
+      "sha256": "20ee64139630afa3d28b9cc5a008ad9bd33be596823a4998b1e5cb4e523cd4da"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1705,
+      "sha256": "1c346f35554e434938023ee6d936a30979e243383c36e502808a362c1bb880a3"
+    },
+    {
+      "path": "consumer-pins.json",
+      "bytes": 412,
+      "sha256": "caff05c3d31fe65fbe051d53b2e85260dbb8b6ddc47cd22f3bfd45108c0334e9"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 6188,
+      "sha256": "ff8febdeaa3b8efca8fcb372549ccf25724c13a6e48df7a975f0ea523bd99969"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 5117,
+      "sha256": "fc6f6f5e2b80c3d656a8d1bb5d8050fbbdd51466f25e3d0df37460c56e11df09"
+    },
+    {
+      "path": "entry-pins.json",
+      "bytes": 1279,
+      "sha256": "7a1375c81c7ebc638e2b3f79c1348f13289f050e703d01d0037b370e1865360f"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 22721,
+      "sha256": "48372b66f6a5cbbe261c9aeabffd74f9930113d8195262aabdaabb13a6481736"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3807,
+      "sha256": "e477b8ed3d3e63fee2918b263e3eade1e4456decc0f4fa053a8f931d384ae07f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 791486,
+      "sha256": "c04d1ad55abab2e831e8e501a357a9783d4ced1901776ff4db65b394b4d3e608"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 796,
+      "sha256": "1a100cd5421c71f35d2e2afdd4bd79d97acea40f1184d892994659f4ba8097bf"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 555,
+      "sha256": "bd88b44f4f4a6b7475a84fc93ab0143caf14aa8a0cf362abc02a97f3115f0e7a"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3991,
+      "sha256": "0b115860f545a844d143587aac6508e5eb706fd27eb7ab17761ae3b468364466"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 34488,
+      "sha256": "6ed49b44aa27889abbc8b6cb4dbdfc2b6535ca6d03004bb1a931390d92e5dbec"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 15265,
+      "sha256": "54dcdc4529366c3eaa277604835046dd52ef79baf2601b5727613f071c4349fa"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "totalFilesIncludingSelf": 17,
+  "fileCountExcludingSelf": 16,
+  "reportLinks": {
+    "count": 16,
+    "missing": []
+  },
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "source": {
+    "semanticRows": 13,
+    "hashOnlyRows": 1,
+    "full": 2,
+    "selected": 11,
+    "semanticProductLines": 612,
+    "displayedProductLines": 731,
+    "sourceEndingAllSame": true
+  },
+  "history": {
+    "files": 3979,
+    "endingAllSame": true,
+    "scope": "include frozen43, exclude44–52"
+  },
+  "role": "Independent current source review, no current author finding/report read",
+  "runtime": {
+    "product": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "ui": 0,
+    "nativeNetworkModel": 0,
+    "git": 0
+  },
+  "limits": "Finite ordinary data review. Not proof of historical unreadness, unique repository-wide coverage or universal semantic correctness."
+}

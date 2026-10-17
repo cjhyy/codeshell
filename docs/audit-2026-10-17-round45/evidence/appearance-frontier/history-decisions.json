@@ -1,0 +1,166 @@
+{
+  "capturedAtUTC": "2026-10-17T15:23:23.927998+00:00",
+  "appearanceGate": {
+    "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+    "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+    "exactPathFilenameShaCounts": [
+      9,
+      9,
+      9
+    ],
+    "originalObjects": "R28 package inventory and R39 explicit hash-only/current source hash bindings; no same-SHA full evidence in this gate.",
+    "neverReadClaim": false,
+    "all9PathContextsAnd11CompactSourceMetadataObjectsDisplayed": true
+  },
+  "logsFallback": "R6 original full scope355 at sameSHA overrides R28 pin-only normalization; body excluded before read.",
+  "historyScope": {
+    "roots": [
+      "docs",
+      "bugs"
+    ],
+    "includeFrozenThrough": 43,
+    "excludedExactRoundDirectories": [
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53
+    ],
+    "requestedMutableFutureExclusions": [
+      44,
+      52,
+      53
+    ],
+    "archivesIncluded": true,
+    "method": "MD text lines and recursively visited JSON scalar values; keys not searched; original full/scope/review objects preserved. No product evaluation."
+  },
+  "totals": {
+    "files": 3979,
+    "markdown": 1399,
+    "json": 2580,
+    "jsonStrings": 1328416,
+    "jsonScalars": 2001326,
+    "exactArchivePaths": 169
+  },
+  "inventoryCanonicalSha256": "dd480f94fc03894dc4d4a034aa846601e28a03fd6934d35aa4c7e1c6efc3ec1d",
+  "counts": {
+    "appearance-path": 9,
+    "appearance-filename": 9,
+    "appearance-sha": 9,
+    "logs-path": 7,
+    "logs-filename": 25,
+    "logs-sha": 6,
+    "ordinary-appearance": 93,
+    "old-failed": 1
+  },
+  "caps": {
+    "appearance-path": 160,
+    "appearance-filename": 160,
+    "appearance-sha": 160,
+    "logs-path": 160,
+    "logs-filename": 160,
+    "logs-sha": 160,
+    "ordinary-appearance": 80,
+    "old-failed": 80
+  },
+  "retained": {
+    "appearance-path": 9,
+    "appearance-filename": 9,
+    "appearance-sha": 9,
+    "logs-path": 7,
+    "logs-filename": 25,
+    "logs-sha": 6,
+    "ordinary-appearance": 80,
+    "old-failed": 1
+  },
+  "actualOrdinaryContextDisplay": {
+    "toolChunk": "92a67a",
+    "filteredIndices": [
+      0,
+      2,
+      3,
+      7,
+      8,
+      9,
+      16,
+      17,
+      19,
+      22,
+      23,
+      25,
+      28,
+      29,
+      31,
+      34,
+      35,
+      37,
+      39,
+      40,
+      41,
+      46,
+      47,
+      49,
+      53,
+      61,
+      63,
+      64,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79
+    ],
+    "displayLimitCharsPerRecord": 1200,
+    "all80RetainedOr93MatchesRead": false
+  },
+  "priorContractNavigation": [
+    {
+      "path": "docs/superpowers/specs/2026-07-27-theme-packs-design.md",
+      "lineContextsSeen": [
+        27,
+        66,
+        83,
+        89,
+        92,
+        93,
+        108
+      ],
+      "coverage": "single MD line contexts only, not whole doc/paragraph or current source proof"
+    }
+  ],
+  "oldRelatedAndPassLimits": "Old R6 SettingsPage narrow-screen candidate DD6-02 rejected and Logs existing pass remain historical statements only; no current pass/cause/exhaustion inferred.",
+  "currentBoundaryPolicy": [
+    "Theme import/remove/focus restore/sound/music/system-theme/native/permissions not followed or exercised.",
+    "Installed-theme admission/ID uniqueness/custody and failure/timing behavior not certified.",
+    "No malformed hand-built DTO or test fixture elevated to a production producer."
+  ],
+  "datedEnding": {
+    "initial": 3979,
+    "ending": 3979,
+    "added": [],
+    "removed": [],
+    "changed": [
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "beforeBytes": 212262,
+        "beforeSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e",
+        "endingBytes": 219241,
+        "endingSha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3"
+      }
+    ],
+    "scopeUnchanged": true
+  },
+  "laterRootContextOnly": "Root reported c466 formal44 docs-only FF then formal45 begin at0b17496707e0f4d679a86a9d8b4c22477093e8a6; incoming release TODO and isolated-node-smoke script. No script body or Git read; initial4d5/3979 not rewritten."
+}

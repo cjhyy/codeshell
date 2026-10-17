@@ -1,0 +1,127 @@
+{
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3004",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "lines": 341,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/100",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "jsonPointer": "/files/118",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "totalLines": 341,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/100",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "totalLines": 341,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "jsonPointer": "/sourceByteChecks/129",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "kind": "hashOnlyFiles",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "matches": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "jsonPointer": "/files/127",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "currentBytes": 12329,
+        "currentSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "mainBytes": 12329,
+        "mainSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "jsonPointer": "/hashOnlyChecks/102",
+      "row": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    }
+  ],
+  "filenameSemanticScopeCandidates": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "jsonPointer": null,
+      "line": 151,
+      "needle": "contextsettingssection",
+      "context": "`packages/desktop/src/renderer/settings/SettingsPage.tsx:292` | 设置页选 Sandbox |\n| **对话设置** | 管理对话级设置，例如自动记忆抽取等 | `packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx:59`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:297` | 设置页选 Conversation |\n| **上下文设置** | 管理上下文策略与 token 预算相关配置 | `packages/desktop/src/renderer/settings/ContextSettingsSection.tsx:79`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:298` | 设置页选 Context |\n| **手机遥控** | 启停远程主机、设备、配对、passcode、tunnel/cloudflared | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1475`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:299` | 设置页选 Mobile Remote |\n| **记忆** | 选择全局/项目 store，查看、编辑、Pin、批量处理 pending memory，手动 Dream | `packages/desktop/src/renderer/settings/MemorySection.tsx:87`，`packages/desktop/src/renderer/settings/MemorySection.tsx:163`，`packages/desktop/src/renderer/settings/MemorySection.tsx:311` | 设置页选 Memory |\n| **已归档会话** | 列出各项目归档会话并恢复或删除 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1274`，`packages/desktop/src/renderer/sett",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/100/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "sourceSha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "jsonPointer": "/sourceByteChecks/129/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "kind": "hashOnlyFiles",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "matches": true
+      },
+      "sourceSha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604"
+    }
+  ],
+  "scope": "Retained metadata scope gate; actual display completion recorded. No unknown/no-row inference as unread."
+}

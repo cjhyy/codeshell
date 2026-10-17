@@ -1,0 +1,14 @@
+{
+  "observations": [
+    {
+      "tool": "004edb",
+      "aggregateExitCode": 0,
+      "kind": "navigation guessed directory miss",
+      "diagnostic": "rg: packages/core/src/config: No such file or directory (os error 2)",
+      "scope": "first field references/settingsBus navigation succeeded; optional inventory dir config was wrong; no product operation",
+      "individualRgExitNotCaptured": true,
+      "correction": "Actual core/settings paths identified in preceding rg results and pinned. No product retry."
+    }
+  ],
+  "productFailures": 0
+}

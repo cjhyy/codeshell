@@ -1,0 +1,33 @@
+{
+  "capturedAtUTC": "2026-10-17T15:13:49.362599+00:00",
+  "rootReportedBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38",
+  "baselineIndependentlyGitVerified": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "lines": 362,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/LogsView.tsx",
+      "exists": false
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "semanticRead": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "semanticRead": false
+    }
+  ],
+  "scope": "First source metadata pin before content read. No product/Git execution."
+}

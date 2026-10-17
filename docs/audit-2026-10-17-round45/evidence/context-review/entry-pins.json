@@ -1,0 +1,37 @@
+{
+  "scope": "before ordinary user-scope dispatch and labels selected text only; authority/native mechanisms stop boundary",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "lineCount": 25,
+      "pinUTC": "2026-10-17T15:15:02.067831+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "lineCount": 1892,
+      "pinUTC": "2026-10-17T15:15:02.070492+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "lineCount": 7330,
+      "pinUTC": "2026-10-17T15:15:02.072648+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "bytes": 132800,
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "lineCount": 2423,
+      "pinUTC": "2026-10-17T15:15:02.074523+00:00",
+      "semanticRead": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "capturedUTC": "2026-10-17T15:20:20.704692+00:00",
+  "currentToolFailures": [],
+  "currentMetadataFailures": [],
+  "currentOutputTruncations": 0,
+  "allStaticCommandExitCodes": 0,
+  "notes": [
+    "SettingsPreferences.interaction.test.tsx is language/theme wrapper, not Context-specific controls: only8–17 assessed for relevance; whole45 shown but no fixture imported/run.",
+    "Engine source function first shown508–520, then ordinary adaptive521–537 continuation; no path error or retry of failed direction.",
+    "AA99 read/error locator was navigation only; malformed settings recovery not assessed.",
+    "All actual numbered source body outputs are retained in source-excerpts.json with path/range; history results in history*.json, no product/runtime logs exist because0runs."
+  ],
+  "historicalFailureIsNotCurrent": "R10 wrong path shown as old history only."
+}

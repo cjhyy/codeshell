@@ -1,0 +1,23 @@
+{
+  "firstObservedMetadataDiagnostics": [
+    {
+      "toolChunk": "b337e4",
+      "exitCode": 0,
+      "path": "packages/desktop/src/renderer/LogsView.tsx",
+      "result": "Initial optional fallback pin path absent, preserved in initial-pins.json; no product contents read."
+    },
+    {
+      "toolChunk": "5a1071",
+      "exitCode": 0,
+      "path": "packages/desktop/src/renderer/settings/LogsView.tsx",
+      "result": "Own unnecessary second location guess absent; printed explicit negative, no file overwritten, no body read."
+    },
+    {
+      "toolChunk": "dc3078",
+      "exitCode": 0,
+      "result": "Actual rg inventory located renderer/logs/LogsView.tsx. Correct fallback byte pin is separate fallback-pin.json."
+    }
+  ],
+  "productAttempts": 0,
+  "note": "These are navigation assumptions and metadata misses, not failing tests. First initial file unchanged."
+}

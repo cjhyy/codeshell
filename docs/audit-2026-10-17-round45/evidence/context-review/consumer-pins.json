@@ -1,0 +1,13 @@
+{
+  "scope": "before normal ratios-to-ContextManager construction data selected read; no model/engine invocation",
+  "files": [
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "bytes": 5588,
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "lineCount": 133,
+      "pinUTC": "2026-10-17T15:15:27.515884+00:00",
+      "semanticRead": false
+    }
+  ]
+}

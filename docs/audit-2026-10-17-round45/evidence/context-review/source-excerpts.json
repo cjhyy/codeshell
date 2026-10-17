@@ -1,0 +1,196 @@
+{
+  "createdUTC": "2026-10-17T15:17:21.572102+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 341,
+          "text": "import React, { useCallback, useEffect, useId, useRef, useState } from \"react\";\nimport { Button } from \"@/components/ui/button\";\nimport { Input } from \"@/components/ui/input\";\nimport { Slider } from \"@/components/ui/slider\";\nimport { writeSettings } from \"../settingsBus\";\nimport { useT } from \"../i18n/I18nProvider\";\nimport { useToast } from \"../ui/ToastProvider\";\nimport type { TranslationKey } from \"../i18n/dict\";\n\nconst DEFAULT_RATIOS = {\n  microcompactFloorRatio: 70,\n  compactAtRatio: 85,\n  summarizeAtRatio: 92,\n} as const;\n\ntype RatioKey = keyof typeof DEFAULT_RATIOS;\ntype RatioState = Record<RatioKey, number>;\n\nconst FIELDS: Array<{\n  key: RatioKey;\n  title: TranslationKey;\n  desc: TranslationKey;\n  min: number;\n  max: number;\n}> = [\n  {\n    key: \"microcompactFloorRatio\",\n    title: \"settingsX.context.microTitle\",\n    desc: \"settingsX.context.microDesc\",\n    min: 10,\n    max: 95,\n  },\n  {\n    key: \"compactAtRatio\",\n    title: \"settingsX.context.compactTitle\",\n    desc: \"settingsX.context.compactDesc\",\n    min: 10,\n    max: 98,\n  },\n  {\n    key: \"summarizeAtRatio\",\n    title: \"settingsX.context.summarizeTitle\",\n    desc: \"settingsX.context.summarizeDesc\",\n    min: 10,\n    max: 99,\n  },\n];\n\nfunction objectOf(value: unknown): Record<string, unknown> {\n  return value && typeof value === \"object\" && !Array.isArray(value)\n    ? (value as Record<string, unknown>)\n    : {};\n}\n\nfunction percentOf(value: unknown, fallback: number): number {\n  return typeof value === \"number\" && Number.isFinite(value) ? Math.round(value * 100) : fallback;\n}\n\nfunction clamp(value: number, min: number, max: number): number {\n  return Math.min(max, Math.max(min, value));\n}\n\nfunction normalizeRatios(input: RatioState): RatioState {\n  const compactAtRatio = clamp(input.compactAtRatio, 10, 98);\n  return {\n    microcompactFloorRatio: Math.min(clamp(input.microcompactFloorRatio, 10, 95), compactAtRatio),\n    compactAtRatio,\n    summarizeAtRatio: Math.max(clamp(input.summarizeAtRatio, 10, 99), compactAtRatio),\n  };\n}\n\ntype RatioDrafts = Record<RatioKey, string>;\n\nfunction toDrafts(ratios: RatioState): RatioDrafts {\n  return Object.fromEntries(\n    Object.entries(ratios).map(([key, value]) => [key, String(value)]),\n  ) as RatioDrafts;\n}\n\nfunction validRatio(raw: string, min: number, max: number): boolean {\n  const value = Number(raw);\n  return raw.trim() !== \"\" && Number.isInteger(value) && value >= min && value <= max;\n}\n\nexport function ContextSettingsSection() {\n  const { t } = useT();\n  const toast = useToast();\n  const fieldPrefix = useId();\n  const [drafts, setDrafts] = useState<RatioDrafts>(() => toDrafts(DEFAULT_RATIOS));\n  const [lastValid, setLastValid] = useState<RatioState>({ ...DEFAULT_RATIOS });\n  const [loadState, setLoadState] = useState<\"loading\" | \"ready\" | \"error\">(\"loading\");\n  const [loadError, setLoadError] = useState(\"\");\n  const [saving, setSaving] = useState<\"save\" | \"reset\" | null>(null);\n  const [touched, setTouched] = useState<Partial<Record<RatioKey, boolean>>>({});\n  const [submitted, setSubmitted] = useState(false);\n  const alive = useRef(false);\n  const loadSequence = useRef(0);\n  const writing = useRef(false);\n  const inputs = useRef<Partial<Record<RatioKey, HTMLInputElement>>>({});\n  const returnFocus = useRef<HTMLElement | null>(null);\n  const retryButton = useRef<HTMLButtonElement>(null);\n  const retryFocus = useRef(false);\n\n  const load = useCallback(async () => {\n    const sequence = ++loadSequence.current;\n    setLoadState(\"loading\");\n    setLoadError(\"\");\n    try {\n      const settings = ((await window.codeshell.getSettings(\"user\")) ?? {}) as Record<\n        string,\n        unknown\n      >;\n      if (!alive.current || sequence !== loadSequence.current) return;\n      const context = objectOf(settings.context);\n      const next = normalizeRatios({\n        microcompactFloorRatio: percentOf(\n          context.microcompactFloorRatio,\n          DEFAULT_RATIOS.microcompactFloorRatio,\n        ),\n        compactAtRatio: percentOf(context.compactAtRatio, DEFAULT_RATIOS.compactAtRatio),\n        summarizeAtRatio: percentOf(context.summarizeAtRatio, DEFAULT_RATIOS.summarizeAtRatio),\n      });\n      setDrafts(toDrafts(next));\n      setLastValid(next);\n      setTouched({});\n      setSubmitted(false);\n      setLoadState(\"ready\");\n    } catch (error) {\n      if (!alive.current || sequence !== loadSequence.current) return;\n      setLoadError(error instanceof Error ? error.message : String(error));\n      setLoadState(\"error\");\n    }\n  }, []);\n\n  useEffect(() => {\n    if (loadState === \"loading\" || !retryFocus.current) return;\n    retryFocus.current = false;\n    if (document.activeElement !== document.body) return;\n    if (loadState === \"ready\") inputs.current.microcompactFloorRatio?.focus();\n    else retryButton.current?.focus();\n  }, [loadState]);\n\n  useEffect(() => {\n    alive.current = true;\n    void load();\n    return () => {\n      alive.current = false;\n      loadSequence.current++;\n    };\n  }, [load]);\n\n  useEffect(() => {\n    if (saving || !returnFocus.current) return;\n    const opener = returnFocus.current;\n    returnFocus.current = null;\n    if (document.activeElement === document.body && opener.isConnected) opener.focus();\n  }, [saving]);\n\n  const setDraft = (field: (typeof FIELDS)[number], value: string): void => {\n    setDrafts((previous) => ({ ...previous, [field.key]: value }));\n    if (validRatio(value, field.min, field.max)) {\n      setLastValid((previous) => ({ ...previous, [field.key]: Number(value) }));\n    }\n  };\n\n  const persist = async (reset: boolean) => {\n    if (loadState !== \"ready\" || writing.current) return;\n    const invalid = FIELDS.find((field) => !validRatio(drafts[field.key], field.min, field.max));\n    if (!reset && invalid) {\n      setSubmitted(true);\n      inputs.current[invalid.key]?.focus();\n      return;\n    }\n    const next = reset\n      ? { ...DEFAULT_RATIOS }\n      : normalizeRatios(\n          Object.fromEntries(\n            Object.entries(drafts).map(([key, value]) => [key, Number(value)]),\n          ) as RatioState,\n        );\n    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;\n    writing.current = true;\n    setSaving(reset ? \"reset\" : \"save\");\n    try {\n      await writeSettings(\"user\", {\n        context: {\n          microcompactFloorRatio: reset ? null : next.microcompactFloorRatio / 100,\n          compactAtRatio: reset ? null : next.compactAtRatio / 100,\n          summarizeAtRatio: reset ? null : next.summarizeAtRatio / 100,\n        },\n      });\n      if (!alive.current) return;\n      setDrafts(toDrafts(next));\n      setLastValid(next);\n      setTouched({});\n      setSubmitted(false);\n      toast({ message: t(\"settingsX.context.saved\"), variant: \"success\" });\n    } catch (error) {\n      if (!alive.current) return;\n      toast({\n        message: `${t(\"settingsX.context.saveFailed\")}: ${error instanceof Error ? error.message : String(error)}`,\n        variant: \"error\",\n      });\n    } finally {\n      writing.current = false;\n      if (alive.current) {\n        returnFocus.current = opener;\n        setSaving(null);\n      }\n    }\n  };\n\n  return (\n    <section\n      className=\"mb-6 flex max-w-3xl flex-col gap-4\"\n      aria-busy={loadState === \"loading\" || saving !== null}\n    >\n      <div>\n        <h3 className=\"m-0 text-[0.95rem] font-semibold text-foreground\">\n          {t(\"settingsX.context.title\")}\n        </h3>\n        <p className=\"m-0 mt-1 text-xs text-muted-foreground\">{t(\"settingsX.context.desc\")}</p>\n      </div>\n      {loadState === \"loading\" && (\n        <p className=\"text-xs text-muted-foreground\" role=\"status\">\n          {t(\"settingsX.context.loading\")}\n        </p>\n      )}\n      {loadState === \"error\" && (\n        <div className=\"rounded-md border border-status-err/30 bg-status-err/5 p-3\">\n          <p className=\"break-words text-xs text-status-err\" role=\"alert\">\n            {t(\"settingsX.context.loadFailed\", { error: loadError })}\n          </p>\n          <Button\n            ref={retryButton}\n            type=\"button\"\n            variant=\"outline\"\n            size=\"sm\"\n            className=\"mt-3\"\n            onClick={() => {\n              retryFocus.current = true;\n              void load();\n            }}\n          >\n            {t(\"settingsX.context.retry\")}\n          </Button>\n        </div>\n      )}\n      {loadState === \"ready\" && (\n        <form\n          noValidate\n          className=\"flex flex-col gap-4\"\n          onSubmit={(event) => {\n            event.preventDefault();\n            void persist(false);\n          }}\n        >\n          <div className=\"grid gap-3\">\n            {FIELDS.map((field) => {\n              const id = `${fieldPrefix}-${field.key}`;\n              const invalid = !validRatio(drafts[field.key], field.min, field.max);\n              const showError = invalid && (submitted || touched[field.key]);\n              return (\n                <div\n                  key={field.key}\n                  className=\"rounded-md border border-border bg-background px-3 py-3\"\n                >\n                  <div className=\"flex items-start justify-between gap-3 max-[520px]:flex-col\">\n                    <div className=\"min-w-0\">\n                      <label htmlFor={id} className=\"text-sm font-medium text-foreground\">\n                        {t(field.title)}\n                      </label>\n                      <p\n                        id={`${id}-description`}\n                        className=\"m-0 mt-1 text-xs text-muted-foreground\"\n                      >\n                        {t(field.desc)}\n                      </p>\n                    </div>\n                    <div className=\"flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground\">\n                      <Input\n                        id={id}\n                        ref={(node) => {\n                          if (node) inputs.current[field.key] = node;\n                          else delete inputs.current[field.key];\n                        }}\n                        type=\"number\"\n                        min={field.min}\n                        max={field.max}\n                        step={1}\n                        value={drafts[field.key]}\n                        disabled={saving !== null}\n                        className=\"h-8 w-20 text-right\"\n                        aria-invalid={showError || undefined}\n                        aria-describedby={`${id}-description${showError ? ` ${id}-error` : \"\"}`}\n                        onChange={(event) => setDraft(field, event.currentTarget.value)}\n                        onBlur={() =>\n                          setTouched((previous) => ({ ...previous, [field.key]: true }))\n                        }\n                      />\n                      <span aria-hidden>%</span>\n                    </div>\n                  </div>\n                  <Slider\n                    min={field.min}\n                    max={field.max}\n                    value={[lastValid[field.key]]}\n                    disabled={saving !== null}\n                    className=\"mt-3\"\n                    aria-label={t(field.title)}\n                    aria-describedby={`${id}-description`}\n                    onValueChange={([value]) => setDraft(field, String(value))}\n                  />\n                  {showError && (\n                    <p id={`${id}-error`} className=\"m-0 mt-2 text-xs text-status-err\" role=\"alert\">\n                      {t(\"settingsX.context.invalidRatio\", { min: field.min, max: field.max })}\n                    </p>\n                  )}\n                </div>\n              );\n            })}\n          </div>\n          <p className=\"m-0 text-xs text-muted-foreground\">{t(\"settingsX.context.orderHint\")}</p>\n          <div className=\"flex flex-wrap gap-2\">\n            <Button type=\"submit\" disabled={saving !== null}>\n              {saving === \"save\" ? t(\"settingsX.context.saving\") : t(\"settingsX.context.save\")}\n            </Button>\n            <Button\n              type=\"button\"\n              variant=\"outline\"\n              onClick={() => void persist(true)}\n              disabled={saving !== null}\n            >\n              {saving === \"reset\" ? t(\"settingsX.context.resetting\") : t(\"settingsX.context.reset\")}\n            </Button>\n          </div>\n        </form>\n      )}\n    </section>\n  );\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 29,
+          "text": "import { updateScopedSettings } from \"./settingsAuthority\";\n\n/**\n * Settings change broadcast.\n *\n * The worker (agent-server-stdio) keeps its own SettingsManager\n * instance; without an explicit reload it ignores edits the user\n * makes through the settings page. The \"codeshell:settings-changed\"\n * event is App.tsx's signal to dispatch configure({reloadModels:\n * true}) at the worker. Every successful settings write must fire\n * the event — historically callers forgot, which is exactly the\n * \"project-level settings 不生效\" bug from TODO-week.md #3.\n *\n * This helper centralises the dispatch so call sites just go through\n * `writeSettings(...)` and don't have to remember.\n */\n\nexport function notifySettingsChanged(): void {\n  window.dispatchEvent(new Event(\"codeshell:settings-changed\"));\n}\n\nexport async function writeSettings(\n  scope: \"user\" | \"project\",\n  patch: Record<string, unknown>,\n  projectPath?: string,\n): Promise<void> {\n  await updateScopedSettings(scope, patch, projectPath);\n  notifySettingsChanged();\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 131,
+          "end": 161,
+          "text": "export async function writeSettings(\n  scope: SettingsScope,\n  patch: Record<string, unknown>,\n  projectPath?: string,\n): Promise<void> {\n  if (!isPlainRecord(patch)) throw new Error(\"settings patch must be a plain object\");\n  assertSafePatch(patch);\n  const p = resolveSettingsPath(scope, projectPath);\n  // Serialize per file. Tail off the previous write (ignoring its rejection so\n  // one failure doesn't poison the chain) before doing our read-modify-write.\n  const prev = writeChains.get(p) ?? Promise.resolve();\n  const next = prev\n    .catch(() => {})\n    .then(() => {\n      // Cross-process lock around the whole RMW. Lock the dir, not the file.\n      // Keep the operation synchronous: other stores in this same process\n      // also synchronously take this directory lock and must not block an\n      // async holder's continuation until it is mistaken for a stale owner.\n      const release = acquireFileLock(p);\n      try {\n        const current = readSettingsForMutation(p) ?? {};\n        const merged = deepMerge(current, patch);\n        normalizeWorktreeBranchPrefixIfPatched(patch, merged);\n        // Unique temp name so a concurrent writer for the same file can't clobber\n        // our half-written temp and produce corrupt JSON after rename.\n        writeSettingsFileAtomic(p, merged);\n      } finally {\n        release();\n      }\n    });\n  writeChains.set(p, next);\n"
+        },
+        {
+          "start": 181,
+          "end": 223,
+          "text": "function deepMerge(\n  a: Record<string, unknown>,\n  b: Record<string, unknown>,\n): Record<string, unknown> {\n  const out: Record<string, unknown> = { ...a };\n  for (const [k, v] of Object.entries(b)) {\n    if (v === null) {\n      delete out[k];\n    } else if (\n      v &&\n      typeof v === \"object\" &&\n      !Array.isArray(v) &&\n      typeof out[k] === \"object\" &&\n      out[k] !== null &&\n      !Array.isArray(out[k])\n    ) {\n      out[k] = deepMerge(out[k] as Record<string, unknown>, v as Record<string, unknown>);\n    } else {\n      out[k] = stripNulls(v);\n    }\n  }\n  return out;\n}\n\n/** Drop null-valued keys from a plain object recursively; other values pass through. */\nfunction stripNulls(value: unknown): unknown {\n  if (!value || typeof value !== \"object\" || Array.isArray(value)) return value;\n  const out: Record<string, unknown> = {};\n  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {\n    if (FORBIDDEN_SETTING_KEYS.has(k)) continue;\n    if (v === null) continue;\n    out[k] = stripNulls(v);\n  }\n  return out;\n}\n\nfunction isPlainRecord(value: unknown): value is Record<string, unknown> {\n  if (!value || typeof value !== \"object\" || Array.isArray(value)) return false;\n  const prototype = Object.getPrototypeOf(value);\n  return prototype === Object.prototype || prototype === null;\n}\n\n/** Remove keys that can affect object prototypes from a legacy on-disk file. */\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 300,
+          "end": 331,
+          "text": "          .enum([\"summary\", \"notes\"])\n          .optional()\n          .describe(\n            \"上下文策略：notes 使用接续笔记和历史检索；summary 使用现有摘要压缩。未设置时跟随行为配置。\",\n          ),\n        maxTokens: z.number().default(200_000),\n        // 压缩阈值（占上下文窗口的比例）。窗口越大可调越高：1M 窗口的模型\n        // 把 compactAtRatio 调到 0.95 能少浪费几十万 token。三档须满足\n        // floor < compact < summarize，否则运行时会 clamp 回安全顺序。\n        compactAtRatio: z\n          .number()\n          .min(0.1)\n          .max(0.98)\n          .default(0.85)\n          .describe(\"达到该比例开始压缩历史（先试摘要，再退化为窗口裁剪）。默认 0.85。\"),\n        summarizeAtRatio: z\n          .number()\n          .min(0.1)\n          .max(0.99)\n          .default(0.92)\n          .describe(\"紧急阈值：到此比例做最激进的窗口压缩。须 ≥ compactAtRatio。默认 0.92。\"),\n        microcompactFloorRatio: z\n          .number()\n          .min(0.1)\n          .max(0.95)\n          .default(0.7)\n          .describe(\n            \"低于该比例不做 microcompact，保留早期工具输出、保住 prompt cache 前缀。默认 0.7。\",\n          ),\n      })\n      .default({}),\n\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 228,
+          "end": 262,
+          "text": "/**\n * Reconcile user-supplied compaction ratios into a safe ordering.\n *\n * The three tiers must satisfy `floor < compact < summarize` or the manager\n * fires them in the wrong order (e.g. an emergency window-compact before the\n * cheaper summary). Users edit these freely in settings.json, so we clamp\n * rather than trust: summarize is pulled up to at least compact, floor is\n * pushed down to at most compact. Absent fields are left undefined so the\n * ContextManager keeps its own default for them.\n */\nexport function clampContextRatios(input: {\n  compactAtRatio?: number;\n  summarizeAtRatio?: number;\n  microcompactFloorRatio?: number;\n}): {\n  compactAtRatio?: number;\n  summarizeAtRatio?: number;\n  microcompactFloorRatio?: number;\n} {\n  const compact = input.compactAtRatio;\n  const summarize =\n    input.summarizeAtRatio !== undefined && compact !== undefined\n      ? Math.max(input.summarizeAtRatio, compact)\n      : input.summarizeAtRatio;\n  const floor =\n    input.microcompactFloorRatio !== undefined && compact !== undefined\n      ? Math.min(input.microcompactFloorRatio, compact)\n      : input.microcompactFloorRatio;\n  return {\n    compactAtRatio: compact,\n    summarizeAtRatio: summarize,\n    microcompactFloorRatio: floor,\n  };\n}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 76,
+          "end": 98,
+          "text": "  // 0.85 ≈ effectiveContextWindow − reserved-output buffer (CC's\n  // autoCompactThreshold pattern: window − 13k buffer − 20k output budget\n  // ≈ 0.83 on a 200k window, 0.97 on 1M). 0.6 was wasting 40% of any model\n  // with a window over ~150k.\n  maxTokens: 200_000,\n  compactAtRatio: 0.85,\n  summarizeAtRatio: 0.92,\n  maxToolResultChars: 30_000,\n  toolOutputTokenLimit: DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,\n  toolMessageTokenLimit: DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,\n  // 0.7 leaves micro idle until the prompt is ~70% full. Below this we\n  // let tool_results stay intact: under-pressure context doesn't need\n  // micro and wiping early Read/Bash output just forces the model to\n  // re-fetch the same files later. CC's external path triggers around\n  // 70-75% of the window; this matches it. Was 0.5 — on a 200k model\n  // that fired at 100k where a long-but-not-overloaded conversation\n  // (~130k tokens) tripped micro every single turn, with the cleared\n  // 8 rounds promptly replaced by 5 fresh ones so the next turn was\n  // back at 130k and the cycle repeated. 0.7 → 140k floor, leaving\n  // realistic headroom before we start churning.\n  microcompactFloorRatio: 0.7,\n};\n\n"
+        },
+        {
+          "start": 428,
+          "end": 438,
+          "text": "    }\n\n    // Tier 1: microcompact — fingerprint old whitelisted tool_results.\n    // Only runs above the floor ratio: under-pressure context keeps full\n    // detail so the model isn't forced to re-Read files it just looked at.\n    const preTier1Tokens = this.estimateTokensHybrid(result);\n    if (preTier1Tokens > this.config.maxTokens * this.config.microcompactFloorRatio) {\n      const keepRecentN =\n        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);\n      // Capture rounds/tools synchronously from microcompact's onClear, but\n      // defer the token re-estimate until AFTER `result` has been reassigned\n"
+        },
+        {
+          "start": 845,
+          "end": 867,
+          "text": "   * Check if context is approaching limits.\n   */\n  checkLimits(messages: Message[]): {\n    tokens: number;\n    ratio: number;\n    needsCompact: boolean;\n    needsEmergency: boolean;\n    promptTokensSource: PromptTokenSource;\n    promptTokensConfidence: PromptTokenConfidence;\n  } {\n    const estimate = this.estimateTokensHybridInfo(messages);\n    const tokens = estimate.tokens;\n    const ratio = tokens / this.config.maxTokens;\n    return {\n      tokens,\n      ratio,\n      needsCompact: ratio >= this.config.compactAtRatio,\n      needsEmergency: ratio >= this.config.summarizeAtRatio,\n      promptTokensSource: estimate.source,\n      promptTokensConfidence: estimate.confidence,\n    };\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 502,
+          "end": 540,
+          "text": "  /**\n   * Compaction thresholds from settings.context, clamped so they keep the\n   * required ordering floor < compact < summarize even if the user configures\n   * conflicting values (e.g. summarize below compact). Falls back to the\n   * ContextManager defaults when a field is absent.\n   */\n  private resolveContextRatios(): {\n    compactAtRatio?: number;\n    summarizeAtRatio?: number;\n    microcompactFloorRatio?: number;\n  } {\n    let ctx:\n      | {\n          compactAtRatio?: number;\n          summarizeAtRatio?: number;\n          microcompactFloorRatio?: number;\n        }\n      | undefined;\n    try {\n      // Read from SettingsManager (shared across all hosts) rather than\n      // EngineConfig, mirroring readMemoriesConfig — avoids per-host wiring\n      // drift (see memory: personalization host wiring).\n      ctx = (\n        this.getSettingsManager().get() as {\n          context?: {\n            compactAtRatio?: number;\n            summarizeAtRatio?: number;\n            microcompactFloorRatio?: number;\n          };\n        }\n      ).context;\n    } catch {\n      return {};\n    }\n    if (!ctx) return {};\n    return clampContextRatiosImpl(ctx);\n  }\n\n  /**\n"
+        },
+        {
+          "start": 2488,
+          "end": 2502,
+          "text": "      cwd,\n      toolCtx,\n      runPermissionMode,\n      messages,\n      getLatestTodos,\n      setLatestTodos,\n    } = args;\n\n    const { contextManager, ctxSeed } = createRunContextManager({\n      maxTokens: this.resolveMaxContextTokens(),\n      ratios: this.resolveContextRatios(),\n      persistedAnchor: session.state.contextUsageAnchor,\n      llmProvider: this.config.llm.provider,\n      llmModel: this.config.llm.model,\n      messages,\n"
+        },
+        {
+          "start": 4445,
+          "end": 4457,
+          "text": "    op: \"force_compact\" | \"archive_range\",\n  ): Promise<ContextManager> {\n    let contextManager = this.lastContextManager;\n    if (!contextManager || this.lastSessionId !== effectiveSessionId) {\n      contextManager = new ContextManager({\n        maxTokens: this.resolveMaxContextTokens(),\n        ...Object.fromEntries(\n          Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),\n        ),\n      });\n      if (session.transcript.isPersistent()) {\n        contextManager.setTranscriptPath(session.transcript.getFilePath());\n      }\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 348,
+          "end": 360,
+          "text": "    const raw = this.deepMerge();\n\n    // Auto-migrate legacy models[] in the user settings file. Runs directly\n    // on the user-scope file (not the merged result), because the merge\n    // collapses provenance and the migration needs to write back to a\n    // single physical file. Gated on readUser: under non-full scope we must\n    // not read — let alone rewrite — the host's ~/.code-shell/settings.json.\n    const userPath = join(this.userConfigDir(), \"settings.json\");\n    if (readUser && resolveConfigPath(userPath) === userPath) {\n      try {\n        // Read-only loads must retain preceding in-memory version migrations.\n        // Ordinary loads preserve their existing disk reread before model migration.\n        if (options?.persistMigrations !== false) this.clearSourceOrigin(\"user\");\n"
+        },
+        {
+          "start": 442,
+          "end": 448,
+          "text": "  get(): ValidatedSettings {\n    if (!this.merged) return this.load();\n    return this.merged;\n  }\n\n  /**\n   * Invalidate cached merge.\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 14,
+          "end": 20,
+          "text": "export function updateScopedSettings(\n  scope: \"user\" | \"project\",\n  patch: Record<string, unknown>,\n  projectPath?: string,\n): Promise<void> {\n  return scope === \"user\"\n    ? window.codeshell.updateSettings(\"user\", patch)\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 975,
+          "end": 979,
+          "text": "  getSettings: (scope: \"user\") => ipcRenderer.invoke(\"settings:get\", scope),\n  getConfigurationSettings: (target: RendererConfigurationTarget) =>\n    ipcRenderer.invoke(\"settings:getConfiguration\", target),\n  updateSettings: (scope: \"user\", patch: Record<string, unknown>) =>\n    ipcRenderer.invoke(\"settings:set\", scope, patch),\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 6707,
+          "end": 6712,
+          "text": "ipcMain.handle(\"settings:set\", async (_e, scope: SettingsScope, patch: Record<string, unknown>) => {\n  if (scope !== \"user\") throw new Error(\"settings:set is user-scoped\");\n  validateRendererSettingsPatch(patch);\n  await writeSettings(\"user\", patch);\n  await applyRendererSettingsSideEffects(\"user\", patch);\n});\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 441,
+          "end": 458,
+          "text": "        microTitle: \"Microcompact 下限\",\n        microDesc: \"低于这个比例不清理旧工具结果,尽量保住 prompt cache 前缀。\",\n        compactTitle: \"开始压缩\",\n        compactDesc: \"达到这个比例后开始压缩历史,先尝试更轻的摘要 / 裁剪策略。\",\n        summarizeTitle: \"紧急压缩\",\n        summarizeDesc: \"达到这个比例后使用更激进的窗口压缩,给下一轮留空间。\",\n        orderHint:\n          \"保存时会保持 Microcompact 下限 ≤ 开始压缩 ≤ 紧急压缩。默认值为 70% / 85% / 92%。\",\n        save: \"保存上下文设置\",\n        saving: \"保存中…\",\n        reset: \"恢复默认\",\n        saved: \"上下文设置已保存\",\n        saveFailed: \"保存失败\",\n        loading: \"正在读取上下文设置…\",\n        loadFailed: \"无法读取上下文设置：{error}\",\n        retry: \"重新读取\",\n        invalidRatio: \"请输入 {min} 到 {max} 之间的整数百分比。\",\n        resetting: \"正在恢复…\",\n"
+        },
+        {
+          "start": 1642,
+          "end": 1661,
+          "text": "        microTitle: \"Microcompact floor\",\n        microDesc: \"Below this ratio, old tool output is kept to preserve the prompt-cache prefix.\",\n        compactTitle: \"Start compaction\",\n        compactDesc:\n          \"At this ratio, history compaction begins with lighter summary / snip strategies.\",\n        summarizeTitle: \"Emergency compaction\",\n        summarizeDesc:\n          \"At this ratio, a more aggressive window compaction leaves room for the next turn.\",\n        orderHint:\n          \"Save keeps Microcompact floor ≤ Start compaction ≤ Emergency compaction. Defaults are 70% / 85% / 92%.\",\n        save: \"Save context settings\",\n        saving: \"Saving…\",\n        reset: \"Reset defaults\",\n        saved: \"Context settings saved\",\n        saveFailed: \"Save failed\",\n        loading: \"Loading context settings…\",\n        loadFailed: \"Could not load context settings: {error}\",\n        retry: \"Retry loading\",\n        invalidRatio: \"Enter a whole percentage from {min} to {max}.\",\n        resetting: \"Resetting…\",\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "purpose": "Metadata snapshot after original reading; not extra semantic coverage",
+      "ranges": [
+        {
+          "start": 23,
+          "end": 42,
+          "text": "export function createRunContextManager(args: {\n  maxTokens: number;\n  ratios: {\n    compactAtRatio?: number;\n    summarizeAtRatio?: number;\n    microcompactFloorRatio?: number;\n  }; // this.resolveContextRatios() 的返回\n  persistedAnchor: ContextUsageAnchor | undefined;\n  llmProvider: string;\n  llmModel: string;\n  messages: Message[];\n  needsCtxSeed: boolean;\n}): { contextManager: ContextManager; ctxSeed: RunContextSeed } {\n  const contextManager = new ContextManager({\n    maxTokens: args.maxTokens,\n    // Drop undefined fields so they don't clobber ContextManager defaults\n    // (spread of `{x: undefined}` would override the default with undefined).\n    ...Object.fromEntries(Object.entries(args.ratios).filter(([, v]) => v !== undefined)),\n  });\n\n"
+        }
+      ]
+    }
+  ]
+}

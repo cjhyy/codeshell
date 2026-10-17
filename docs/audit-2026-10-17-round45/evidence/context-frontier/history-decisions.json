@@ -1,0 +1,109 @@
+{
+  "capturedUTC": "2026-10-17T15:20:20.698784+00:00",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "scopeGate": {
+    "currentSourceSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+    "samePathShaRows": 7,
+    "allSevenInventoryOrHashOnly": true,
+    "foundExplicitSameShaFull": false,
+    "noNeverReadInference": true,
+    "fallbackConversationBodyRead": false
+  },
+  "freshInventory": {
+    "files": 3979,
+    "md": 1399,
+    "json": 2580,
+    "jsonStringValues": 1328416,
+    "jsonScalarValues": 2001326,
+    "includesFrozen43": true,
+    "excludedRoundRules": [
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52
+    ],
+    "actualExcludedAtCapture": 3,
+    "archiveBySubstring": 175,
+    "archiveExactDirectory": 162,
+    "allJsonValuesAndMdTextScanned": true,
+    "jsonKeysNotSearchValues": true,
+    "parseErrors": []
+  },
+  "initialNavigation": {
+    "hitTotals": {
+      "source_path": 9,
+      "source_filename": 10,
+      "source_sha": 9,
+      "settings_contract": 60
+    },
+    "retained": {
+      "source_path": 9,
+      "source_filename": 10,
+      "source_sha": 9,
+      "settings_contract": 60
+    },
+    "capPerGroup": 160,
+    "uniqueContractRecords": 53,
+    "contractContextIndicesActuallyRead": [
+      9,
+      18,
+      25,
+      26,
+      27,
+      28,
+      30,
+      31,
+      32,
+      51,
+      52
+    ],
+    "semanticAll53Claimed": false
+  },
+  "focused": {
+    "totals": {
+      "actual_ratio_fields": 17,
+      "context_form_recovery": 2
+    },
+    "retained": {
+      "actual_ratio_fields": 17,
+      "context_form_recovery": 2
+    },
+    "capPerGroup": 120,
+    "all17RatioWindowsAnd2RecoveryWindowsActuallyDisplayed": true,
+    "twoRecoveryHitsUnrelatedOptimizationPlan": true
+  },
+  "priorFix": {
+    "path": "docs/todo/release-ui-20261015.md",
+    "at": 129,
+    "commitLabel": "2dcd041ff",
+    "scope": "Context read-error safety, normal numeric drafts, failed save/reset preservation and slider names already recorded; historical reported tests not rerun/adopted as current pass",
+    "decision": "Prior fix/reference only; no new or related finding"
+  },
+  "historicalFailedDirection": {
+    "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+    "at": 7,
+    "scope": "Wrong static Engine path and skipped reloadCachedContextWindows cache-refresh direction; no retry/recovery here",
+    "currentProductFailure": false
+  },
+  "normalCounterevidence": [
+    "Integer/nonempty/min-max draft checks and atomic writing guard; only ready state exposes form/save.",
+    "UI percent normalization and /100 DTO match schema bounds/defaults and ordinary engine/core numeric consumer fields.",
+    "Core clamp and existing ratio test declarations accept equality at safety ordering; strict prose alone was not promoted into a new UI defect.",
+    "Successful reset writes null tombstones only for three ratio keys; existing writer deepMerge/stripNulls removes these keys and preserves other context data.",
+    "Promise rejection path does not replace drafts; this does not certify arbitrary malformed file parsing or actual I/O failure recovery."
+  ],
+  "skips": [
+    "No malformed fake DTO/NaN/Infinity generator",
+    "No real user/project settings or authority resolution/permission/native/lock behavior",
+    "No legacy cache refresh or failed dynamic direction resumed"
+  ]
+}

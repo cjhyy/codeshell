@@ -1,0 +1,148 @@
+{
+  "rows": [
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3004/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "lines": 341
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3005/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "lines": 321
+      }
+    },
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "pointer": "/groupChecks/0/separateHashOnlyRows/100/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "pointer": "/groupChecks/0/separateHashOnlyRows/116/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "pointer": "/files/118/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "totalLines": 341
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "pointer": "/files/136/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "totalLines": 321
+      }
+    },
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/100/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "totalLines": 341
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/116/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "totalLines": 321
+      }
+    },
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "pointer": "/sourceByteChecks/129/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "kind": "hashOnlyFiles"
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "pointer": "/sourceByteChecks/145/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "kind": "hashOnlyFiles"
+      }
+    },
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "pointer": "/files/127/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e"
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "pointer": "/files/128/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df"
+      }
+    },
+    {
+      "candidate": "context",
+      "historyPath": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "pointer": "/hashOnlyChecks/102/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "candidate": "conversation",
+      "historyPath": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "pointer": "/hashOnlyChecks/118/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    }
+  ],
+  "count": 14,
+  "requiresManualFullOrSelectedInterpretation": true
+}
