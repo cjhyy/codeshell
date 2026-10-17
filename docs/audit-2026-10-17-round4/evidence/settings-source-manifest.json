@@ -1,0 +1,74 @@
+{
+  "base": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "actual_head": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "files": [
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139"
+    },
+    {
+      "path": "packages/core/src/settings/personalization.ts",
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea"
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc"
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a"
+    },
+    {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef"
+    },
+    {
+      "path": "packages/core/src/settings/recovery.ts",
+      "sha256": "3b8c69fbe3797fd12509bbc51acbc87238f4888bd61a76f9b31f7035e5594cb7"
+    },
+    {
+      "path": "packages/core/src/migrate-models.ts",
+      "sha256": "a1be4d0b12e9ee6265b53d358b9cb659c8c51889528de513c7de8d185cf5d4dc"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/config.ts",
+      "sha256": "60736e759bb17cf5081a11c52682ecccb122a1184561a85bbb21ee97d4b5dcdf"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "97f802afa7615eff8e0fc897b0a88cdbd7f62274e2b5a9fca10133602b104c1d"
+    },
+    {
+      "path": "packages/core/src/engine/disk-defaults.ts",
+      "sha256": "6e667f80e3e4baad433cacbe771586b387a0c2b72be5f070a29993de7d56caae"
+    },
+    {
+      "path": "packages/core/src/prompt/composer.ts",
+      "sha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f"
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "sha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3"
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "sha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642"
+    },
+    {
+      "path": "packages/desktop/src/main/model-meta-service.ts",
+      "sha256": "fb7e866525ebd5fbd8f0c7b48a7f5e315ce08e1f04439fc78e00eb82aca21801"
+    }
+  ]
+}

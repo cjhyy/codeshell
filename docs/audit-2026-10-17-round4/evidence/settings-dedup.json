@@ -1,0 +1,189 @@
+{
+  "base": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "roots": [
+    "docs/audit-2026-10-16",
+    "docs/audit-2026-10-17",
+    "docs/audit-2026-10-17-round3",
+    "docs/review-2026-07-09",
+    "docs/review-remaining-2026-10-12",
+    "docs/review-2026-10-12",
+    "docs/review-2026-07-10-goal-judge-v1.md"
+  ],
+  "files_scanned": 619,
+  "query_regexes": {
+    "user_yaml_masking": "saveUserSetting|settings\\.(?:yaml|yml)|user.{0,30}yaml|yaml.{0,30}user",
+    "invalid_setting_write": "(?:config|setting).{0,75}(?:invalid.{0,15}(?:value|type)|schema.{0,20}(?:crash|write)|wrong.type)|invalid.settings|invalid.{0,25}setting.{0,25}persist",
+    "legacy_binding_candidate": "migrateModels|migrate-models|providerKey|legacy.{0,30}provider"
+  },
+  "matches": {
+    "user_yaml_masking": [],
+    "invalid_setting_write": [],
+    "legacy_binding_candidate": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "line": 235,
+        "excerpt": "    \"tests/migrate-models.test.ts\": 1,"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "line": 692,
+        "excerpt": "    \"packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/progress.md",
+        "line": 146,
+        "excerpt": "07:31第二十二轮确认R81/B22-1/P2：实际Core Stop已abort/settle、busyfalse/pending0且Input0后，Main自然disabled ready仍alive，enable才旧Input seq5/6/7+DOMhit1；旧approve正确-32602拒绝/模型不续跑。direct实际driver AbortSignal阻止、新正式turncompleted/hit2、idleStop不回滚已提交输入正常。作者latest与root84740/a66f各standalone native66/Completed/close0/HOMEremoved，info只读精确重试0/2/1分账，mutation0；12sourcehash同、9已知Main/rendererPID均已退出。前6支架失败完整保留，Bun增量0/通用81/243，正式81=1/52/28。动态仅legacy/unbound、实际Core/Engine内存provider/nativeIPC/抽取Main/runtime/Puppeteer/ownedChromium，"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 149,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 1402,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 2874,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 4469,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 6104,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 8783,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "line": 11485,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 143,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 1396,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 2868,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 4463,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 6098,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 8777,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "line": 11479,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "line": 51,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 136,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 1389,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 2861,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 4456,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 6091,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 8770,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "line": 11472,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "line": 51,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "line": 81,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "line": 1334,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "line": 2806,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "line": 4401,
+        "excerpt": "          \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "line": 6016,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "line": 50,
+        "excerpt": "      \"/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/migrate-models.ts\","
+      }
+    ]
+  },
+  "assessment": {
+    "SET-01": "No equivalent prior finding found. Settings recovery R70 is failed auto-save queue recovery in Desktop; this is Core successful write masking a YAML layer.",
+    "SET-02": "No equivalent prior finding found. This is an ordinary known-field type write accepted before the same loader rejects it, distinct from Desktop save failures or trust gates.",
+    "C-SET-01": "No equivalent prior migration association finding found, but current Engine uses modelConnections; keep candidate pending current product impact rather than claiming model-call breakage."
+  }
+}

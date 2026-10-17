@@ -2,6 +2,7 @@ import type { TokenUsage } from "../types.js";
 import type { LLMUsageTracker } from "../llm/types.js";
 
 export interface CumulativeUsageCounters {
+  cacheUsageVersion?: 1;
   cumulativePromptTokens: number;
   cumulativeCacheReadTokens: number;
   cumulativeCacheCreationTokens: number;
@@ -9,29 +10,60 @@ export interface CumulativeUsageCounters {
 
 export function emptyCumulativeUsageCounters(): CumulativeUsageCounters {
   return {
+    cacheUsageVersion: 1,
     cumulativePromptTokens: 0,
     cumulativeCacheReadTokens: 0,
     cumulativeCacheCreationTokens: 0,
   };
 }
 
-export function normalizeCumulativeUsageCounters(
-  counters: Partial<CumulativeUsageCounters> | undefined,
-  legacyUsage?: TokenUsage,
+/** Rebuild legacy cache metrics only from complete, purpose-attributed billing history. */
+function migrateCacheUsage(
+  costState: Record<string, unknown> | undefined,
 ): CumulativeUsageCounters {
+  const zero = emptyCumulativeUsageCounters();
+  const summary = costState?.summary as Record<string, unknown> | undefined;
+  if (
+    costState?.kind !== "usage-ledger" ||
+    costState.version !== 1 ||
+    costState.historicalCoverageIncomplete === true ||
+    summary?.version !== 1 ||
+    summary.scope !== "session" ||
+    summary.includesChildren !== false ||
+    summary.partial !== false ||
+    summary.unknownUsageRequests !== 0 ||
+    summary.invalidReceipts !== 0 ||
+    summary.persistenceErrors !== 0 ||
+    !Array.isArray(summary.byPurpose)
+  )
+    return zero;
+  const result = { ...zero };
+  for (const row of summary.byPurpose) {
+    if (!row || (row.purpose !== "main" && row.purpose !== "subagent")) continue;
+    const values = [row.promptTokens, row.cacheReadTokens, row.cacheCreationTokens];
+    if (values.some((value) => typeof value !== "number" || !Number.isFinite(value) || value < 0))
+      return zero;
+    result.cumulativePromptTokens += row.promptTokens;
+    result.cumulativeCacheReadTokens += row.cacheReadTokens;
+    result.cumulativeCacheCreationTokens += row.cacheCreationTokens;
+  }
+  return result;
+}
+
+export function normalizeCumulativeUsageCounters(
+  counters:
+    | (Partial<CumulativeUsageCounters> & { costState?: Record<string, unknown> })
+    | undefined,
+  _legacyUsage?: TokenUsage,
+): CumulativeUsageCounters {
+  // Historical billing totals cannot distinguish foreground from auxiliary input.
+  // Without complete purpose history start a new known-foreground window.
+  if (counters?.cacheUsageVersion !== 1) return migrateCacheUsage(counters?.costState);
   return {
-    cumulativePromptTokens:
-      typeof counters?.cumulativePromptTokens === "number"
-        ? counters.cumulativePromptTokens
-        : (legacyUsage?.promptTokens ?? 0),
-    cumulativeCacheReadTokens:
-      typeof counters?.cumulativeCacheReadTokens === "number"
-        ? counters.cumulativeCacheReadTokens
-        : (legacyUsage?.cacheReadTokens ?? 0),
-    cumulativeCacheCreationTokens:
-      typeof counters?.cumulativeCacheCreationTokens === "number"
-        ? counters.cumulativeCacheCreationTokens
-        : (legacyUsage?.cacheCreationTokens ?? 0),
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: counters.cumulativePromptTokens ?? 0,
+    cumulativeCacheReadTokens: counters.cumulativeCacheReadTokens ?? 0,
+    cumulativeCacheCreationTokens: counters.cumulativeCacheCreationTokens ?? 0,
   };
 }
 
@@ -41,6 +73,7 @@ export function addCumulativeUsage(
 ): CumulativeUsageCounters {
   const current = normalizeCumulativeUsageCounters(counters);
   return {
+    cacheUsageVersion: 1,
     cumulativePromptTokens: current.cumulativePromptTokens + (usage.promptTokens ?? 0),
     cumulativeCacheReadTokens: current.cumulativeCacheReadTokens + (usage.cacheReadTokens ?? 0),
     cumulativeCacheCreationTokens:

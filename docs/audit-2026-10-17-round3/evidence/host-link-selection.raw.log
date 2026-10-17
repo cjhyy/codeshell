@@ -1,0 +1,20 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round3/evidence/host-link-selection.test.ts:
+{"observation":"trimmed-reference","requested":" report.md","selected":{"providerId":"github","action":"get_file","scopeId":"github:get_file","params":{"owner":"owner","repo":"repo","path":"report.md"},"resourceId":"owner/repo","label":"owner/repo/report.md"}}
+{"observation":"trimmed-reference","requested":"report.md ","selected":{"providerId":"github","action":"get_file","scopeId":"github:get_file","params":{"owner":"owner","repo":"repo","path":"report.md"},"resourceId":"owner/repo","label":"owner/repo/report.md"}}
+{"observation":"trimmed-reference","requested":" report.md ","selected":{"providerId":"github","action":"get_file","scopeId":"github:get_file","params":{"owner":"owner","repo":"repo","path":"report.md"},"resourceId":"owner/repo","label":"owner/repo/report.md"}}
+{"observation":"trimmed-reference","requested":"　report.md","selected":{"providerId":"github","action":"get_file","scopeId":"github:get_file","params":{"owner":"owner","repo":"repo","path":"report.md"},"resourceId":"owner/repo","label":"owner/repo/report.md"}}
+(pass) round 3 ordinary Link exact-reference observations > leading and trailing filename whitespace changes the selected reference [2.97ms]
+{"observation":"literal-percent-rejected","requested":"docs/rate%2Ftable.md","message":"Invalid GitHub file path"}
+{"observation":"literal-percent-rejected","requested":"docs/rate%5Ctable.md","message":"Invalid GitHub file path"}
+(pass) round 3 ordinary Link exact-reference observations > ordinary literal percent text is accepted unless it looks like an encoded separator [0.21ms]
+{"observation":"default-label-lone-surrogate","requestedLength":513,"labelLength":512,"firstCodeUnit":"de00","labelWellFormed":false}
+(pass) round 3 ordinary Link exact-reference observations > a long valid multi-directory path creates a default label beginning with a lone surrogate [0.08ms]
+(pass) round 3 ordinary Link exact-reference observations > an explicit ordinary Unicode label is preserved [0.02ms]
+
+ 4 pass
+ 0 fail
+ 26 expect() calls
+Ran 4 tests across 1 file. [68.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

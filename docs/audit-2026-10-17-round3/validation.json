@@ -1,0 +1,238 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "totals": {
+    "completedShards": 12,
+    "passedTests": 87,
+    "expectations": 507,
+    "filteredOrSkippedTests": 32,
+    "failedShardsSeparatelyRetained": 1
+  },
+  "runs": [
+    {
+      "logs": [
+        "evidence/host-baseline.raw.log"
+      ],
+      "completed": true,
+      "phase": "baseline",
+      "passed": 19,
+      "failed": 0,
+      "expectations": 88,
+      "selectedTests": 35,
+      "skipped": 16,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/host-baseline.raw.log": "c56e5b89bca9f6701119d7ddbf8bd21cf737bdcec9e3dcb93e5bb55583d963a0"
+      }
+    },
+    {
+      "logs": [
+        "evidence/host-link-selection.raw.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 4,
+      "failed": 0,
+      "expectations": 26,
+      "selectedTests": 4,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/host-link-selection.raw.log": "2b36a3f4d9e4a11bc625a7c6c1be06ac6de6f958ad333a901d8ec11244d5682a"
+      }
+    },
+    {
+      "logs": [
+        "evidence/host-operation-baseline.raw.log"
+      ],
+      "completed": true,
+      "phase": "baseline",
+      "passed": 3,
+      "failed": 0,
+      "expectations": 209,
+      "selectedTests": 9,
+      "skipped": 6,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/host-operation-baseline.raw.log": "9233da694e7e865fddaa5ae047e74c5903387bb369094a62aceeec2fe09f6c93"
+      }
+    },
+    {
+      "logs": [
+        "evidence/lab-offline-round1.raw.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 4,
+      "failed": 0,
+      "expectations": 19,
+      "selectedTests": 4,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/lab-offline-round1.raw.log": "9f02a61eed49105dfcd150e11b99ea8492eb9473d89e08c0e3649d58653ecd38"
+      }
+    },
+    {
+      "logs": [
+        "evidence/lab-offline-round2.raw.log"
+      ],
+      "completed": false,
+      "phase": "failed-fixture-skipped",
+      "passed": 0,
+      "failed": 1,
+      "expectations": null,
+      "selectedTests": null,
+      "skipped": null,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/lab-offline-round2.raw.log": "3c5e5b66b9b94907f89ef8ec3a633d9468e8a966e540a8cb549b85dd6133556d"
+      },
+      "note": "Provider registry identity mismatch before fakeLLM/expect; raw log does not print expectation count. No repair/retry."
+    },
+    {
+      "logs": [
+        "evidence/root-codex-event-data.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 4,
+      "failed": 0,
+      "expectations": 9,
+      "selectedTests": 4,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/root-codex-event-data.log": "2ccc65ab1c8307248715e973c9f093f514eaae23847329b292516a47e23d0377"
+      }
+    },
+    {
+      "logs": [
+        "evidence/root-codex-parser-baseline.log"
+      ],
+      "completed": true,
+      "phase": "baseline",
+      "passed": 15,
+      "failed": 0,
+      "expectations": 24,
+      "selectedTests": 16,
+      "skipped": 1,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/root-codex-parser-baseline.log": "f6f572bb7c75c788cd06fcc124a7288bc4fea0990b68a36163dc40e78cf84032"
+      }
+    },
+    {
+      "logs": [
+        "evidence/root-codex-room-projection.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 1,
+      "failed": 0,
+      "expectations": 7,
+      "selectedTests": 1,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/root-codex-room-projection.log": "8b87e5dd42ffdee0f73967f4c9edf7f124467e0f51a6639bdcc3fc316be9b5b9"
+      }
+    },
+    {
+      "logs": [
+        "evidence/root-history-replay-baseline.log"
+      ],
+      "completed": true,
+      "phase": "baseline",
+      "passed": 14,
+      "failed": 0,
+      "expectations": 59,
+      "selectedTests": 23,
+      "skipped": 9,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/root-history-replay-baseline.log": "3c7b320a5d6cf699830b0320b0a333146d4c394e2b99769098c1def3be32282a"
+      }
+    },
+    {
+      "logs": [
+        "evidence/root-room-default-name.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 3,
+      "failed": 0,
+      "expectations": 11,
+      "selectedTests": 3,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/root-room-default-name.log": "59a5294b7690cf3918d11144ef800e688ec00ac29cfef8378d924fffa1eae026"
+      }
+    },
+    {
+      "logs": [
+        "evidence/cdp-diagnostics-projection.first.stdout.log",
+        "evidence/cdp-diagnostics-projection.first.stderr.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 6,
+      "failed": 0,
+      "expectations": 18,
+      "selectedTests": 6,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/cdp-diagnostics-projection.first.stdout.log": "7791467a0d4ffed0225ea15ce52fb9cef34e5a78096ffe44c5511e7d2a26f7b2",
+        "evidence/cdp-diagnostics-projection.first.stderr.log": "93d7b8511579537d1ecc03bb20379c6c17a3d90dd945f69db741faee089e4161"
+      }
+    },
+    {
+      "logs": [
+        "evidence/cdp-geometry-keymap.first.stdout.log",
+        "evidence/cdp-geometry-keymap.first.stderr.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 9,
+      "failed": 0,
+      "expectations": 24,
+      "selectedTests": 9,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/cdp-geometry-keymap.first.stdout.log": "d7255ed3d69eef36a937382c37143f672a53fbd5ad5b3694629721f029d03223",
+        "evidence/cdp-geometry-keymap.first.stderr.log": "46ba6c24bdfe5a1d6fe72b160ece4342a926f574c07d78569d017ae4b1419529"
+      }
+    },
+    {
+      "logs": [
+        "evidence/cdp-scroll-read-data.first.stdout.log",
+        "evidence/cdp-scroll-read-data.first.stderr.log"
+      ],
+      "completed": true,
+      "phase": "focused-observation",
+      "passed": 5,
+      "failed": 0,
+      "expectations": 13,
+      "selectedTests": 5,
+      "skipped": 0,
+      "receipt": "first-run-redirected-guarded-runner-output",
+      "hashes": {
+        "evidence/cdp-scroll-read-data.first.stdout.log": "5d3729f3ee243d3dac395c9f61bdfd9ab004656d6e82bda3d1eb50cdaa8c619b",
+        "evidence/cdp-scroll-read-data.first.stderr.log": "ed02d5109de977700b654ae81f602ec1cb3802f8003b2e61ccaef50354e7bcc5"
+      }
+    }
+  ],
+  "notes": [
+    "Shared logs counted once. CDP stdout/stderr paired as one first-run shard.",
+    "Selected test counts include filtered cases; passedTests is actual executed pass only.",
+    "Passing wrong-behavior assertions reproduces bugs; it does not mean fixed product behavior.",
+    "Lab failure is separately retained; no repair/retry or successful fakeLLM business result.",
+    "Two independent quality agent turns later failed at model capacity; not product/test failures and not full independent reviews.",
+    "Existing room history fixture has an explicit 120s case timeout and 10010 fsync writes; 40.7s first-run completion is not independent performance-bug evidence.",
+    "No clean build/full typecheck/lint/full suite/real platforms claimed. Existing node_modules/dist reused where imports require it.",
+    "Raw failed Lab log line11 ends with the provider diagnostic's literal trailing space. Full diff --check reports this one preserved raw-receipt exception; non-log material passes.",
+    "16 raw .log files are intentionally force-added only within this task directory because repository ignore rules exclude logs."
+  ]
+}

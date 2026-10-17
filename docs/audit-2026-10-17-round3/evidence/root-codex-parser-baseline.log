@@ -1,0 +1,25 @@
+bun test v1.3.11 (af24e281)
+
+packages/server/src/mobile-remote/codex-parse.test.ts:
+(pass) parseCodexJsonLine > ignores noise / unparseable / thread.started / turn.started / reasoning [0.43ms]
+(pass) parseCodexJsonLine > agent_message (completed) → text
+(pass) parseCodexJsonLine > agent_message only emits on completed, not started (avoid dup)
+(pass) parseCodexJsonLine > command_execution started → tool(Bash) carrying the item id + input.command
+(pass) parseCodexJsonLine > command_execution completed → tool_result paired by id, isError from exit_code
+(pass) parseCodexJsonLine > mcp_tool_call → tool named <server>__<tool> (started, carries input.arguments) + tool_result (completed)
+(pass) parseCodexJsonLine > web_search → tool(WebSearch) with input.query
+(pass) parseCodexJsonLine > file_change → tool(Edit) with the path summary + input.path
+(pass) parseCodexJsonLine > turn.completed → turn_end
+(pass) parseCodexJsonLine > turn.failed → error with the failure message
+(pass) parseCodexJsonLine > standalone error event → error
+(pass) extractThreadId > returns the thread_id from a thread.started line
+(pass) extractThreadId > returns undefined for any non-thread.started line [0.60ms]
+(pass) extractThreadId > returns undefined for unparseable / empty input
+(pass) extractThreadId > returns undefined if thread.started lacks a string thread_id
+
+ 15 pass
+ 1 filtered out
+ 0 fail
+ 24 expect() calls
+Ran 15 tests across 1 file. [45.00ms]
+Completed Bun shard: 16 tests, 1 skipped; 0 failures.

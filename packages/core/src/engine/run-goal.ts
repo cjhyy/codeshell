@@ -136,7 +136,6 @@ export function armRunGoalHook(args: {
     reason: PersistedGoalTerminationReason,
   ) => boolean;
   getJudgeContext: () => GoalJudgeRuntimeContext | undefined;
-  recordCumulativeUsage: (usage: TokenUsage) => unknown;
   recordGoalJudgeUsage: (
     usage: TokenUsage | undefined,
   ) => ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
@@ -152,7 +151,6 @@ export function armRunGoalHook(args: {
     sessionManager,
     persistGoalTerminal,
     getJudgeContext,
-    recordCumulativeUsage,
     recordGoalJudgeUsage,
   } = args;
   let goalHookHandler: GoalStopHookHandler | null = null;
@@ -169,10 +167,8 @@ export function armRunGoalHook(args: {
       log: logger,
       getJudgeContext: () => getJudgeContext(),
       onJudgeUsage: (usage) => {
-        // The provider records this request into llmClient.getUsage() and the
-        // process-wide CostTracker. This separate callback feeds the session
-        // cumulative cache counters and the live Goal hard-budget tracker.
-        if (usage) recordCumulativeUsage(usage);
+        // The provider records the billed request in llmClient.getUsage().
+        // Judge input is auxiliary and never belongs to foreground cache metrics.
         // Charge the request even if an edit landed while the judge was
         // awaiting its response. Revision fencing suppresses the old
         // verdict, not the provider cost; otherwise repeated edits can

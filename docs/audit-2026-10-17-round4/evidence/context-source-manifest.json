@@ -1,0 +1,212 @@
+{
+  "frozenBase": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "branch": "codex/audit/context-round4-20261017",
+  "sources": [
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/context/token-counter.ts",
+      "sha256": "f11e4c6175922b1396f2eb622d6e98a62cfc63801c2cd96750339879b5f01328",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/context/notes.ts",
+      "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+      "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/llm/token-counter.ts",
+      "sha256": "0f6af230c35dd9d4a5c4a800a54d10b62007ca1c7a741e1bbac225766612aad2",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/llm/clamp-max-tokens.ts",
+      "sha256": "a73f3452ed9a5910c25e7444a11e074d3df85c44bce1be3633fd1bf4342d88e6",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/view-image.ts",
+      "sha256": "6c8544201e18704709f215be6db8de349b9529e11d5af5f72c84a0cd23c3f2b7",
+      "review": "full"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "730280399531e6e6893584800ce89604a1867d8e42a7fdda6259de67f51b5683",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          1,
+          145
+        ],
+        [
+          245,
+          266
+        ],
+        [
+          280,
+          325
+        ],
+        [
+          470,
+          790
+        ],
+        [
+          930,
+          1260
+        ],
+        [
+          1280,
+          1410
+        ],
+        [
+          1940,
+          2045
+        ],
+        [
+          2060,
+          2235
+        ],
+        [
+          2353,
+          2411
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "97f802afa7615eff8e0fc897b0a88cdbd7f62274e2b5a9fca10133602b104c1d",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          2420,
+          2448
+        ],
+        [
+          3356,
+          3388
+        ],
+        [
+          4350,
+          4396
+        ],
+        [
+          4520,
+          4555
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          70,
+          124
+        ],
+        [
+          200,
+          300
+        ],
+        [
+          695,
+          824
+        ],
+        [
+          1080,
+          1205
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          420,
+          483
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          1110,
+          1178
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          600,
+          725
+        ],
+        [
+          1621,
+          1625
+        ],
+        [
+          1731,
+          1735
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "review": "selected ranges",
+      "reviewedRanges": [
+        [
+          396,
+          396
+        ]
+      ]
+    }
+  ]
+}

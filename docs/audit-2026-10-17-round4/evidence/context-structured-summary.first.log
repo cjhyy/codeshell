@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round4/evidence/context-structured-summary.test.ts:
+(pass) round4 structured tool result summary evidence > automatic summary omits text from the real toolResultToBlock shape; scalar control preserves it [10.58ms]
+(pass) round4 structured tool result summary evidence > range archival also replaces the only structured result with a summary that never received its text [1.94ms]
+
+ 2 pass
+ 0 fail
+ 14 expect() calls
+Ran 2 tests across 1 file. [119.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

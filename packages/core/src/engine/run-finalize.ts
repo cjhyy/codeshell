@@ -147,6 +147,7 @@ export async function finalizeRunSuccess(args: {
   firstGoalTermination: GoalTerminationReason | undefined;
   turnCount: number; // turnLoop.currentTurn
   getRunUsage: () => LLMUsageTracker;
+  getRunCacheUsage: () => TokenUsage;
   usageBaseline: TokenUsage;
   userContextMsg: Message | null;
   dynamicContextMsg: Message | null;
@@ -379,16 +380,16 @@ export async function finalizeRunSuccess(args: {
     options?.signal,
   );
 
-  // Settle the whole user run before its footer is finalized. The live loop
-  // counts primary responses; getRunUsage also includes billed compaction,
-  // tool summaries and goal judging. Zero means no new context-size reading,
-  // so consumers retain the last provider/estimate value for the context ring.
+  // Cache metrics use foreground responses even though billing includes helpers.
+  // Zero preserves the last provider/estimate reading of live context size.
+  const cacheUsage = args.getRunCacheUsage();
   options?.onStream?.({
     type: "usage_update",
     promptTokens: 0,
-    singleTurnPromptTokens: usage.totalPromptTokens,
-    singleTurnCacheReadTokens: usage.totalCacheReadTokens ?? 0,
-    singleTurnCacheCreationTokens: usage.totalCacheCreationTokens ?? 0,
+    cacheUsageVersion: 1,
+    singleTurnPromptTokens: cacheUsage.promptTokens,
+    singleTurnCacheReadTokens: cacheUsage.cacheReadTokens ?? 0,
+    singleTurnCacheCreationTokens: cacheUsage.cacheCreationTokens ?? 0,
   });
 
   // Emit completion

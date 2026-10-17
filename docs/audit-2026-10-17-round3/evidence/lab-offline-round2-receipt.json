@@ -1,0 +1,37 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "branch": "codex/audit/broad-round3-20261017",
+  "recordedAtUtc": "2026-10-16T23:46:58.006491+00:00",
+  "firstInvocation": true,
+  "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round3/evidence/lab-offline-round2.test.ts > docs/audit-2026-10-17-round3/evidence/lab-offline-round2.raw.log 2>&1",
+  "source": {
+    "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round2.test.ts",
+    "sha256": "a5b999fa2fc836c2b6b1b7ae4202dc65b93eb1eda56ed1caf3b60f632020c5db",
+    "bytes": 3051
+  },
+  "rawOutput": {
+    "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round2.raw.log",
+    "sha256": "3c5e5b66b9b94907f89ef8ec3a633d9468e8a966e540a8cb549b85dd6133556d",
+    "bytes": 1270
+  },
+  "processExitCode": 1,
+  "completed": false,
+  "completionMarker": null,
+  "testFilesReported": 1,
+  "testsAttempted": 1,
+  "passedReported": 0,
+  "failedReported": 1,
+  "skipped": null,
+  "expectCallsExecuted": 0,
+  "reason": "Fixture provider registry/dependency resolution failure: Unknown LLM provider audit-arena-reviewer-cap; Available list empty. Raw stack resolves createLLMClient through primary checkout core/dist. No fixture repair or alternate rerun attempted.",
+  "rawDependencyStackPath": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/core/dist/llm/client-factory.js",
+  "productFinding": false,
+  "candidateOnly": "Arena reviewer cap appears unused in source; expected reviewer count not dynamically established.",
+  "fakeLLMMethodCalls": 0,
+  "realModelCalls": 0,
+  "networkOperations": 0,
+  "productSubprocessOperations": 0,
+  "hostOrFeatureStartup": 0,
+  "reruns": 0,
+  "disposition": "preserved first source and raw output; skipped"
+}

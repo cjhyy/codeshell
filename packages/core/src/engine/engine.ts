@@ -107,6 +107,7 @@ import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.j
 import {
   persistRunState,
   sessionCumulativeUsageUpdate,
+  subtractUsage,
   type RunningSessionState,
 } from "./run-state-persistence.js";
 import { logger, runWithSid } from "../logging/logger.js";
@@ -1779,6 +1780,7 @@ export class Engine {
       runId,
       state: session.state,
       committedUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      committedCacheUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       committedAnchor: structuredClone(session.state.contextUsageAnchor),
       finalized: false,
     };
@@ -2081,6 +2083,7 @@ export class Engine {
           if (this.runningSession?.runId === runId) {
             this.runningSession.ownUsage = () =>
               foldRunUsage({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }, getRunUsage());
+            this.runningSession.ownCacheUsage = accounting.getRunCacheUsage;
           }
 
           let result: Awaited<ReturnType<typeof turnLoop.run>>;
@@ -2189,6 +2192,7 @@ export class Engine {
     } = args;
     const sourceRunId = this.runIds.get(session.state);
     return finalizeRunSuccess({
+      getRunCacheUsage: accounting.getRunCacheUsage,
       session,
       result,
       firstGoalTermination,
@@ -2915,7 +2919,6 @@ export class Engine {
       sessionManager: this.sessionManager,
       persistGoalTerminal: (state, goal, reason) => this.persistGoalTerminal(state, goal, reason),
       getJudgeContext: () => latestGoalJudgeContext,
-      recordCumulativeUsage,
       recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
     });
 
@@ -3287,8 +3290,20 @@ export class Engine {
           profileAllowedToolNames: runAllowedToolNames,
           runPlanMode,
         }),
-      { taskText, policy: this.preset.initialToolRouting },
+      {
+        taskText,
+        policy: this.preset.initialToolRouting,
+        injected: options?.injected === true,
+        selection: session.state.toolSelection,
+        onSelectionChanged: (selection) => {
+          session.state.toolSelection = selection;
+        },
+      },
     );
+    const surface = toolCtx.runToolSurface!;
+    if (this.runningSession?.state === session.state) {
+      this.runningSession.ownToolSelection = () => surface.getSelection();
+    }
 
     return {
       promptComposer,
@@ -3785,8 +3800,13 @@ export class Engine {
     const runOwned = {
       status: live.status,
       summary: live.summary,
+      toolSelection:
+        (this.runningSession?.state === live
+          ? this.runningSession.ownToolSelection?.()
+          : undefined) ?? live.toolSelection,
       tokenUsage: live.tokenUsage,
       contextUsageAnchor: live.contextUsageAnchor,
+      cacheUsageVersion: live.cacheUsageVersion,
       cumulativePromptTokens: live.cumulativePromptTokens,
       cumulativeCacheReadTokens: live.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: live.cumulativeCacheCreationTokens,
@@ -3848,6 +3868,7 @@ export class Engine {
         !finalizer.commit(() => ({
           fields: this.finalRunStateFields(running.state),
           usageDelta: this.uncommittedRunUsage(running),
+          cacheUsageDelta: this.uncommittedRunCacheUsage(running),
           previousContextUsageAnchor: running.committedAnchor,
         }))
       ) {
@@ -3874,25 +3895,24 @@ export class Engine {
   }
 
   private uncommittedRunUsage(running: NonNullable<Engine["runningSession"]>): TokenUsage {
-    const current = running.ownUsage?.() ?? {
-      promptTokens: 0,
-      completionTokens: 0,
-      totalTokens: 0,
-    };
-    const previous = running.committedUsage;
-    return {
-      promptTokens: current.promptTokens - previous.promptTokens,
-      completionTokens: current.completionTokens - previous.completionTokens,
-      totalTokens: current.totalTokens - previous.totalTokens,
-      cacheReadTokens: (current.cacheReadTokens ?? 0) - (previous.cacheReadTokens ?? 0),
-      cacheCreationTokens: (current.cacheCreationTokens ?? 0) - (previous.cacheCreationTokens ?? 0),
-    };
+    return subtractUsage(
+      running.ownUsage?.() ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      running.committedUsage,
+    );
+  }
+
+  private uncommittedRunCacheUsage(running: NonNullable<Engine["runningSession"]>): TokenUsage {
+    return subtractUsage(
+      running.ownCacheUsage?.() ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      running.committedCacheUsage,
+    );
   }
 
   private finalRunStateFields(
     state: SessionState,
     usage = state.tokenUsage,
   ): SessionRunFinalStatePatch {
+    this.syncRunToolSelection(state);
     state.costState = this.usageCostState(state.sessionId);
     return {
       status: state.status,
@@ -3900,6 +3920,8 @@ export class Engine {
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
       tokenUsage: usage,
+      toolSelection: state.toolSelection,
+      cacheUsageVersion: state.cacheUsageVersion,
       cumulativePromptTokens: state.cumulativePromptTokens,
       cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
@@ -3921,14 +3943,22 @@ export class Engine {
   }
 
   private persistOwnedRunState(state: SessionState, fields: SessionStateFieldPatch): boolean {
+    const ownsSelection = this.runningSession?.state === state;
+    this.syncRunToolSelection(state);
     return persistRunState({
       manager: this.sessionManager,
       state,
-      fields,
+      fields: ownsSelection ? { ...fields, toolSelection: state.toolSelection } : fields,
       runId: this.runIds.get(state),
       running: this.runningSession,
       costState: () => this.usageCostState(state.sessionId),
     });
+  }
+
+  private syncRunToolSelection(state: SessionState): void {
+    if (this.runningSession?.state !== state) return;
+    const selection = this.runningSession.ownToolSelection?.();
+    if (selection) state.toolSelection = selection;
   }
 
   private persistRunProgress(state: SessionState): boolean {
@@ -3937,6 +3967,7 @@ export class Engine {
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
       tokenUsage: state.tokenUsage,
+      cacheUsageVersion: state.cacheUsageVersion,
       cumulativePromptTokens: state.cumulativePromptTokens,
       cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,

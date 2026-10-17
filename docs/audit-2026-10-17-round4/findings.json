@@ -1,0 +1,115 @@
+{
+  "baseline": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "count": 7,
+  "priorities": {
+    "P2": 5,
+    "P3": 2
+  },
+  "findings": [
+    {
+      "id": "CTX-1",
+      "priority": "P2",
+      "title": "Fallback snip切掉已保留tool call的结果",
+      "report": "context.md",
+      "reportLine": 7,
+      "source": "packages/core/src/context/compaction.ts",
+      "line": 324,
+      "logs": [
+        "evidence/context-snip-pairs.first.log"
+      ],
+      "evidenceLevel": "真实manager/TurnLoop+fake model",
+      "limitations": "summary失败后fallback；没有真实provider请求",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "CTX-2",
+      "priority": "P2",
+      "title": "摘要转换丢失结构化tool_result中的文字",
+      "report": "context.md",
+      "reportLine": 19,
+      "source": "packages/core/src/context/compaction.ts",
+      "line": 843,
+      "logs": [
+        "evidence/context-structured-summary.first.log"
+      ],
+      "evidenceLevel": "真实manager/toolResultToBlock+fake summarizer",
+      "limitations": "自动压缩/range archival；原始transcript保留；真实MCP/Engine持久化未执行",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "SET-01",
+      "priority": "P2",
+      "title": "user单字段保存遮蔽YAML中的其他配置",
+      "report": "settings.md",
+      "reportLine": 7,
+      "source": "packages/core/src/settings/manager.ts",
+      "line": 550,
+      "logs": [
+        "evidence/settings-yaml-write.first.log"
+      ],
+      "evidenceLevel": "真实manager/自有YAML JSON目录",
+      "limitations": "YAML字节保留；fresh manager加载已验证，实际TUI/app重启未执行",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "SET-02",
+      "priority": "P3",
+      "title": "Config接受错误类型并落盘，后续settings读取失败",
+      "report": "settings.md",
+      "reportLine": 19,
+      "source": "packages/core/src/settings/manager.ts",
+      "line": 581,
+      "logs": [
+        "evidence/settings-invalid-write.first.log"
+      ],
+      "evidenceLevel": "真实Config/manager/schema/自有文件",
+      "limitations": "需无效类型输入；写回合法值可恢复；没有真实app crash",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "CODING-R4-01",
+      "priority": "P2",
+      "title": "LSP Definition/References把编码URI当文件路径",
+      "report": "coding.md",
+      "reportLine": 7,
+      "source": "packages/coding/src/tools/lsp.ts",
+      "line": 208,
+      "logs": [
+        "evidence/coding-lsp-data.first.log"
+      ],
+      "evidenceLevel": "真实tool/manager+内存client/自有文件",
+      "limitations": "含空格/中文等路径；无真实server/Windows/GUI",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "CODING-R4-02",
+      "priority": "P2",
+      "title": "LSP重复diagnostics未同步已打开文件的编辑",
+      "report": "coding.md",
+      "reportLine": 17,
+      "source": "packages/coding/src/tools/lsp.ts",
+      "line": 156,
+      "logs": [
+        "evidence/coding-lsp-data.first.log"
+      ],
+      "evidenceLevel": "真实tool/manager+严格fake client",
+      "limitations": "重复didOpen/version1违反官方3.17合同；陈旧结果仅fake观察，真实server未执行",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "LOG-R4-01",
+      "priority": "P3",
+      "title": "日志轮转按bucket前缀删除最近engine历史",
+      "report": "root.md",
+      "reportLine": 5,
+      "source": "packages/core/src/logging/logger.ts",
+      "line": 439,
+      "logs": [
+        "evidence/root-log-retention.first.log"
+      ],
+      "evidenceLevel": "真实rotation/getRecentLogs/自有tmp",
+      "limitations": "TUI启动接线静态；仅诊断文件，无真实应用启动/transcript损失",
+      "status": "confirmed-at-frozen-source-baseline"
+    }
+  ]
+}
