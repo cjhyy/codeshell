@@ -8,6 +8,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -17,6 +18,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import { describePackagedAppLayout } from "./packaged-app-layout.mjs";
 
 const desktopRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(desktopRoot, "../..");
@@ -193,6 +195,11 @@ async function main() {
     assert.deepEqual(receipt.failures, [], "Process lifetime verification must succeed");
     const appRoot = realpathSync(nativeAppRoot(packageOutput, pkg.build.productName));
     assert.ok(inside(packageOutput, appRoot), "Native app must be inside the new owned output");
+    receipt.packageEntries = readdirSync(appRoot).sort();
+    const executable = describePackagedAppLayout(appRoot).executable;
+    const binary = lstatSync(executable);
+    assert.ok(binary.isFile() && !binary.isSymbolicLink(), "Native package executable is missing");
+    receipt.executable = { path: executable, sha256: hash(readFileSync(executable)) };
     const resources = join(
       appRoot,
       ...(process.platform === "darwin" ? ["Contents", "Resources"] : ["resources"]),

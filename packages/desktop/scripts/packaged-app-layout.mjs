@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json");
+const builderRequire = createRequire(require.resolve("electron-builder/package.json"));
+const appBuilderRequire = createRequire(builderRequire.resolve("app-builder-lib/package.json"));
+const { sanitizeFileName } = appBuilderRequire("./out/util/filename.js");
+const configuredLinuxName = pkg.build.linux.executableName ?? pkg.build.executableName;
+// LinuxPackager removes the slash from a scoped name, retaining its scope and @.
+const linuxExecutable =
+  configuredLinuxName == null
+    ? sanitizeFileName(pkg.name).toLowerCase()
+    : sanitizeFileName(configuredLinuxName);
 
 /** Select a package format without executing or inspecting its binaries. The
  * platform override supports fixture trees on the current filesystem; native
@@ -13,9 +26,7 @@ export function describePackagedAppLayout(appRoot, { platform = process.platform
   const executable =
     platform === "darwin"
       ? join(root, "Contents", "MacOS", "code-shell")
-      : // LinuxPackager defaults to the sanitized package name, whereas Windows
-        // and macOS use productName. Keep the existing release binary contract.
-        join(root, platform === "win32" ? "code-shell.exe" : "code-shell-desktop");
+      : join(root, platform === "win32" ? "code-shell.exe" : linuxExecutable);
   return {
     root,
     resources,

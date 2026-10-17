@@ -40,7 +40,7 @@ async function packageFixture(platform, run) {
   const emittedExecutable =
     platform === "darwin"
       ? join(root, "Contents/MacOS/code-shell")
-      : join(root, platform === "win32" ? "code-shell.exe" : "code-shell-desktop");
+      : join(root, platform === "win32" ? "code-shell.exe" : "@cjhyycode-shell-desktop");
   await writeFile(emittedExecutable, "owned application bytes");
   await writeFile(layout.managedNode, "owned node bytes");
   await writeFile(join(layout.resources, "app.asar"), "owned ASAR bytes");
