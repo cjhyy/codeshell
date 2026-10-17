@@ -531,6 +531,13 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/composer.log
             ${{ env.ACCEPTANCE_ROOT }}/composer/*.png
             ${{ env.ACCEPTANCE_ROOT }}/composer/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/composer/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/composer/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/composer/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/composer/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/composer/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/composer/real-keyring-bootstrap.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/composer/spawned-workers.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/memory.log
             ${{ env.ACCEPTANCE_ROOT }}/memory/*.png
             ${{ env.ACCEPTANCE_ROOT }}/memory/receipt.json
@@ -641,6 +648,13 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/composer.log
             ${{ env.ACCEPTANCE_ROOT }}/composer/*.png
             ${{ env.ACCEPTANCE_ROOT }}/composer/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/composer/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/composer/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/composer/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/composer/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/composer/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/composer/real-keyring-bootstrap.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/composer/spawned-workers.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/memory.log
             ${{ env.ACCEPTANCE_ROOT }}/memory/*.png
             ${{ env.ACCEPTANCE_ROOT }}/memory/receipt.json

@@ -17,11 +17,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
+  composerAcceptanceComplete,
+  createComposerOperationDiagnostics,
+} from "./composer-operation-diagnostics.mjs";
+import {
   assertSourceElectronTransportSettled,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  observeElectronDiagnostic,
   seedSessionCatalog,
 } from "./electron-harness.mjs";
 
@@ -43,7 +48,15 @@ assert.ok(
   "Evidence must remain outside Desktop",
 );
 if (args.length) await mkdir(evidence, { mode: 0o700 });
-const isolated = await makeIsolatedElectronHome("codeshell-composer-reference-");
+const diagnostics = createComposerOperationDiagnostics({
+  evidence,
+  ownedRoots: [appDir, evidence],
+});
+diagnostics.phase("composer-fixture-init");
+const isolated = await makeIsolatedElectronHome("codeshell-composer-reference-").catch((error) => {
+  diagnostics.error(error);
+  throw error;
+});
 const projectPath = join(isolated.home, "owned-project");
 const filename = "owned-报告 with spaces.md";
 const filepath = join(projectPath, filename);
@@ -66,6 +79,7 @@ const report = {
   cases: [],
   errors: [],
   evidence,
+  diagnostics: diagnostics.receipt,
 };
 let electron,
   win,
@@ -338,8 +352,10 @@ async function stopHeld() {
 }
 
 try {
+  diagnostics.phase("composer-prepare");
   await prepare();
   stage = "launch";
+  diagnostics.phase("composer-launch");
   const executable = await realpath(createRequire(import.meta.url)("electron"));
   const originalSpawn = children.spawn;
   children.spawn = function (command, args, options) {
@@ -347,17 +363,26 @@ try {
     if (command === executable && options?.env?.HOME === isolated.home) {
       assert.equal(captured, undefined, "Exactly one owned Electron Main may be launched");
       captured = child;
+      diagnostics.observeChild(child);
       processClosed = new Promise((resolve) =>
         child.once("close", (code, signal) => resolve({ code, signal })),
       );
       report.processCapture = { pid: child.pid, homeMatched: true, beforeHandshake: true };
-      child.once("error", () => report.errors.push("Owned Electron spawn error"));
+      child.once("error", (error) => {
+        diagnostics.error(error, child);
+        report.errors.push("Owned Electron spawn error");
+      });
       // Establish PID + parent + birth custody before Playwright can await its
       // native handshake. A failed identity query confers no signaling right.
       monitor = watchElectronTestProcess(child, {
         timeoutMs: 180_000,
         reportFailure: (message) => {
           report.errors.push(message);
+          diagnostics.error(new Error(message), child);
+        },
+        signalProcess: (pid, signal) => {
+          observeElectronDiagnostic(diagnostics, "signal", pid, signal);
+          process.kill(pid, signal);
         },
       });
     }
@@ -368,7 +393,11 @@ try {
     electron = await launchCodeShellElectron(
       { appDir, ...isolated, env: confined.env, mainEntry: confined.mainEntry },
       {
-        reportFailure: (message) => report.errors.push(message),
+        diagnostics,
+        reportFailure: (message) => {
+          report.errors.push(message);
+          diagnostics.error(new Error(message), captured);
+        },
         watch: (child) => {
           assert.equal(child, captured, "Harness must reuse this exact early Main custody");
           return monitor;
@@ -382,6 +411,7 @@ try {
   }
   assert.equal(captured, electron.process(), "Early watcher must bind the launched Main");
   report.processCapture.handshakeCompleted = true;
+  diagnostics.phase("composer-find-renderer");
   win = await findCodeShellWindow(electron);
   win.setDefaultTimeout(10_000);
   win.on("pageerror", (error) => report.errors.push(error.message));
@@ -433,6 +463,7 @@ try {
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
   await dismissTrust();
+  diagnostics.phase("composer-worker-guard");
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   assert.equal(report.confinement.workerCreated, false);
   await composer().waitFor();
@@ -461,6 +492,7 @@ try {
         });
     });
   });
+  diagnostics.phase("composer-ui-operations");
   stage = "visible Unicode whitespace reference";
   const visible = await pickFile();
   await win.keyboard.type("[OWNED_VISIBLE]");
@@ -607,6 +639,7 @@ try {
   assert.deepEqual(report.errors, []);
   report.result = "pass";
 } catch (error) {
+  diagnostics.error(error, captured);
   failure = error;
   report.failure = error.stack;
   report.stage = stage;
@@ -618,8 +651,12 @@ try {
   report.main = await mainState().catch(() => null);
   report.events = await win?.evaluate(() => window.__composerEvents ?? []).catch(() => []);
 } finally {
+  const cleanup = diagnostics.cleanup(failure ? "cycle-error" : "cycle-complete", captured);
+  let processGatesPassed = false;
   try {
     if (electron && monitor) {
+      diagnostics.phase("composer-graceful-close");
+      if (cleanup) diagnostics.request(cleanup, "application.close", captured);
       let timer;
       try {
         await Promise.race([
@@ -633,6 +670,7 @@ try {
       }
     }
   } catch (error) {
+    diagnostics.error(error, captured);
     report.errors.push(error.message);
     failure ??= error;
   }
@@ -643,12 +681,16 @@ try {
     captured.stderr?.unref?.();
   }
   try {
+    diagnostics.phase("composer-custody");
+    if (cleanup) diagnostics.request(cleanup, "monitor.terminate", captured);
     report.processSettlement = (await monitor?.terminate()) ?? null;
+    if (cleanup) diagnostics.settled(cleanup, captured);
     assert.equal(
       report.processSettlement?.status,
       "cleaned",
       "Owned process birth settlement must prove cleanup",
     );
+    diagnostics.phase("composer-main-close");
     let timer;
     try {
       report.mainExit = await Promise.race([
@@ -661,20 +703,70 @@ try {
       clearTimeout(timer);
     }
     assert.deepEqual(report.mainExit, { code: 0, signal: null }, "Main must exit normally");
+    diagnostics.phase("composer-transport");
     report.windowsTransport = assertSourceElectronTransportSettled(captured);
     assert.deepEqual(report.errors, [], "Late renderer/transport errors require retaining HOME");
-    await isolated.cleanup();
-    report.privateHomeRemoved = true;
+    processGatesPassed = true;
   } catch (error) {
+    diagnostics.error(error, captured);
     report.errors.push(error.message);
     report.retainedHome = isolated.home;
     failure ??= error;
   }
+  diagnostics.phase("composer-final-ledgers");
+  diagnostics.exportGuards(isolated.home, report.processSettlement?.status === "cleaned");
+  if (diagnostics.hasRecordingFailure())
+    report.errors.push("Composer diagnostics failed/truncated");
+  if (report.result === "pass" && !diagnostics.hasRequiredGuards())
+    report.errors.push("Composer bootstrap guard records are incomplete");
+  if (!failure && !composerAcceptanceComplete(report, failure))
+    report.errors.push("Composer acceptance did not complete nine operations");
+  diagnostics.phase("composer-home-cleanup");
+  if (
+    processGatesPassed &&
+    composerAcceptanceComplete(report, failure) &&
+    report.errors.length === 0 &&
+    !diagnostics.hasRecordingFailure()
+  ) {
+    try {
+      await isolated.cleanup();
+      report.privateHomeRemoved = true;
+    } catch (error) {
+      diagnostics.error(error, captured);
+      report.errors.push(error.message);
+      failure ??= error;
+    }
+  }
+  if (report.privateHomeRemoved !== true) report.retainedHome = isolated.home;
+  diagnostics.homeRemoved(report.privateHomeRemoved === true);
   if (failure || report.errors.length) {
     report.result = "fail";
     report.failure ??= failure?.stack;
   }
-  await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2), { mode: 0o600 });
+  diagnostics.phase("composer-final-report");
+  if (diagnostics.hasRecordingFailure()) {
+    report.result = "fail";
+    if (!report.errors.includes("Composer diagnostics failed/truncated"))
+      report.errors.push("Composer diagnostics failed/truncated");
+  }
+  try {
+    await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2), {
+      mode: 0o600,
+    });
+    diagnostics.finalReportWritten(report.result);
+    if (diagnostics.hasRecordingFailure() && report.result === "pass") {
+      report.result = "fail";
+      report.errors.push("Composer diagnostics failed/truncated");
+      await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2), {
+        mode: 0o600,
+      });
+    }
+  } catch (error) {
+    diagnostics.error(error, captured);
+    report.result = "fail";
+    report.errors.push("Composer final report recording failed");
+    failure ??= error;
+  }
 }
 console.log(
   JSON.stringify({
