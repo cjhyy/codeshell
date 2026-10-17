@@ -8,18 +8,17 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI28, failed overall. macOS, Linux and Web pass their
-stated audited scopes. Windows passes seven startup operations/three normal Main
-launches, then fails the Review identity read before any Review operation. Its
-Main exit `1/null` is observed after cleanup signal requests; this does not prove
-a native crash before cleanup or establish the identity error's cause. The failed
-Review HOME is retained. Review drafts and all later Windows native suites,
-packaged runtime, updater and NSIS are not reached. See the
-[CI28 actual record](#ci28--actual-platform-results-and-windows-review-identity-failure).
-The distinct CI27 inode/installed-UI failures, CI26 packaged-launch failure and
-CI25 query/Setup failures remain unknown in their historical records. The CI24
-uninstall absence failure and NSIS hook still lack successful native uninstall
-lifecycle validation.
+The latest completed run, CI29, failed overall across five jobs. macOS, Linux
+and Web pass their stated audited scopes. The original Windows matrix accepts
+38 operations/five normal Mains plus separate Review drafts three/one, then
+fails Composer identity before any Composer operation. Its recorded exit
+`1/null` is not normal acceptance; cleanup/exit ordering and the GC cause remain
+unknown. A separate fresh Windows NSIS job completes first installation and
+thirteen installed UI operations, then times out during replacement. Replacement
+UI, uninstall, cache cleanup and final OS-state validation are not reached.
+See the [CI29 actual record](#ci29--actual-five-job-results-paused-goal-deletion-and-two-windows-failures).
+CI28/27/26/25/24 failures and their unknown causes remain in their original
+records. The NSIS hook still lacks successful full native uninstall validation.
 
 CI14 remains the latest fully passing matrix in its earlier, narrower scope,
 before expanded NSIS acceptance. The
@@ -3344,3 +3343,113 @@ scope and without new runtime proof. Historical finding totals are not remaining
 defect counts. CI27/26/25/24 failures, the accidental discovery unknowns and the
 unvalidated NSIS uninstall lifecycle remain intact. No release, publication,
 new CI dispatch or acceptance-gate weakening is performed for this record.
+
+## CI29 — actual five-job results, paused Goal deletion and two Windows failures
+
+[Run 39065030384](https://github.com/cjhyy/codeshell/actions/runs/39065030384),
+attempt 1 / push, binds source `463497e04d75f5a6d999a1fd59ea2f0260653784`.
+All five jobs are terminal: Web, macOS and Linux succeed; the original Windows
+matrix and independent Windows NSIS job fail. The overall result is **FAILED**.
+The new independent job does not bypass the original matrix or establish release readiness.
+
+| Scope                    | Accepted actual scope                                                                                                                                                                          | Remaining boundary                                                                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS arm64              | Original 83 operations/12 normal Mains; separate drafts three/one; required paused-Goal deletion one in the existing third preferences Main; DMG installed 13 and replacement 13 in two Mains. | Fifteen normal Mains total. Ad-hoc same-build replacement; no Intel Mac, notarization or Gatekeeper claim.                                   |
+| Linux x64                | Original 83/12, separate drafts three/one and required paused-Goal deletion one without another Main. Actual AppImage updater ten manifest GETs.                                               | No update asset download/install or OS-wide process proof.                                                                                   |
+| Web                      | 31 real behaviors: eleven ServiceWorker, four auth, eight child and eight annotation cases.                                                                                                    | Attachment nine/45, 64 pure contracts and two controls/six expected negative failures remain separate.                                       |
+| Original Windows matrix  | Startup seven, Review eleven and Panels twenty: 38 operations/five normal Mains; separate drafts three/one.                                                                                    | Step 31 Composer identity fails with zero operations. Memory, preferences/Goal, packaged UI, updater and this matrix's NSIS are not reached. |
+| Independent Windows NSIS | Ten phases complete, including first installation, installed identity and thirteen UI operations in normal Main 7996.                                                                          | Step 20 fails during replacement. Replacement identity/UI, uninstall, cache cleanup and final integrity are not completed.                   |
+
+The new Goal acceptance uses a real status-popover Delete click, preload,
+original no-child Main fallback and SessionManager CAS in owned paused session A.
+Both macOS and Linux record exactly one true deletion, preserved Goal identity
+and revision seven, terminal `user_cleared`, state revision zero to one and null
+Goal after reload. Four original RPC requests are recorded on each platform,
+with complete final-prefix reconciliation and no late rows. Runtime assertions
+preserve A's explicit business fields, A's transcript bytes and B's whole
+state/transcript bytes. Private files are not uploaded for a physical reread.
+
+The nonempty unsent draft and permission remain identical immediately before and
+after deletion. The actual model marker is empty before/after; this is not real
+model-selection acceptance. Reload proves durable Goal absence and no UI revival,
+not cross-reload draft restoration. This additional one operation adds no Main
+and does not establish active Engine/provider use, GoalExtend or the R50 extension click.
+
+Original Windows Main 4628, parent 5940, has recorded birth
+`2026-10-17T20:11:22.4305600Z`. Composer first reports
+`electronApplication.evaluate: Resulting promise was garbage collected.` at
+`verifyElectronMainIdentity`, stage `launch`, with zero cases and no returned Main
+snapshot. Its final receipt records exit `1/null`; 31 observed identities settle
+to zero without query failure/truncation. The normal-exit gate refuses acceptance
+and HOME retention is recorded. No first-error/cleanup/exit timeline, signal
+ledger, Main stdout/stderr, guard snapshot, body or failure PNG is uploaded for
+this source fixture. The data therefore establishes neither cleanup/exit ordering,
+a pre-cleanup crash, actual zero-worker observation nor the GC cause.
+
+The independent NSIS job is a distinct disposable Windows VM. Replacement Setup
+2932 first records its 180,000ms budget failure at journal sequence 33, then a
+SIGTERM request at 34 and exit `1/null` at 35. The process assertion follows at
+36 and outer first error at 40. That observed order does not explain why
+replacement remained unfinished or prove a dialog was reached. Earlier first
+installed Main 7996 exits `0/null`, its thirteen UI operations pass and its HOME
+is removed. The failed replacement's three observed identities settle to zero;
+that is cleanup evidence, not normal replacement or six normal controller roots.
+Replacement may have changed OS state despite no completed phase. Final payload,
+registry/cache/OS state is unverified. The bound 181-byte CRLF NSIS hook source
+and successful build do not prove `customUnInit` ran or fixed the earlier uninstall failure.
+
+macOS preserves all fifteen normal exits and the original custody/HOME/package
+bindings. DMG attachments are one read-write construction and one read-only final
+verification, both detached. Linux AppImage Main 9378 and runtime 9375 remain
+distinct; first-instruction guards, sandbox, exact 04755 owned helper, full-07777
+source/cache inventories and ten updater GETs pass. Authorized extraction mode
+deltas remain explicit; removed inner HOME and retained outer scratch are distinct.
+Passive startup observations record normal preload result/write/SDK completion,
+not failure-branch execution, a new identity authority or any prior GC cause.
+
+Web's six full settled Host RPC arrays match once each. The five browser birth
+sets close normally and settle cleanly with the original late-ledger/HOME gates;
+the expected-negative HOME/profile remains retained. The 57-file ZIP passes CRC
+under 28 patterns; 106 source hashes, thirteen provenance pins and 33 PNG CRCs are
+checked. Two actual Chinese/narrow screenshots are readable. These finite Web
+results do not establish desktop or full-matrix success.
+
+The five frozen scope summaries have SHA-256:
+
+- Web: `996be00740b543004a0ae15fe65fa2b03512a04c77b415b2b732057724b4b6d5`.
+- macOS: `6c32d7b650011f10edf0937e59513bd4fb04732f892e9ebd91ac3c332e99344a`.
+- Linux: `273c1a2b19fe4aca85483d88f49278be45e519134460369b111597ab9bfa2a52`.
+- Original Windows matrix: `dec1f449bead5b845bfbe9b90115bc8ec47ae4c96ace45b6eee9b9cdd3556628`.
+- Independent Windows NSIS: `130bb95d3dc99602e6a6050ac04bdb25c96fc6990d9109bdafe38e1c0cd94d21`.
+
+Hosted native Bun gates pass 445 tests/32 files, with 3,550 expectations on macOS,
+3,547 on Linux and 3,541 on Windows. Write eleven/38, output sixteen/32, branch
+fifteen/50, Review diagnostic thirteen and draft/lineage/invocation 72 remain
+separate. Windows installer/collector 73 and the independent job's sixteen
+passive/Goal pure contracts are not native lifecycle events.
+
+The local combined 174-test run first reports 172 passes/two failures: the pure
+catch harness did not bind the newly added actual observer. Commit `463497e04`
+corrects only that test binding; production is unchanged by the correction.
+The final fresh explicit twelve-file run passes all 174 with zero failures,
+skips or cancellations. Its frozen proof has SHA-256
+`783a1d7638a882af240681ddbdf2b35fe69a59dcbb7f70215f5bc8d5654bb258`.
+The first full log remains retained. Earlier local 445/type/bundle gates are
+reused only by unchanged-input binding, not freshly rerun at this documentation head.
+
+Offline first errors remain retained: Linux's passive reader initially assumes
+a top-level updater identity; reviewed v2 selects the existing
+`operations[0].identity` without changing native predicates. Unexecuted preparation
+versions remain distinct from actual reader runs. Web's poll-interval guard stops
+before its premature API request; the later permitted readers each run once.
+Original Windows extraction and both finite outcome readers each run once, with
+no success-reader shortcut or runtime retry. None of these metadata corrections
+explains a native failure or changes its gates.
+
+Root's `ci29-final-five-scope-verified-matrix-20261018.json` has SHA-256
+`45d32e849af58f2a3a5967b753d51cbb89865dd09186b8afa653fb24351a1007`.
+It binds final APIs, all five source-bound summaries/freezes and artifact digests;
+provenance checks are not extra native operations. CI28 and earlier failures,
+unknown causes and the accidental local discovery's unknown consequences remain
+unchanged. No release, remote-main/tag push, publication, retry or gate relaxation
+is performed by this documentation update.
