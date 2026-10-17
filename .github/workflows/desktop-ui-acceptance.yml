@@ -50,6 +50,12 @@ jobs:
           // Both installation and the isolated HOME launch use this owned cache.
           appendFileSync(process.env.GITHUB_ENV, `ACCEPTANCE_ROOT=${root}\nPLAYWRIGHT_BROWSERS_PATH=${browsers}\n`);
           NODE
+      - name: image attachment MIME and size regressions
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/web/src/lib/mobileAttachments.alias-limit.test.ts packages/web/src/lib/mobileAttachments.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/image-attachments.log"
       - name: install Chromium and system browser dependencies
         timeout-minutes: 5
         run: node packages/desktop/node_modules/playwright/cli.js install --with-deps chromium
@@ -87,6 +93,7 @@ jobs:
         with:
           name: web-ui-acceptance
           path: |
+            ${{ env.ACCEPTANCE_ROOT }}/image-attachments.log
             ${{ env.ACCEPTANCE_ROOT }}/service-worker.log
             ${{ env.ACCEPTANCE_ROOT }}/service-worker/*.png
             ${{ env.ACCEPTANCE_ROOT }}/service-worker/report.json
