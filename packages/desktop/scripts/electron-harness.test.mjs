@@ -208,6 +208,9 @@ test("launch validates merged environment first and attaches a bounded watchdog"
   const result = await launchCodeShellElectron(
     { ...input, env: { CODE_SHELL_NO_DEVTOOLS: "fixture" }, runtimeTimeoutMs: 12_345 },
     {
+      // This mock has no installed-Windows spawn handshake. That contract is
+      // exercised independently by windows-source-harness.test.mjs.
+      platform: "linux",
       preflight(options) {
         order.push("preflight");
         equal(options.environment.HOME, input.home);
@@ -240,6 +243,7 @@ test("launch validates merged environment first and attaches a bounded watchdog"
 test("Linux bootstrap refuses an actual no-sandbox switch before app initialization", async (t) => {
   const input = fixture(t);
   await launchCodeShellElectron(input, {
+    platform: "linux",
     preflight: () => {},
     watch: () => {},
     launch: async (options) => {
@@ -343,7 +347,7 @@ test(
   },
 );
 
-test("invalid deadlines refuse launch and watcher setup failure closes only its app", async (t) => {
+test("invalid deadlines refuse launch and missing birth custody never closes its app", async (t) => {
   const input = fixture(t);
   for (const options of [
     { timeout: 0 },
@@ -365,6 +369,7 @@ test("invalid deadlines refuse launch and watcher setup failure closes only its 
   let closed = 0;
   await rejects(
     launchCodeShellElectron(input, {
+      platform: "linux",
       preflight: () => {},
       launch: async () => ({
         process: () => ({}),
@@ -378,7 +383,7 @@ test("invalid deadlines refuse launch and watcher setup failure closes only its 
     }),
     /synthetic watchdog failure/,
   );
-  equal(closed, 1);
+  equal(closed, 0);
 });
 
 test("temporary Electron homes are canonical and cleanup stays scoped to that fixture", async () => {

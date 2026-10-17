@@ -9,6 +9,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  assertSourceElectronTransportSettled,
   captureRendererErrors,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -162,6 +163,7 @@ export async function runStartupOperationCycles(args) {
     resource.proof.rendererErrors = resource.errors.flat().map((error) => error.message);
     resource.proof.mainErrors = startupMainLogErrors(resource.logs.stderr);
     try {
+      resource.proof.windowsTransport = assertSourceElectronTransportSettled(resource.child);
       resource.proof.deniedAttempts = await rows("startup-denied-attempts.jsonl");
       resource.proof.spawnedWorkers = await rows("spawned-workers.jsonl");
       assertStartupCycleSettled(resource.proof);
@@ -284,7 +286,17 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
       try {
         app = await launchCodeShellElectron(
           { appDir, ...isolated, env: fixture.env, mainEntry: fixture.mainEntry },
-          { watch: () => {} },
+          {
+            reportFailure: (message) => proof.observerFailures.push(message),
+            watch: (child) => {
+              assert.equal(
+                child,
+                resource.child,
+                "Harness must reuse this exact early Main custody",
+              );
+              return resource.monitor;
+            },
+          },
         );
       } finally {
         children.spawn = originalSpawn;

@@ -17,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
+  assertSourceElectronTransportSettled,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -366,7 +367,13 @@ try {
   try {
     electron = await launchCodeShellElectron(
       { appDir, ...isolated, env: confined.env, mainEntry: confined.mainEntry },
-      { watch: () => {} },
+      {
+        reportFailure: (message) => report.errors.push(message),
+        watch: (child) => {
+          assert.equal(child, captured, "Harness must reuse this exact early Main custody");
+          return monitor;
+        },
+      },
     );
   } finally {
     children.spawn = originalSpawn;
@@ -654,6 +661,8 @@ try {
       clearTimeout(timer);
     }
     assert.deepEqual(report.mainExit, { code: 0, signal: null }, "Main must exit normally");
+    report.windowsTransport = assertSourceElectronTransportSettled(captured);
+    assert.deepEqual(report.errors, [], "Late renderer/transport errors require retaining HOME");
     await isolated.cleanup();
     report.privateHomeRemoved = true;
   } catch (error) {

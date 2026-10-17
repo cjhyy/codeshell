@@ -10,6 +10,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  assertSourceElectronTransportSettled,
   captureRendererErrors,
   expandSidebar,
   findCodeShellWindow,
@@ -233,7 +234,13 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   try {
     app = await launchCodeShellElectron(
       { appDir, ...isolated, mainEntry: fixture.mainEntry, env: fixture.env },
-      { watch: () => {} },
+      {
+        reportFailure: (message) => observerFailures.push(message),
+        watch: (child) => {
+          assert.equal(child, captured, "Harness must reuse this exact early Main custody");
+          return monitor;
+        },
+      },
     );
   } finally {
     children.spawn = originalSpawn;
@@ -407,6 +414,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     assert.equal(report.settlement.status, "cleaned");
     report.mainExit = await bounded(processClosed, 3000, "Owned Main exit unavailable");
     assert.deepEqual(report.mainExit, { code: 0, signal: null });
+    report.windowsTransport = assertSourceElectronTransportSettled(captured);
   } catch (error) {
     failures.push({ stage: "custody", message: error.message });
     captured?.unref();

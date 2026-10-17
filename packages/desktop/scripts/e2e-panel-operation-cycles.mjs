@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
+  assertSourceElectronTransportSettled,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -43,7 +44,7 @@ const secondaryPath = join(isolated.home, "secondary-folder");
 const sessionId = "panel-operation-session";
 const title = "Panel operation conversation";
 const report = { cases: [], errors: [], evidence };
-let electron, win, failure, processMonitor;
+let electron, win, failure, processMonitor, mainChild, mainClosed;
 let routeAvailable = false;
 const requests = [];
 const server = createServer((request, response) => {
@@ -174,9 +175,15 @@ try {
     },
     {
       watch: (child, options) => {
+        assert.equal(mainChild, undefined, "One direct Main per panel fixture");
+        mainChild = child;
+        mainClosed = new Promise((done) =>
+          child.once("close", (code, signal) => done({ code, signal })),
+        );
         processMonitor = watchElectronTestProcess(child, options);
         return processMonitor;
       },
+      reportFailure: (message) => report.errors.push(message),
     },
   );
   win = await findCodeShellWindow(electron);
@@ -257,7 +264,7 @@ try {
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
   await dismissTrust();
-  await confined.assertWorker(electron, { requireWorker: false });
+  report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   const composer = win.locator('textarea[aria-autocomplete="list"]:visible');
   for (const [query, name, path, content] of [
     ["报告", "报告.md", join(projectPath, "报告.md"), "owned Unicode mention content\n"],
@@ -658,10 +665,23 @@ try {
       .catch(() => "unavailable")) ?? "unavailable",
   );
 } finally {
-  await electron?.close().catch((error) => {
+  let closeTimer;
+  try {
+    if (electron) {
+      assert.ok(processMonitor, "No birth custody: unsafe ordinary close skipped");
+      await Promise.race([
+        electron.close(),
+        new Promise((_, reject) => {
+          closeTimer = setTimeout(() => reject(Error("Owned panel close timed out")), 8000);
+        }),
+      ]);
+    }
+  } catch (error) {
     report.errors.push(error.message);
     failure ??= error;
-  });
+  } finally {
+    clearTimeout(closeTimer);
+  }
   try {
     report.processSettlement = (await processMonitor?.terminate()) ?? null;
     assert.equal(
@@ -669,12 +689,36 @@ try {
       "cleaned",
       "Process exit unproven; HOME retained",
     );
+    assert.equal(report.processSettlement.queryFailed, false);
+    assert.equal(report.processSettlement.remainingCount, 0);
+    let exitTimer;
+    try {
+      assert.ok(mainClosed, "Direct Main close event was not captured");
+      report.mainExit = await Promise.race([
+        mainClosed,
+        new Promise((_, reject) => {
+          exitTimer = setTimeout(() => reject(Error("Owned Main close event unavailable")), 3000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(exitTimer);
+    }
+    assert.deepEqual(report.mainExit, { code: 0, signal: null });
+    report.windowsTransport = assertSourceElectronTransportSettled(mainChild);
+    assert.deepEqual(
+      report.errors,
+      [],
+      "Late renderer/transport/close failure must fail acceptance",
+    );
     await isolated.cleanup();
     report.privateHomeRemoved = true;
   } catch (error) {
     report.errors.push(error.message);
     report.retainedHome = isolated.home;
     failure ??= error;
+    mainChild?.unref();
+    mainChild?.stdout?.unref?.();
+    mainChild?.stderr?.unref?.();
   }
   server.closeAllConnections();
   await new Promise((done) => server.close(done));

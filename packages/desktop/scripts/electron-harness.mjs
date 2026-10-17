@@ -1,7 +1,8 @@
 /* global document, window */
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 
@@ -16,6 +17,66 @@ export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-
     codeShellHome: join(home, ".code-shell"),
     userDataDir: join(home, "electron-user-data"),
     cleanup: () => rm(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }),
+  };
+}
+
+/** A launcher PID is not evidence that the connected Electron Main owns it. */
+export async function verifyElectronMainIdentity(
+  application,
+  { executable, home, parentPid = process.pid },
+) {
+  const child = application.process();
+  assert(
+    Number.isSafeInteger(child?.pid) && child.pid > 0,
+    "Actual Electron child PID is required",
+  );
+  const identity = await application.evaluate(() => ({
+    pid: process.pid,
+    ppid: process.ppid,
+    executable: process.execPath,
+    home: process.env.HOME,
+  }));
+  assert(identity.pid === child.pid, "Connected Main PID differs from the direct captured child");
+  assert(
+    identity.ppid === parentPid,
+    "Connected Main parent differs from the owned fixture process",
+  );
+  assert(identity.home === home, "Connected Main HOME differs from the owned fixture");
+  assert(
+    (await realpath(identity.executable)) === (await realpath(executable)),
+    "Connected Main executable differs from the captured executable",
+  );
+  return identity;
+}
+
+/** Read the live transport ledger after close, before accepting/removing HOME. */
+export function assertSourceElectronTransportSettled(
+  child,
+  { required = process.platform === "win32" } = {},
+) {
+  const read = child?.__sourceWindowsTransportRead;
+  assert(!required || typeof read === "function", "Windows Main transport custody is missing");
+  if (!read) return null;
+  const receipt = read();
+  assert(
+    receipt.directMain && receipt.pid === child.pid,
+    "Windows transport does not own this direct Main",
+  );
+  assert(receipt.nativeTaskkillExecuted === false, "Native taskkill must never execute");
+  assert(
+    receipt.failures.length === 0 && receipt.cleanupRequests.length === 0,
+    "Windows transport requested unsafe or forced cleanup",
+  );
+  return receipt;
+}
+
+async function sourceWindowsLaunchDetails() {
+  const require = createRequire(import.meta.url);
+  const packageFile = require.resolve("playwright-core/package.json");
+  return {
+    executable: await realpath(require("electron")),
+    loader: await realpath(join(dirname(packageFile), "lib/server/electron/loader.js")),
+    playwrightVersion: require("playwright-core/package.json").version,
   };
 }
 
@@ -34,6 +95,12 @@ export async function launchCodeShellElectron(
     launch = async (options) => (await import("playwright"))._electron.launch(options),
     preflight = ensureElectronKeychainContext,
     watch = watchElectronTestProcess,
+    reportFailure = (message) => {
+      console.error(message);
+      process.exitCode = 1;
+    },
+    platform = process.platform,
+    windowsLaunchDetails = sourceWindowsLaunchDetails,
   } = {},
 ) {
   if (
@@ -100,7 +167,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
 `,
     { mode: 0o600 },
   );
-  const application = await launch({
+  const options = {
     timeout,
     // Playwright otherwise prepends --no-sandbox on Linux. The CI owns and
     // configures these Electron helpers; missing sandbox support must fail.
@@ -114,11 +181,68 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
     ],
     cwd: appDir,
     env: environment,
-  });
+  };
+  if (platform === "win32") {
+    const details = await windowsLaunchDetails();
+    const { installWindowsElectronDirectTransport } =
+      await import("./windows-electron-direct-transport.mjs");
+    let captured, custody;
+    const transport = installWindowsElectronDirectTransport({
+      ...details,
+      args: options.args,
+      home,
+      cwd: appDir,
+      platform,
+      reportFailure,
+      onCapturedSpawn(child) {
+        assert(captured === undefined, "Only one direct Main can be captured");
+        captured = child;
+        child.__sourceWindowsTransportRead = () => transport.receipt();
+        custody = watch(child, { timeoutMs: runtimeTimeoutMs, reportFailure });
+        assert(
+          typeof custody?.terminate === "function" &&
+            typeof custody?.completed?.then === "function",
+          "Windows launch requires early birth custody before handshake",
+        );
+        return custody;
+      },
+    });
+    try {
+      const application = await launch(options);
+      assert(
+        captured && application.process() === captured,
+        "Playwright must expose the captured direct Main",
+      );
+      application.__sourceMainIdentity = await verifyElectronMainIdentity(application, {
+        executable: details.executable,
+        home,
+      });
+      application.__sourceWindowsTransport = transport.receipt();
+      return application;
+    } catch (error) {
+      // Never route Playwright's taskkill or an ordinary app.close without
+      // identity. The same early monitor owns any permitted termination.
+      if (typeof custody?.terminate === "function") await custody.terminate();
+      else {
+        captured?.unref();
+        captured?.stdout?.unref?.();
+        captured?.stderr?.unref?.();
+      }
+      throw error;
+    } finally {
+      transport.restoreSpawn();
+      syncBuiltinESMExports();
+    }
+  }
+  const application = await launch(options);
   try {
-    watch(application.process(), { timeoutMs: runtimeTimeoutMs });
+    watch(application.process(), { timeoutMs: runtimeTimeoutMs, reportFailure });
   } catch (error) {
-    await application.close().catch(() => {});
+    // An unsuccessful birth query grants no quit/signal authority.
+    const child = application.process();
+    child?.unref?.();
+    child?.stdout?.unref?.();
+    child?.stderr?.unref?.();
     throw error;
   }
   return application;

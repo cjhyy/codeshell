@@ -10,6 +10,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  assertSourceElectronTransportSettled,
   captureRendererErrors,
   expandSidebar,
   findCodeShellWindow,
@@ -233,7 +234,11 @@ async function launch() {
     app = await launchCodeShellElectron(
       { appDir, ...isolated, mainEntry: fixture.mainEntry, env: fixture.env },
       {
-        watch: () => {},
+        reportFailure: (message) => observerFailures.push(message),
+        watch: (child) => {
+          assert.equal(child, active.child, "Harness must reuse this exact early Main custody");
+          return active.monitor;
+        },
         // Playwright otherwise forces light and hides nativeTheme media updates.
         launch: async (options) =>
           (await import("playwright"))._electron.launch({
@@ -321,6 +326,7 @@ async function close() {
             "Main close event unavailable",
           );
           assert.deepEqual(resource.proof.exit, { code: 0, signal: null });
+          resource.proof.windowsTransport = assertSourceElectronTransportSettled(resource.child);
         } catch (error) {
           failures.push({ stage: "close", message: error.message });
         }

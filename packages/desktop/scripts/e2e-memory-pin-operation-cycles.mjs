@@ -9,6 +9,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  assertSourceElectronTransportSettled,
   captureRendererErrors,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -311,7 +312,13 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
   try {
     app = await launchCodeShellElectron(
       { appDir, ...isolated, mainEntry: fixture.mainEntry, env: fixture.env },
-      { watch: () => {} },
+      {
+        reportFailure: (message) => observerFailures.push(message),
+        watch: (child) => {
+          assert.equal(child, captured, "Harness must reuse this exact early Main custody");
+          return monitor;
+        },
+      },
     );
   } finally {
     children.spawn = originalSpawn;
@@ -602,6 +609,11 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
     failures.push({ stage: "cleanup", message: "Owned process identity was never established" });
   }
   if (observerFailures.length) failures.push({ stage: "observer", messages: observerFailures });
+  try {
+    receipt.windowsTransport = assertSourceElectronTransportSettled(captured);
+  } catch (error) {
+    failures.push({ stage: "Windows transport", message: error.message });
+  }
   receipt.rendererErrors = rendererErrors.flat().map((error) => error.message);
   if (receipt.rendererErrors.length)
     failures.push({
