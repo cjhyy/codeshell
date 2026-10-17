@@ -26,6 +26,7 @@ import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.mjs";
 import { createNsisCheckpointDiagnostics } from "./windows-nsis-checkpoint-diagnostics.mjs";
 import { collectNsisCrashEvidence } from "./windows-nsis-crash-evidence.mjs";
+import { observeNsisUninstallLeftovers } from "./windows-nsis-leftover-metadata.mjs";
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
 import {
@@ -433,6 +434,8 @@ export async function runWindowsNsisAcceptance(args) {
       checkpoint,
     });
   let baselineInventory;
+  let postUninstallAbsenceFailed = false;
+  let postUninstallAbsenceError;
   try {
     await mkdir(temporary, { recursive: true, mode: 0o700 });
     environment = {
@@ -490,6 +493,7 @@ export async function runWindowsNsisAcceptance(args) {
             "electron-test-watchdog.mjs",
             "windows-nsis-crash-evidence.mjs",
             "windows-nsis-crash-evidence.ps1",
+            "windows-nsis-leftover-metadata.mjs",
           ].map(async (file) => [file, sha256(await readFile(join(here, file)))]),
         ),
       ),
@@ -711,7 +715,13 @@ export async function runWindowsNsisAcceptance(args) {
         environment,
         BUDGETS.installer,
       );
-      await absent(installation);
+      try {
+        await absent(installation);
+      } catch (error) {
+        postUninstallAbsenceFailed = true;
+        postUninstallAbsenceError = error;
+        throw error;
+      }
       await assertInstallationSiblings(false);
       assertNsisUninstalled(await observe("uninstalled"), initial);
     });
@@ -774,6 +784,16 @@ export async function runWindowsNsisAcceptance(args) {
     // installer/registry/delete action is attempted after a failed stage.
     checkpoint("first-error", {}, { error: report.firstError });
     process.exitCode = 1;
+    if (
+      report.phase === "uninstall" &&
+      postUninstallAbsenceFailed &&
+      error === postUninstallAbsenceError
+    ) {
+      report.postUninstallObservation = await observeNsisUninstallLeftovers({
+        root,
+        installation: join(root, NSIS_IDENTITY.product),
+      });
+    }
     // The failed process helper has already mirrored its original error/exit and
     // awaited existing custody cleanup. This one passive query cannot advance a stage.
     if (report.phase === "install") {

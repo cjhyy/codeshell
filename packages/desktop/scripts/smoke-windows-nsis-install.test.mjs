@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { parseNsisArguments, runNsisOwnedProcess } from "./smoke-windows-nsis-install.mjs";
+import {
+  NSIS_LEFTOVER_LIMITS,
+  observeNsisUninstallLeftovers,
+} from "./windows-nsis-leftover-metadata.mjs";
 
 const fixture = async (action) => {
   const root = await mkdtemp(join(await realpath(tmpdir()), "codeshell-nsis-node-contract-"));
@@ -253,4 +257,339 @@ test("CLI has only the finite build-receipt/evidence interface", () => {
     ["--build-receipt", "x", "--build-receipt", "y"],
   ])
     assert.throws(() => parseNsisArguments(args));
+});
+
+const metadataInfo = (type, { ino = 2n, size = 0n, time = 1n } = {}) => ({
+  dev: 1n,
+  ino,
+  mode: type === "directory" ? 0o40700n : type === "link" ? 0o120700n : 0o100600n,
+  mtimeNs: time,
+  ctimeNs: time,
+  size,
+  isSymbolicLink: () => type === "link",
+  isDirectory: () => type === "directory",
+  isFile: () => type === "file",
+});
+const metadataFixture = (entries = []) => {
+  const root = join(tmpdir(), "codeshell-inert-leftover-contract");
+  const installation = join(root, "code-shell");
+  const seen = [],
+    directoryInfo = metadataInfo("directory");
+  let index = 0;
+  const directory = {
+    read: async () => {
+      seen.push("read");
+      const entry = entries[index++];
+      return entry ? { name: entry.name } : null;
+    },
+    close: async () => seen.push("close"),
+  };
+  const io = {
+    lstat: async (path) => {
+      seen.push(["lstat", path]);
+      if (path === installation) return directoryInfo;
+      if (dirname(path) !== installation) return metadataInfo("directory", { ino: 1n });
+      const entry = entries.find((entry) => join(installation, entry.name) === path);
+      return entry?.info ?? metadataInfo("directory", { ino: 1n });
+    },
+    realpath: async (path) => {
+      seen.push(["realpath", path]);
+      return path;
+    },
+    opendir: async (path) => {
+      seen.push(["opendir", path]);
+      assert.equal(path, installation, "No child directory or link may be opened");
+      return directory;
+    },
+  };
+  return { root, installation, io, directory, directoryInfo, seen };
+};
+
+test("post-uninstall metadata observes actual empty and direct-child owned directories without contents", () =>
+  fixture(async ({ root }) => {
+    const installation = join(root, "code-shell");
+    await mkdir(installation);
+    const empty = await observeNsisUninstallLeftovers({ root, installation });
+    assert.equal(empty.status, "observed");
+    assert.equal(empty.complete, true);
+    assert.deepEqual(empty.entries, []);
+    await mkdir(join(installation, "nested"));
+    await writeFile(join(installation, "nested", "not-enumerated.txt"), "never read\n");
+    await writeFile(join(installation, "中文 file.txt"), "owned bytes\n");
+    const value = await observeNsisUninstallLeftovers({ root, installation });
+    assert.equal(value.status, "observed");
+    assert.equal(value.complete, true);
+    assert.deepEqual(value.entries, [
+      { relativeName: "nested", type: "directory" },
+      { relativeName: "中文 file.txt", type: "file", size: 12 },
+    ]);
+    assert.equal(await readFile(join(installation, "中文 file.txt"), "utf8"), "owned bytes\n");
+    assert.ok(Buffer.byteLength(JSON.stringify(value)) <= NSIS_LEFTOVER_LIMITS.bytes);
+  }));
+
+test("post-uninstall metadata never follows root links or opens direct-child directories and links", async () => {
+  const value = metadataFixture([
+    { name: "directory", info: metadataInfo("directory") },
+    { name: "external-link", info: metadataInfo("link") },
+    { name: "file", info: metadataInfo("file", { size: 4n }) },
+  ]);
+  const result = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+  assert.equal(result.status, "observed");
+  assert.deepEqual(result.entries, [
+    { relativeName: "directory", type: "directory" },
+    { relativeName: "external-link", type: "link" },
+    { relativeName: "file", type: "file", size: 4 },
+  ]);
+  assert.deepEqual(
+    value.seen.filter((row) => Array.isArray(row) && row[0] === "opendir"),
+    [["opendir", value.installation]],
+  );
+  const linked = metadataFixture();
+  const original = linked.io.lstat;
+  linked.io.lstat = (path) =>
+    path === linked.installation ? Promise.resolve(metadataInfo("link")) : original(path);
+  const refused = await observeNsisUninstallLeftovers(linked, { io: linked.io, now: () => 0 });
+  assert.equal(refused.status, "unknown");
+  assert.equal(refused.rootType, "link");
+  assert.equal(refused.reason, "root-not-directory");
+  assert.equal(
+    linked.seen.some((row) => Array.isArray(row) && row[0] === "opendir"),
+    false,
+  );
+});
+
+test("post-uninstall metadata refuses foreign installation before IO and canonical parent aliases before open", async () => {
+  const value = metadataFixture();
+  const wrong = await observeNsisUninstallLeftovers(
+    { root: value.root, installation: join(dirname(value.root), "foreign") },
+    { io: value.io, now: () => 0 },
+  );
+  assert.equal(wrong.status, "unknown");
+  assert.equal(wrong.reason, "owned-path");
+  assert.deepEqual(value.seen, []);
+  value.io.realpath = async () => join(value.root, "alias");
+  const alias = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+  assert.equal(alias.status, "unknown");
+  assert.equal(alias.reason, "parent-alias");
+  assert.equal(
+    value.seen.some((row) => Array.isArray(row) && row[0] === "opendir"),
+    false,
+  );
+});
+
+test("post-uninstall metadata reports missing, renamed and replaced identities as unknown", async () => {
+  for (const mode of ["missing", "root-swap", "directory-change", "parent-swap"]) {
+    const value = metadataFixture();
+    const original = value.io.lstat;
+    let rootReads = 0,
+      parentReads = 0;
+    value.io.lstat = async (path) => {
+      if (path === value.installation) {
+        rootReads++;
+        if (mode === "missing") throw Object.assign(Error("private"), { code: "ENOENT" });
+        if (mode === "root-swap" && rootReads === 2) return metadataInfo("directory", { ino: 3n });
+        if (mode === "directory-change" && rootReads === 3)
+          return metadataInfo("directory", { time: 2n });
+      }
+      if (path === value.root && ++parentReads === 2 && mode === "parent-swap")
+        return metadataInfo("directory", { ino: 7n });
+      return original(path);
+    };
+    const result = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+    assert.equal(result.status, "unknown", mode);
+    assert.equal(result.complete, false, mode);
+    assert.equal(JSON.stringify(result).includes("private"), false);
+    assert.equal(value.seen.filter((row) => row === "close").length, mode === "missing" ? 0 : 1);
+  }
+});
+
+test("post-uninstall metadata waits for pending read and close beyond its explicit soft deadline", async () => {
+  const value = metadataFixture();
+  let clock = 0,
+    releaseRead,
+    releaseClose,
+    markRead,
+    markClose,
+    settled = false;
+  const readStarted = new Promise((resolve) => (markRead = resolve));
+  const closeStarted = new Promise((resolve) => (markClose = resolve));
+  value.directory.read = async () => {
+    markRead();
+    await new Promise((resolve) => (releaseRead = resolve));
+    value.seen.push("read-finished");
+    return null;
+  };
+  value.directory.close = async () => {
+    markClose();
+    await new Promise((resolve) => (releaseClose = resolve));
+    value.seen.push("close-finished");
+  };
+  const pending = observeNsisUninstallLeftovers(value, { io: value.io, now: () => clock }).then(
+    (result) => {
+      settled = true;
+      return result;
+    },
+  );
+  await readStarted;
+  clock = NSIS_LEFTOVER_LIMITS.softDeadlineMs + 1;
+  assert.equal(settled, false);
+  releaseRead();
+  await closeStarted;
+  assert.equal(settled, false);
+  releaseClose();
+  const result = await pending;
+  assert.equal(result.status, "unknown");
+  assert.equal(result.reason, "soft-deadline");
+  assert.deepEqual(value.seen.slice(-2), ["read-finished", "close-finished"]);
+});
+
+test("post-uninstall metadata entry and serialized byte caps are explicit and close the iterator", async () => {
+  for (const mode of ["entries", "bytes"]) {
+    const names = Array.from({ length: 129 }, (_, index) => ({
+      name: String(index).padStart(3, "0") + (mode === "bytes" ? "中".repeat(252) : ""),
+      info: metadataInfo("file"),
+    }));
+    const value = metadataFixture(names);
+    const result = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+    assert.equal(result.status, "unknown");
+    assert.equal(result.complete, false);
+    assert.equal(result.reason, mode === "entries" ? "entry-limit" : "byte-limit");
+    assert.ok(result.entries.length <= 128);
+    assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 64 * 1024);
+    assert.equal(value.seen.filter((row) => row === "close").length, 1);
+  }
+});
+
+test("post-uninstall metadata IO and close errors stay bounded unknown without raw causes", async () => {
+  for (const step of ["opendir", "read", "child-lstat", "close"]) {
+    const value = metadataFixture([{ name: "file", info: metadataInfo("file") }]);
+    const failure = () => {
+      throw Error("SECRET original path and environment");
+    };
+    if (step === "opendir") value.io.opendir = failure;
+    else if (step === "child-lstat") {
+      const original = value.io.lstat;
+      value.io.lstat = (path) =>
+        path === join(value.installation, "file") ? failure() : original(path);
+    } else value.directory[step] = failure;
+    const result = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+    assert.equal(result.status, "unknown", step);
+    assert.equal(result.complete, false, step);
+    assert.equal(JSON.stringify(result).includes("SECRET"), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 64 * 1024);
+  }
+});
+
+test("post-uninstall metadata rejects unsafe names and non-safe size without reading content", async () => {
+  for (const name of ["..", "../foreign", "foreign\\file", "file:stream", "nul", "file."]) {
+    const value = metadataFixture([{ name, info: metadataInfo("file") }]);
+    const result = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+    assert.equal(result.status, "unknown");
+    assert.equal(result.reason, "unsafe-name");
+    assert.deepEqual(result.entries, []);
+  }
+  const value = metadataFixture([
+    { name: "huge", info: metadataInfo("file", { size: BigInt(Number.MAX_SAFE_INTEGER) + 1n }) },
+  ]);
+  const result = await observeNsisUninstallLeftovers(value, { io: value.io, now: () => 0 });
+  assert.equal(result.status, "unknown");
+  assert.equal(result.reason, "metadata");
+  const source = await readFile(
+    new URL("./windows-nsis-leftover-metadata.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    source,
+    /\b(?:readFile|readlink|unlink|rmdir|rename|spawn|execFile|setTimeout)\b/,
+  );
+  assert.doesNotMatch(source, /Promise\.race/);
+});
+
+test("actual outer catch preserves first error before one specific absence diagnostic await", async () => {
+  const source = (
+    await readFile(new URL("./smoke-windows-nsis-install.mjs", import.meta.url), "utf8")
+  ).replace(/\r\n/g, "\n");
+  const begin = source.indexOf('  } catch (error) {\n    report.status = "failed";');
+  const end = source.indexOf("  } finally {\n    report.finished", begin);
+  assert.ok(begin > 0 && end > begin);
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const run = new AsyncFunction(
+    "error",
+    "report",
+    "safeError",
+    "checkpoint",
+    "process",
+    "postUninstallAbsenceFailed",
+    "postUninstallAbsenceError",
+    "observeNsisUninstallLeftovers",
+    "root",
+    "join",
+    "NSIS_IDENTITY",
+    "collectNsisCrashEvidence",
+    "ci",
+    "environment",
+    "writeExclusive",
+    "recordingFailure",
+    source.slice(begin + "  } catch (error) {".length, end),
+  );
+  for (const mode of [
+    "matched",
+    "flag-false",
+    "different",
+    "undefined-earlier",
+    "undefined-gate",
+  ]) {
+    const original = mode.startsWith("undefined") ? undefined : Error("original absence failure");
+    const tagged = !["flag-false", "undefined-earlier"].includes(mode);
+    const trigger = tagged && mode !== "different";
+    const expectedMessage = original?.message ?? "Unknown caught value";
+    const report = { phase: "uninstall", failures: [] };
+    const fakeProcess = { exitCode: 0 },
+      order = [];
+    await run(
+      original,
+      report,
+      (error) => {
+        assert.equal(error, original);
+        return { name: error?.name ?? "Error", message: error?.message ?? "Unknown caught value" };
+      },
+      (kind, _fields, diagnostic) => {
+        assert.equal(kind, "first-error");
+        assert.equal(diagnostic.error, report.firstError);
+        order.push("persisted-first-error");
+      },
+      fakeProcess,
+      tagged,
+      mode === "different" ? Error("different earlier failure") : original,
+      async ({ root, installation }) => {
+        assert.equal(fakeProcess.exitCode, 1);
+        assert.equal(report.firstError.message, expectedMessage);
+        assert.deepEqual(order, ["persisted-first-error"]);
+        assert.equal(installation, join(root, "code-shell"));
+        order.push("metadata-only-observation");
+        return { status: "unknown" };
+      },
+      join(tmpdir(), "inert-owned-root"),
+      join,
+      { product: "code-shell" },
+      () => assert.fail("Install-only native event query cannot run"),
+      {},
+      {},
+      () => assert.fail("No new public artifact is written"),
+      () => assert.fail("No recording failure expected"),
+    );
+    assert.equal(report.status, "failed");
+    assert.equal(report.failures.length, 1);
+    assert.equal(report.failures[0], report.firstError);
+    assert.equal(report.firstError.message, expectedMessage);
+    assert.equal(fakeProcess.exitCode, 1);
+    assert.deepEqual(
+      order,
+      trigger ? ["persisted-first-error", "metadata-only-observation"] : ["persisted-first-error"],
+    );
+  }
+  assert.match(
+    source,
+    /try \{\n {8}await absent\(installation\);\n {6}\} catch \(error\) \{\n {8}postUninstallAbsenceFailed = true;\n {8}postUninstallAbsenceError = error;\n {8}throw error;/,
+  );
 });
