@@ -8,14 +8,14 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI22, failed overall. Web and macOS pass their audited
-scopes. Linux completes 73 original operations/11 Main launches and the separate
-new Review-draft three/one, then fails the AppImage updater's post-launch identity
-evaluation before any updater operation or manifest GET. Windows fails a pure VM
-test-file initialization before package build or native operations. Neither failure
-is installer recovery; historical Windows custody withdrawal, Setup and GC causes
-remain recorded and unresolved. See the [CI22 actual record](#ci22--actual-web-and-macos-passes-linux-and-windows-failures).
-CI23 preparation below changes one test harness only; no new runtime pass is asserted.
+The latest completed run, CI23, failed overall. Web, macOS and Linux pass their
+audited scopes. Windows completes original 83 operations/12 Main launches, separate
+new Review drafts three/one and installed/replaced UI 13+13, then fails because its
+owned installation path still exists after normal uninstaller exit. Cache cleanup
+and final OS restoration are not reached; the residual entry and cause are unknown.
+See the [CI23 actual record](#ci23--actual-platform-results-and-windows-uninstall-failure).
+The child fallback repair below has pure reducer validation only; no new native
+validation is asserted, and additional NSIS diagnostics remain work in progress.
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2358,3 +2358,106 @@ source-bound CI22 local component 33/61, fourteen typechecks and four safe stati
 bundles are reused, with no new full build or native claim. Linux identity GC is
 unmodified and unknown. CI23 has not been pushed or executed; native/installer
 revalidation remains pending, and no retry or weakened gate is a recovery claim.
+
+## CI23 — actual platform results and Windows uninstall failure
+
+[Run 39044613569](https://github.com/cjhyy/codeshell/actions/runs/39044613569),
+attempt 1 / push, binds source `0b17496707e0f4d679a86a9d8b4c22477093e8a6`.
+The final run fails overall: Web, macOS and Linux succeed; Windows fails at the
+post-uninstaller existence gate. The four source-bound audits remain separate.
+
+Web verifies 31 actual behaviors (SW 11, Auth four, child eight, annotations eight),
+with image nine/45 and lifecycle Node 64 counted separately. The old-reducer
+negative run retains two passing controls and six expected failures, with its
+private HOME/profile checked retained by the runner. All 57 public files pass ZIP
+CRC; 106 current-source hashes and 33 PNG chunk CRCs match. Five observed birth
+sets 7/20/10/10/10 settle to zero with normal browser `0/null` and empty signal
+ledgers. Successful Auth/SW/child inner HOMEs and annotation profile are removed;
+private remote disks are not independently re-enumerated by the offline reviewer.
+Actual logout 1280px and annotation 390px samples have readable CJK and layout.
+
+macOS passes original 83 operations/12 Main launches, separate new drafts
+three/one and DMG installed/reinstalled UI 13+13 across two detached mounts.
+Its 212 checks retain 116+55 original and 41 draft predicates. Draft Main 6320
+exits `0/null`, custody 14→0, HOME removed; five preparations produce three attempts
+and three accepted seeds, no rejected/pending seed, two readonly rows and no late
+rows. The independent peer retains these predicates and checks 254 metadata/
+receipt facts, not additional operations. Current CJK/narrow-screen PNG samples
+are readable. Ad-hoc packaging is not Developer ID, notarization or auto-install.
+
+Linux passes original 83/12 and separate new drafts three/one; draft Main 6242
+exits `0/null`, custody 13→0, HOME removed, with five preparations and three accepted
+seeds. Actual AppImage Main 9429 under runtime 9426 reaches the first-JS guard with
+seven probes, owned APPIMAGE/APPDIR and enabled sandbox, without `--no-sandbox`.
+The exact owned sandbox helper retains inode/hash and root:root `4755`; source/cache
+byte identities and full `07777` inventories keep 75 authorized normalization
+deltas. Ten `/latest-linux.yml` GETs cover five error modes and five healthy retries,
+without asset download, install, Worker, model or nativeStorage calls. Main bootstrap
+and runtime exit normally; all original twelve plus draft one settle, inner HOMEs
+are removed, and both outer launcher scratch roots remain intentionally retained.
+Recorded parent chronology has no conflict; it is not an exhaustive OS process audit.
+
+Windows independently passes original 83/12 and separate new drafts three/one,
+then real installed and replacement UI 13+13 with two normal Main exits and removed
+private UI HOMEs. NSIS reaches install, replacement and both UI phases. Its original
+48-record journal is complete: normal uninstaller `0/null` is sequence 46, first
+error sequence 47 and controller-final sequence 48. All six build/install/UI/
+replace/UI/uninstall process roots have normal `0/null`, empty signal ledgers and
+cleaned birth custody; the outer controller nevertheless exits 1. The first error
+is `Error: Preexisting owned destination refused` in uninstall, at
+`await absent(installation)`: lstat finds an entry at the owned installation path.
+Residual names, types, contents and cause are not recorded; this is no proof of an
+empty directory, delayed exit or OS cause. Uninstall absence, cache cleanup and
+final OS restoration remain unverified, with the NSIS root retained. No compensating
+delete, registry change or rerun follows that first failure in the retained evidence.
+
+Pure gates remain separate from native counts: actual aggregate 410/3,480/30 files
+on macOS, 410/3,477/30 on Linux and 410/3,471/30 on Windows; Review Node 13 and combined
+draft/lineage/wrapper 72 pass. Windows NSIS contracts pass 46; Write 11/38 is separate.
+Recorded custody covers captured incarnations, not every OS process or signal delivery.
+Uploaded inventories bind package identities; absent raw app/ASAR/installer bytes
+are not independently rehashed. Current successes do not explain historical GC,
+Setup `0xC0000005`, inode differences or discovery-incident effects/descendants.
+
+Frozen summaries under `codeshell-real-operation-cycles-20261016` are:
+
+- Web `ci-39044613569-web-independent-20261017/ci-39044613569-web-independent-audit.json`,
+  SHA-256 `51393e64cc38b8e35a3f9a1f8f66bd6eb9507ff6885427a222ed228670d4a87e`.
+- Mac `ci-39044613569-mac-independent-20261017/verified-summary.json`,
+  SHA-256 `c05d457a18a6d4561da7404a31a0269ae15ed7a64f588812f5db87b52bf10a3a`;
+  `independent-panel-peer.json` SHA-256 `b84b61d887b389990bb05eb3a80e05e9175c310d585e21b3f5c0741d090d0e21`.
+- Linux `ci-39044613569-linux-panel-independent-20261017/verified-summary.json`,
+  SHA-256 `a36d8f578fb224d7a3b6c2adb52880f877d8ca81b16740cee31c27fb29c7646d`.
+- Windows `ci-39044613569-windows-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `92456f969b46c8d077dcb3a1d5a4046fe563409f2337f5d05ce37063fb1c674d`.
+  Its `nsis-verified-failed-summary.json` SHA-256 is
+  `6e1f42a9837e9b54a121790376cbf66b44eb579556efa1dea0525b6e65d5232e`.
+
+The Root final matrix binding `ci23-root-final-matrix-binding-20261017.json` has
+SHA-256 `fcbfbd6b39816e6a2108fb7875d92e3d091456acb44970aa2a333e1bf96a8842`.
+The Windows `independent-panel-nsis-failed-peer.json` has SHA-256
+`b62afc08392948358fef17cb4ebac973438a6b005f54536ddb335b716f83701e`;
+its 95 metadata checks add no native operations or uninstall acceptance.
+
+## CI24 — local child fallback revocation preparation only
+
+Commit `5a01299e6ed7f2e48a84a1e77c1be48ce0b54377` changes only Desktop renderer
+`types.ts` and `types.test.ts`. A live child's correlated request now retains its
+text frontier; a matching tombstone removes only that request's partial text,
+including after parent flushing. Previous successful text, other agents, main
+feed/pointers, tool revocation, no-ID compatibility and terminal authoritative
+text stay protected. The current CI23 candidate and its runtime evidence are unchanged.
+
+Seven added cases drive the actual reducer. Immutable-source RED has 110 tests:
+105 pass and five fail; fixed GREEN passes 110 tests/299 assertions, zero failures/
+skips, including the original 103 control bodies/order preserved byte-for-byte.
+The first module-resolution attempt executes zero cases and is excluded from RED.
+The exact admitted guarded single-file run validates complete success JUnit;
+raw temporary XML is not retained, and failed RED exits before success-JUnit
+validation. Only the two changed paths receive lint/format checks; no new native,
+browser, provider, full build or installer validation is claimed by this repair.
+Source proof `codeshell-child-fallback-revocation-proof-20261017/verified-source-summary.json`
+has SHA-256 `346295666283139cae1fde47046e1d067d21db14811393cabfebcb5d7651586b`.
+Additional NSIS diagnostics are still work in progress, not completed preparation
+or an explanation of the CI23 uninstall failure. CI14 remains the last fully passing
+matrix; a future CI24 runtime result is not asserted.
