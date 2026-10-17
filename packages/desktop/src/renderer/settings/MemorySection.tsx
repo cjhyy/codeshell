@@ -335,6 +335,7 @@ export function MemoryStoreView({
   const [draftBaseline, setDraftBaseline] = useState<SaveMemoryInput | null>(null);
   const [saving, setSaving] = useState(false);
   const saveLock = React.useRef(false);
+  const storeGeneration = React.useRef(0);
   const refreshGeneration = React.useRef(0);
   const entryReadGeneration = React.useRef(0);
   const [error, setError] = useState<string | null>(null);
@@ -413,6 +414,7 @@ export function MemoryStoreView({
     setCleanupReviewOpen(false);
     setCleanupSelected(new Set());
     return () => {
+      storeGeneration.current += 1;
       refreshGeneration.current += 1;
       entryReadGeneration.current += 1;
     };
@@ -513,6 +515,7 @@ export function MemoryStoreView({
   const startEdit = async (): Promise<void> => {
     if (!selected) return;
     if (!(await confirmDiscardDraft())) return;
+    entryReadGeneration.current += 1;
     setPromotion(null);
     const next = buildEditDraft(selected, level, scope, cwd, profileName);
     setDrafting(true);
@@ -681,6 +684,9 @@ export function MemoryStoreView({
   /** Pin/unpin = re-save with the flag flipped (content fetched on demand). */
   const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
     if (saving) return;
+    // Complete the original pin, but keep its UI effects within this store visit.
+    const generation = storeGeneration.current;
+    const selectionGeneration = entryReadGeneration.current;
     setError(null);
     try {
       const full = await window.codeshell.readMemory(level, scope, entry.name, cwd, profileName);
@@ -688,9 +694,17 @@ export function MemoryStoreView({
       await window.codeshell.saveMemory(
         buildPinSaveInput(full, !entry.pinned, level, scope, cwd, profileName),
       );
+      if (generation !== storeGeneration.current) return;
       await refresh();
-      if (selected?.name === entry.name) await openEntry(entry.name);
+      if (generation !== storeGeneration.current) return;
+      if (
+        !drafting &&
+        selectionGeneration === entryReadGeneration.current &&
+        selected?.name === entry.name
+      )
+        await openEntry(entry.name);
     } catch (e: unknown) {
+      if (generation !== storeGeneration.current) return;
       setError(String(e instanceof Error ? e.message : e));
     }
   };
@@ -1025,7 +1039,10 @@ export function MemoryStoreView({
             <ViewEntry
               entry={selected}
               onEdit={() => void startEdit()}
-              onClose={() => setSelected(null)}
+              onClose={() => {
+                entryReadGeneration.current += 1;
+                setSelected(null);
+              }}
               onPin={() => void togglePin(selected)}
               onDelete={() => void removeEntry(selected.name)}
               onPromote={

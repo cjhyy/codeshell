@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/root-tui-tables.test.ts:
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;{"case":"fenced-table","input":"```md\n| field | value |\n| --- | --- |\n| key | sample |\n```","output":" field value ────── ─────── key sample ``` "}
+(pass) R2-06 fenced markdown table is extracted as a rendered table and loses literal syntax [97.69ms]
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;(pass) R2-06 plain fenced code keeps its literal pipe and normal tables render [4.36ms]
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;{"case":"escaped-pipe","input":"| expression | result |\n| --- | --- |\n| left \\| right | expected-tail |","output":" expression result ─────────── ─────── left \\ right "}
+(pass) R2-07 escaped pipe splits a table cell into two and discards last-column content [1.66ms]
+
+ 3 pass
+ 0 fail
+ 10 expect() calls
+Ran 3 tests across 1 file. [1152.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

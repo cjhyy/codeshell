@@ -526,7 +526,7 @@ import {
   listDigitalHumanTeams,
   saveDigitalHumanTeam,
 } from "./digital-human-team-service.js";
-import { searchProjectFiles } from "./file-search-service.js";
+import { createRendererProjectFileSearch } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -1571,13 +1571,15 @@ async function createWindow(): Promise<BrowserWindow> {
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
-  if (devUrl) {
-    win.loadURL(devUrl);
-    if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
-  } else {
-    win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
-    if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
-  }
+  const loadRenderer = () => {
+    if (devUrl) {
+      void win.loadURL(devUrl);
+      if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
+    } else {
+      void win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
+      if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
+    }
+  };
 
   win.webContents.on("did-fail-load", (_e, code, desc, url) => {
     dlog("main", "renderer.did-fail-load", { code, desc, url });
@@ -2785,12 +2787,17 @@ async function createWindow(): Promise<BrowserWindow> {
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
+    // The renderer immediately publishes its active session and reads Mimi's
+    // state. Register those handlers before loading it; handlers themselves
+    // await hydration, so the interface can still load while indexes recover.
+    loadRenderer();
     await petInitialization;
     petRuntimeReady = petDispatchService !== null;
     markPetIpcReady?.();
     markPetIpcReady = null;
   } else {
     bridge.attachWindow(win);
+    loadRenderer();
   }
 
   await installAppMenu(win);
@@ -5009,12 +5016,13 @@ ipcMain.handle(
   async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
     updateSkillEntry(await requireRendererListedSkillPath(target, filePath)),
 );
-ipcMain.handle("files:searchProject", async (_e, projectId: string, query: string) => {
-  const project = await requireRendererProject(projectId);
-  const q = typeof query === "string" ? query : "";
-  if (q.length > 512) throw new Error("files:searchProject query is too long");
-  return searchProjectFiles(project.roots, q);
+const rendererProjectFileSearch = createRendererProjectFileSearch({
+  requireProject: requireRendererProject,
+  requireRoot: requireRendererProjectRoot,
 });
+ipcMain.handle("files:searchProject", (_e, projectId: unknown, query: unknown, rootId?: unknown) =>
+  rendererProjectFileSearch(projectId, query, rootId),
+);
 ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   const query = args.length === 1 ? args[0] : undefined;
   if (typeof query !== "string") throw new Error("invalid content search query");

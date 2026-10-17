@@ -9,6 +9,7 @@ import type {
 } from "../shared/review.js";
 import {
   getGitBranchBase,
+  getGitCommitDiff,
   getGitDiffForReview,
   getGitRecentCommits,
   getGitRangeDiff,
@@ -41,6 +42,7 @@ export interface ReviewServiceDependencies {
   getGitStatus?(repoRoot: string): Promise<GitStatus>;
   getGitDiff?(repoRoot: string, file: undefined, mode: GitDiffMode): Promise<string>;
   getGitRangeDiff?(repoRoot: string, range: string): Promise<string>;
+  getGitCommitDiff?(repoRoot: string, commit: string): Promise<string>;
   getGitBranchBase?(repoRoot: string): Promise<string>;
   getGitRecentCommits?(repoRoot: string, limit?: number): Promise<GitCommit[]>;
 }
@@ -56,6 +58,9 @@ export class ReviewService {
   private readonly branchBaseForRepository: NonNullable<
     ReviewServiceDependencies["getGitBranchBase"]
   >;
+  private readonly commitDiffForRepository: NonNullable<
+    ReviewServiceDependencies["getGitCommitDiff"]
+  >;
   private readonly commitsForRepository: NonNullable<
     ReviewServiceDependencies["getGitRecentCommits"]
   >;
@@ -67,6 +72,7 @@ export class ReviewService {
     this.diffForRepository =
       deps.getGitDiff ?? ((cwd, _file, mode) => getGitDiffForReview(cwd, mode));
     this.rangeDiffForRepository = deps.getGitRangeDiff ?? getGitRangeDiff;
+    this.commitDiffForRepository = deps.getGitCommitDiff ?? getGitCommitDiff;
     this.branchBaseForRepository = deps.getGitBranchBase ?? getGitBranchBase;
     this.commitsForRepository = deps.getGitRecentCommits ?? getGitRecentCommits;
   }
@@ -153,16 +159,12 @@ export class ReviewService {
       return this.diffForRepository(repository.repoRoot, undefined, request.mode);
     }
     if (request.kind === "committed") {
-      const range = request.commitHash
-        ? `${request.commitHash}^..${request.commitHash}`
-        : "HEAD~1..HEAD";
-      return this.rangeDiffForRepository(repository.repoRoot, range);
+      return this.commitDiffForRepository(repository.repoRoot, request.commitHash ?? "HEAD");
     }
     const base = await this.branchBaseForRepository(repository.repoRoot);
-    return this.rangeDiffForRepository(
-      repository.repoRoot,
-      base ? `${base}...HEAD` : "HEAD~1..HEAD",
-    );
+    return base
+      ? this.rangeDiffForRepository(repository.repoRoot, `${base}...HEAD`)
+      : this.commitDiffForRepository(repository.repoRoot, "HEAD");
   }
 
   private async resolveRepositories(sessionId: string): Promise<ReviewRepositoryResolution> {

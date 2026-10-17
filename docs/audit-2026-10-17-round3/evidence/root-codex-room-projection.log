@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round3/evidence/root-codex-room-projection.test.ts:
+{"case":"persisted-codex-projection","messages":[{"seq":1,"ts":1003,"from":"system","type":"room_created","text":"cwd=/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/cs-audit-room-projection-8FKHw7/workspace permission=default"},{"seq":2,"ts":1004,"from":"user","type":"text","text":"local fixture question"},{"seq":3,"ts":1005,"from":"agent","type":"tool","tool":"fixture__read","summary":"","toolId":"m1","args":{"arguments":{"path":"a.ts"}}},{"seq":4,"ts":1006,"from":"agent","type":"tool_result","summary":"[object Object]","isError":false,"toolId":"m1"},{"seq":5,"ts":1007,"from":"agent","type":"tool_result","summary":"","isError":true,"toolId":"m2"},{"seq":6,"ts":1008,"from":"agent","type":"text","text":"completed local reply"},{"seq":7,"ts":1009,"from":"agent","type":"turn_end","reason":"completed"}]}
+(pass) R3-01/02 parser projection loss persists through actual local RoomManager history [34.32ms]
+
+ 1 pass
+ 0 fail
+ 7 expect() calls
+Ran 1 test across 1 file. [456.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

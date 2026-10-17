@@ -15,6 +15,7 @@ import {
   makeIsolatedElectronHome,
   navigateSettingsMenu,
 } from "./electron-harness.mjs";
+import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-model-settings-e2e-");
@@ -1028,6 +1029,7 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    ...(await settingsNetworkGuard(isolated.home)),
   });
   stage = "renderer readiness";
   win = await findCodeShellWindow(app);
@@ -1049,6 +1051,10 @@ try {
   await checkConnectionEditor();
   await checkConnectionActions();
   assert(rendererErrors.length === 0, "Model settings emitted a renderer error");
+  assert(
+    (await app.evaluate(() => globalThis.__staticSettingsNetworkAttempts)) === 0,
+    "Static model settings attempted network access",
+  );
   console.log("CodeShell Electron model settings E2E: passed (zero renderer errors)");
 } catch (error) {
   // Do not print Playwright errors: input-action call logs can contain key text.
@@ -1058,14 +1064,18 @@ try {
     ? error.name
     : "UnknownError";
   // Only emit fixed labels, never the matched text or a serialized error.
-  const failureKind = [
-    [/structuredClone is not defined|structuredClone is not a function/i, "clone-unavailable"],
-    [/Attempted to register a second handler/i, "duplicate-ipc-handler"],
-    [/No handler registered/i, "ipc-handler-unavailable"],
-    [/Execution context was destroyed|Cannot find context with specified id/i, "context-unavailable"],
-    [/Target.*(?:has been closed|closed)|browser has been closed/i, "electron-target-closed"],
-    [/timeout|timed out/i, "timeout"],
-  ].find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified";
+  const failureKind =
+    [
+      [/structuredClone is not defined|structuredClone is not a function/i, "clone-unavailable"],
+      [/Attempted to register a second handler/i, "duplicate-ipc-handler"],
+      [/No handler registered/i, "ipc-handler-unavailable"],
+      [
+        /Execution context was destroyed|Cannot find context with specified id/i,
+        "context-unavailable",
+      ],
+      [/Target.*(?:has been closed|closed)|browser has been closed/i, "electron-target-closed"],
+      [/timeout|timed out/i, "timeout"],
+    ].find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified";
   console.error(`Failure category: ${failureKind} (${errorType})`);
   console.error(
     error.stack?.match(/e2e-model-settings\.mjs:\d+:\d+/)?.[0] ?? "No script location available",

@@ -239,24 +239,25 @@ async function coreRegistry(operation, input) {
 }
 async function openTaskCenter({ commandPalette = false } = {}) {
   if (!commandPalette) {
-    await navigateSettingsMenu(win, "任务中心", { activity: true });
-    await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
+    await navigateSettingsMenu(win, "后台工作", { activity: true });
+    await win.getByRole("heading", { name: "后台工作", level: 1 }).waitFor();
     return;
   }
   await win.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
   const palette = win.getByRole("dialog", { name: "命令面板", exact: true });
   await palette.waitFor({ state: "visible" });
-  await palette.getByRole("combobox").fill("任务中心");
-  await palette.getByRole("option", { name: "任务中心", exact: true }).click();
+  await palette.getByRole("combobox").fill("后台工作");
+  await palette.getByRole("option", { name: "后台工作", exact: true }).click();
   await palette.waitFor({ state: "hidden" });
-  await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
+  await win.getByRole("heading", { name: "后台工作", level: 1 }).waitFor();
 }
 async function reopenChild() {
   await openTaskCenter();
   await win.getByRole("button", { name: `打开来源：${titles.child}`, exact: true }).click();
   await win.getByText(childResult, { exact: true }).waitFor();
-  await win.getByRole("button", { name: "返回上级对话", exact: true }).click();
-  await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
+  await win.locator('[data-subagent-action="back-to-list"]').click();
+  await win.locator('[data-subagent-action="back-to-parent"]').click();
+  await win.getByRole("heading", { name: "后台工作", level: 1 }).waitFor();
 }
 async function terminateOwnedProcessGroup(pgid) {
   assert.ok(ownedProcessGroups.has(pgid), "Only test-owned process groups may be terminated");

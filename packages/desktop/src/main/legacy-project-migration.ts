@@ -90,12 +90,18 @@ export function createLegacyProjectMigrationService(
     },
 
     async complete(token) {
-      const pending = requirePending(token);
+      const pending = migrations.get(token);
+      if (!pending) throw new Error("legacy project migration token is invalid or expired");
       if (pending.size > 0) {
         throw new Error("legacy project migration still requires picker authorization");
       }
+      if (options.store.isLegacyMigrationComplete()) return;
       await options.store.completeLegacyMigration();
-      migrations.clear();
+      // Another renderer may already hold a drained token. Retain only those
+      // tokens for completion-only replay; requirePending still closes authorization.
+      for (const [issuedToken, paths] of migrations) {
+        if (paths.size > 0) migrations.delete(issuedToken);
+      }
     },
   };
 }

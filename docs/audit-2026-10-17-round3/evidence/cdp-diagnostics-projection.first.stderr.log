@@ -1,0 +1,13 @@
+
+docs/audit-2026-10-17-round3/evidence/cdp-diagnostics-projection.test.ts:
+(pass) observed: visibility:hidden ancestor suppresses a visible descendant from DOM summary [2.59ms]
+(pass) control: visible ancestor includes the same child [0.22ms]
+(pass) control: display:none subtree is intentionally omitted [0.17ms]
+(pass) control: DOM entry limit indicates pending descendants and open shadow roots are traversed [0.65ms]
+(pass) control: console retains latest 100, clamps reads and bounds message text [0.74ms]
+(pass) control: performance callback projects bounded navigation, paint and resource summaries [0.48ms]
+
+ 6 pass
+ 0 fail
+ 18 expect() calls
+Ran 6 tests across 1 file. [73.00ms]

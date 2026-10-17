@@ -1,0 +1,207 @@
+bun test v1.3.11 (af24e281)
+
+packages/tui/src/ui/query-guard.test.ts:
+(pass) QueryGuard ownership fencing > does not let an external terminal event release a client-owned run [2.34ms]
+(pass) QueryGuard ownership fencing > does not let a cancelled run's stale finally release a newer external run [0.11ms]
+(pass) QueryGuard ownership fencing > hands off to an external turn synchronously at the local transport response [0.28ms]
+(pass) QueryGuard ownership fencing > does not let a local response release an existing external owner [0.06ms]
+(pass) QueryGuard ownership fencing > does not let an old Run response release a newer local owner [0.06ms]
+(pass) QueryGuard ownership fencing > reports whether forceEnd cancelled a local or external owner [0.04ms]
+
+packages/tui/src/ui/store-notify.test.ts:
+(pass) chatStore.notify error isolation > a throwing listener does not prevent others from being notified [2.45ms]
+(pass) chatStore.notify error isolation > update returning the same entries reference does not notify [0.09ms]
+(pass) chatStore.notify error isolation > commitInterruptedStreaming is quiet when nothing changes [0.07ms]
+
+packages/tui/src/ui/input-history.test.ts:
+(pass) input history sensitive commands > does not persist inline /login secrets [68.58ms]
+
+packages/tui/src/ui/pending-questions.test.ts:
+(pass) optional questions queue without taking input focus or overwriting earlier questions [0.45ms]
+(pass) required questions still display immediately and survive optional-question deferral [0.06ms]
+(pass) resolution clears open and deferred questions only for the originating session [0.03ms]
+(pass) answers use the stored origin session and preserve the legacy client form [0.10ms]
+(pass) question drafts stay attached to their request across deferral and another question [0.10ms]
+(pass) submission state belongs to the request and blocks deferral until a failure unlocks it [0.10ms]
+
+packages/tui/src/cli/parse-int-option.test.ts:
+(pass) parsePositiveInt > parses a valid positive integer [0.15ms]
+(pass) parsePositiveInt > uses radix 10 (no octal surprise) [0.03ms]
+(pass) parsePositiveInt > throws a clear error on non-numeric input [0.19ms]
+(pass) parsePositiveInt > throws on zero and negatives [0.08ms]
+(pass) parsePositiveInt > rejects trailing garbage (parseInt would accept '5abc') [0.04ms]
+
+packages/tui/src/cli/main-options.test.ts:
+(pass) interactive command options > keeps resume and prefill available on both interactive entry points [4131.90ms]
+(pass) interactive command options > does not advertise or accept the retired Arena subcommand [2267.83ms]
+
+packages/coding/src/lsp/root-path.test.ts:
+(pass) coding rootUriToPath > round-trips a posix path through file:// URL [0.02ms]
+(pass) coding rootUriToPath > decodes percent-encoded spaces (replace() would leave %20) [0.02ms]
+(pass) coding rootUriToPath > differs from the naive replace() on a percent-encoded path [0.03ms]
+
+packages/tui/src/cli/input/read-stdin.test.ts:
+(pass) resolveTaskFromArgOrStdin > prefers the positional task argument over stdin [0.41ms]
+(pass) resolveTaskFromArgOrStdin > reads the prompt from stdin when no task and stdin is piped [1.29ms]
+(pass) resolveTaskFromArgOrStdin > returns undefined when no task and stdin is a TTY (does not hang) [0.04ms]
+(pass) resolveTaskFromArgOrStdin > treats an empty positional arg as absent and falls back to stdin [0.08ms]
+(pass) resolveTaskFromArgOrStdin > returns undefined when piped stdin is empty/whitespace [0.07ms]
+
+packages/tui/src/cli/input/ndjson-reader.test.ts:
+(pass) NdjsonReader.start lifecycle > stop() closes the interface; no lines processed afterward [12.84ms]
+(pass) NdjsonReader.start lifecycle > stop() before start() is a no-op (does not throw) [0.16ms]
+
+packages/tui/src/cli/output/renderer.test.ts:
+(pass) output renderers — schema contracts > json emits exactly one final aggregated object
+(pass) output renderers — schema contracts > jsonl emits one line per event plus a final result line [0.26ms]
+(pass) output renderers — schema contracts > stream-json is a documented alias of jsonl (same wire shape) [0.03ms]
+(pass) output renderers — schema contracts > unknown format falls back to the text renderer
+(pass) output renderers — schema contracts > text renderer shows only the image path for view_image results
+
+packages/tui/src/cli/commands/drain-notifications.test.ts:
+(pass) drainBackgroundNotifications > counts a Session-owned DriveAgent-style background job as running work [0.26ms]
+(pass) drainBackgroundNotifications > counts a grandchild spawned by a finished child agent as running work [0.14ms]
+(pass) drainBackgroundNotifications > returns enqueued items and drains the queue atomically [0.14ms]
+(pass) drainBackgroundNotifications > with wait=false it does not wait even if agents are running [0.07ms]
+(pass) drainBackgroundNotifications > with wait=true it polls until no agents are running, then drains [5.75ms]
+(pass) drainBackgroundNotifications > with wait=true it gives up at the timeout and still drains what arrived [40.35ms]
+
+packages/tui/src/cli/commands/link.test.ts:
+(pass) link status command > returns full structured diagnostics for a provider without model setup [2.29ms]
+(pass) link status command > checks all providers by default and keeps unreadable Link and CLI login separate [0.34ms]
+(pass) link status command > propagates an invalid provider error instead of reporting an empty successful query [0.14ms]
+(pass) link status command > exempts only Link status from the shared setup hook [0.53ms]
+(pass) Link status text > does not turn an inconclusive CLI probe into a signed-out assertion [0.04ms]
+(pass) Link status text > distinguishes an unreadable credential store from an empty one [0.10ms]
+(pass) Link status text > shows missing and skipped CLIs without implying a login failure [0.10ms]
+(pass) Link status text > keeps stored account names from adding terminal control sequences or extra lines [0.03ms]
+
+packages/tui/src/cli/commands/max-context-tokens.test.ts:
+(pass) resolveMaxContextTokens > prefers the model connection maxContextTokens over settings.context.maxTokens [0.03ms]
+(pass) resolveMaxContextTokens > falls back to settings.context.maxTokens when the model connection omits it [0.01ms]
+(pass) resolveMaxContextTokens > falls back to 200_000 when both values are missing
+(pass) resolveMaxContextTokens > REPL uses the shared resolver instead of duplicating fallback logic [0.74ms]
+
+packages/tui/src/cli/commands/settings-recovery.test.ts:
+(pass) CLI inspection, reviewed repair and exact rollback use explicit revisions [106.94ms]
+(pass) explicit project and local scope never silently use the caller directory [15.41ms]
+(pass) all recovery actions bypass bootstrap while unrelated commands do not [1.67ms]
+error: option '--scope <scope>' argument 'user' is invalid. Allowed choices are project, local.
+(pass) repair requires both revision and candidate hash, and rejects unknown scope [3.03ms]
+
+packages/tui/src/cli/commands/run-last-message.test.ts:
+(pass) writeLastMessage (--output-last-message) > writes the final message text verbatim [7.89ms]
+(pass) writeLastMessage (--output-last-message) > writes an empty file for empty text rather than skipping [3.99ms]
+Warning: failed to write --output-last-message file: ENOENT: no such file or directory, open '/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/run-lastmsg-sEW7wA/no-such-dir/out.txt'
+(pass) writeLastMessage (--output-last-message) > an unwritable path is swallowed (best-effort, no throw) [1.27ms]
+(pass) headless run product composition > uses the coding default preset and exposes DriveAgent [12.11ms]
+
+packages/coding/src/external-runtimes/shared/spawn-env.test.ts:
+(pass) buildRuntimeSpawnEnv > adds the loopback hosts to NO_PROXY [0.16ms]
+(pass) buildRuntimeSpawnEnv > preserves entries the user already set [0.10ms]
+(pass) buildRuntimeSpawnEnv > does not duplicate a loopback host that is already present [0.13ms]
+(pass) buildRuntimeSpawnEnv > folds in the lowercase twin and then removes it [0.04ms]
+(pass) buildRuntimeSpawnEnv > carries the bridge token under its configured name [0.04ms]
+(pass) buildRuntimeSpawnEnv > does not mutate the base environment [0.03ms]
+
+packages/coding/src/external-runtimes/shared/session-context-store.test.ts:
+(pass) SessionContextStore > resolves a registered thread to its own host [0.19ms]
+(pass) SessionContextStore > fails closed on a missing thread id [0.06ms]
+(pass) SessionContextStore > fails closed on an unregistered thread, even when exactly one is registered [0.04ms]
+(pass) SessionContextStore > fails closed after the thread is unregistered [0.04ms]
+(pass) SessionContextStore > generation fencing rejects a late request from a previous app-server [0.04ms]
+(pass) SessionContextStore > registering one thread never changes another thread's reachability [0.10ms]
+(pass) SessionContextStore > a caller cannot resurrect a stale entry by passing the old generation [0.03ms]
+(pass) SessionContextStore > bumpGeneration drops entries it just made unreachable [0.06ms]
+(pass) SessionContextStore > a batch spanning two threads is rejected wholesale [0.14ms]
+(pass) SessionContextStore > a batch with any missing thread id is rejected [0.03ms]
+(pass) SessionContextStore > an empty batch is rejected rather than treated as trivially fine [0.02ms]
+(pass) SessionContextStore > re-registering a thread replaces the host instead of accumulating [0.03ms]
+(pass) SessionContextStore > clear() drops every mapping [0.02ms]
+(pass) SessionContextStore > never serializes a host — the store is memory-only [0.14ms]
+
+packages/coding/src/external-runtimes/shared/mcp-bridge.test.ts:
+(pass) Codex MCP bridge > rejects a request with no or wrong bearer token [19.09ms]
+(pass) Codex MCP bridge > binds only to loopback [4.00ms]
+(pass) Codex MCP bridge > answers as SSE when the client accepts it [4.87ms]
+(pass) Codex MCP bridge > still answers plain JSON to a client that does not accept SSE [3.91ms]
+(pass) Codex MCP bridge > routes a call to the host bound to that thread [5.77ms]
+(pass) Codex MCP bridge > keeps calls in the same Codex turn distinct in the host transcript [5.43ms]
+(pass) Codex MCP bridge > a thread id in ARGUMENTS cannot redirect the call [4.92ms]
+(pass) Codex MCP bridge > fails closed on missing thread id [4.82ms]
+(pass) Codex MCP bridge > fails closed on unknown thread [5.18ms]
+(pass) Codex MCP bridge > a stale generation is refused after a restart [3.52ms]
+(pass) Codex MCP bridge > tools/list advertises nothing for an unroutable thread [3.02ms]
+(pass) Codex MCP bridge > tools/list returns the host's own tools when routable [4.02ms]
+(pass) Codex MCP bridge > an oversized body is refused [3.56ms]
+(pass) Codex MCP bridge > a batched (array) body is refused explicitly, not silently accepted [6.93ms]
+(pass) Codex MCP bridge > a batch spanning two threads is refused as ambiguous [4.17ms]
+(pass) Codex MCP bridge > only POST is accepted [4.79ms]
+(pass) Codex MCP bridge > a reply always carries a JSON-RPC id [4.16ms]
+(pass) Codex MCP bridge > single-session pin (Claude Code, which sends no thread identity) > routes a call that carries no _meta at all [4.49ms]
+(pass) Codex MCP bridge > single-session pin (Claude Code, which sends no thread identity) > lists tools without a thread id [4.49ms]
+(pass) Codex MCP bridge > single-session pin (Claude Code, which sends no thread identity) > the pin OVERRIDES a caller-supplied thread id [8.11ms]
+(pass) Codex MCP bridge > single-session pin (Claude Code, which sends no thread identity) > an unpinned bridge still refuses a call with no thread id [4.64ms]
+(pass) Codex MCP bridge > malformed JSON is refused [3.82ms]
+(pass) Codex MCP bridge > logs never contain the bearer token or full arguments [3.49ms]
+(pass) Codex MCP bridge > threadIdFromMeta reads both shapes Codex actually sends [0.07ms]
+(pass) Codex MCP bridge > config args put the url on the command line and the token in the env [0.07ms]
+
+packages/tui/src/cli/commands/builtin/loop-command.test.ts:
+(pass) /loop command > builds a skill-backed prompt that explicitly bypasses Goal
+(pass) /loop command > submits the expanded prompt but displays the original command [0.04ms]
+
+packages/tui/src/cli/commands/builtin/extra-commands.test.ts:
+(pass) /skills > shows a bound Panel package Skill without opening the Panel, respecting disable and binding [103.63ms]
+(pass) /login > reloads models and switches the current session to the active/default connection
+(pass) /logout > clears legacy and unified auth/model settings [4.32ms]
+
+packages/tui/src/cli/commands/builtin/list-files.test.ts:
+(pass) listFiles — no shell injection > lists files with no pattern [280.45ms]
+(pass) listFiles — no shell injection > filters by a glob pattern passed as a literal -name value [10.23ms]
+(pass) listFiles — no shell injection > a shell-injection pattern does not execute — treated as a literal name [9.54ms]
+(pass) listFiles — no shell injection > caps output at 50 lines [58.87ms]
+
+packages/tui/src/cli/commands/builtin/goal-command.test.ts:
+(pass) /goal command > /goal <text> sets the goal and submits it [0.32ms]
+(pass) /goal command > bare /goal with an active goal shows it
+(pass) /goal command > bare /goal shows paused state
+(pass) /goal command > bare /goal with no active goal hints how to set one
+(pass) /goal command > /goal delete clears the goal [0.15ms]
+(pass) /goal command > /goal clear clears the goal [0.02ms]
+(pass) /goal command > /goal off clears the goal
+(pass) /goal command > /goal stop clears the goal [0.01ms]
+(pass) /goal command > /goal none clears the goal
+(pass) /goal command > /goal reset clears the goal
+(pass) /goal command > /goal cancel clears the goal
+(pass) /goal command > /goal CLEAR clears the goal
+(pass) /goal command > /goal clear when nothing active reports so [0.05ms]
+(pass) /goal command > /goal edit updates the same goal [0.05ms]
+(pass) /goal command > /goal edit requires objective text [0.04ms]
+(pass) /goal command > /goal pause and resume update paused state
+(pass) /goal command > /goal pause extra only reports usage
+(pass) /goal command > /goal resume extra only reports usage
+(pass) /goal command > /goal delete extra only reports usage [0.13ms]
+(pass) /goal command > /goal clear extra only reports usage
+(pass) /goal command > /goal off extra only reports usage
+(pass) /goal command > /goal stop extra only reports usage
+(pass) /goal command > /goal none extra only reports usage
+(pass) /goal command > /goal reset extra only reports usage
+(pass) /goal command > /goal cancel extra only reports usage
+(pass) /goal command > goal controls reject when no goal is active [0.07ms]
+
+packages/tui/src/cli/commands/builtin/core-commands.test.ts:
+(pass) /config command > redacts saved secrets from show output [6.11ms]
+(pass) /config command > redacts saved secrets from get output [3.66ms]
+(pass) /config command > redacts secret-shaped get keys [5.86ms]
+
+packages/tui/src/cli/commands/builtin/git-diff.test.ts:
+(pass) git-diff helpers — no shell injection > stat shows the changed file [288.12ms]
+(pass) git-diff helpers — no shell injection > diff body shows the change [259.17ms]
+(pass) git-diff helpers — no shell injection > a shell-metacharacter file arg does NOT execute — treated as a pathspec [186.93ms]
+
+ 150 pass
+ 0 fail
+ 412 expect() calls
+Ran 150 tests across 24 files. [11.21s]
+Completed Bun shard: 150 tests, 0 skipped; 0 failures.

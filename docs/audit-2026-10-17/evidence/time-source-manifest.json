@@ -1,0 +1,95 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "owner": "operations_memory_round2",
+  "report": "docs/audit-2026-10-17/scheduling-data.md",
+  "confirmed": {
+    "total": 2,
+    "P3": 2,
+    "ids": [
+      "TIME1",
+      "TIME2"
+    ]
+  },
+  "productionSources": [
+    {
+      "path": "packages/core/src/automation/cron-expr.ts",
+      "sha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/scheduler.ts",
+      "sha256": "6b59290c36a81bbab5445372deb8033c67b638ea9f53ad34831e8dccfdd27c70",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/store.ts",
+      "sha256": "76254f6a995e29884203cf4bd155be51f7990b6b04d5d99d8bd45e25e129c458",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/index.ts",
+      "sha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/cron.ts",
+      "sha256": "8971b2edcc7de99541f6b662f9307ba7abb1592c7df57963c671d417f97281d5",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/sleep.ts",
+      "sha256": "c609617b9a22347b1671381046c201721bfbd6f23635660be238d1eef4cee8a5",
+      "matchesFrozenGitBlob": true
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-cron-data-round1.log",
+      "sha256": "727197833b215205afb14ca5516c5d185828070f2238821a16f800f3dbf5e523"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-cron-data-round1.test.ts",
+      "sha256": "e8e3ad725460317a08a5f22b49ab61ab98c461b1c37265259e096fb692d7bd04"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-cron-once-display.log",
+      "sha256": "75facb2770f07fadc744ce03e8fae51c5eb39150bce05cd4b624a5f4aee391cc"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-cron-once-display.test.ts",
+      "sha256": "f74b9f3a1eb8b00dea0ae04d56d90cf70023b37129ae08edc2fe7b4beb669653"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-scheduling-baseline.log",
+      "sha256": "9895349417981e95290ede28f16c6d855a09a3641f89f75501f95bd9b00b188d"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-sleep-data-round2.log",
+      "sha256": "5fc2e47fc80c5a6d23ac495418353ee2bbe640ba378ed3677ccf4039dfb78be1"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/time-sleep-data-round2.test.ts",
+      "sha256": "d5eafe94674e4df76d63ee4718a63545c6d3d0dd8a2d86b0813e591a539b6c40"
+    }
+  ],
+  "completedRuns": {
+    "shards": 4,
+    "tests": 49,
+    "expectCalls": 163,
+    "failures": 0,
+    "skipped": 0
+  },
+  "knownNotCounted": [
+    "Sleep mid-wait abort acknowledgement remains Slept, already recorded goal-sleep-round20"
+  ],
+  "scope": {
+    "realTimerWait": false,
+    "longSleep": false,
+    "realModel": false,
+    "network": false,
+    "nativeToolExecution": false,
+    "productEdits": false,
+    "fakeClockOrPureFunctionsOnly": true,
+    "ownedTemporaryFilesOnly": true
+  }
+}

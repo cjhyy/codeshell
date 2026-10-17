@@ -33,7 +33,8 @@ export function submitWorkbenchPanelPrompt(
     controller.chat.run === "running" ||
     controller.chat.run === "waiting" ||
     controller.approvals.some(
-      (approval) => !approval.sessionId || approval.sessionId === request.sessionId,
+      (approval) =>
+        !approval.asynchronous && (!approval.sessionId || approval.sessionId === request.sessionId),
     )
   )
     throw new Error("当前对话仍在处理任务，请完成后再发送面板任务。");
@@ -364,6 +365,7 @@ export function Workbench({
   };
   const stop = controller.stop;
   const approvals = controller.approvals.filter((a) => !a.sessionId || a.sessionId === activeId);
+  const blockingApprovals = approvals.filter((approval) => !approval.asynchronous);
   const otherApprovals = controller.approvals.filter(
     (a) => a.sessionId && a.sessionId !== activeId,
   );
@@ -744,7 +746,7 @@ export function Workbench({
         ) : null}
         {view !== "chat" && approvals.length > 0 ? (
           <div className="banner">
-            当前对话需要你的确认。
+            {blockingApprovals.length ? "当前对话需要你的确认。" : "当前对话有可稍后回答的问题。"}
             <button className="ghost" onClick={() => requestNavigation(() => setView("chat"))}>
               返回对话
             </button>
@@ -924,7 +926,12 @@ export function Workbench({
                   controller.setDraft(event.target.value);
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  if (
+                    !window.matchMedia("(max-width: 760px)").matches &&
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing
+                  ) {
                     event.preventDefault();
                     send();
                   }
@@ -1002,11 +1009,13 @@ export function Workbench({
                       ? controller.host === "desktop"
                         ? "正在发送…"
                         : "正在上传附件…"
-                      : approvals.length
+                      : blockingApprovals.length
                         ? "等待你的确认"
                         : running
                           ? "正在处理…"
-                          : ""}
+                          : approvals.length
+                            ? "有可稍后回答的问题"
+                            : ""}
                 </span>
                 {running ? (
                   <button
@@ -1026,6 +1035,7 @@ export function Workbench({
                     onClick={send}
                     disabled={
                       connection !== "open" ||
+                      controller.loading ||
                       uploading ||
                       controller.uncertain ||
                       controller.readOnly ||

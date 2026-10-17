@@ -49,6 +49,7 @@ export async function launchCodeShellElectron(
     HOME: home,
     USERPROFILE: home,
     CODE_SHELL_HOME: join(home, ".code-shell"),
+    CODE_SHELL_TEST_HOME: join(home, ".code-shell"),
     CODE_SHELL_NO_DEVTOOLS: "1",
     CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
     DISABLE_AUTOUPDATER: "1",
@@ -232,11 +233,44 @@ export async function seedSessionCatalog(win, indices, { replace = false } = {})
 }
 
 export async function waitForSessionCatalogSelection(win, projectKey, sessionId) {
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async ({ projectKey, sessionId }) =>
       (await window.codeshell.sessionCatalog.load()).indices[projectKey]?.activeSessionId ===
       sessionId,
     { projectKey, sessionId },
     { polling: 100 },
   );
+}
+
+/** Await each IPC result in the controller. Playwright's page predicate poller
+ * can accept a Promise as truthy before its eventual false value is known. */
+export async function waitForAsyncFunction(
+  win,
+  predicate,
+  arg,
+  { timeout = 30_000, polling = 100 } = {},
+) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    let timer;
+    let value;
+    try {
+      value = await Promise.race([
+        win.evaluate(predicate, arg),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("Timed out waiting for an asynchronous UI condition")),
+            Math.max(0, deadline - Date.now()),
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+    if (value) return value;
+    if (Date.now() >= deadline)
+      throw new Error("Timed out waiting for an asynchronous UI condition");
+    await new Promise((done) => setTimeout(done, polling));
+  }
 }

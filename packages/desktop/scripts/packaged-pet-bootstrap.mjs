@@ -8,6 +8,7 @@ import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
 import { isAbsolute, join, relative } from "node:path";
 import { installLocalNetworkGuard } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
+import { installPackagedChromiumGuard } from "./packaged-chromium-guard.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const root = realpathSync(process.env.CODESHELL_OFFICIAL_FIXTURE_ROOT);
@@ -79,28 +80,17 @@ appendFileSync(
 );
 
 if (role === "Main") {
-  // The actual signed Electron executable loads its own packaged entry.
+  // The actual supplied Electron executable loads its own packaged entry.
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- This source is bundled as a synchronous CJS preload, also tested under plain Node.
   const { app, safeStorage } = require("electron");
   app.setName("code-shell");
   app.commandLine.removeSwitch("password-store");
   app.commandLine.removeSwitch("use-mock-keychain");
+  if (process.platform === "linux")
+    app.commandLine.appendSwitch("password-store", "gnome-libsecret");
   app.commandLine.appendSwitch("disable-background-networking");
   app.setPath("userData", process.env.CODESHELL_OFFICIAL_USER_DATA);
-  const seenSessions = new WeakSet();
-  app.on("web-contents-created", (_event, contents) => {
-    const session = contents.session;
-    if (seenSessions.has(session)) return;
-    seenSessions.add(session);
-    session.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
-      const url = new URL(details.url);
-      const allowed =
-        ["file:", "data:", "blob:", "devtools:"].includes(url.protocol) ||
-        url.protocol === "codeshell-panel:" ||
-        url.origin === origin;
-      callback({ cancel: !allowed });
-    });
-  });
+  installPackagedChromiumGuard(app, origin);
   for (const name of ["isEncryptionAvailable", "encryptString", "decryptString"]) {
     const original = safeStorage[name];
     safeStorage[name] = (...args) => {
@@ -125,6 +115,14 @@ if (role === "Main") {
     };
   }
   const spawn = children.spawn;
+  let workerSpawnCount = 0;
+  process.once("exit", () => {
+    appendFileSync(
+      join(home, "main-exits.jsonl"),
+      JSON.stringify({ pid: process.pid, workerSpawnCount }) + "\n",
+      { mode: 0o600 },
+    );
+  });
   children.spawn = function (command, args, options) {
     const worker = args?.some((argument) => argument.includes("agent-server-stdio"));
     if (worker) {
@@ -148,6 +146,7 @@ if (role === "Main") {
     }
     const child = spawn.call(this, command, args, options);
     if (worker && child.pid) {
+      workerSpawnCount++;
       child.stdin.cork();
       const timer = setInterval(() => {
         if (existsSync(join(home, `worker-${child.pid}.permit`))) {
@@ -168,6 +167,7 @@ if (role === "Main") {
         join(home, "spawned-workers.jsonl"),
         JSON.stringify({
           pid: child.pid,
+          mainPid: process.pid,
           command: realpathSync(command),
           args: args.filter((argument) => argument.includes("agent-server-stdio")),
         }) + "\n",

@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ops-progress-recovery-round3.test.ts:
+{"observation":"parallel-tool-start-attribution","expectedReadStartedAt":10,"actual":{"name":"Read","state":"completed","startedAt":20,"finishedAt":30}}
+(pass) observation: parallel tool A completion inherits tool B start timestamp [2.84ms]
+{"observation":"queued-cold-boundary","recovered":[],"afterRecover":"queued","callsAfterSdkStart":1,"afterStart":"completed"}
+(pass) boundary observation: cold queued snapshot is ignored by recover and resume, SDK start executes it [56.55ms]
+
+ 2 pass
+ 0 fail
+ 7 expect() calls
+Ran 2 tests across 1 file. [485.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round3/evidence/root-room-default-name.test.ts:
+{"case":"windows-default-name","cwd":"C:\\work\\project-name","name":"C:\\work\\project-name"}
+(pass) R3-04 Windows default room name preserves the full path instead of its final component [17.76ms]
+{"case":"long-windows-cwd","cwdLength":567,"nameLength":567,"returnedId":"room_mvbm9q03_eo3xb1","readable":false}
+(pass) R3-04 accepted long Windows-form cwd writes metadata that the same reader rejects [9.45ms]
+(pass) POSIX basename and explicit Windows room name normal controls [19.68ms]
+
+ 3 pass
+ 0 fail
+ 11 expect() calls
+Ran 3 tests across 1 file. [556.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

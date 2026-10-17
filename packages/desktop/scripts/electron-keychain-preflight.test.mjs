@@ -1,4 +1,4 @@
-import { deepStrictEqual, equal, match, throws } from "node:assert/strict";
+import { deepStrictEqual, doesNotMatch, equal, match, throws } from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -16,7 +16,10 @@ import {
 import { tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
+import {
+  ensureElectronKeychainContext,
+  getElectronKeychainPreflightDiagnostic,
+} from "./electron-keychain-preflight.mjs";
 import { keychainPreferenceXml } from "./macos-keychain-context.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
@@ -92,6 +95,61 @@ function assertPreflightFailure(action, causePattern) {
     return true;
   });
 }
+
+test("safe diagnostic extraction rejects forged errors and never reads arbitrary getters", () => {
+  const untrusted = {
+    get code() {
+      throw new Error("must not inspect untrusted code");
+    },
+    get cause() {
+      throw new Error("must not inspect untrusted cause");
+    },
+  };
+  for (const error of [undefined, null, "raw failure", untrusted, new Error("raw failure")])
+    equal(getElectronKeychainPreflightDiagnostic(error), null);
+  equal(
+    getElectronKeychainPreflightDiagnostic({
+      code: "CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED",
+      preflightStage: "account-before",
+    }),
+    null,
+  );
+});
+
+testPosix("query failures expose only fixed diagnostics instead of raw causes or stderr", (t) => {
+  const f = fixture(t);
+  const secret = "PRIVATE_SYNTHETIC_KEYCHAIN_QUERY_SECRET";
+  throws(
+    () =>
+      ensureElectronKeychainContext({
+        ...f.input,
+        query() {
+          const error = new Error(`${secret}: ${f.root}`);
+          error.stderr = `${secret}: Security stderr`;
+          throw error;
+        },
+      }),
+    (error) => {
+      const diagnostic = getElectronKeychainPreflightDiagnostic(error);
+      deepStrictEqual(diagnostic, {
+        version: 1,
+        code: "CODESHELL_KEYCHAIN_PREFLIGHT_FAILED",
+        stage: "account-before",
+        launchStarted: false,
+      });
+      equal(error.code, diagnostic.code);
+      equal(error.preflightStage, diagnostic.stage);
+      for (const text of [error.message, JSON.stringify(error), JSON.stringify(diagnostic)]) {
+        doesNotMatch(text, /PRIVATE_SYNTHETIC|Security stderr/);
+        equal(text.includes(f.root), false);
+      }
+      equal(getElectronKeychainPreflightDiagnostic(JSON.parse(JSON.stringify(error))), null);
+      equal(Object.isFrozen(diagnostic), true);
+      return true;
+    },
+  );
+  equal(existsSync(join(f.home, "Library")), false);
+});
 
 test("non-macOS launches do not query or write Keychain metadata", () => {
   equal(
@@ -266,13 +324,32 @@ testPosix(
       ensureElectronKeychainContext(f.input);
       const original = readFileSync(f.referenceFile, "utf8");
       let calls = 0;
-      assertPreflightFailure(
+      throws(
         () =>
           ensureElectronKeychainContext({
             ...f.input,
             query: () => (++calls === changedCall ? { ...f.metadata, ino: 3 } : f.metadata),
           }),
-        /changed|differs/,
+        (error) => {
+          match(error.cause.message, /changed|differs/);
+          const diagnostic = getElectronKeychainPreflightDiagnostic(error);
+          deepStrictEqual(diagnostic, {
+            version: 1,
+            code: "CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED",
+            stage: ["account-before", "private", "account-after"][changedCall - 1],
+            launchStarted: false,
+            identity: {
+              sameHome: true,
+              samePath: true,
+              sameDevice: true,
+              sameInode: false,
+              sameOwner: true,
+            },
+          });
+          equal(Object.isFrozen(diagnostic.identity), true);
+          equal(JSON.stringify(diagnostic).includes(f.metadata.path), false);
+          return true;
+        },
       );
       equal(readFileSync(f.referenceFile, "utf8"), original);
     }
@@ -285,7 +362,17 @@ testPosix("explicit reference cannot replace a different pinned cold-start ident
   const explicit = explicitReference(f);
   writeFileSync(explicit, JSON.stringify({ ...f.reference, ino: 3 }));
   f.calls.length = 0;
-  assertPreflightFailure(() => ensureElectronKeychainContext(f.input), /disagree/);
+  throws(
+    () => ensureElectronKeychainContext(f.input),
+    (error) => {
+      match(error.cause.message, /disagree/);
+      const diagnostic = getElectronKeychainPreflightDiagnostic(error);
+      equal(diagnostic.code, "CODESHELL_KEYCHAIN_PREFLIGHT_REFERENCE_MISMATCH");
+      equal(diagnostic.stage, "pinned-reference");
+      equal(diagnostic.identity.sameInode, false);
+      return true;
+    },
+  );
   equal(f.calls.length, 0);
 });
 

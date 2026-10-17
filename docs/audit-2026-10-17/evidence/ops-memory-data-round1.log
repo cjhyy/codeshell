@@ -1,0 +1,115 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ops-memory-data-round1.test.ts:
+{"observation":"recency-offset","expected":["newer","older"],"actual":["older","newer"]}
+(pass) observation: legal offset timestamps reverse physical recency [9.99ms]
+28 | test("observation: stale same-name recall TTL prunes the pinned sibling", () => {
+29 |   const baseDir = root();
+30 |   const mm = new MemoryManager({ baseDir });
+31 |   mm.save({ id: "a-pinned", name: "same-topic", description: "keep this pinned note", type: "project", content: "PINNED FRESH BODY", pinned: true, lastUsedAt: "2026-10-16T00:00:00Z" });
+32 |   mm.save({ id: "b-expired", name: "same-topic", description: "expire this note", type: "project", content: "EXPIRED BODY", lastUsedAt: "2026-01-01T00:00:00Z" });
+33 |   expect(mm.loadAll().map((entry) => entry.id)).toEqual(["a-pinned", "b-expired"]);
+                                                     ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "a-pinned",
+    "b-expired",
++   "a-pinned",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/evidence/ops-memory-data-round1.test.ts:33:49)
+(fail) observation: stale same-name recall TTL prunes the pinned sibling [37.40ms]
+{"observation":"promote-same-name","selected":"b-selected.md","promoted":"mem_5b4607580a7d4ae18b40bd0eae3d9d97.md","project":[{"id":"a-other","content":"A BODY"}],"global":["B BODY"]}
+45 |   const selected = mm.save({ id: "b-selected", name: "same-topic", description: "selected item", type: "user", content: "B BODY" });
+46 |   const promoted = mm.promoteToGlobal(selected);
+47 |   const global = new MemoryManager({ baseDir });
+48 |   console.log(JSON.stringify({ observation: "promote-same-name", selected, promoted, project: mm.loadAll().map((entry) => ({ id: entry.id, content: entry.content })), global: global.loadAll().map((entry) => entry.content) }));
+49 |   expect(global.loadAll().map((entry) => entry.content)).toEqual(["B BODY"]);
+50 |   expect(mm.findById("a-other")).toBeUndefined();
+                                      ^
+error: expect(received).toBeUndefined()
+
+Received: {
+  id: "a-other",
+  name: "same-topic",
+  description: "other item",
+  type: "user",
+  content: "A BODY",
+  fileName: "a-other.md",
+  scope: "user",
+  updatedAt: "2026-10-16T17:38:57.955Z",
+  mtimeMs: 1792172337956.2761,
+  pinned: false,
+  origin: "manual",
+  useCount: 0,
+  updateCount: 0,
+  lastUsedAt: "2026-10-16T17:38:57.955Z",
+  createdAt: "2026-10-16T17:38:57.955Z",
+  usageCount: 0,
+  lastUsed: "2026-10-16T17:38:57.955Z",
+  created: "2026-10-16T17:38:57.955Z",
+  originProject: undefined,
+  promotionKey: undefined,
+  originProjects: undefined,
+  evidenceCount: undefined,
+  firstSeenAt: undefined,
+  lastSeenAt: undefined,
+  promotionReason: undefined,
+  promotionStatus: undefined,
+  promotionSourceId: undefined,
+}
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/evidence/ops-memory-data-round1.test.ts:50:34)
+(fail) observation: promote selected filename copies B but deletes same-name A [24.56ms]
+{"observation":"approve-same-name","approved":"mem_ed29f5d95768455fbbdaeefcbf0d384c.md","remaining":[{"id":"a-other","content":"A BODY"}],"dream":["B BODY"]}
+58 |   pending.save({ id: "b-selected", name: "same-topic", description: "from project B", type: "user", content: "B BODY", originProject: join(baseDir, "project-b"), origin: "dream" });
+59 |   const approved = pending.approvePending("b-selected");
+60 |   const dream = new MemoryManager({ baseDir, scope: "dream" });
+61 |   console.log(JSON.stringify({ observation: "approve-same-name", approved, remaining: pending.loadAll().map((entry) => ({ id: entry.id, content: entry.content })), dream: dream.loadAll().map((entry) => entry.content) }));
+62 |   expect(dream.loadAll().map((entry) => entry.content)).toEqual(["B BODY"]);
+63 |   expect(pending.findById("a-other")).toBeUndefined();
+                                           ^
+error: expect(received).toBeUndefined()
+
+Received: {
+  id: "a-other",
+  name: "same-topic",
+  description: "from project A",
+  type: "user",
+  content: "A BODY",
+  fileName: "a-other.md",
+  scope: "pending",
+  updatedAt: "2026-10-16T17:38:57.979Z",
+  mtimeMs: 1792172337979.683,
+  pinned: false,
+  origin: "dream",
+  useCount: 0,
+  updateCount: 0,
+  lastUsedAt: "2026-10-16T17:38:57.979Z",
+  createdAt: "2026-10-16T17:38:57.979Z",
+  usageCount: 0,
+  lastUsed: "2026-10-16T17:38:57.979Z",
+  created: "2026-10-16T17:38:57.979Z",
+  originProject: "/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-memory-3jfs9c/project-a",
+  promotionKey: undefined,
+  originProjects: undefined,
+  evidenceCount: undefined,
+  firstSeenAt: undefined,
+  lastSeenAt: undefined,
+  promotionReason: undefined,
+  promotionStatus: undefined,
+  promotionSourceId: undefined,
+}
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/evidence/ops-memory-data-round1.test.ts:63:39)
+(fail) observation: approve selected pending id copies B but deletes same-name A [20.60ms]
+
+ 1 pass
+ 3 fail
+ 7 expect() calls
+Ran 4 tests across 1 file. [233.00ms]
+Bun test process failed (1)

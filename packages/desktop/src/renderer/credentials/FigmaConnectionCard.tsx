@@ -3,7 +3,7 @@ import { Figma, Loader2 } from "lucide-react";
 import type { LinkSnapshot, MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
-import { LinkConnectionDialog } from "./LinkConnectionDialog";
+import { captureLinkAuthorizationReturnFocus, LinkConnectionDialog } from "./LinkConnectionDialog";
 import { RemoteProviderSection } from "./RemoteLinkSection";
 import { LinkConnectionRow, LinkStatus } from "./LinkProviderCard";
 import { LinkAccountMenu, LinkConnectionOption, useLinkPrimaryAction } from "./LinkPresentation";
@@ -32,6 +32,7 @@ export function FigmaConnectionCard({
   const [authorization, setAuthorization] = React.useState<{
     id: string;
     connection?: MaskedLinkConnection;
+    opener: HTMLElement | null;
   }>();
   const locked = React.useRef(false);
   const alive = React.useRef(false);
@@ -95,10 +96,12 @@ export function FigmaConnectionCard({
       }
     }
   };
-  const connect = (connection?: MaskedLinkConnection) =>
+  const connect = (connection?: MaskedLinkConnection) => {
+    const opener = captureLinkAuthorizationReturnFocus();
     void run(connection, async (live) => {
-      if (alive.current) setAuthorization({ id: crypto.randomUUID(), connection: live });
+      if (alive.current) setAuthorization({ id: crypto.randomUUID(), connection: live, opener });
     });
+  };
   const primary = useLinkPrimaryAction("mcp-oauth", {
     onClick: () => connect(),
     disabled: busy || !available || Boolean(authorization) || connections.length > 0,
@@ -265,6 +268,7 @@ export function FigmaConnectionCard({
           key={authorization.id}
           cwd={cwd}
           providerName="Figma"
+          opener={authorization.opener}
           icon={Figma}
           modes={modes}
           input={{

@@ -44,6 +44,11 @@ if (process.platform === "darwin") {
   const { bindPrivateKeychainContext, readKeychainReference } =
     await import("./macos-keychain-context.mjs");
   keychainReference = readKeychainReference(options.get("--default-keychain-reference"));
+  // The parent preflight needs the pinned reference; confinement removes it
+  // from Main and worker environments after validating the existing plist.
+  process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE = options.get(
+    "--default-keychain-reference",
+  );
   keychainContext = bindPrivateKeychainContext({
     home: isolated.home,
     root: fixtureRoot,

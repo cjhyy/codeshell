@@ -1,0 +1,43 @@
+{
+  "python": "3.14.5",
+  "node": "v25.8.1",
+  "bun": "1.3.11",
+  "git": "git version 2.39.5 (Apple Git-154)",
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "dependencyRoots": [
+    {
+      "path": "node_modules",
+      "isSymlink": true,
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules"
+    },
+    {
+      "path": "packages/core/node_modules",
+      "isSymlink": true,
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/core/node_modules"
+    },
+    {
+      "path": "packages/coding/node_modules",
+      "isSymlink": true,
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/coding/node_modules"
+    },
+    {
+      "path": "packages/tui/node_modules",
+      "isSymlink": true,
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/tui/node_modules"
+    },
+    {
+      "path": "packages/desktop/node_modules",
+      "isSymlink": true,
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/node_modules"
+    },
+    {
+      "path": "packages/chat/node_modules",
+      "isSymlink": true,
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/chat/node_modules"
+    }
+  ],
+  "notes": [
+    "No dependency install or clean product build in this audit checkpoint.",
+    "Root/package node_modules reuse existing installation; source imports and prebuilt package dist dependencies are distinguished in individual reports."
+  ]
+}

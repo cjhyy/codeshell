@@ -326,7 +326,7 @@ try {
   await settingsMenu.getByRole("menuitem", { name: "活动记录", exact: true }).click();
   await activityMenu.getByRole("menuitem", { name: "诊断日志", exact: true }).click();
   await drawer.waitFor({ state: "hidden" });
-  await win.getByRole("heading", { name: "日志", level: 1, exact: true }).waitFor();
+  await win.getByRole("heading", { name: "诊断日志", level: 1, exact: true }).waitFor();
   await win.waitForFunction(() => getComputedStyle(document.body).pointerEvents !== "none");
   drawer = await openDrawer();
   await drawer.locator('button[aria-haspopup="menu"]').click();

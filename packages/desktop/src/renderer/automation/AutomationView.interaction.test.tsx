@@ -172,6 +172,35 @@ describe("AutomationView interaction", () => {
     expect(textOf(container)).toContain("找不到原始任务");
     expect(writes).toEqual([]);
   });
+
+  test("retains delayed action failures only on their source job and clears them on retry", async () => {
+    let rejectRun!: (error: Error) => void;
+    let calls = 0;
+    window.codeshell.runAutomationNow = async () => {
+      calls++;
+      if (calls === 1)
+        await new Promise<void>((_resolve, reject) => {
+          rejectRun = reject;
+        });
+    };
+    await renderView();
+    await click(button("立即运行"));
+    expect(calls).toBe(1);
+    const choices = descendants(container).filter(
+      (node) => node.tagName === "BUTTON" && node.getAttribute("aria-controls") != null,
+    );
+    await click(choices[1]);
+    await act(async () => {
+      rejectRun(new Error("Daily job failed"));
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain("Daily job failed");
+    await click(choices[0]);
+    expect(textOf(container)).toContain("Daily job failed");
+    await click(button("立即运行"));
+    expect(calls).toBe(2);
+    expect(textOf(container)).not.toContain("Daily job failed");
+  });
   test("the empty state has one working conversational creation entry", async () => {
     jobs = [];
     await renderView();

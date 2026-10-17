@@ -2,16 +2,19 @@ import assert from "node:assert/strict";
 import childrenModule from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync } from "node:fs";
-import { readFile, realpath, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { _electron } from "playwright";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { preloadPausedPackagedMain } from "./packaged-main-preload.mjs";
 import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
+import { canCleanupPackagedProcesses } from "./packaged-process-exits.mjs";
+import { describePackagedAppLayout } from "./packaged-app-layout.mjs";
+import { readPackagedLinuxEnvironment } from "./packaged-linux-environment.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -21,12 +24,16 @@ export async function preparePackagedPetFixture({
   origin,
   fixtureRoot,
   keychainReferenceFile,
+  requireWorkerEvidence = true,
 }) {
+  assert.equal(typeof requireWorkerEvidence, "boolean");
   officialApp = await realpath(resolve(officialApp));
   keychainReferenceFile = keychainReferenceFile && (await realpath(keychainReferenceFile));
-  const executable = await realpath(join(officialApp, "Contents/MacOS/code-shell"));
-  const resources = join(officialApp, "Contents/Resources");
-  const managedNode = await realpath(join(resources, "runtimes/node/bin/node"));
+  const layout = describePackagedAppLayout(officialApp);
+  const executable = await realpath(layout.executable);
+  const { resources } = layout;
+  const resourcesURLPrefix = pathToFileURL(resources + sep).href;
+  const managedNode = await realpath(layout.managedNode);
   const before = await capturePackagedAppIntegrity(officialApp);
   // Persist before starting Electron, so assertion failures cannot lose the
   // baseline needed for a complete before/after failure receipt.
@@ -47,15 +54,33 @@ export async function preparePackagedPetFixture({
   const environment = {};
   for (const key of [
     "PATH",
+    "PATHEXT",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
     "LANG",
     "LC_ALL",
     "LC_CTYPE",
     "TZ",
     "USER",
+    "USERNAME",
     "LOGNAME",
     "SECURITYSESSIONID",
   ])
     if (process.env[key]) environment[key] = process.env[key];
+  const temporary = join(isolated.home, "tmp");
+  await mkdir(temporary, { mode: 0o700 });
+  if (process.platform === "win32") {
+    environment.APPDATA = join(isolated.home, "AppData/Roaming");
+    environment.LOCALAPPDATA = join(isolated.home, "AppData/Local");
+    await Promise.all(
+      [environment.APPDATA, environment.LOCALAPPDATA].map((path) =>
+        mkdir(path, { recursive: true, mode: 0o700 }),
+      ),
+    );
+  }
+  if (process.platform === "linux") Object.assign(environment, readPackagedLinuxEnvironment());
   Object.assign(environment, {
     HOME: isolated.home,
     USERPROFILE: isolated.home,
@@ -64,7 +89,9 @@ export async function preparePackagedPetFixture({
     CODE_SHELL_NO_DEVTOOLS: "1",
     CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
     DISABLE_AUTOUPDATER: "1",
-    TMPDIR: isolated.home,
+    TMPDIR: temporary,
+    TEMP: temporary,
+    TMP: temporary,
     XDG_CONFIG_HOME: join(isolated.home, ".config"),
     XDG_DATA_HOME: join(isolated.home, ".local/share"),
     NODE_USE_ENV_PROXY: "0",
@@ -78,10 +105,19 @@ export async function preparePackagedPetFixture({
     CODESHELL_OFFICIAL_USER_DATA: isolated.userDataDir,
   });
   const children = [];
+  const processMonitors = [];
+  const monitorsByChild = new Map();
   const workers = new Set();
   const verifiedMains = new Set();
   const verifiedWorkerMains = new Set();
   let launchFailed = false;
+  const terminateChild = async (child) => {
+    const monitor = monitorsByChild.get(child);
+    assert.ok(monitor?.terminate, "Captured Main identity is unproven; private HOME retained");
+    const settlement = await monitor.terminate();
+    assert.equal(settlement.status, "cleaned", "Captured Main exit is unproven; HOME retained");
+    return settlement;
+  };
   return {
     env: environment,
     managedNode,
@@ -94,7 +130,7 @@ export async function preparePackagedPetFixture({
           CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE: keychainReferenceFile,
         },
       });
-      // No app directory/script argument: this signed executable must load its
+      // No app directory/script argument: this executable must load its
       // own Resources/app.asar Main/preload/renderer. Its actual worker uses
       // this executable in Node mode; the synthetic plugin uses managed Node.
       const spawn = childrenModule.spawn;
@@ -110,6 +146,9 @@ export async function preparePackagedPetFixture({
         if (owned) {
           captured = child;
           children.push(child);
+          const monitor = watchElectronTestProcess(child, { timeoutMs: 120_000 });
+          processMonitors.push(monitor);
+          monitorsByChild.set(child, monitor);
           for (const stream of ["stdout", "stderr"])
             child[stream].on("data", (chunk) =>
               appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
@@ -119,9 +158,10 @@ export async function preparePackagedPetFixture({
           preload = preloadPausedPackagedMain(child, bootstrap, {
             // Initial ESM Break-on-start precedes the first dependency body.
             // Parsing the graph is expected; ordinary later pauses are denied.
-            allowedPause: (url) => url.startsWith(`file://${resources}/app.asar/out/main/`),
-            isHostScript: (url) => url.includes(resources),
+            allowedPause: (url) => url.startsWith(layout.mainURLPrefix),
+            isHostScript: (url) => url.startsWith(resourcesURLPrefix),
             allowParsedHostOnStart: true,
+            terminateChild: () => terminateChild(child),
           }).then(async (receipt) => {
             await writeFile(
               join(isolated.home, `startup-pause-${child.pid}.json`),
@@ -148,7 +188,6 @@ export async function preparePackagedPetFixture({
         });
         const startupPause = await preload;
         assert.equal(captured, app.process(), "packaged executable was not captured at spawn");
-        watchElectronTestProcess(app.process(), { timeoutMs: 120_000 });
         const identity = await app.evaluate(({ app }) => ({
           packaged: app.isPackaged,
           appPath: app.getAppPath(),
@@ -156,6 +195,8 @@ export async function preparePackagedPetFixture({
           resources: process.resourcesPath,
           version: app.getVersion(),
           electron: process.versions.electron,
+          platform: process.platform,
+          arch: process.arch,
           userData: app.getPath("userData"),
         }));
         assert.equal(identity.packaged, true);
@@ -163,6 +204,8 @@ export async function preparePackagedPetFixture({
         assert.equal(identity.executable, executable);
         assert.equal(identity.resources, resources);
         assert.equal(identity.userData, isolated.userDataDir);
+        assert.equal(identity.platform, process.platform);
+        assert.equal(identity.arch, process.arch);
         await writeFile(
           join(isolated.home, `packaged-identity-${captured.pid}.json`),
           JSON.stringify(identity),
@@ -201,15 +244,7 @@ export async function preparePackagedPetFixture({
         ];
         if (captured && captured.exitCode === null && captured.signalCode === null) {
           try {
-            captured.kill("SIGTERM");
-            await new Promise((resolve) => setTimeout(resolve, 1_000));
-            if (captured.exitCode === null && captured.signalCode === null)
-              captured.kill("SIGKILL");
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            if (captured.exitCode === null && captured.signalCode === null)
-              throw Error("captured packaged Main still alive; private HOME retained", {
-                cause: error,
-              });
+            await terminateChild(captured);
           } catch (closeError) {
             errors.push(closeError);
           }
@@ -223,6 +258,7 @@ export async function preparePackagedPetFixture({
       }
       return app;
     },
+    terminateChild,
     async assertWorker(app) {
       const pid = app.process().pid;
       const deadline = Date.now() + 15_000;
@@ -285,36 +321,33 @@ export async function preparePackagedPetFixture({
       throw Error("actual packaged Main/Node-mode worker preimport receipts were not verified");
     },
     async canCleanup() {
-      const spawned = (await readFile(join(isolated.home, "spawned-workers.jsonl"), "utf8"))
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line));
-      const exits = (await readFile(join(isolated.home, "worker-exits.jsonl"), "utf8"))
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line));
-      return (
-        !launchFailed &&
-        children.every(
-          (child) =>
-            verifiedMains.has(child.pid) &&
-            verifiedWorkerMains.has(child.pid) &&
-            (child.exitCode !== null || child.signalCode !== null),
-        ) &&
-        [...workers, ...spawned.map((worker) => worker.pid)].every((pid) =>
-          exits.some((exit) => exit.pid === pid),
-        )
-      );
+      const settlements = await Promise.all(processMonitors.map((monitor) => monitor.completed));
+      if (
+        processMonitors.length !== children.length ||
+        settlements.some((result) => result?.status !== "cleaned")
+      )
+        return false;
+      return canCleanupPackagedProcesses({
+        home: isolated.home,
+        requireWorkerEvidence,
+        launchFailed,
+        children,
+        verifiedMains,
+        verifiedWorkerMains,
+        workers,
+      });
     },
     async verifyUnchanged() {
+      const observedProcessSettlements = await Promise.all(
+        processMonitors.map((monitor) => monitor.completed),
+      );
       const after = await capturePackagedAppIntegrity(officialApp);
       assert.equal(after.appTreeSHA256, before.appTreeSHA256, "official signed app changed");
       return {
         ...after,
         beforeAppTreeSHA256: before.appTreeSHA256,
         unchangedAfterRuntime: true,
+        observedProcessSettlements,
         bootstrapSHA256: hash(await readFile(bootstrap)),
         mainExits: children.map((child) => ({
           pid: child.pid,

@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/sources-parse.test.ts:
+{"case":"absolute-xlsx","intendedOrder":["Second visible sheet","First visible sheet"],"actual":{"format":"xlsx","parts":[{"label":"First visible sheet","text":"[A1] first data"}],"truncated":false}}
+(pass) observation: one absolute worksheet relationship silently omits that sheet [56.82ms]
+{"case":"dot-relative-xlsx","intendedOrder":["Second visible sheet","First visible sheet"],"actual":{"format":"xlsx","parts":[{"label":"First visible sheet","text":"[A1] first data"}],"truncated":false}}
+(pass) observation: dot-relative worksheet relationship has the same silent omission [1.60ms]
+{"case":"absolute-pptx","expectedText":["Second slide data","First slide data"],"actual":{"format":"pptx","parts":[{"label":"slide 1","text":"First slide data\n"}],"truncated":false}}
+(pass) observation: absolute PPTX relationship silently omits a selected slide [1.33ms]
+{"case":"namespace-alias-xlsx","intendedOrder":["Second visible sheet","First visible sheet"],"actual":{"format":"xlsx","parts":[{"label":"xl/worksheets/sheet1.xml","text":"[A1] first data"},{"label":"xl/worksheets/sheet2.xml","text":"[A1] second data"}],"truncated":false}}
+(pass) observation: namespace alias loses workbook labels and display order [4.39ms]
+{"case":"phonetic-xlsx","expectedCellDisplay":"東京","actual":{"format":"xlsx","parts":[{"label":"xl/worksheets/sheet1.xml","text":"[A1] 東京トウキョウ"}],"truncated":false}}
+(pass) observation: XLSX phonetic guides are concatenated into displayed strings [1.00ms]
+
+ 5 pass
+ 0 fail
+ 10 expect() calls
+Ran 5 tests across 1 file. [113.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

@@ -16,6 +16,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -328,7 +329,7 @@ try {
   assert(firstPrepared.revision === first.revision, "prepare/list revision mismatch");
   const firstView = await attachPanel(win, first, firstPrepared);
 
-  await win.waitForFunction(async () => {
+  await waitForAsyncFunction(win, async () => {
     const candidate = document.getElementById("panel-app-e2e");
     if (typeof candidate?.executeJavaScript !== "function") return false;
     return (
@@ -468,12 +469,16 @@ try {
     .waitFor({ state: "visible" });
   await reviewDialog.getByRole("button", { name: /^(确认并更新|Review and update)$/ }).click();
   await reviewDialog.waitFor({ state: "hidden" });
-  await win.waitForFunction(async (cwd) => {
-    const selected = (await window.codeshell.getPanelAppBindings(cwd)).find(
-      (item) => item.appId === "panel-e2e",
-    );
-    return selected?.version === "1.0.1" && selected?.bound && !!selected?.packageDigest;
-  }, projectDir);
+  await waitForAsyncFunction(
+    win,
+    async (cwd) => {
+      const selected = (await window.codeshell.getPanelAppBindings(cwd)).find(
+        (item) => item.appId === "panel-e2e",
+      );
+      return selected?.version === "1.0.1" && selected?.bound && !!selected?.packageDigest;
+    },
+    projectDir,
+  );
   const staleReviewRejected = await win.evaluate(
     async ({ revision, cwd }) => {
       try {
@@ -511,7 +516,7 @@ try {
     "Panel App update reused stale storage",
   );
   const secondView = await attachPanel(win, second, secondPrepared);
-  await win.waitForFunction(async () => {
+  await waitForAsyncFunction(win, async () => {
     const candidate = document.getElementById("panel-app-e2e");
     if (typeof candidate?.executeJavaScript !== "function") return false;
     return (

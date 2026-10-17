@@ -61,6 +61,12 @@ import {
 } from "./chat/localFilePaths";
 import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
+import {
+  bindMentionReference,
+  currentMentionReferences,
+  reconcileMentionReferences,
+  type MentionReferences,
+} from "./chat/mentionReferences";
 import { ComposerSuggestions, suggestionOptionId } from "./chat/ComposerSuggestions";
 import { detectMention } from "./chat/mention";
 import {
@@ -483,6 +489,20 @@ export function ChatView({
   );
   const setAttachments = onAttachmentsChange;
   const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
+  const [mentionReferences, setMentionReferences] = useState<MentionReferences>({
+    draft,
+    bindings: [],
+  });
+  const mentionEditSelection = useRef<{ draft: string; start: number; end: number } | null>(null);
+  const captureMentionEditSelection = (target = textareaRef.current) => {
+    const start = target?.selectionStart ?? draft.length;
+    mentionEditSelection.current = { draft, start, end: target?.selectionEnd ?? start };
+  };
+  useEffect(() => {
+    setMentionReferences((current) => reconcileMentionReferences(current, draft));
+  }, [draft]);
+  const referencesForDraft = () =>
+    currentMentionReferences(mentionReferences, draft).reduce(appendReference, inputReferences);
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
   const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
@@ -1013,11 +1033,15 @@ export function ChatView({
         : item.kind === "recent"
           ? `@${item.attachment.path} `
           : `@${item.file.path} `;
+    const next = before + insertion + after;
     if (item.kind === "file") {
       const attachmentContext = onPrepareAttachmentSession?.();
-      setInputReferences((cur) =>
-        appendReference(
+      setMentionReferences((cur) =>
+        bindMentionReference(
           cur,
+          next,
+          before.length,
+          before.length + insertion.length - 1,
           referenceFromFileHit(
             item.file,
             attachmentContext?.cwd ?? conversationRoot,
@@ -1026,9 +1050,16 @@ export function ChatView({
         ),
       );
     } else if (item.kind === "recent") {
-      setInputReferences((cur) => appendReference(cur, item.attachment));
+      setMentionReferences((cur) =>
+        bindMentionReference(
+          cur,
+          next,
+          before.length,
+          before.length + insertion.length - 1,
+          item.attachment,
+        ),
+      );
     }
-    const next = before + insertion + after;
     setDraft(next);
     closeMention();
     // After React paints, restore caret to the end of the inserted token.
@@ -1090,6 +1121,7 @@ export function ChatView({
       onCompactCommand();
       setDraft("");
       setInputReferences([]);
+      setMentionReferences({ draft: "", bindings: [] });
       setLocalFilePaths([]);
       setAttachmentError(null);
       setHistoryCursor(-1);
@@ -1153,7 +1185,7 @@ export function ChatView({
     );
     const displayWithAnchors = encodeAnchorsForWire(displayWithLocalFiles, anchors);
     const displayPayload = encodeAttachmentsForWire(displayWithAnchors, attachments);
-    const runAttachments = [...toRunAttachments(attachments), ...inputReferences];
+    const runAttachments = [...toRunAttachments(attachments), ...referencesForDraft()];
     // Only the text actually submitted by this composer contributes authorization candidates.
     // Attachment paths, injected prompts, tool results and replayed messages cannot register one.
     const linkSubmission = rememberLinkSubmission(text);
@@ -1182,6 +1214,7 @@ export function ChatView({
     closeSlash();
     setAttachments([]);
     setInputReferences([]);
+    setMentionReferences({ draft: "", bindings: [] });
     setLocalFilePaths([]);
     setAttachmentError(null);
     setHistoryCursor(-1);
@@ -1261,6 +1294,7 @@ export function ChatView({
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (compacting) return;
+    captureMentionEditSelection(e.currentTarget);
     const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);
     if (imageFiles.length === 0) return;
     e.preventDefault();
@@ -1306,6 +1340,7 @@ export function ChatView({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (isComposing || e.nativeEvent.isComposing) return;
+    if (e.key === "Backspace" || e.key === "Delete") captureMentionEditSelection(e.currentTarget);
 
     if (slash) {
       if (e.key === "Escape") {
@@ -2196,8 +2231,25 @@ export function ChatView({
                 aria-autocomplete="list"
                 aria-haspopup="listbox"
                 value={draft}
+                onBeforeInput={(e) => captureMentionEditSelection(e.currentTarget)}
+                onCut={(e) => captureMentionEditSelection(e.currentTarget)}
                 onChange={(e) => {
                   const value = e.target.value;
+                  const selection = mentionEditSelection.current;
+                  mentionEditSelection.current = null;
+                  setMentionReferences((current) =>
+                    reconcileMentionReferences(
+                      reconcileMentionReferences(current, draft),
+                      value,
+                      selection?.draft === draft
+                        ? {
+                            start: selection.start,
+                            end: selection.end,
+                            caret: e.target.selectionStart ?? value.length,
+                          }
+                        : undefined,
+                    ),
+                  );
                   setDraft(value);
                   if (historyCursor !== -1) setHistoryCursor(-1);
                   const caret = e.target.selectionStart ?? value.length;
@@ -2445,7 +2497,7 @@ export function ChatView({
                           const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
                           const runAttachments = [
                             ...toRunAttachments(attachments),
-                            ...inputReferences,
+                            ...referencesForDraft(),
                           ];
                           onForceSend(withAnchors, {
                             ...(sendBucket ? { bucket: sendBucket } : {}),
@@ -2461,6 +2513,7 @@ export function ChatView({
                           closeSlash();
                           setAttachments([]);
                           setInputReferences([]);
+                          setMentionReferences({ draft: "", bindings: [] });
                           setLocalFilePaths([]);
                           setAttachmentError(null);
                           onClearAnchors?.();

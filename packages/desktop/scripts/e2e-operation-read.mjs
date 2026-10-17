@@ -314,8 +314,8 @@ async function guardedProcesses() {
   }
 }
 async function activityReview() {
-  await navigateSettingsMenu(win, "Task center", { activity: true });
-  const card = win.locator(`[data-task-key="session:${sessionId}"]`);
+  await navigateSettingsMenu(win, "Conversations", { activity: true });
+  const card = win.locator(`[data-session-id="${sessionId}"]`);
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
   await card.getByText("Result remains unknown", { exact: true }).waitFor();
@@ -520,6 +520,9 @@ try {
   const processes = await guardedProcesses();
   stage = "actual compiled Engine creates durable unknown Star";
   core = await import(coreUrl);
+  (await import("@cjhyy/code-shell-server/links")).installDefaultLinkProviders(
+    core.registerLocalLinkProviders,
+  );
   (await import(helperUrl)).installOperationReadFixture(core, origin, "original");
   class SyntheticProvider extends core.LLMClientBase {
     initClient() {}

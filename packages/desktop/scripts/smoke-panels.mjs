@@ -22,6 +22,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -309,6 +310,14 @@ async function registerFixtureProject() {
     const chooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
     await chooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
     await acceptancePhase("after-picker-click");
+    await waitForAsyncFunction(
+      win,
+      async (path) => {
+        const projects = await window.codeshell.projectRegistry.list();
+        return projects.some((entry) => entry.roots.some((root) => root.path === path));
+      },
+      projectPath,
+    );
     const project = await win.evaluate(async (path) => {
       const projects = await window.codeshell.projectRegistry.list();
       return projects.find((entry) => entry.roots.some((root) => root.path === path));
@@ -399,14 +408,7 @@ async function sendScenario(win, modelKey, prompt, { expectedError } = {}) {
 async function openPanelDock(win) {
   const toggle = win.locator('[data-panel-action="toggle"]');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
-  await win
-    .locator('[data-panel-id="files"]')
-    .or(win.getByRole("button", { name: /文件|Files/i }))
-    .first()
-    .waitFor({
-      state: "visible",
-      timeout: 10_000,
-    });
+  await win.locator('[data-panel-action="new-tab"]').waitFor({ state: "visible", timeout: 10_000 });
 }
 
 async function mountCorePanels(win) {

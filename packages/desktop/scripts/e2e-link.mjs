@@ -2,11 +2,11 @@
  * Real Electron Link-page smoke.
  *
  * Boots the production main/preload/renderer stack in an isolated HOME and
- * proves the four independent credential categories, ten expandable provider
+ * proves the four independent credential categories, ten provider dialogs
  * cards with one unified Figma API/MCP entry, five zero-copy CLI
  * entry points, manual credential fallback, and responsive layout.
  */
-/* global document, window */
+/* global document, window, getComputedStyle */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { dirname } from "node:path";
@@ -38,10 +38,10 @@ async function networkAttempts() {
         .map((line) => JSON.parse(line))
     : [];
 }
-// Each category now includes a localized description in its accessible name.
+// Match the current localized category names; descriptions use aria-description.
 const credentialTabNames = {
-  cookie: /^Cookie(?:\s|$)/i,
-  token: /^Permission Token(?:\s|$)/i,
+  cookie: /^(?:网站登录|Website sign-ins)(?:\s|$)/i,
+  token: /^(?:API 密钥|API keys)(?:\s|$)/i,
   channels: /^(沟通渠道|Channels)(?:\s|$)/i,
   link: /^Link(?:\s|$)/i,
 };
@@ -103,7 +103,20 @@ async function assertNoHorizontalOverflow(label) {
 async function assertReadableHero(selector, label) {
   const heading = win.locator(selector).getByRole("heading", { level: 2 }).first();
   const box = await heading.boundingBox();
-  assert(box && box.width >= 160, `${label} hero heading collapsed to ${box?.width ?? 0}px`);
+  const naturalWidth = await heading.evaluate((node) => {
+    const style = getComputedStyle(node);
+    const context = document.createElement("canvas").getContext("2d");
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const text = node.textContent ?? "";
+    return (
+      context.measureText(text).width +
+      (parseFloat(style.letterSpacing) || 0) * Math.max(0, text.length - 1)
+    );
+  });
+  assert(
+    box && box.width >= Math.min(160, naturalWidth) - 1,
+    `${label} hero heading collapsed to ${box?.width ?? 0}px`,
+  );
 }
 
 async function openCliDialog(providerId, providerName) {
@@ -111,11 +124,17 @@ async function openCliDialog(providerId, providerName) {
   const method = card.locator(
     `[data-link-method-provider="${providerId}"][data-link-runtime="local"]`,
   );
-  await method.getByRole("button", { name: /连接本地|Connect locally/i }).click();
-  const dialog = win.getByRole("dialog");
+  const localConnect = method.getByRole("button", { name: /连接本地|Connect locally/i });
+  if (await localConnect.isVisible()) await localConnect.click();
+  else await card.locator(`[data-link-dialog-connect="${providerId}"]`).click();
+  const dialog = win.getByRole("dialog", {
+    name: new RegExp(`连接 ${providerName}|Connect ${providerName}`, "i"),
+  });
   await dialog
     .getByRole("heading", { name: new RegExp(`连接 ${providerName}|Connect ${providerName}`, "i") })
     .waitFor({ state: "visible", timeout: 15_000 });
+  const advancedModes = dialog.getByRole("button", { name: /高级设置|Advanced settings/i });
+  if (await advancedModes.count()) await advancedModes.click();
   await dialog.locator('[data-link-auth-mode="cli-session"]').click();
   await dialog
     .locator('[data-link-authorization-step="local-session"]')
@@ -129,25 +148,19 @@ async function openCliDialog(providerId, providerName) {
 async function expandProvider(providerId) {
   const card = win.locator(`article[data-link-provider-card="${providerId}"]`);
   await card.waitFor({ state: "visible" });
-  const toggle = card.locator("[data-link-provider-toggle]");
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await card.locator(`[data-link-provider-details="${providerId}"]`).waitFor({ state: "visible" });
-  assert(
-    (await toggle.getAttribute("aria-expanded")) === "true",
-    `${providerId} details did not expand accessibly`,
-  );
-  return card;
+  await card.locator("[data-link-provider-toggle], [data-link-primary-connect]").click();
+  const dialog = win.locator(`[data-link-provider-dialog="${providerId}"]`);
+  await dialog.waitFor({ state: "visible" });
+  const advanced = dialog.locator(`[data-link-advanced-toggle="${providerId}"]`);
+  if ((await advanced.count()) && (await advanced.getAttribute("aria-expanded")) === "false")
+    await advanced.click();
+  return dialog;
 }
 
 async function collapseProvider(providerId) {
-  const card = win.locator(`article[data-link-provider-card="${providerId}"]`);
-  const toggle = card.locator("[data-link-provider-toggle]");
-  if ((await toggle.getAttribute("aria-expanded")) === "true") await toggle.click();
-  await card.locator(`[data-link-provider-details="${providerId}"]`).waitFor({ state: "hidden" });
-  assert(
-    (await toggle.getAttribute("aria-expanded")) === "false",
-    `${providerId} details did not collapse accessibly`,
-  );
+  const dialog = win.locator(`[data-link-provider-dialog="${providerId}"]`);
+  await dialog.locator(`[data-link-dialog-close="${providerId}"]`).click();
+  await dialog.waitFor({ state: "hidden" });
 }
 
 try {
@@ -238,11 +251,13 @@ require("node:module").syncBuiltinESMExports();
   for (const providerId of expectedProviders) {
     const card = win.locator(`article[data-link-provider-card="${providerId}"]`);
     assert(
-      (await card.locator("[data-link-provider-toggle]").getAttribute("aria-expanded")) === "false",
-      `${providerId} was expanded before user interaction`,
+      (await card
+        .locator("[data-link-provider-toggle], [data-link-primary-connect]")
+        .getAttribute("data-state")) === "closed",
+      `${providerId} dialog was open before user interaction`,
     );
     assert(
-      !(await card.locator(`[data-link-provider-details="${providerId}"]`).isVisible()),
+      !(await win.locator(`[data-link-provider-details="${providerId}"]`).isVisible()),
       `${providerId} management details were initially visible`,
     );
   }
@@ -250,18 +265,23 @@ require("node:module").syncBuiltinESMExports();
   await screenshot("link-desktop.png");
   const figma = await expandProvider("figma");
   assert(
-    (await figma.locator('[data-figma-channel="api"]').count()) === 1,
-    "Figma API channel is missing",
+    (await figma
+      .locator('[data-link-method-provider="figma"][data-link-runtime="local"]')
+      .count()) === 1,
+    "Figma local API channel is missing",
   );
   const mcp = figma.locator('[data-figma-channel="mcp"]');
   assert((await mcp.count()) === 1, "Figma official MCP channel is missing");
   const officialMcpName = /连接设计上下文|Connect design context/i;
+  const officialMcpAction = mcp.getByRole("button", { name: officialMcpName });
   assert(
-    (await mcp.getByRole("button", { name: officialMcpName }).count()) === 1,
+    (await officialMcpAction.count()) === 1 ||
+      (await figma.locator('[data-link-dialog-connect="figma"]').count()) === 1,
     "Official MCP connect is missing from the Figma card",
   );
   assert(
-    (await win.getByRole("button", { name: officialMcpName }).count()) === 1,
+    (await win.getByRole("button", { name: officialMcpName }).count()) ===
+      (await officialMcpAction.count()),
     "Official Figma MCP connect leaked outside the unified card",
   );
   assert(
@@ -310,7 +330,6 @@ require("node:module").syncBuiltinESMExports();
     await collapseProvider(providerId);
   }
 
-  await win.setViewportSize({ width: 700, height: 900 });
   const responsiveTabs = [
     [credentialTabNames.cookie, "[data-cookie-page]", "Cookie", "credentials-cookie-mobile.png"],
     [
@@ -327,13 +346,20 @@ require("node:module").syncBuiltinESMExports();
     ],
     [credentialTabNames.link, "[data-link-page]", "Link", "link-mobile.png"],
   ];
-  for (const [name, selector, label, screenshotName] of responsiveTabs) {
-    await win.getByRole("tab", { name }).click();
-    await win.locator(selector).waitFor({ state: "visible", timeout: 20_000 });
-    await win.locator(selector).getByRole("heading", { level: 2 }).first().scrollIntoViewIfNeeded();
-    await assertNoHorizontalOverflow(`mobile ${label} page`);
-    await assertReadableHero(selector, `mobile ${label} page`);
-    await screenshot(screenshotName);
+  for (const width of [700, 390]) {
+    await win.setViewportSize({ width, height: 900 });
+    for (const [name, selector, label, screenshotName] of responsiveTabs) {
+      await win.getByRole("tab", { name }).click();
+      await win.locator(selector).waitFor({ state: "visible", timeout: 20_000 });
+      await win
+        .locator(selector)
+        .getByRole("heading", { level: 2 })
+        .first()
+        .scrollIntoViewIfNeeded();
+      await assertNoHorizontalOverflow(`${width}px ${label} page`);
+      await assertReadableHero(selector, `${width}px ${label} page`);
+      await screenshot(`${width}-${screenshotName}`);
+    }
   }
 
   const mobileFigma = await expandProvider("figma");

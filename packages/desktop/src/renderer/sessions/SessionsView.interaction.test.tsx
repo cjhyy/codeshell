@@ -53,6 +53,7 @@ describe("SessionsView editing and recovery", () => {
   let readFailure: string | null;
   let titlesFailure: string | null;
   let reads: number;
+  const operationReviews: string[] = [];
   const renames: Array<{ id: string; title: string; result: ReturnType<typeof deferred> }> = [];
   const deletes: Array<{ id: string; result: ReturnType<typeof deferred> }> = [];
 
@@ -80,6 +81,7 @@ describe("SessionsView editing and recovery", () => {
     readFailure = null;
     titlesFailure = null;
     reads = 0;
+    operationReviews.length = 0;
     renames.length = 0;
     deletes.length = 0;
     Object.defineProperty(window, "codeshell", {
@@ -107,6 +109,12 @@ describe("SessionsView editing and recovery", () => {
           return result.promise.then(() => {
             sessions = sessions.filter((session) => session.id !== id);
           });
+        },
+        operationResolution: {
+          review: async (id: string) => {
+            operationReviews.push(id);
+            return { reviewToken: "fixture-review", records: [], truncated: false };
+          },
         },
       },
     });
@@ -209,6 +217,16 @@ describe("SessionsView editing and recovery", () => {
     expect(document.activeElement === search()).toBe(true);
     expect(rows()).toHaveLength(2);
     expect(reads).toBe(1);
+  });
+
+  test("ordinary sessions expose external-write review only after that session's explicit request", async () => {
+    await render();
+    expect(operationReviews).toEqual([]);
+    expect(rows().map((row) => props(row)["data-session-id"])).toEqual([FIRST.id, SECOND.id]);
+    await click(button("外部写入人工处理", 1));
+    expect(operationReviews).toEqual([SECOND.id]);
+    expect(textOf(rows()[0])).not.toContain("没有需要人工处理的已发送写入。");
+    expect(textOf(rows()[1])).toContain("没有需要人工处理的已发送写入。");
   });
 
   test("shows and searches durable session titles before any UI-side rename exists", async () => {

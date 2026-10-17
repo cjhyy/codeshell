@@ -24,6 +24,7 @@ export const pet = {
         customInstructionsLabel: "给 Mimi 的专属要求",
         customInstructionsPlaceholder: "例如：汇报工作时先说结论；任务有明显风险时先跟我确认…",
         personalizationSaveHint: "自动保存，下一次 Mimi 回复时生效。",
+        personalizationSaveFailed: "个性化设置保存失败，请重试。",
         modelTitle: "Mimi 对话模型",
         modelDescription: "只用于 Mimi 的管理对话；长程工作 Session 继续使用自己的默认模型。",
         useAppDefault: "跟随应用默认",
@@ -439,6 +440,7 @@ export const pet = {
         customInstructionsPlaceholder:
           "For example: Lead work updates with the outcome; ask before proceeding when a task has material risk…",
         personalizationSaveHint: "Saved automatically and applied to Mimi's next reply.",
+        personalizationSaveFailed: "Could not save personalization. Please retry.",
         modelTitle: "Mimi chat model",
         modelDescription:
           "Used only for Mimi's manager chat. Long-running work Sessions keep their own default model.",

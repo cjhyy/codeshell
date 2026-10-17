@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/sources-redaction.test.ts:
+{"case":"single-file-query-json","before":"{\"format\":\"text\",\"parserVersion\":\"1\",\"sourceHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"resourceId\":\"notes.txt\",\"inputBytes\":31,\"extractionTruncated\":false,\"totalMatches\":1,\"hasMore\":false,\"matches\":[{\"id\":\"c_aaaaaaaaaaaaaaaaaaaaaaaa\",\"part\":\"text\",\"partIndex\":0,\"start\":0,\"end\":31,\"text\":\"Header, password: fixture-value\",\"score\":1.4054651081081644}]}","after":"{\"format\":\"text\",\"parserVersion\":\"1\",\"sourceHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"resourceId\":\"notes.txt\",\"inputBytes\":31,\"extractionTruncated\":false,\"totalMatches\":1,\"hasMore\":false,\"matches\":[{\"id\":\"c_aaaaaaaaaaaaaaaaaaaaaaaa\",\"part\":\"text\",\"partIndex\":0,\"start\":0,\"end\":31,\"text\":\"Header, password: [REDACTED],\"score\":1.4054651081081644}]}","validJsonAfter":false}
+(pass) observation: the single file query redaction sequence breaks result JSON [2.23ms]
+{"case":"cross-file-query-json-control","after":"{\"search\":\"lexical\",\"resources\":[{\"resourceId\":\"notes.txt\",\"sourceHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"format\":\"text\",\"parserVersion\":\"1\",\"inputBytes\":31,\"extractionTruncated\":false}],\"extractionTruncated\":false,\"totalMatches\":1,\"hasMore\":false,\"outputTruncated\":false,\"matches\":[{\"resourceId\":\"notes.txt\",\"sourceHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"format\":\"text\",\"parserVersion\":\"1\",\"id\":\"c_aaaaaaaaaaaaaaaaaaaaaaaa\",\"part\":\"text\",\"partIndex\":0,\"start\":0,\"end\":31,\"text\":\"Header, password: [REDACTED]\",\"score\":1.4054651081081644}]}","validJsonAfter":true}
+(pass) control: corpus redaction preserves JSON by scrubbing values before serialization [0.31ms]
+
+ 2 pass
+ 0 fail
+ 5 expect() calls
+Ran 2 tests across 1 file. [38.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

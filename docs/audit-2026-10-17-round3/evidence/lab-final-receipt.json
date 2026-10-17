@@ -1,0 +1,77 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "branch": "codex/audit/broad-round3-20261017",
+  "recordedAtUtc": "2026-10-16T23:46:58.027867+00:00",
+  "confirmedFindings": [
+    "LAB-R3-01",
+    "ARENA-R3-01",
+    "ARENA-R3-02"
+  ],
+  "priorities": {
+    "P3": 3
+  },
+  "successfulShards": 1,
+  "successfulShardFiles": 1,
+  "successfulShardTests": 4,
+  "successfulShardExpectCalls": 19,
+  "successfulShardFailures": 0,
+  "successfulShardSkipped": 0,
+  "firstFixtureFailedShards": 1,
+  "failedShardFiles": 1,
+  "failedShardAttemptedTests": 1,
+  "failedShardReportedFailures": 1,
+  "failedShardCompleted": false,
+  "reruns": 0,
+  "realModelCalls": 0,
+  "networkOperations": 0,
+  "productSubprocessOperations": 0,
+  "hostOrFeatureStartup": 0,
+  "fixtureTmpDirectories": [],
+  "staticManifestFiles": 46,
+  "staticManifestHashesStillMatch": true,
+  "firstRunSourceAndRawStillMatch": true,
+  "productSourceEdits": 0,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round3/arena-lab.md",
+      "sha256": "8ef589d9e343fc8b0c284740ec9e7d589f5cecd8337f6de75765e6c00df0229a",
+      "bytes": 10360
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1-receipt.json",
+      "sha256": "b73919da94282127e1143676eac08b096d9355d9d1c2086d41c07bb8bf5869cc",
+      "bytes": 3541
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1.raw.log",
+      "sha256": "9f02a61eed49105dfcd150e11b99ea8492eb9473d89e08c0e3649d58653ecd38",
+      "bytes": 1263
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1.test.ts",
+      "sha256": "76759c22bce482b36a15e157939c052d363ef770dfc8b1d76ae096914a773415",
+      "bytes": 6722
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round2-receipt.json",
+      "sha256": "a3e9ad553dd7d13bf98404248777fd237bb2edee725a0e26b800ee864b7abb35",
+      "bytes": 1775
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round2.raw.log",
+      "sha256": "3c5e5b66b9b94907f89ef8ec3a633d9468e8a966e540a8cb549b85dd6133556d",
+      "bytes": 1270
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round2.test.ts",
+      "sha256": "a5b999fa2fc836c2b6b1b7ae4202dc65b93eb1eda56ed1caf3b60f632020c5db",
+      "bytes": 3051
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "sha256": "058b5562f5cb9e1abb08a7813e3091ecf1fa23f96e224752dbb7619d8812de10",
+      "bytes": 8392
+    }
+  ],
+  "countsNote": "Do not combine failed shard with completed coverage; observation emission is one of the four passing tests. Private Arena and default-off experimental Lab only."
+}

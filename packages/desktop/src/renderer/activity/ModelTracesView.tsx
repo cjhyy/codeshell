@@ -892,7 +892,10 @@ export function ModelTracesView({
                   size="sm"
                   variant="outline"
                   className="mt-2"
-                  onClick={refresh}
+                  onClick={() => {
+                    refresh();
+                    queueFocus(detailHeadingRef);
+                  }}
                 >
                   {t("observability.retry")}
                 </Button>

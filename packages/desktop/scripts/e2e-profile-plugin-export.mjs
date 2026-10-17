@@ -1,6 +1,6 @@
 /* Real Settings export review; no model/tool execution. The OS picker alone is stubbed. */
 /* global localStorage, window */
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -139,7 +139,7 @@ require("node:module").syncBuiltinESMExports();
     .filter({ has: win.locator("summary", { hasText: /reference\.txt/ }) });
   await support.locator("summary").click();
   await support.getByText("OPTIONAL_REVIEW_TEXT", { exact: true }).waitFor();
-  for (const width of [1440, 820, 390]) {
+  for (const width of [1440, 820, 390, 320]) {
     await win.setViewportSize({ width, height: 960 });
     await review.evaluate((node) => {
       node.scrollTop = 0;
@@ -150,12 +150,25 @@ require("node:module").syncBuiltinESMExports();
       right: node.getBoundingClientRect().right,
       client: node.clientWidth,
       content: node.scrollWidth,
+      overflowing: [...node.querySelectorAll("*")]
+        .filter(
+          (child) => child.getBoundingClientRect().right > node.getBoundingClientRect().right + 1,
+        )
+        .slice(0, 8)
+        .map((child) => ({
+          tag: child.tagName,
+          className: child.className,
+          width: child.getBoundingClientRect().width,
+        })),
     }));
     assert(
       metrics.x >= 0 && metrics.right <= metrics.viewport + 1,
       `Review escapes ${width}px viewport`,
     );
-    assert(metrics.content <= metrics.client + 1, `Review overflows horizontally at ${width}px`);
+    assert(
+      metrics.content <= metrics.client + 1,
+      `Review overflows horizontally at ${width}px: ${JSON.stringify(metrics)}`,
+    );
     await capture(`static-review-${width}.png`);
   }
   await win.setViewportSize({ width: 1440, height: 960 });
@@ -178,13 +191,113 @@ require("node:module").syncBuiltinESMExports();
     "Canceled picker wrote a directory",
   );
   await capture("static-review-native-cancel.png");
+  const existing = join(isolated.home, "existing.plugin");
+  const exported = join(isolated.home, "reviewed-export.plugin");
+  await put(join(existing, "sentinel.txt"), "EXISTING_DIRECTORY_MUST_SURVIVE\n");
+  await action.click();
+  await review.getByRole("checkbox", { name: /^skill: reviewed/ }).check();
+  await review.getByText(/Complete file review · 4 files/).waitFor();
+  await review.getByRole("checkbox", { name: "reference.txt", exact: true }).check();
+  await review.getByText(/Complete file review · 5 files/).waitFor();
+  await review.getByRole("checkbox", { name: /^I reviewed all selected text/ }).check();
+  await app.evaluate(({ dialog }, existing) => {
+    globalThis.__profileExportUI.destination = existing;
+    dialog.showSaveDialog = async () => {
+      globalThis.__profileExportUI.pickerCalls++;
+      if (globalThis.__profileExportUI.deferPicker) {
+        globalThis.__profileExportUI.deferPicker = false;
+        await new Promise((resolve) => {
+          globalThis.__profileExportUI.releasePicker = resolve;
+        });
+        globalThis.__profileExportUI.releasePicker = null;
+      }
+      return { canceled: false, filePath: globalThis.__profileExportUI.destination };
+    };
+  }, existing);
+  await save.click();
+  await review
+    .getByRole("alert")
+    .filter({ hasText: /already exists/ })
+    .waitFor();
+  assert(
+    (await readFile(join(existing, "sentinel.txt"), "utf8")) ===
+      "EXISTING_DIRECTORY_MUST_SURVIVE\n",
+    "Rejected existing destination changed an existing file",
+  );
+  assert(
+    await review.getByRole("checkbox", { name: /^skill: reviewed/ }).isChecked(),
+    "Failed export discarded its reviewed component selection",
+  );
+  assert(await save.isDisabled(), "Failed commit retained stale export authority");
+  await capture("static-review-existing-destination-rejected.png");
+  await review.getByRole("button", { name: "Read again and review", exact: true }).click();
+  await review.getByText(/Complete file review · 5 files/).waitFor();
+  await review.getByRole("alert").waitFor({ state: "hidden" });
+  const accept = review.getByRole("checkbox", { name: /^I reviewed all selected text/ });
+  assert(!(await accept.isChecked()), "Refreshing export review preserved stale acceptance");
+  await accept.check();
+  await app.evaluate((_electron, destination) => {
+    globalThis.__profileExportUI.destination = destination;
+    globalThis.__profileExportUI.deferPicker = true;
+  }, exported);
+  await win.setViewportSize({ width: 390, height: 420 });
+  await save.click();
+  await app.evaluate(async () => {
+    const deadline = Date.now() + 3_000;
+    while (!globalThis.__profileExportUI.releasePicker && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    if (!globalThis.__profileExportUI.releasePicker)
+      throw new Error("Owned picker was not reached");
+  });
+  assert(await save.isDisabled(), "Pending export opened another destination picker");
+  const box = await save.boundingBox();
+  await win.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  assert(
+    (await app.evaluate(() => globalThis.__profileExportUI.pickerCalls)) === 3,
+    "A repeated physical click opened a duplicate picker",
+  );
+  await app.evaluate(() => globalThis.__profileExportUI.releasePicker());
+  await review.waitFor({ state: "hidden" });
+  const manifest = JSON.parse(
+    await readFile(join(exported, ".claude-plugin", "plugin.json"), "utf8"),
+  );
+  assert(
+    typeof manifest.name === "string" && manifest.name.startsWith("profile-"),
+    "Export did not publish its reviewed plugin manifest",
+  );
+  const skillDirectories = await readdir(join(exported, "skills"));
+  assert(skillDirectories.length === 1, "Export wrote unexpected skill directories");
+  assert(
+    (await readFile(join(exported, "skills", skillDirectories[0], "SKILL.md"), "utf8")).includes(
+      body,
+    ),
+    "Successful export truncated the reviewed skill",
+  );
+  assert(
+    (await readFile(join(exported, "skills", skillDirectories[0], "reference.txt"), "utf8")) ===
+      "OPTIONAL_REVIEW_TEXT\n",
+    "Successful export omitted its selected supporting file",
+  );
+  assert(
+    (
+      await readFile(join(project, ".code-shell", "skills", "reviewed", "SKILL.md"), "utf8")
+    ).includes(body),
+    "Export changed its source skill",
+  );
+  await capture("static-review-success.png");
   const receipt = await app.evaluate(({ dialog }) => {
-    const { originalPicker, ...receipt } = globalThis.__profileExportUI;
+    const {
+      originalPicker,
+      destination: _destination,
+      deferPicker: _deferPicker,
+      releasePicker: _releasePicker,
+      ...receipt
+    } = globalThis.__profileExportUI;
     dialog.showSaveDialog = originalPicker;
     return receipt;
   });
   assert(
-    receipt.pickerCalls === 1 && receipt.networkRequests === 0,
+    receipt.pickerCalls === 3 && receipt.networkRequests === 0,
     "Unexpected picker/network activity",
   );
   assert(errors.length === 0, `Renderer emitted ${errors.length} errors`);
@@ -195,9 +308,11 @@ require("node:module").syncBuiltinESMExports();
       advancedSettingsEntry: true,
       fullText: true,
       lossAcceptance: true,
-      viewportWidths: [1440, 820, 390],
+      viewportWidths: [1440, 820, 390, 320],
       osPickerCancelStub: true,
-      wrotePackage: false,
+      existingDestinationRejected: true,
+      pendingRepeatedClick: true,
+      wrotePackage: true,
     }),
   );
 } catch (error) {

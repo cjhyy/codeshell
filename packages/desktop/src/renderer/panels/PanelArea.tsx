@@ -547,13 +547,14 @@ function ResolvedPanelArea({
             right: 0,
             bottom: 0,
             width,
+            maxWidth: "100%",
             opacity: 0,
             pointerEvents: "none",
           }
       : { display: "none" }
     : maximized
       ? undefined
-      : { width };
+      : { width, maxWidth: "100%" };
 
   return (
     <div

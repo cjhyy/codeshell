@@ -37,6 +37,9 @@ function newSessionId(): string {
 
 const noop = () => {};
 const checkNoop = async () => {};
+function isDeferredQuestion(payload: ApprovalRequestPayload): boolean {
+  return payload.request.toolName === "__ask_user__" && payload.request.args.asynchronous === true;
+}
 
 export function useHubController({
   session,
@@ -57,6 +60,7 @@ export function useHubController({
     () => sessionIdFromSearch(window.location.search) ?? newSessionId(),
   );
   const [chat, setChat] = React.useState<ChatState>(initialChatState());
+  const [loadingSession, setLoadingSession] = React.useState<string | null>(null);
   const [approvalState, dispatchApprovals] = React.useReducer(reduceApprovals, {} as ApprovalState);
   const [pendingDecisions, setPendingDecisions] = React.useState<Record<string, boolean>>({});
   const [draft, setDraft] = React.useState("");
@@ -67,13 +71,24 @@ export function useHubController({
   const uploading = uploadingFor === activeId;
   const [workerNote, setWorkerNote] = React.useState<string | null>(null);
   const [replayNote, setReplayNote] = React.useState<string | null>(null);
-  const [error, setError] = React.useState("");
+  const [sessionErrors, setSessionErrors] = React.useState(() => new Map<string, string>());
   const [now, setNow] = React.useState(Date.now());
   const [sessionsVersion, setSessionsVersion] = React.useState(0);
   const [configuration, setConfiguration] = React.useState<HubConfiguration | null>(null);
   const [configurationVersion, setConfigurationVersion] = React.useState(0);
   const configurationRequest = React.useRef(0);
+  const sessionsRequest = React.useRef(0);
   const activeIdRef = React.useRef<string>(activeId);
+  const setError = React.useCallback((message: string, sessionId = activeIdRef.current) => {
+    setSessionErrors((current) => {
+      if ((current.get(sessionId) ?? "") === message) return current;
+      const next = new Map(current);
+      if (message) next.set(sessionId, message);
+      else next.delete(sessionId);
+      return next;
+    });
+  }, []);
+  const error = sessionErrors.get(activeId) ?? "";
   const activeStreamCursor = React.useRef<HubStreamCursor | null>(null);
   const activeOutputCursor = React.useRef<string | null>(null);
   const outputRecoveryBlocked = React.useRef(false);
@@ -97,6 +112,7 @@ export function useHubController({
     >(),
   );
   const runPending = React.useRef(new Set<string>());
+  const cancelPending = React.useRef(new Set<string>());
   const liveRuns = React.useRef(new Set<string>());
   const decisionPending = React.useRef(new Set<string>());
   const approvalRevision = React.useRef(0);
@@ -129,6 +145,11 @@ export function useHubController({
     (submission: { clientMessageId: string; draft: SubmittedDraft }, reason?: string) => {
       const restored = draftStore.current.restore(submission.draft);
       syncDraft(submission.draft.sessionId);
+      if (restored)
+        setError(
+          `${reason ? `${reason} ` : "消息未送达。"}内容和附件已恢复，可以重试。`,
+          submission.draft.sessionId,
+        );
       if (activeIdRef.current === submission.draft.sessionId) {
         setChat((previous) => ({
           ...previous,
@@ -137,20 +158,18 @@ export function useHubController({
             (item) => item.kind !== "user" || item.clientMessageId !== submission.clientMessageId,
           ),
         }));
-        if (restored)
-          setError(`${reason ? `${reason} ` : "消息未送达。"}内容和附件已恢复，可以重试。`);
       }
     },
-    [syncDraft],
+    [syncDraft, setError],
   );
 
   const reportError = React.useCallback(
-    (cause: unknown) => {
+    (cause: unknown, sessionId = activeIdRef.current) => {
       if (!mounted.current) return;
       if (cause instanceof ApiError && cause.status === 401) onAuthLost();
-      else setError(cause instanceof Error ? cause.message : "操作失败，请重试。");
+      else setError(cause instanceof Error ? cause.message : "操作失败，请重试。", sessionId);
     },
-    [onAuthLost],
+    [onAuthLost, setError],
   );
 
   const refreshConfiguration = React.useCallback(async () => {
@@ -169,11 +188,12 @@ export function useHubController({
   const refreshSessions = React.useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
+    const request = ++sessionsRequest.current;
     try {
       const data = hub
         ? (await readManagedSessions()).sessions
         : (await client.listSessions()).data;
-      if (clientRef.current === client && mounted.current) {
+      if (clientRef.current === client && mounted.current && request === sessionsRequest.current) {
         const sorted = [...data].sort(
           (a, b) => (b.lastActiveAt ?? b.startedAt) - (a.lastActiveAt ?? a.startedAt),
         );
@@ -181,7 +201,12 @@ export function useHubController({
         setSessions(sorted);
       }
     } catch (cause) {
-      reportError(cause);
+      if (
+        clientRef.current === client &&
+        mounted.current &&
+        (request === sessionsRequest.current || (cause instanceof ApiError && cause.status === 401))
+      )
+        reportError(cause);
     }
   }, [reportError, hub]);
 
@@ -243,6 +268,7 @@ export function useHubController({
         bytes: 0,
       };
       loadingTranscript.current = load;
+      setLoadingSession(sessionId);
       try {
         const detail = await client.sessionDetail(sessionId, true);
         if (
@@ -254,8 +280,8 @@ export function useHubController({
         let latestRunning = load.running ?? detail.data.running;
         if (latestRunning) liveRuns.current.add(sessionId);
         else if (latestRunning === false) liveRuns.current.delete(sessionId);
-        const snapshot = chatFromSnapshot(detail.data, load.events);
-        let restored = snapshot.chat;
+        let durableChat: ChatState | undefined;
+        let durableOutputCursor: string | null = null;
         let durableRecovered = false;
         let durableFailed = false;
         try {
@@ -273,12 +299,11 @@ export function useHubController({
               activeIdRef.current === sessionId,
           );
           if (durable) {
-            restored = durable.chat;
-            activeOutputCursor.current = durable.outputCursor;
+            durableChat = durable.chat;
+            durableOutputCursor = durable.outputCursor;
             durableRecovered = true;
-          } else activeOutputCursor.current = null;
+          }
         } catch (cause) {
-          activeOutputCursor.current = null;
           // Older peers do not implement the v2 query; their existing snapshot
           // contract remains in force. Known v2 failures retain the notice.
           durableFailed = !(
@@ -295,6 +320,11 @@ export function useHubController({
           activeIdRef.current !== sessionId
         )
           return;
+        // Live notifications keep arriving while the durable query is pending.
+        // Fold the final buffer only after that asynchronous recovery completes.
+        const snapshot = chatFromSnapshot(detail.data, load.events);
+        const restored = durableChat ?? snapshot.chat;
+        activeOutputCursor.current = durableOutputCursor;
         latestRunning = load.running ?? detail.data.running;
         outputRecoveryBlocked.current = durableFailed;
         if (!durableFailed) activeStreamCursor.current = snapshot.cursor ?? null;
@@ -313,9 +343,13 @@ export function useHubController({
           restored.run = "idle";
         setChat((current) => (durableFailed ? current : restored));
       } catch (cause) {
-        if (activeIdRef.current === sessionId) reportError(cause);
+        if (loadingTranscript.current === load && activeIdRef.current === sessionId)
+          reportError(cause);
       } finally {
-        if (loadingTranscript.current === load) loadingTranscript.current = null;
+        if (loadingTranscript.current === load) {
+          loadingTranscript.current = null;
+          if (mounted.current) setLoadingSession(null);
+        }
       }
     },
     [reportError],
@@ -422,6 +456,12 @@ export function useHubController({
       if (method === "agent/streamEvent") {
         const payload = params as unknown as StreamEventPayload;
         const { sessionId, event } = payload;
+        if (event.type === "session_title") {
+          // Title generation can finish after its turn and after another
+          // conversation is selected. Refresh the shared sidebar/history too.
+          void refreshSessions();
+          setSessionsVersion((value) => value + 1);
+        }
         const submission = submissions.current.get(sessionId);
         if (
           submission &&
@@ -544,7 +584,6 @@ export function useHubController({
     setActiveId(sessionId);
     syncDraft(sessionId);
     setChat(initialChatState());
-    setError("");
     setReplayNote(null);
     if (
       !sessions.some((item) => item.sessionId === sessionId) &&
@@ -562,6 +601,7 @@ export function useHubController({
     activeOutputCursor.current = null;
     outputRecoveryBlocked.current = false;
     loadingTranscript.current = null;
+    setLoadingSession(null);
     setActiveId(id);
     syncDraft(id);
     setChat(initialChatState());
@@ -576,12 +616,19 @@ export function useHubController({
     if ((!text && !currentDraft.files.length) || !client || connection !== "open" || uploading)
       return false;
     const sessionId = activeIdRef.current;
+    // A newly selected/reconnected session may still be running on the Host.
+    // Its pending snapshot would also replace any optimistic user message.
+    if (loadingTranscript.current?.sessionId === sessionId) return false;
     if (
       runPending.current.has(sessionId) ||
       liveRuns.current.has(sessionId) ||
       chat.run === "running" ||
       chat.run === "waiting" ||
-      Object.values(approvalState).some((a) => a.payload.sessionId === sessionId) ||
+      Object.values(approvalState).some(
+        (a) =>
+          (!a.payload.sessionId || a.payload.sessionId === sessionId) &&
+          !isDeferredQuestion(a.payload),
+      ) ||
       uncertainSubmissions.current.has(sessionId)
     )
       return false;
@@ -621,13 +668,13 @@ export function useHubController({
       })
       .catch((cause) => {
         if (!mounted.current) return;
-        reportError(cause);
+        reportError(cause, sessionId);
         if (
           cause instanceof ProtocolRequestError &&
           (cause.kind === "transport" || cause.kind === "timeout")
         ) {
           uncertainSubmissions.current.set(sessionId, submission);
-          setError("连接中断，重新连接后会核对这条消息是否已经送达。");
+          setError("连接中断，重新连接后会核对这条消息是否已经送达。", sessionId);
         } else if (!submission.accepted)
           restoreSubmission(
             submission,
@@ -657,6 +704,7 @@ export function useHubController({
   const decide = (payload: ApprovalRequestPayload, approved: boolean, answer?: string): void => {
     const client = clientRef.current;
     if (!client || connection !== "open" || decisionPending.current.has(payload.requestId)) return;
+    const sessionId = payload.sessionId ?? activeIdRef.current;
     approvalRevision.current++;
     decisionPending.current.add(payload.requestId);
     setPendingDecisions((prev) => ({ ...prev, [payload.requestId]: true }));
@@ -673,7 +721,7 @@ export function useHubController({
           params: { requestId: payload.requestId },
         }),
       )
-      .catch(reportError)
+      .catch((cause) => reportError(cause, sessionId))
       .finally(() => {
         decisionPending.current.delete(payload.requestId);
         setPendingDecisions((prev) => {
@@ -685,7 +733,15 @@ export function useHubController({
   };
 
   const stop = (): void => {
-    if (activeId) void clientRef.current?.cancel(activeId).catch(reportError);
+    const sessionId = activeIdRef.current;
+    const client = clientRef.current;
+    if (!client || connection !== "open" || cancelPending.current.has(sessionId)) return;
+    cancelPending.current.add(sessionId);
+    setError("", sessionId);
+    void client
+      .cancel(sessionId)
+      .catch((cause) => reportError(cause, sessionId))
+      .finally(() => cancelPending.current.delete(sessionId));
   };
 
   const addFiles = async (selected: FileList | null): Promise<void> => {
@@ -706,7 +762,7 @@ export function useHubController({
         }
       }
     } catch (cause) {
-      reportError(cause);
+      reportError(cause, sessionId);
     } finally {
       if (uploadController.current === controller) uploadController.current = null;
       if (mounted.current) setUploadingFor(null);
@@ -719,7 +775,10 @@ export function useHubController({
   const approvalCount = (sessionId: string) =>
     Object.values(approvalState).filter((a) => a.payload.sessionId === sessionId).length;
 
-  const running = chat.run === "running" || chat.run === "waiting" || approvals.length > 0;
+  const running =
+    chat.run === "running" ||
+    chat.run === "waiting" ||
+    approvals.some((a) => !isDeferredQuestion(a.payload));
   const localDrafts = React.useMemo(
     () =>
       draftStore.current
@@ -748,6 +807,7 @@ export function useHubController({
     connection,
     session,
     activeId,
+    loading: loadingSession === activeId,
     chat,
     sessions,
     workspaceCwd,
@@ -768,12 +828,16 @@ export function useHubController({
     approvals: Object.values(approvalState).map((a) => ({
       id: a.payload.requestId,
       sessionId: a.payload.sessionId,
+      ...(isDeferredQuestion(a.payload) ? { asynchronous: true } : {}),
     })),
     approvalCount,
-    approvalContent: approvals.map((a) => (
+    // Keep unanswered form state for each request while other sessions are open.
+    // A resolution removes its card; changing the selected session only hides it.
+    approvalContent: Object.values(approvalState).map((a) => (
       <HubApprovalCard
         key={a.payload.requestId}
         payload={a.payload}
+        hidden={!!a.payload.sessionId && a.payload.sessionId !== activeId}
         onDecide={decide}
         busy={
           !!pendingDecisions[a.payload.requestId] ||

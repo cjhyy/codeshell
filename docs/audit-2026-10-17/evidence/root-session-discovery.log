@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/root-session-discovery.test.ts:
+(pass) R2-01 colliding project directory encodings label another project's session as the selected cwd [18.31ms]
+(pass) R2-01 distinct encoded buckets retain normal project-specific discovery [7.94ms]
+
+ 2 pass
+ 0 fail
+ 8 expect() calls
+Ran 2 tests across 1 file. [190.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

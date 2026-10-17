@@ -1,0 +1,23 @@
+EVIDENCE TYPE: TRANSCRIPT EXCERPT, NOT A RUNNER RAW FILE
+This file was copied verbatim from the retained exec_command tool stdout after execution.
+The original run did not redirect stdout/stderr to disk. No original raw log or JUnit file was retained.
+Original tool response: chunk_id=859ee5; exit_code=0; wall_time_seconds=0.141179541.
+Command: node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-16/evidence/server-chat-identity.test.ts
+--- retained tool stdout begins ---
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/server-chat-identity.test.ts:
+AUDIT ordinal account B durable input was sent through account A
+(pass) durable same-channel ordinal replays account B input through account A after reorder [16.85ms]
+AUDIT both adapter handlers resolved; only account A is durable
+(pass) same-channel dedupe suppresses the second distinct adapter's input [10.16ms]
+AUDIT attachment enqueue=queued pending=1; fresh queue after restart pending=0
+(pass) valid small attachment is acknowledged memory-only after spool I/O failure and lost on restart [2.50ms]
+(pass) normal small attachment persists and restores [5.03ms]
+
+ 4 pass
+ 0 fail
+ 9 expect() calls
+Ran 4 tests across 1 file. [113.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.
+--- retained tool stdout ends ---

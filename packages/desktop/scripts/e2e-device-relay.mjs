@@ -15,6 +15,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-desktop-relay-ui-");
@@ -166,7 +167,7 @@ try {
   let { win, errors } = await launch(origin);
   await win.getByLabel("电脑名称").fill("E2E 电脑");
   await win.getByLabel("一次性登记票据").fill(ticket);
-  await win.getByRole("button", { name: "登记电脑", exact: true }).click();
+  await win.getByRole("button", { name: "使用票据登记电脑", exact: true }).click();
   await win.getByText("已登记，连接已停止", { exact: true }).waitFor();
   assert(
     (await win.getByLabel("一次性登记票据").inputValue()) === "",
@@ -208,7 +209,10 @@ try {
   revoked = true;
   for (const ws of controls) ws.terminate();
   await win.getByText("登记已被撤销或替换，请重新登记。", { exact: true }).waitFor();
-  await win.waitForFunction(async () => !(await window.codeshell.mobileRemote.status()).running);
+  await waitForAsyncFunction(
+    win,
+    async () => !(await window.codeshell.mobileRemote.status()).running,
+  );
   assert(
     !(await win.evaluate(() => window.codeshell.mobileRemote.relay.status())).registered,
     "Revoked credential still registered",
@@ -217,7 +221,7 @@ try {
   revoked = false;
   await win.getByLabel("电脑名称").fill("E2E 电脑");
   await win.getByLabel("一次性登记票据").fill(ticket);
-  await win.getByRole("button", { name: "登记电脑", exact: true }).click();
+  await win.getByRole("button", { name: "使用票据登记电脑", exact: true }).click();
   await win.getByText("已登记，连接已停止", { exact: true }).waitFor();
   await win.getByRole("button", { name: "移除本机登记", exact: true }).click();
   await win.getByRole("dialog").getByRole("button", { name: "移除本机登记", exact: true }).click();
@@ -225,7 +229,8 @@ try {
   await win.getByRole("combobox").click();
   await win.getByRole("option", { name: /局域网/ }).click();
   await win.getByRole("button", { name: /开启手机遥控/ }).click();
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async () => (await window.codeshell.mobileRemote.status()).mode === "lan",
   );
   await win.getByRole("button", { name: "关闭", exact: true }).click();

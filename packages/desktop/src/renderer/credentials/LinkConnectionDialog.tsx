@@ -33,6 +33,17 @@ import type { LinkAuthGuide } from "./link-catalog";
 import { linkAuthorizationFailureMessage } from "./linkAuthorizationFailure";
 import { LinkServiceIcon } from "./LinkServiceIcon";
 
+/** Capture before asynchronous preparation can unmount the selected menu item. */
+export function captureLinkAuthorizationReturnFocus(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const active = document.activeElement;
+  const launcherId = active
+    ?.closest("[data-link-account-menu]")
+    ?.getAttribute("data-link-account-menu-trigger");
+  const element = (launcherId && document.getElementById(launcherId)) || active;
+  return element && "focus" in element ? (element as HTMLElement) : null;
+}
+
 /** All secrets stay in the current step form until submitted to the owning Host. */
 export function LinkConnectionDialog({
   cwd,
@@ -42,6 +53,7 @@ export function LinkConnectionDialog({
   brandClass: _brandClass,
   modes,
   authGuide,
+  opener,
   onClose,
   onConnected,
 }: {
@@ -52,21 +64,12 @@ export function LinkConnectionDialog({
   brandClass?: string;
   modes: NonNullable<LinkProviderView["authModes"]>;
   authGuide?: LinkAuthGuide;
+  opener?: HTMLElement | null;
   onClose: () => void;
   onConnected: (connection?: MaskedLinkConnection) => void;
 }) {
   const { t, lang } = useT();
-  const [returnFocus] = React.useState(() => {
-    if (typeof document === "undefined") return null;
-    const active = document.activeElement;
-    // A selected menu item unmounts as authorization opens. Return to its stable
-    // account-actions launcher rather than retaining that disappearing item.
-    const launcherId = active
-      ?.closest("[data-link-account-menu]")
-      ?.getAttribute("data-link-account-menu-trigger");
-    const element = (launcherId && document.getElementById(launcherId)) || active;
-    return element && "focus" in element ? (element as HTMLElement) : null;
-  });
+  const [returnFocus] = React.useState(() => opener ?? captureLinkAuthorizationReturnFocus());
   const designContext = input.methodId === "mcp";
   const requestId = React.useRef<string | undefined>(undefined);
   const api = window.codeshell.links;

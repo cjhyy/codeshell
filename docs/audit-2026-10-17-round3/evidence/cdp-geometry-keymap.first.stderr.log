@@ -1,0 +1,16 @@
+
+docs/audit-2026-10-17-round3/evidence/cdp-geometry-keymap.test.ts:
+(pass) observed: clipped rotated box dispatches a click outside its actual quad [0.83ms]
+(pass) observed: hover shares the same out-of-quad point [0.11ms]
+(pass) control: axis-aligned partial viewport intersection remains on the target
+(pass) control: a wholly visible rotated quad has a valid center [0.03ms]
+(pass) observed: Shift+a has uppercase text but lowercase logical key on down and up [0.52ms]
+(pass) observed: Shift+1 has exclamation text but digit logical key [0.04ms]
+(pass) control: unshifted printable key and Control shortcut retain their payloads [0.34ms]
+(pass) known duplicate: literal plus is mapped but lost by combination tokenization [0.15ms]
+(pass) candidate: sided modifier names get a physical code but contribute no modifier bit
+
+ 9 pass
+ 0 fail
+ 24 expect() calls
+Ran 9 tests across 1 file. [73.00ms]

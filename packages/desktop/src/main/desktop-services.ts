@@ -622,11 +622,22 @@ export async function getGitRangeDiff(cwd: string, range: string, file?: string)
   if (typeof range !== "string" || !range) return "";
   const args = ["diff", "--no-color", "--unified=3", range];
   if (file) args.push("--", file);
-  try {
-    return await gitRun(cwd, args);
-  } catch {
-    return "";
-  }
+  return gitRun(cwd, args);
+}
+
+/** A selected commit's own patch, including a root commit's additions. The
+ * first-parent view keeps merge commits consistent with ordinary commit review. */
+export async function getGitCommitDiff(cwd: string, commit = "HEAD"): Promise<string> {
+  return gitRun(cwd, [
+    "show",
+    "--format=",
+    "--no-color",
+    "--unified=3",
+    "--root",
+    "--first-parent",
+    commit,
+    "--",
+  ]);
 }
 
 /** One recent commit, for the review panel's 提交 submenu. */

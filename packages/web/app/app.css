@@ -424,6 +424,7 @@ button.workspace-button:hover {
 }
 .banner {
   padding: 8px 20px;
+  overflow-wrap: anywhere;
   font-size: 12px;
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 7%, transparent);
@@ -778,6 +779,8 @@ button.composer-submit {
 /* Authenticated approvals retain the shared risk / lease states. */
 .approval {
   align-self: stretch;
+  min-width: 0;
+  overflow-wrap: anywhere;
   border: 1px solid color-mix(in srgb, var(--warning) 60%, var(--border));
   background: color-mix(in srgb, var(--warning) 5%, var(--surface));
   border-radius: 12px;
@@ -824,6 +827,42 @@ button.composer-submit {
   color: var(--text);
   padding: 10px;
   min-height: 64px;
+}
+.approval-options {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.approval-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.approval-option:hover:not(:disabled) {
+  background: var(--hover);
+}
+label.approval-option {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.approval-option > span {
+  min-width: 0;
+}
+.approval-option-description {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
 }
 .approval-actions {
   display: flex;
@@ -1077,6 +1116,9 @@ button.ghost:hover:not(:disabled) {
     border-radius: 16px;
   }
   .composer textarea {
+    font-size: 16px;
+  }
+  .approval-answer {
     font-size: 16px;
   }
   .composer-caption {

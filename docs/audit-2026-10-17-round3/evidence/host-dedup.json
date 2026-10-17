@@ -1,0 +1,48 @@
+{
+  "scope": "limited prior-index root-cause deduplication",
+  "indexes": [
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "sha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "entryCount": 25,
+      "hits": []
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "sha256": "7e197f4b8b12f058ceeefbb8c73e0fbb292da844823b9a33fd9e19bcafabdb0d",
+      "entryCount": 26,
+      "hits": []
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/findings.json",
+      "sha256": "b72da00f7b2f0a1e6fe1024dfc941c821fb649a5527e8f7c15d23f5fa5e6c7cc",
+      "entryCount": 33,
+      "hits": []
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "entryCount": 296,
+      "hits": []
+    },
+    {
+      "path": "docs/review-2026-07-09/13-findings-register.md",
+      "sha256": "dfea044e45ee1ba4529dc1eef16ee5c312ce5ba48e8a310d50e8129b59c6ceeb",
+      "entryCount": null,
+      "hits": []
+    },
+    {
+      "path": "docs/bug-review-report-2026-08-13.md",
+      "sha256": "87b5abdcdf57554643d88aad808ca669e6f49d3a7c5401c0c7261437cc8de793",
+      "entryCount": null,
+      "hits": []
+    }
+  ],
+  "related_not_duplicate": [
+    {
+      "id": "CHD02",
+      "source": "docs/audit-2026-10-17/findings.json",
+      "reason": "same UTF-16 truncation class in a different chat attachment-name producer; Link default label has separate code path and consumer"
+    }
+  ]
+}
