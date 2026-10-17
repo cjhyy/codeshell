@@ -219,6 +219,38 @@ export function matchNsisCrashEvents(output, target) {
   }
 }
 
+function ownedQueryEnvironment(environment, root) {
+  const systemRoot = environment?.SystemRoot ?? environment?.SYSTEMROOT;
+  canonicalPath(systemRoot);
+  const privateBuild = win32.join(root, "private-build"),
+    home = win32.join(privateBuild, "home");
+  const expected = {
+    HOME: home,
+    USERPROFILE: home,
+    APPDATA: win32.join(home, "AppData", "Roaming"),
+    LOCALAPPDATA: win32.join(home, "AppData", "Local"),
+    XDG_CONFIG_HOME: win32.join(home, ".config"),
+    XDG_DATA_HOME: win32.join(home, ".local", "share"),
+    XDG_CACHE_HOME: win32.join(home, ".cache"),
+    XDG_STATE_HOME: win32.join(home, ".local", "state"),
+    XDG_RUNTIME_DIR: win32.join(home, ".run"),
+    TEMP: win32.join(privateBuild, "tmp"),
+    TMP: win32.join(privateBuild, "tmp"),
+    TMPDIR: win32.join(privateBuild, "tmp"),
+  };
+  const env = {
+    SystemRoot: systemRoot,
+    WINDIR: systemRoot,
+    PATH: win32.join(systemRoot, "System32"),
+  };
+  for (const [key, path] of Object.entries(expected)) {
+    if (canonicalPath(environment?.[key]) !== canonicalPath(path))
+      throw Error("Unproven query isolation");
+    env[key] = environment[key];
+  }
+  return env;
+}
+
 function checkFixedExecutable(path) {
   const info = lstatSync(path);
   if (
@@ -251,10 +283,10 @@ export function collectNsisCrashEvidence(
   try {
     if (platform !== "win32") return { ...result, reason: "unsupported-platform" };
     const target = checkedTarget(options);
-    const root = options.environment?.SystemRoot ?? options.environment?.SYSTEMROOT;
-    canonicalPath(root);
+    result.reason = "unproven-query-isolation";
+    const env = ownedQueryEnvironment(options.environment, options.root);
     const executable = win32.join(
-      win32.parse(root).root,
+      win32.parse(env.SystemRoot).root,
       "Program Files",
       "PowerShell",
       "7",
@@ -280,7 +312,7 @@ export function collectNsisCrashEvidence(
           fileTime: target.fileTime,
           observedFileTime: windowsBirthToFileTime(target.observedAt),
         }),
-        env: { SystemRoot: root, WINDIR: root, PATH: win32.join(root, "System32") },
+        env,
         encoding: "utf8",
         timeout: TIMEOUT,
         maxBuffer: MAX_BYTES,
