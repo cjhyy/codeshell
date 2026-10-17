@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.test.ts:
+(pass) round6 Task/Todo ordinary snapshot contract > create, update, reorder, delete and clear use replacement snapshots [1.10ms]
+(pass) round6 Task/Todo ordinary snapshot contract > every bounded combination of supported statuses replays like the live snapshot [0.82ms]
+(pass) round6 Task/Todo ordinary snapshot contract > invalid outer input does not emit a replacement; documented item tolerance is stable [0.12ms]
+(pass) round6 Task/Todo ordinary snapshot contract > replay uses latest valid outer shape and does not revive a legacy per-item API [0.25ms]
+(pass) round6 Task/Todo ordinary snapshot contract > independent callbacks retain isolated snapshots and cannot share a singleton [0.07ms]
+(pass) round6 Task/Todo ordinary snapshot contract > real stream wrapper keeps child replacements out of parent guard metadata [0.73ms]
+(pass) round6 Task/Todo ordinary snapshot contract > same-position replacement and clear reset guard age while unchanged snapshots re-nag [0.11ms]
+
+ 7 pass
+ 0 fail
+ 161 expect() calls
+Ran 7 tests across 1 file. [131.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/settings/SettingsPage.search.test.tsx"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 1.13,
+  "rawLog": "docs/audit-2026-10-17-round6/evidence/desktop-settings-search-first.log",
+  "sha256": "669fdcd28f46dc497cee4278599011743df17c9a313c0a7dfc33333d9454ac21",
+  "bytes": 785,
+  "attempt": 1
+}

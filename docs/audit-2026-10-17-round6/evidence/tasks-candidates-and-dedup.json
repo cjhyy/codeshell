@@ -1,0 +1,49 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "confirmedCount": 0,
+  "candidates": [
+    {
+      "id": "TASK-C01",
+      "status": "excluded-unsupported-contract",
+      "title": "Missing independent CRUD/dependency store",
+      "source": "packages/core/src/tool-system/builtin/task.ts",
+      "lines": [4, 26, 49, 85],
+      "reason": "Current supported API is full TodoWrite snapshot replacement with transcript storage; legacy sextet intentionally removed, no todo dependency field or current ordinary dependency caller found."
+    },
+    {
+      "id": "TASK-C02",
+      "status": "excluded-known-intentional-behavior",
+      "title": "Engine resume does not emit an empty all-completed snapshot",
+      "source": "packages/core/src/engine/engine.ts",
+      "lines": [2520, 2531],
+      "priorSources": [
+        "docs/archive/todo/plan-group-a-core.md:29-31,145-159",
+        "packages/core/src/engine/engine.todo-resume.test.ts:88-112"
+      ],
+      "reason": "Archived accepted contract and existing test explicitly require no event for all-completed resume. Pure reader/live clear semantics tested; Engine.run not executed in this slice."
+    },
+    {
+      "id": "TASK-C03",
+      "status": "excluded-prior-fixed-and-current-control-passed",
+      "title": "Position id reuse inherits stale TaskGuard age",
+      "source": "packages/core/src/tool-system/task-guard.ts",
+      "lines": [29, 43],
+      "priorSources": ["docs/todo/2026-09-11-overnight-todo-audit.md:21,134"],
+      "reason": "Already recorded and fixed; current reference-based snapshot reset and real TodoWrite replacement passed first-run controls."
+    },
+    {
+      "id": "TASK-C04",
+      "status": "excluded-consumer-specific-contract",
+      "title": "Todo visibility differs across Desktop, Web and TUI",
+      "sources": [
+        "packages/desktop/src/renderer/types.ts:1453-1476",
+        "packages/web/src/lib/streamReducer.ts:553-584",
+        "packages/tui/src/ui/App.tsx:948-963,2150"
+      ],
+      "priorSources": ["docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-followup-design.md:18,127-134"],
+      "reason": "Desktop intentionally hides child todos; Web intentionally displays only child progress; TUI displays selected owner's list. Current controls passed. No universal visibility contract inferred."
+    }
+  ],
+  "dedupCorpus": "tasks-dedup.json",
+  "scopeLimits": ["no permission/security/native/realexec audit", "no revival of previous failed CLI/data/recorder/summary/Discord/memoryTTL directions", "no Engine.run or real provider execution", "zero confirmed findings is not a claim of complete module correctness"]
+}

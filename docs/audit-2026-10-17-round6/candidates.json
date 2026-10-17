@@ -1,0 +1,34 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "count": 3,
+  "candidates": [
+    {
+      "id": "S-C1",
+      "report": "skills-agents.md",
+      "source": "packages/core/src/skills/frontmatter.ts",
+      "line": 9,
+      "title": "Skill frontmatter may terminate on embedded triple dashes",
+      "status": "static-candidate-SKIP",
+      "validation": "Custom fixture never executed: direct yaml import unresolved. No repair/retry/alternate validation."
+    },
+    {
+      "id": "S-C2",
+      "report": "skills-agents.md",
+      "source": "packages/core/src/agent/agent-definition.ts",
+      "line": 90,
+      "title": "CRLF agent-definition delimiter may fail parsing",
+      "status": "static-candidate-SKIP",
+      "validation": "Custom fixture never executed: same first shard dependency failure. No real Windows or registry/UI observation."
+    },
+    {
+      "id": "PACKAGE-C1",
+      "report": "root-package.md",
+      "source": "package.json",
+      "line": 42,
+      "title": "Watch test script differs from required guarded test entry",
+      "status": "static-candidate-unvalidated",
+      "validation": "No watch execution or operator state/credential inspection; maintenance intent and actual impact unconfirmed."
+    }
+  ],
+  "note": "None counted as confirmed; provisional priorities in worker prose are not confirmed severities."
+}

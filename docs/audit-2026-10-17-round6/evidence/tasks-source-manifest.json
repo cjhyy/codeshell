@@ -1,0 +1,337 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "headAtReceipt": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "selectedInspectedPathCount": 41,
+  "allSelectedPathsMatchFrozenSource": true,
+  "inspectionLevel": "selected contract/caller sections and existing test fixtures, not every line of each listed file",
+  "paths": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "lineCount": 217,
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "sha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "bytes": 50794,
+      "lineCount": 1306,
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/task.ts",
+      "sha256": "bb009fb2fe8be2eb5c12fdba479f71d815cb7b2394742684c34c6e38c46fe6c9",
+      "bytes": 7317,
+      "lineCount": 171,
+      "frozenSha256": "bb009fb2fe8be2eb5c12fdba479f71d815cb7b2394742684c34c6e38c46fe6c9",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/task.test.ts",
+      "sha256": "458ebce9f638192e735a821e7ea6f1edd610672b9611ef2054a6054f410b6cf5",
+      "bytes": 2847,
+      "lineCount": 91,
+      "frozenSha256": "458ebce9f638192e735a821e7ea6f1edd610672b9611ef2054a6054f410b6cf5",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "bytes": 39835,
+      "lineCount": 1233,
+      "frozenSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/context.ts",
+      "sha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+      "bytes": 29617,
+      "lineCount": 624,
+      "frozenSha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/task-guard.ts",
+      "sha256": "eb16662b813474318c43db19754b8b395c5eff404d469109be9bc2a55d1aac5a",
+      "bytes": 3447,
+      "lineCount": 92,
+      "frozenSha256": "eb16662b813474318c43db19754b8b395c5eff404d469109be9bc2a55d1aac5a",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/task-guard.test.ts",
+      "sha256": "62f7bda4d78f2f1fa786244a0787b66c7a5712389c29aeba2f182b43c2d81eca",
+      "bytes": 3600,
+      "lineCount": 97,
+      "frozenSha256": "62f7bda4d78f2f1fa786244a0787b66c7a5712389c29aeba2f182b43c2d81eca",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "bytes": 210013,
+      "lineCount": 5072,
+      "frozenSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.todo-resume.test.ts",
+      "sha256": "b46328b44a85900e3f8559d49426d35ed90f1e0181090c0ff1b1970ab08699c6",
+      "bytes": 5057,
+      "lineCount": 144,
+      "frozenSha256": "b46328b44a85900e3f8559d49426d35ed90f1e0181090c0ff1b1970ab08699c6",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/engine/run-stream.ts",
+      "sha256": "8210d4745f69991ede8144f9a1ac4136cea8bbf438bd46fa9970b69f601d33ce",
+      "bytes": 9777,
+      "lineCount": 255,
+      "frozenSha256": "8210d4745f69991ede8144f9a1ac4136cea8bbf438bd46fa9970b69f601d33ce",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/engine/run-stream.test.ts",
+      "sha256": "d2d2175718ee97121ff06eb024a87a63fefc8482a5c54f0d31c7f1f4cd512485",
+      "bytes": 11223,
+      "lineCount": 311,
+      "frozenSha256": "d2d2175718ee97121ff06eb024a87a63fefc8482a5c54f0d31c7f1f4cd512485",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "sha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "bytes": 25457,
+      "lineCount": 586,
+      "frozenSha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "frozenSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "bytes": 195050,
+      "lineCount": 4949,
+      "frozenSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "frozenSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "bytes": 90976,
+      "lineCount": 2318,
+      "frozenSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.agent-todos.test.tsx",
+      "sha256": "5faf7973a5dd07447e8e7b53bf8e05ac130b52020ba95ed4f1039b4fa519c4db",
+      "bytes": 8358,
+      "lineCount": 237,
+      "frozenSha256": "5faf7973a5dd07447e8e7b53bf8e05ac130b52020ba95ed4f1039b4fa519c4db",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/TaskList.tsx",
+      "sha256": "99432a90d3754a084f9e98007758a7effb3e3744f27cb1ead1442b32b6fea739",
+      "bytes": 1558,
+      "lineCount": 60,
+      "frozenSha256": "99432a90d3754a084f9e98007758a7effb3e3744f27cb1ead1442b32b6fea739",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.ts",
+      "sha256": "ecbc1f25fb00581ee0ce0b529245488350292b427fe07339e896a8275c0d837f",
+      "bytes": 30252,
+      "lineCount": 783,
+      "frozenSha256": "ecbc1f25fb00581ee0ce0b529245488350292b427fe07339e896a8275c0d837f",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.test.ts",
+      "sha256": "79dca1c659373a3c7f3a0b41304c3a0ac09f01706b55405be795ea8d8929c9c5",
+      "bytes": 38158,
+      "lineCount": 1009,
+      "frozenSha256": "79dca1c659373a3c7f3a0b41304c3a0ac09f01706b55405be795ea8d8929c9c5",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "c578fb19975f8432a84679b4994ec9910fc0766ba5a45a22c16253cfab72aa9e",
+      "bytes": 86437,
+      "lineCount": 2284,
+      "frozenSha256": "c578fb19975f8432a84679b4994ec9910fc0766ba5a45a22c16253cfab72aa9e",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.test.ts",
+      "sha256": "ec4e623fd77a0b8812ee13784a660bfbc8ba005800ae83be61d5662d56176032",
+      "bytes": 67985,
+      "lineCount": 1772,
+      "frozenSha256": "ec4e623fd77a0b8812ee13784a660bfbc8ba005800ae83be61d5662d56176032",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/foldTranscript.ts",
+      "sha256": "1403188188de6b8d0a85c7516aee2db2afdcbd024bb92e826a4d047f032e0504",
+      "bytes": 4224,
+      "lineCount": 104,
+      "frozenSha256": "1403188188de6b8d0a85c7516aee2db2afdcbd024bb92e826a4d047f032e0504",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/mergeTranscripts.ts",
+      "sha256": "ac4c6f4388b61a6210909a5871957edda614543a07baa9eb160d56af1171a27f",
+      "bytes": 12135,
+      "lineCount": 269,
+      "frozenSha256": "ac4c6f4388b61a6210909a5871957edda614543a07baa9eb160d56af1171a27f",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TaskListMessageView.tsx",
+      "sha256": "571fc08e445a52dd648c122fc211ccd918886e1e83fb5cf92ebc887f0afbf4e9",
+      "bytes": 3029,
+      "lineCount": 78,
+      "frozenSha256": "571fc08e445a52dd648c122fc211ccd918886e1e83fb5cf92ebc887f0afbf4e9",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "bytes": 29998,
+      "lineCount": 733,
+      "frozenSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+      "bytes": 122444,
+      "lineCount": 2912,
+      "frozenSha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "bytes": 106169,
+      "lineCount": 2622,
+      "frozenSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/StatusPopover.tsx",
+      "sha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "bytes": 9048,
+      "lineCount": 268,
+      "frozenSha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5",
+      "bytes": 27797,
+      "lineCount": 779,
+      "frozenSha256": "3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.test.ts",
+      "sha256": "cf60ceffc30ad1468a1980e80dc807f16a840426b6367ef254d567d45147317d",
+      "bytes": 19132,
+      "lineCount": 528,
+      "frozenSha256": "cf60ceffc30ad1468a1980e80dc807f16a840426b6367ef254d567d45147317d",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "bytes": 7513,
+      "lineCount": 207,
+      "frozenSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "lineCount": 8,
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "bytes": 6518,
+      "lineCount": 152,
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "sha256": "50087b9d5790503161f4f0d3af36229e9716d744997a99d49dfe1a5fed38ecc0",
+      "bytes": 22431,
+      "lineCount": 359,
+      "frozenSha256": "50087b9d5790503161f4f0d3af36229e9716d744997a99d49dfe1a5fed38ecc0",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/archive/todo/plan-group-a-core.md",
+      "sha256": "15fad822d84099827bfa331532a433ad148bb267b8f781d14231e3d65942874e",
+      "bytes": 26652,
+      "lineCount": 538,
+      "frozenSha256": "15fad822d84099827bfa331532a433ad148bb267b8f781d14231e3d65942874e",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/archive/todo/plan-todo-batch-2026-07.md",
+      "sha256": "c1e20f830b14e72433901eef4be0d679ea87a3ba1d57b47723aa77243e4970e4",
+      "bytes": 32220,
+      "lineCount": 388,
+      "frozenSha256": "c1e20f830b14e72433901eef4be0d679ea87a3ba1d57b47723aa77243e4970e4",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "sha256": "4013a34f967ba1cd27caa08ca51db48839b6ec4809fce7d47de3770409b97963",
+      "bytes": 80007,
+      "lineCount": 353,
+      "frozenSha256": "4013a34f967ba1cd27caa08ca51db48839b6ec4809fce7d47de3770409b97963",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-polish-results.md",
+      "sha256": "efcd0f84e3a28f82ae29fba17e2278e68c2ddbf5ffe76a52bf2ad293132c37f0",
+      "bytes": 18856,
+      "lineCount": 116,
+      "frozenSha256": "efcd0f84e3a28f82ae29fba17e2278e68c2ddbf5ffe76a52bf2ad293132c37f0",
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-followup-design.md",
+      "sha256": "a17e4f26f5d17d9d42c7b0947fa5f0572b62c0b66f6fdec715c2d8729f69a53e",
+      "bytes": 9991,
+      "lineCount": 156,
+      "frozenSha256": "a17e4f26f5d17d9d42c7b0947fa5f0572b62c0b66f6fdec715c2d8729f69a53e",
+      "matchesFrozenSource": true
+    }
+  ]
+}

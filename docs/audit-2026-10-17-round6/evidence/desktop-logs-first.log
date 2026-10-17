@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/logs/LogsView.interaction.test.tsx:
+(pass) LogsView sources, filtering, and request recovery > links localized tabs to a keyboard-focusable log panel and preserves raw IPC bucket values [31.84ms]
+(pass) LogsView sources, filtering, and request recovery > search is case insensitive, counts matching lines, and clearing restores focus without altering contents [9.29ms]
+(pass) LogsView sources, filtering, and request recovery > distinguishes an empty log from no search matches [10.98ms]
+(pass) LogsView sources, filtering, and request recovery > initial failures recover and the disappearing retry button hands focus to refresh [7.46ms]
+(pass) LogsView sources, filtering, and request recovery > a failed refresh preserves loaded lines and a later retry clears the error [7.68ms]
+(pass) LogsView sources, filtering, and request recovery > A to B to A ignores old success and errors even when the bucket name matches again [10.58ms]
+(pass) LogsView sources, filtering, and request recovery > an unmounted request cannot publish into a new page [5.08ms]
+
+ 7 pass
+ 0 fail
+ 51 expect() calls
+Ran 7 tests across 1 file. [896.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

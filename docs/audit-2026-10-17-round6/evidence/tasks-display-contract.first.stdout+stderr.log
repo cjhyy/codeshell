@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round6/evidence/tasks-display-contract.test.ts:
+(pass) round6 Task/Todo display data consumers > Desktop disk reconstruction and live emission agree for bounded supported snapshots [2.75ms]
+(pass) round6 Task/Todo display data consumers > Desktop replay of multiple writes retains one latest panel and clears on completion
+(pass) round6 Task/Todo display data consumers > Desktop ignores child snapshots while accepting replacement and empty parent snapshots [0.40ms]
+(pass) round6 Task/Todo display data consumers > Web intentionally omits the main list and replaces child progress by owner [0.38ms]
+
+ 4 pass
+ 0 fail
+ 91 expect() calls
+Ran 4 tests across 1 file. [549.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.
