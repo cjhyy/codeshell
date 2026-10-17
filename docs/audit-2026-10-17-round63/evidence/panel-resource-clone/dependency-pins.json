@@ -1,0 +1,44 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/panels/resources/service.ts",
+      "bytes": 19533,
+      "sha256": "d9963d5969e65b9e031d36784f9677d12040647feae444177fd21c9c4781f237",
+      "lines": 497,
+      "atUTC": "2026-10-17T20:53:04.355236+00:00",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/library.ts",
+      "bytes": 18818,
+      "sha256": "f86bcfac1a7ea9ca43292e6abb33588254cb2fc0b6e92d85fe80a04bb3921a41",
+      "lines": 502,
+      "atUTC": "2026-10-17T20:53:04.356919+00:00",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/types.ts",
+      "bytes": 774,
+      "sha256": "2ebb6856caeff775d4f6e0cec85b797764bf1bd27816395e2715632d81e728c2",
+      "lines": 29,
+      "atUTC": "2026-10-17T20:53:04.357455+00:00",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/clone.test.ts",
+      "bytes": 3025,
+      "sha256": "a191cc2afa9119e16a5c7db1bf45f8a4389c8ec0ee2e38ce9ba404b7e75c9c67",
+      "lines": 84,
+      "atUTC": "2026-10-17T20:53:04.357988+00:00",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/http.ts",
+      "bytes": 2882,
+      "sha256": "fea3a39ff42cf6747bb351bda0675f7e678fc1491ea1746b7f0d6e758d06bb5a",
+      "lines": 91,
+      "atUTC": "2026-10-17T20:53:04.358566+00:00",
+      "beforeBodyAndLineNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+packages/core/src/model-traces/store.ts
+packages/core/src/model-traces/index.ts
+packages/core/src/model-traces/classification.ts
+packages/core/src/model-traces/capture.test.ts
+packages/core/src/model-traces/classification.test.ts
+packages/core/src/model-traces/native-process.test.ts
+packages/core/src/model-traces/types.ts
+packages/core/src/model-traces/sessions.test.ts
+packages/core/src/model-traces/native-frames.ts
+packages/core/src/model-traces/context.ts
+packages/core/src/model-traces/native-frames.test.ts
+packages/core/src/model-traces/tool-events.test.ts
+packages/core/src/model-traces/native-process.ts
+packages/core/src/model-traces/sanitize.test.ts
+packages/core/src/model-traces/sanitize.ts
+packages/core/src/model-traces/store.test.ts

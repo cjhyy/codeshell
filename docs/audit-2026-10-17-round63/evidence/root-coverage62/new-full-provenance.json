@@ -1,0 +1,389 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/0",
+      "original": {
+        "path": "packages/core/src/model-catalog/resolve.ts",
+        "bytes": 4284,
+        "lines": 113,
+        "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+        "initialPinAtUTC": "2026-10-17T20:34:36.398034+00:00",
+        "initialSemanticReadSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "semanticReadLines": 113,
+        "sourceKind": "product",
+        "scope": "Full physical body read; ordinary exact catalog/preset lookup and returned model/paramValues fields. Credential compatibility, secret use and runtime behavior are not certified.",
+        "navigationLineRanges": [],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+      },
+      "claimId": "formal62:model-catalog:0",
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "classification": "full",
+      "semanticLineCount": 113,
+      "selectedLineRanges": [
+        [
+          1,
+          113
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/1",
+      "original": {
+        "path": "packages/core/src/model-catalog/gen-connections.ts",
+        "bytes": 1539,
+        "lines": 43,
+        "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+        "initialPinAtUTC": "2026-10-17T20:34:36.398790+00:00",
+        "initialSemanticReadSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "semanticReadLines": 43,
+        "sourceKind": "product",
+        "scope": "Full physical body read; normal tag filtering and id/kind/baseUrl/defaultModel projection; no real provider or credential operation.",
+        "navigationLineRanges": [],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+      },
+      "claimId": "formal62:model-catalog:1",
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "classification": "full",
+      "semanticLineCount": 43,
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/2",
+      "original": {
+        "path": "packages/core/src/model-catalog/upsert.ts",
+        "bytes": 1099,
+        "lines": 25,
+        "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+        "initialPinAtUTC": "2026-10-17T20:34:36.399605+00:00",
+        "initialSemanticReadSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            25
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            25
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            25
+          ]
+        ],
+        "semanticReadLines": 25,
+        "sourceKind": "product",
+        "scope": "Full physical body read; exact id/value append/replace and copied input array; no storage durability certification.",
+        "navigationLineRanges": [],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+      },
+      "claimId": "formal62:model-catalog:2",
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "classification": "full",
+      "semanticLineCount": 25,
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "pointer": "/files/4",
+      "original": {
+        "path": "packages/core/src/sources/collection.ts",
+        "bytes": 3025,
+        "lineCount": 89,
+        "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+        "pinnedAtUTC": "2026-10-17T20:34:43.582625+00:00",
+        "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+        "selectedLineRanges": [
+          [
+            1,
+            89
+          ]
+        ],
+        "semanticLineCount": 89,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            89
+          ]
+        ],
+        "bodyDisplayedLineCount": 89,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [
+          [
+            1,
+            89
+          ]
+        ],
+        "displayedLineCount": 89,
+        "semanticFull": true,
+        "coverage": "full",
+        "category": "product-semantic",
+        "scopeBoundary": "Full static DTO/schema leaf read. Normalizer and real path/identity/I/O enforcement callees not read or exercised; full file is not transitive mechanism certification. Prior original Sources MD7 already described selected reading, so no first-read claim."
+      },
+      "claimId": "formal62:source-view:4",
+      "path": "packages/core/src/sources/collection.ts",
+      "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "classification": "full",
+      "semanticLineCount": 89,
+      "selectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "sourceKind": "product-semantic",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/0",
+      "original": {
+        "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+        "bytes": 2306,
+        "lines": 61,
+        "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            61
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            61
+          ]
+        ],
+        "semanticLineCount": 61,
+        "bodyDisplayedLineCount": 61,
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:0",
+      "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+      "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+      "classification": "full",
+      "semanticLineCount": 61,
+      "selectedLineRanges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/1",
+      "original": {
+        "path": "packages/desktop/src/main/theme-asset-url.ts",
+        "bytes": 1823,
+        "lines": 70,
+        "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            70
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            70
+          ]
+        ],
+        "semanticLineCount": 70,
+        "bodyDisplayedLineCount": 70,
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:1",
+      "path": "packages/desktop/src/main/theme-asset-url.ts",
+      "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+      "classification": "full",
+      "semanticLineCount": 70,
+      "selectedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/6",
+      "original": {
+        "path": "packages/desktop/src/shared/theme-packs.ts",
+        "bytes": 1788,
+        "lines": 53,
+        "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+        "beforeBodyOrLineNavigation": true,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            53
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            53
+          ]
+        ],
+        "semanticLineCount": 53,
+        "bodyDisplayedLineCount": 53,
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:6",
+      "path": "packages/desktop/src/shared/theme-packs.ts",
+      "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+      "classification": "full",
+      "semanticLineCount": 53,
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/server-run-replay/source-manifest.json",
+      "pointer": "/files/2",
+      "original": {
+        "path": "packages/server/src/hub/run-replay.test.ts",
+        "bytes": 5239,
+        "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd",
+        "lines": 109,
+        "beforeBodyAndLineNavigation": true,
+        "atUTC": "2026-10-17T20:41:50.077900+00:00",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            109
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            109
+          ]
+        ],
+        "additionalNavigationSnippetLineRanges": [],
+        "scope": "Full existing7 unit-test declarations for normal prefix/overlay/cursor, overlapping request lifetime, missing session, bounds, clear, total budget and ownership. Source text only, never imported or executed; declared asserts are not observed results.",
+        "category": "test-declaration",
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "semanticLineCount": 109,
+        "bodyDisplayedLineCount": 109,
+        "displayedLineRanges": [
+          [
+            1,
+            109
+          ]
+        ],
+        "displayedLineCount": 109
+      },
+      "claimId": "formal62:server-run-replay:2",
+      "path": "packages/server/src/hub/run-replay.test.ts",
+      "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd",
+      "classification": "full",
+      "semanticLineCount": 109,
+      "selectedLineRanges": [
+        [
+          1,
+          109
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    }
+  ]
+}

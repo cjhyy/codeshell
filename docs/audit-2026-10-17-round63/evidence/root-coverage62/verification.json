@@ -1,0 +1,16 @@
+{
+  "allChecksPassed": true,
+  "counts": {
+    "unknown": 3898,
+    "full": 368,
+    "selected": 377
+  },
+  "acceptedRows": 26,
+  "excludedRows": 10,
+  "transitions": 22,
+  "fullUpgrades": 8,
+  "selectedUpgrades": 14,
+  "sourceSemanticReads": 0,
+  "productRuns": 0,
+  "checkerIsSecondRootImplementationNotExternalPeer": true
+}

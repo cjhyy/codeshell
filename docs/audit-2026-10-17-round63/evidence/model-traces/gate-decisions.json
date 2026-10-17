@@ -1,0 +1,13 @@
+{
+  "classification": {
+    "decision": "same-SHA old full; current body not read",
+    "canonical": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json#/files/7",
+    "oldScope": "full static read; not imported/executed",
+    "reportRange": "docs/audit-2026-10-17-round18/presentation.md:15-36"
+  },
+  "nativeFramesAndSanitize": {
+    "decision": "limited static reading allowed; no explicit canonical old full established in bounded gate",
+    "notClaimed": "first read, historically unread or unique new source coverage"
+  },
+  "oldFailures": "Prior Core model-trace backend/i18n dynamic failures remain skipped; no test/import/fixture execution"
+}

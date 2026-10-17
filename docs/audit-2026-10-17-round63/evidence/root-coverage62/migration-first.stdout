@@ -1,0 +1,1 @@
+{"counts": {"unknown": 3898, "full": 368, "selected": 377}, "denominator": 4643, "notFull": 4275, "primaryRows": 36, "acceptedRows": 26, "uniqueAcceptedPaths": 26, "excludedRows": 10, "deferredRows": 0, "transitions": 22, "retainedStatusPaths": 4, "productSourceSemanticReads": 0, "productRuns": 0, "gitRuns": 0}

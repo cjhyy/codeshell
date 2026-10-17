@@ -1,0 +1,26 @@
+[
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "bytes": 299337,
+    "lineCount": 7330,
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+    "pinnedAtUTC": "2026-10-17T20:53:38.224337+00:00",
+    "timing": "before own body/nav; actual producer inventory or known import path confirmed"
+  },
+  {
+    "path": "packages/desktop/src/main/desktop-notifier.ts",
+    "bytes": 7928,
+    "lineCount": 224,
+    "sha256": "912a2e5ce5e9518a55e03f94334abb1d6c4c3ff408e660c6b479e22f23f619af",
+    "pinnedAtUTC": "2026-10-17T20:53:38.225720+00:00",
+    "timing": "before own body/nav; actual producer inventory or known import path confirmed"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent-notifications.ts",
+    "bytes": 37250,
+    "lineCount": 1094,
+    "sha256": "d829f15f49905f39d590eed96aebe6e40bc758e1dbcf2a65e741aec163eeb56a",
+    "pinnedAtUTC": "2026-10-17T20:53:38.226462+00:00",
+    "timing": "before own body/nav; actual producer inventory or known import path confirmed"
+  }
+]

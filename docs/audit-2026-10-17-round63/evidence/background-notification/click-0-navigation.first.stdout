@@ -1,0 +1,2 @@
+3:export const NOTIFICATION_OPEN_SESSION_CHANNEL = "notification:open-session";
+21:    onNotificationOpenSession(listener: (sessionId: string) => void): () => void {

@@ -1,0 +1,473 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "9874f8abdfce0ade5bb058d26e026b10f173a129",
+  "rootReportedBranch": "codex/audit/traces-notifications-resources-round63-20261018",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/core/src/model-traces/native-frames.ts",
+      "bytes": 3333,
+      "lines": 90,
+      "sha256": "b3b08f076f1a115ba97ad9641c655a45799a6a32318d05fbbe934f561a4b4e8f",
+      "initialPinAtUTC": "2026-10-17T20:49:50.587420+00:00",
+      "initialSemanticReadSha256": "b3b08f076f1a115ba97ad9641c655a45799a6a32318d05fbbe934f561a4b4e8f",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          90
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          90
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          90
+        ]
+      ],
+      "semanticReadLines": 90,
+      "displayedLines": 90,
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "sourceKind": "product",
+      "scope": "Full physical body reading for ordinary frame identity/part accumulation and final UTF8/JSON projection. No native producer, FD, clock, Buffer, decoder or helper is executed; no arbitrary malformed data is used as a bug.",
+      "newUniqueCoverageClaimed": false
+    },
+    {
+      "path": "packages/core/src/model-traces/sanitize.ts",
+      "bytes": 5223,
+      "lines": 147,
+      "sha256": "fe1200025c0c241c6cffb770fdd737d41e3eb7f0ce3db2fe9e0be8fb5f74f7d0",
+      "initialPinAtUTC": "2026-10-17T20:49:50.588168+00:00",
+      "initialSemanticReadSha256": "fe1200025c0c241c6cffb770fdd737d41e3eb7f0ce3db2fe9e0be8fb5f74f7d0",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          147
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          147
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          147
+        ]
+      ],
+      "semanticReadLines": 147,
+      "displayedLines": 147,
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "sourceKind": "product",
+      "scope": "Full physical body reading for diagnostic clone, ordinary nested string/object/array and content-state propagation. This is not a complete secrets/security certification or adversarial-input campaign.",
+      "newUniqueCoverageClaimed": false
+    },
+    {
+      "path": "packages/core/src/model-traces/context.ts",
+      "bytes": 33874,
+      "lines": 944,
+      "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "initialPinAtUTC": "2026-10-17T20:53:30.638930+00:00",
+      "initialSemanticReadSha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          199,
+          248
+        ],
+        [
+          740,
+          807
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          199,
+          248
+        ],
+        [
+          740,
+          807
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          199,
+          248
+        ],
+        [
+          740,
+          807
+        ]
+      ],
+      "semanticReadLines": 118,
+      "displayedLines": 118,
+      "navigationLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          119,
+          122
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          250,
+          250
+        ],
+        [
+          761,
+          761
+        ],
+        [
+          766,
+          766
+        ],
+        [
+          770,
+          770
+        ],
+        [
+          831,
+          831
+        ],
+        [
+          845,
+          845
+        ],
+        [
+          861,
+          861
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          119,
+          122
+        ],
+        [
+          250,
+          250
+        ],
+        [
+          831,
+          831
+        ],
+        [
+          845,
+          845
+        ],
+        [
+          861,
+          861
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Selected capture/settle and event value/state-to-write plumbing. Adjacent policy/timer/storage names are visible but their mechanisms, enforcement and runtime scheduling are not certified.",
+      "newUniqueCoverageClaimed": false
+    },
+    {
+      "path": "packages/core/src/model-traces/native-process.ts",
+      "bytes": 6670,
+      "lines": 192,
+      "sha256": "91c499a8fb06eb7e71e247f4de102197dc722839a43177a54cd57d7ddf21f7fc",
+      "initialPinAtUTC": "2026-10-17T20:53:30.641606+00:00",
+      "initialSemanticReadSha256": "91c499a8fb06eb7e71e247f4de102197dc722839a43177a54cd57d7ddf21f7fc",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          192
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          192
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          192
+        ]
+      ],
+      "semanticReadLines": 192,
+      "displayedLines": 192,
+      "navigationLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          161,
+          161
+        ]
+      ],
+      "navigationOnlyLineRanges": [],
+      "sourceKind": "product",
+      "scope": "Full physical body reading of the bounded observation data channel, actual frames.read consumer, accepted start/finish fields and record callback. Launcher, process/FD producer, provider/account/authority mechanisms are outside scope.",
+      "newUniqueCoverageClaimed": false
+    },
+    {
+      "path": "packages/core/src/model-traces/types.ts",
+      "bytes": 6231,
+      "lines": 214,
+      "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "initialPinAtUTC": "2026-10-17T20:53:30.642864+00:00",
+      "initialSemanticReadSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "semanticReadLines": 5,
+      "displayedLines": 5,
+      "navigationLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          77,
+          77
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          159,
+          159
+        ],
+        [
+          170,
+          171
+        ],
+        [
+          206,
+          207
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          49,
+          49
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          77,
+          77
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          159,
+          159
+        ],
+        [
+          170,
+          171
+        ],
+        [
+          206,
+          207
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Selected state/status type declarations only.",
+      "newUniqueCoverageClaimed": false
+    },
+    {
+      "path": "packages/core/src/model-traces/native-frames.test.ts",
+      "bytes": 4644,
+      "lines": 128,
+      "sha256": "29f70e32cbaf84fd9880ff4558a71db605340c22e9d1a2da4420aec8130e46cf",
+      "initialPinAtUTC": "2026-10-17T20:53:30.643923+00:00",
+      "initialSemanticReadSha256": "29f70e32cbaf84fd9880ff4558a71db605340c22e9d1a2da4420aec8130e46cf",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          60
+        ]
+      ],
+      "semanticReadLines": 46,
+      "displayedLines": 60,
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "sourceKind": "test-declaration",
+      "scope": "Ordinary legacy/concurrent UTF8 existing declaration and helper read through line46, no execution. Lines47–60 are adjacent malformed-input test display, excluded from semantic scope and no bug inferred from them.",
+      "newUniqueCoverageClaimed": false
+    },
+    {
+      "path": "packages/core/src/model-traces/classification.ts",
+      "bytes": 2106,
+      "lines": 65,
+      "sha256": "fb315940464ed4d6af338a4b6335fb49226869e5cb76644afe78c391cd06f1cb",
+      "initialPinAtUTC": "2026-10-17T20:49:50.588830+00:00",
+      "initialSemanticReadSha256": null,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLines": 0,
+      "displayedLines": 0,
+      "sourceKind": "product",
+      "scope": "Canonical same-SHA R18 /files/7 explicit full static read; current body excluded before read. Old backend dynamic failure remains SKIP."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialPinAtUTC": "2026-10-17T20:49:50.584547+00:00",
+      "initialSemanticReadSha256": null,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLines": 0,
+      "displayedLines": 0,
+      "sourceKind": "instruction",
+      "scope": "Unchanged previously read instruction reused by SHA; no new semantic reading."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialPinAtUTC": "2026-10-17T20:49:50.586665+00:00",
+      "initialSemanticReadSha256": null,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLines": 0,
+      "displayedLines": 0,
+      "sourceKind": "instruction",
+      "scope": "Unchanged previously read instruction reused by SHA; no new semantic reading."
+    }
+  ],
+  "counts": {
+    "sourceRows": 9,
+    "productSemanticFiles": 5,
+    "productFullFiles": 3,
+    "productSelectedFiles": 2,
+    "productHashOnlyFiles": 1,
+    "testSelectedFiles": 1,
+    "instructionHashOnlyFiles": 2,
+    "productSemanticLines": 552,
+    "testDeclarationSemanticLines": 46,
+    "displayedLines": 612
+  },
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+      "bytes": 5925,
+      "sha256": "658679d962ea547236d14bd7d748370c2ace7f413b207864d0cb274a27e7f543",
+      "pinAtUTC": "2026-10-17T20:52:41.914569+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/presentation.md",
+      "bytes": 5144,
+      "sha256": "91f8c12fbd57bd72fcf3fa85c5082f3da728121879d80295bcdec1e2c5cad2bf",
+      "pinAtUTC": "2026-10-17T20:52:41.917974+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pinAtUTC": "2026-10-17T20:52:41.928188+00:00"
+    }
+  ],
+  "sharedHistoryBatch": {
+    "path": "/tmp/codeshell-audit-round171-coverage62/history-batch.json",
+    "bytes": 1553692,
+    "sha256": "819a414f68c2331ea87455754e0cc724d7ba623b3daa40b1de5137638c571bd0"
+  },
+  "historyGateRead": {
+    "canonicalObject": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json#/files/7",
+    "canonicalReportRange": [
+      "docs/audit-2026-10-17-round18/presentation.md",
+      15,
+      36
+    ],
+    "derivedLocatorObjectsRead": 8,
+    "derivedObjectsNotCanonicalFullProof": true
+  },
+  "scopeMeaning": "Physical full/selected body reading only for the bounded ordinary data contract; not first reading, unique new coverage or all-behavior/runtime certification. Navigation-only rows/ranges and adjacent display are separate.",
+  "testsExecuted": 0,
+  "productExecutions": 0,
+  "gitCalls": 0,
+  "networkCalls": 0
+}

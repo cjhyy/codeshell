@@ -1,0 +1,4 @@
+/tmp/codeshell-audit-round168-model-traces/navigate-chain.py:15: SyntaxWarning: "\." is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\."? A raw string is also an option.
+  plans=[(['rg','-n','sanitizeTraceValue|createNativeModelTraceFrameDecoder|frameDecoder|decoder\.read|\.clear\(|recordRequest|recordResponse|ModelTraceContentState|contentState|sanitize'],paths[:3])]
+/tmp/codeshell-audit-round168-model-traces/navigate-chain.py:16: SyntaxWarning: "\(" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\("? A raw string is also an option.
+  if len(paths)>3:plans.append((['rg','-n','^describe|^  (test|it)\('],paths[3:]))

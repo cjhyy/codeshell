@@ -1,0 +1,18 @@
+[
+  {
+    "path": "packages/desktop/src/preload/index.ts",
+    "bytes": 86436,
+    "lineCount": 1892,
+    "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+    "pinnedAtUTC": "2026-10-17T20:55:06.212321+00:00",
+    "timing": "before own body/nav; actual mount/import filenames confirmed"
+  },
+  {
+    "path": "packages/desktop/src/renderer/App.tsx",
+    "bytes": 122863,
+    "lineCount": 2924,
+    "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+    "pinnedAtUTC": "2026-10-17T20:55:06.213880+00:00",
+    "timing": "before own body/nav; actual mount/import filenames confirmed"
+  }
+]

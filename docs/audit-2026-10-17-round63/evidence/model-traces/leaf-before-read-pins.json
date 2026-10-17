@@ -1,0 +1,32 @@
+[
+  {
+    "path": "packages/core/src/model-traces/native-frames.ts",
+    "bytes": 3333,
+    "lines": 90,
+    "sha256": "b3b08f076f1a115ba97ad9641c655a45799a6a32318d05fbbe934f561a4b4e8f",
+    "pinAtUTC": "2026-10-17T20:52:59.776556+00:00",
+    "coverage": "full",
+    "selectedLineRanges": [
+      [
+        1,
+        90
+      ]
+    ],
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/core/src/model-traces/sanitize.ts",
+    "bytes": 5223,
+    "lines": 147,
+    "sha256": "fe1200025c0c241c6cffb770fdd737d41e3eb7f0ce3db2fe9e0be8fb5f74f7d0",
+    "pinAtUTC": "2026-10-17T20:52:59.777652+00:00",
+    "coverage": "full",
+    "selectedLineRanges": [
+      [
+        1,
+        147
+      ]
+    ],
+    "sourceKind": "product"
+  }
+]

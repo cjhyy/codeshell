@@ -1,0 +1,5 @@
+packages/desktop/src/preload/notification-navigation-api.ts
+packages/desktop/src/preload/notification-navigation-api.test.ts
+packages/desktop/src/preload/types.d.ts
+packages/desktop/src/renderer/app/useNotificationSessionNavigation.test.tsx
+packages/desktop/src/renderer/app/useNotificationSessionNavigation.ts

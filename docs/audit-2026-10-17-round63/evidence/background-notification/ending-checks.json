@@ -1,0 +1,157 @@
+{
+  "atUTC": "2026-10-17T20:57:34.022903+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "beforeSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notification-routes.ts",
+      "beforeSha256": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+      "endingSha256": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+      "endingBytes": 5240,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/native-desktop-notification.ts",
+      "beforeSha256": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+      "endingSha256": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+      "endingBytes": 1346,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/background-notification-content.ts",
+      "beforeSha256": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+      "endingSha256": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+      "endingBytes": 6444,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notification-routes.test.ts",
+      "beforeSha256": "d9f1339d159124a9600718b577f78083e45e5536b1e7e8164ce0b92721492e1e",
+      "endingSha256": "d9f1339d159124a9600718b577f78083e45e5536b1e7e8164ce0b92721492e1e",
+      "endingBytes": 9759,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/native-desktop-notification.test.ts",
+      "beforeSha256": "73d78beda67d1378cb38c6e5718e4c8176a9de1601eca8e99944dd4b060e2817",
+      "endingSha256": "73d78beda67d1378cb38c6e5718e4c8176a9de1601eca8e99944dd4b060e2817",
+      "endingBytes": 2154,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "beforeSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingBytes": 299337,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notifier.ts",
+      "beforeSha256": "912a2e5ce5e9518a55e03f94334abb1d6c4c3ff408e660c6b479e22f23f619af",
+      "endingSha256": "912a2e5ce5e9518a55e03f94334abb1d6c4c3ff408e660c6b479e22f23f619af",
+      "endingBytes": 7928,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-notifications.ts",
+      "beforeSha256": "d829f15f49905f39d590eed96aebe6e40bc758e1dbcf2a65e741aec163eeb56a",
+      "endingSha256": "d829f15f49905f39d590eed96aebe6e40bc758e1dbcf2a65e741aec163eeb56a",
+      "endingBytes": 37250,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/notification-navigation-api.ts",
+      "beforeSha256": "5ebe21aaf4a161422abe1bef54d7262ffc0504d856c075e9e37dff3f1bf976f0",
+      "endingSha256": "5ebe21aaf4a161422abe1bef54d7262ffc0504d856c075e9e37dff3f1bf976f0",
+      "endingBytes": 1490,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/notification-navigation-api.test.ts",
+      "beforeSha256": "357b5bd64d9ddf3613f1014590907839e4f7d225ce67c865ce6b3de0fbf24e7f",
+      "endingSha256": "357b5bd64d9ddf3613f1014590907839e4f7d225ce67c865ce6b3de0fbf24e7f",
+      "endingBytes": 2263,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "beforeSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "endingBytes": 102370,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useNotificationSessionNavigation.test.tsx",
+      "beforeSha256": "d7bfbb6b9cb4270cd8472bd0d3bdc0a790c0b7d7478a50f6a266f87b83f92c7f",
+      "endingSha256": "d7bfbb6b9cb4270cd8472bd0d3bdc0a790c0b7d7478a50f6a266f87b83f92c7f",
+      "endingBytes": 13248,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useNotificationSessionNavigation.ts",
+      "beforeSha256": "9c63d5e65a76315d5d5a45abf186ba24d6c4e77ecf978109f556924a40921a5e",
+      "endingSha256": "9c63d5e65a76315d5d5a45abf186ba24d6c4e77ecf978109f556924a40921a5e",
+      "endingBytes": 3411,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "beforeSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingBytes": 86436,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "beforeSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingBytes": 122863,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "beforeSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingBytes": 12061422,
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/notification-round14.md",
+      "beforeSha256": "678802c7c7845c7c4f83afbcb4a335736ce0c53ca15b0af332027db43cdb0bdd",
+      "endingSha256": "678802c7c7845c7c4f83afbcb4a335736ce0c53ca15b0af332027db43cdb0bdd",
+      "endingBytes": 6353,
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/notification-quality-round14.md",
+      "beforeSha256": "6fccdc4940862197c5719272a4b6ff358997624d1124db6822747a6022706b82",
+      "endingSha256": "6fccdc4940862197c5719272a4b6ff358997624d1124db6822747a6022706b82",
+      "endingBytes": 9069,
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round171-coverage62/history-batch.json",
+      "beforeSha256": "819a414f68c2331ea87455754e0cc724d7ba623b3daa40b1de5137638c571bd0",
+      "endingSha256": "819a414f68c2331ea87455754e0cc724d7ba623b3daa40b1de5137638c571bd0",
+      "endingBytes": 1553692,
+      "unchanged": true
+    }
+  ],
+  "sourceInstructionChecks": 17,
+  "boundedCanonicalSharedMetadataChecks": 4,
+  "allUnchanged": true,
+  "gitOrFrozenBlobVerification": false,
+  "scope": "Own pinned files and actual bounded historical inputs/shared batch only; no full6669-file historical ending scan."
+}

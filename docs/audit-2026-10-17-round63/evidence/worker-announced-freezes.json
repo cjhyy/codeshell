@@ -1,0 +1,65 @@
+{
+  "checks": [
+    {
+      "path": "model-traces/report.md",
+      "bytes": 2620,
+      "sha256": "e454937b2a5c413c3728d8f8ea084f112a0ec999235948cdbfb7710e17a5851f"
+    },
+    {
+      "path": "model-traces/source-manifest.json",
+      "bytes": 12417,
+      "sha256": "e27271104866c5f2121122e724a7238f9c5076ab6a3b7bba25fccb03540fc568"
+    },
+    {
+      "path": "model-traces/reviewer-receipt.json",
+      "bytes": 9241,
+      "sha256": "b6bbfbdd19e8f750f4cc745fd4becdf9e51241978c79d7d455a0b7a8f55c1d3b"
+    },
+    {
+      "path": "background-notification/report.md",
+      "bytes": 2529,
+      "sha256": "c577eddf36674648a76f2ea5dff0fbcfc4b5a7556041cf79c6ef8875306558ae"
+    },
+    {
+      "path": "background-notification/source-manifest.json",
+      "bytes": 21841,
+      "sha256": "b08b3df51f75d5bac6905d8491209fd806a6c8bd7ac1a161991930be97b9b3e9"
+    },
+    {
+      "path": "background-notification/artifact-receipt.json",
+      "bytes": 9799,
+      "sha256": "de358c07effb3066c7ce6d5425ce9146eb8f7998adfa1e942db89d34f2b84ebd"
+    },
+    {
+      "path": "panel-resource-clone/report.md",
+      "bytes": 6085,
+      "sha256": "78d024689187a970ec4d4a2c65035d98d893d3192c3615197f3d9ce0650a6501"
+    },
+    {
+      "path": "panel-resource-clone/source-manifest.json",
+      "bytes": 19234,
+      "sha256": "7f7c321c0cbb3e7e603ddb0e98b50feec2beca8a4f37107ac21149e7728ec54f"
+    },
+    {
+      "path": "panel-resource-clone/artifact-receipt.json",
+      "bytes": 4610,
+      "sha256": "ee1e4c2d8541d693cb30d65eb500ceb5d288b7af76bc5e38a9a4145eda73d083"
+    },
+    {
+      "path": "root-coverage62/report.md",
+      "bytes": 3007,
+      "sha256": "14db6a8ea40d80474e3678e273279c3dc25916e16c8ad12f4567c0aa5a221709"
+    },
+    {
+      "path": "root-coverage62/source-manifest.json",
+      "bytes": 8498,
+      "sha256": "6991179a982fa53aebbfd82715a5076cdfa4b42461fb25bc429e377095988f07"
+    },
+    {
+      "path": "root-coverage62/artifact-receipt.json",
+      "bytes": 4725,
+      "sha256": "7ee4c197d0224302f9276d3cc1dbea2ca048710015f45d886c51c07cc5159c2d"
+    }
+  ],
+  "scope": "Author-announced frozen anchors; Root will bind copied bytes before publication."
+}
