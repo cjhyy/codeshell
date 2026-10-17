@@ -8,6 +8,10 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
+CI30 is prepared for a new source-bound acceptance run; execution is still pending.
+See the [CI30 preparation](#ci30--prepared-source-native-execution-pending).
+This does not replace the completed CI29 failure below.
+
 The latest completed run, CI29, failed overall across five jobs. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
 38 operations/five normal Mains plus separate Review drafts three/one, then
@@ -3453,3 +3457,74 @@ provenance checks are not extra native operations. CI28 and earlier failures,
 unknown causes and the accidental local discovery's unknown consequences remain
 unchanged. No release, remote-main/tag push, publication, retry or gate relaxation
 is performed by this documentation update.
+
+## CI30 — prepared source, native execution pending
+
+The candidate source is `46fef80a8029d84f4e7ebef165fcfba952e9ce31`.
+This is a preparation record, not a new CI result or release approval. No CI30
+push or hosted execution is recorded here. CI29 remains **FAILED**; its Windows
+Composer GC cause and unfinished NSIS replacement cause remain **UNKNOWN**.
+Earlier failures and all historical records above remain unchanged.
+
+MCP project overrides now treat a configured name such as `team.docs` as one
+literal record key inside the existing SettingsManager write lock. Commit
+`27f2c29e3de4e1c1e36430dccd0e08eb5cf606b6` fixes the reproduced nested-write/schema
+failure and failed literal-key inheritance deletion without changing the Manager,
+schema, name validation or global write path. The real owned-file baseline is
+seven passes/three failures: two defect triggers plus the separately approved
+contract difference that deleted projects now fail closed rather than silently
+no-op. The new and existing service shard then passes 27 tests/85 expectations,
+zero failures/skips, with eighteen deny probes and zero actual transport attempts.
+Both off and null literal overrides are deleted; sibling keys, raw fields
+and local/profile precedence remain covered. No real MCP client/server is run.
+Returning false for an absent override means no JSON write, not zero lock or
+directory IO. The unchanged runner deletes its JUnit in `finally`; full raw logs
+are retained, without a claim that the physical XML was frozen.
+
+Updater commit `5cda96c8bb7ffd71e0b528b6d10d98af3400dac5` replaces inline technical
+error text with a short summary and a closed Error details disclosure retaining
+the full message. Its updated packaged fixture must still prove the new UI on
+the actual candidate; no new native updater result is claimed at preparation.
+
+Composer commit `836983d6a19d7481d0e4a4b177dee3b5eba01531` preserves the observed
+first error, bounded Main output, cleanup order and three existing owned guard
+records. Known failures retain HOME under the stricter complete-evidence gate.
+NSIS commit `d73384dbdaf55c880ae88e7720f446ae703ab9d1` adds bounded advisory image
+roles from the same existing process query, joined to current owned full-birth
+identities. Roles grant no cleanup authority or physical image proof. These are
+evidence improvements, not fixes for GC, replacement timeout or uninstall.
+Neither adds a retry, native identity query, timeout extension or relaxed exit gate.
+
+Root's explicit fourteen-file pure Node vector actually passes all 201 tests,
+zero failures/cancellations/skips. Its first postprocessing receipt expected TAP
+footer syntax, while the completed raw output used Spec footer syntax; null
+counts caused a metadata assertion after the actual zero exit. The first receipt
+and error remain retained. Reading the existing Spec footer verifies 201 passes
+without rerunning tests; this is not a product or native failure. The verified
+result has SHA-256
+`12e20f311539a632bea05efd51a328a1cefe0a1749e13053f85146b7bb8c912b`.
+The 27 Bun tests and 201 Node tests are distinct scopes and are not native cases.
+
+Workflow commit `6637b34d8` adds three finite guarded steps: native-job operation
+evidence/Goal contracts, project literal-key regressions, and the independent
+Windows NSIS job's operation-evidence contracts. Original steps, native guards,
+budgets, normal-exit/custody, OS/cache/HOME and acceptance predicates remain.
+New exact public log entries do not imply native behavior has passed.
+
+At source `46fef80a8`, Root's actual dependency build, fourteen explicit workspace
+commands covering sixteen no-emit TypeScript checks, and renderer/mobile browser
+bundles all exit zero. Bundle-size warnings remain: standalone Web 773.23 kB and
+mobile 741.23 kB exceed 500 kB; renderer index 1,468.59 kB exceeds 1,000 kB. This is
+not a zero-warning result or a Desktop native build/runtime test. The seventeen
+static-command result has SHA-256
+`f0c6e81636fd3984c8b673b3b91bb85051ea247f9a57856b7835c6279a69f811`.
+The single shared-i18n `MessageStream.test.tsx` SSR shard at the same source
+passes eleven tests/23 expectations, zero failures/skips, in one guarded run.
+Its result has SHA-256
+`14e0add86300b157ab045aec0c9e3bbbaacca01c7c3da966d3a962d5fa0eaeb0`.
+It does not render the new UpdaterBanner. The historical 445-test/32-file gate is
+not a whole-input-identical result for this candidate: shared misc runtime i18n
+and Core-barrel definitions changed. Hosted CI must rerun all 32 files; the
+historical result is not promoted to a fresh combined pass.
+Hosted native execution, including full NSIS replacement/uninstall/OS restoration,
+remains pending; no successful hook execution or readiness is inferred.
