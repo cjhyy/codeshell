@@ -1,0 +1,3319 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "mainHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "files": [
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "bytes": 32518,
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+      "mainSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 33037,
+      "mainBytes": 33037
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 206,
+      "mainBytes": 206
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 17639,
+      "mainBytes": 17639
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "mainSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 339166,
+      "mainBytes": 339166
+    },
+    {
+      "path": "docs/architecture/12-package-boundaries-and-release-units.md",
+      "bytes": 23643,
+      "sha256": "0f09b9775a6248936d3e47f9b8a0d7845735c03dee78dfc682cf1e8cef5e0308",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "0f09b9775a6248936d3e47f9b8a0d7845735c03dee78dfc682cf1e8cef5e0308",
+      "mainSha256": "0f09b9775a6248936d3e47f9b8a0d7845735c03dee78dfc682cf1e8cef5e0308",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 23643,
+      "mainBytes": 23643
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "bytes": 6327,
+      "sha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "mainSha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 6327,
+      "mainBytes": 6327
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "bytes": 2847,
+      "sha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "mainSha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2847,
+      "mainBytes": 2847
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+      "bytes": 64579,
+      "sha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "mainSha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 64579,
+      "mainBytes": 64579
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "bytes": 31923,
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "mainSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 31923,
+      "mainBytes": 31923
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/root-and-video-download.md",
+      "bytes": 10090,
+      "sha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65",
+      "mainSha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10090,
+      "mainBytes": 10090
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "bytes": 134232,
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentSha256": "3a8e251255d41687f76056ed3aaacd75726f213b1b8d533b1ad4c2305e9a35d9",
+      "mainSha256": "3a8e251255d41687f76056ed3aaacd75726f213b1b8d533b1ad4c2305e9a35d9",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 150208,
+      "mainBytes": 150208
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "mainSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 7063,
+      "mainBytes": 7063
+    },
+    {
+      "path": "packages/arena/package.json",
+      "bytes": 1188,
+      "sha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "mainSha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1188,
+      "mainBytes": 1188
+    },
+    {
+      "path": "packages/arena/src/index.exports.test.ts",
+      "bytes": 1459,
+      "sha256": "e0197815c4cd0effc76ca556bc9a8c7357fbe11aa06b5b48a5ecc1e7b3d82a2d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e0197815c4cd0effc76ca556bc9a8c7357fbe11aa06b5b48a5ecc1e7b3d82a2d",
+      "mainSha256": "e0197815c4cd0effc76ca556bc9a8c7357fbe11aa06b5b48a5ecc1e7b3d82a2d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1459,
+      "mainBytes": 1459
+    },
+    {
+      "path": "packages/arena/src/index.runtime.ts",
+      "bytes": 1560,
+      "sha256": "1a4a464da62cda6c362e925d2b1369f9f2eecbedfd58d3038d1c33151f9af63b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1a4a464da62cda6c362e925d2b1369f9f2eecbedfd58d3038d1c33151f9af63b",
+      "mainSha256": "1a4a464da62cda6c362e925d2b1369f9f2eecbedfd58d3038d1c33151f9af63b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1560,
+      "mainBytes": 1560
+    },
+    {
+      "path": "packages/arena/src/index.ts",
+      "bytes": 2094,
+      "sha256": "e1ed0327d7e92da43710cf4bac8ea692fa8b5ee9fce6060fbe7674316dd582cb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e1ed0327d7e92da43710cf4bac8ea692fa8b5ee9fce6060fbe7674316dd582cb",
+      "mainSha256": "e1ed0327d7e92da43710cf4bac8ea692fa8b5ee9fce6060fbe7674316dd582cb",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2094,
+      "mainBytes": 2094
+    },
+    {
+      "path": "packages/arena/src/iterate/formats/index.ts",
+      "bytes": 12743,
+      "sha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "mainSha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 12743,
+      "mainBytes": 12743
+    },
+    {
+      "path": "packages/arena/src/iterate/index.ts",
+      "bytes": 777,
+      "sha256": "fca5381634c8d489aa4b27028f3adc25dff956d47e7c6e39967b4bad35a88277",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "fca5381634c8d489aa4b27028f3adc25dff956d47e7c6e39967b4bad35a88277",
+      "mainSha256": "fca5381634c8d489aa4b27028f3adc25dff956d47e7c6e39967b4bad35a88277",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 777,
+      "mainBytes": 777
+    },
+    {
+      "path": "packages/arena/src/lenses/index.ts",
+      "bytes": 1910,
+      "sha256": "3cba6fbf4a6dad32217df6f108ddf00e1bedd14772e8783a85b9b5416dec4e8f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "3cba6fbf4a6dad32217df6f108ddf00e1bedd14772e8783a85b9b5416dec4e8f",
+      "mainSha256": "3cba6fbf4a6dad32217df6f108ddf00e1bedd14772e8783a85b9b5416dec4e8f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1910,
+      "mainBytes": 1910
+    },
+    {
+      "path": "packages/arena/src/providers/index.ts",
+      "bytes": 5728,
+      "sha256": "22622e6446a8d5b5c4f0d70dbcc6aa3b312489d6642939a93e0693c6b3ef86ef",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "22622e6446a8d5b5c4f0d70dbcc6aa3b312489d6642939a93e0693c6b3ef86ef",
+      "mainSha256": "22622e6446a8d5b5c4f0d70dbcc6aa3b312489d6642939a93e0693c6b3ef86ef",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 5728,
+      "mainBytes": 5728
+    },
+    {
+      "path": "packages/arena/src/strategies/index.ts",
+      "bytes": 1164,
+      "sha256": "3600f972f9e6b4a48c5c21be399016cb05c55a5c2bd960221e9b7189d3ed6984",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "3600f972f9e6b4a48c5c21be399016cb05c55a5c2bd960221e9b7189d3ed6984",
+      "mainSha256": "3600f972f9e6b4a48c5c21be399016cb05c55a5c2bd960221e9b7189d3ed6984",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1164,
+      "mainBytes": 1164
+    },
+    {
+      "path": "packages/arena/tsconfig.json",
+      "bytes": 523,
+      "sha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "mainSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 523,
+      "mainBytes": 523
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "bytes": 910,
+      "sha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "mainSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 910,
+      "mainBytes": 910
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "bytes": 189,
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "mainSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 189,
+      "mainBytes": 189
+    },
+    {
+      "path": "packages/browser-devtools/tsconfig.json",
+      "bytes": 404,
+      "sha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "mainSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 404,
+      "mainBytes": 404
+    },
+    {
+      "path": "packages/cdp/package.json",
+      "bytes": 1146,
+      "sha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "mainSha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1146,
+      "mainBytes": 1146
+    },
+    {
+      "path": "packages/cdp/src/index.ts",
+      "bytes": 1186,
+      "sha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "mainSha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1186,
+      "mainBytes": 1186
+    },
+    {
+      "path": "packages/cdp/tsconfig.json",
+      "bytes": 554,
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "mainSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 554,
+      "mainBytes": 554
+    },
+    {
+      "path": "packages/chat/README.md",
+      "bytes": 24150,
+      "sha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "mainSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 24150,
+      "mainBytes": 24150
+    },
+    {
+      "path": "packages/chat/package.json",
+      "bytes": 2936,
+      "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "mainSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2936,
+      "mainBytes": 2936
+    },
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "bytes": 10201,
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "mainSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10201,
+      "mainBytes": 10201
+    },
+    {
+      "path": "packages/chat/src/codeshell.ts",
+      "bytes": 278,
+      "sha256": "4d8800592c357f57b3d6b0f92b680450630398a86b71b6e5f11ec3b1dfcff7da",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "4d8800592c357f57b3d6b0f92b680450630398a86b71b6e5f11ec3b1dfcff7da",
+      "mainSha256": "4d8800592c357f57b3d6b0f92b680450630398a86b71b6e5f11ec3b1dfcff7da",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 278,
+      "mainBytes": 278
+    },
+    {
+      "path": "packages/chat/src/index.ts",
+      "bytes": 453,
+      "sha256": "04f01b99d649c8756e925ec887daacc67e1516daaf1a06265fcd91290825393e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "04f01b99d649c8756e925ec887daacc67e1516daaf1a06265fcd91290825393e",
+      "mainSha256": "04f01b99d649c8756e925ec887daacc67e1516daaf1a06265fcd91290825393e",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 453,
+      "mainBytes": 453
+    },
+    {
+      "path": "packages/chat/tsconfig.json",
+      "bytes": 533,
+      "sha256": "2f22bd4eda957e3937eee27452c2fa9424492d0eadc78e46b5c28ba039f03baa",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2f22bd4eda957e3937eee27452c2fa9424492d0eadc78e46b5c28ba039f03baa",
+      "mainSha256": "2f22bd4eda957e3937eee27452c2fa9424492d0eadc78e46b5c28ba039f03baa",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 533,
+      "mainBytes": 533
+    },
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "mainSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1906,
+      "mainBytes": 1906
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/index.ts",
+      "bytes": 422,
+      "sha256": "ab4b9a927eb700da0684bba072d7a7772f8b2894754a65748dc69caec539d657",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ab4b9a927eb700da0684bba072d7a7772f8b2894754a65748dc69caec539d657",
+      "mainSha256": "ab4b9a927eb700da0684bba072d7a7772f8b2894754a65748dc69caec539d657",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 422,
+      "mainBytes": 422
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/index.ts",
+      "bytes": 376,
+      "sha256": "545e48bea6882780e96687945300332ae7bc1b0596f26153dbd9230153e0e9bb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "545e48bea6882780e96687945300332ae7bc1b0596f26153dbd9230153e0e9bb",
+      "mainSha256": "545e48bea6882780e96687945300332ae7bc1b0596f26153dbd9230153e0e9bb",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 376,
+      "mainBytes": 376
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/index.ts",
+      "bytes": 3131,
+      "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "mainSha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3131,
+      "mainBytes": 3131
+    },
+    {
+      "path": "packages/coding/src/git/worktree/index.ts",
+      "bytes": 198,
+      "sha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "mainSha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 198,
+      "mainBytes": 198
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 10967,
+      "sha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "mainSha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10967,
+      "mainBytes": 10967
+    },
+    {
+      "path": "packages/coding/src/index.exports.test.ts",
+      "bytes": 3056,
+      "sha256": "520d33dfcf8feddd4d3dccf19f46e023216a60f325b29ace69a0895b2dd70364",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "520d33dfcf8feddd4d3dccf19f46e023216a60f325b29ace69a0895b2dd70364",
+      "mainSha256": "520d33dfcf8feddd4d3dccf19f46e023216a60f325b29ace69a0895b2dd70364",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3056,
+      "mainBytes": 3056
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "bytes": 177,
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "mainSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 177,
+      "mainBytes": 177
+    },
+    {
+      "path": "packages/coding/src/index.orchestration.ts",
+      "bytes": 595,
+      "sha256": "c0e4aa1c37bab43641143b8865875d6fb9a9da682aaabcc79c2d09cc983ca43a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c0e4aa1c37bab43641143b8865875d6fb9a9da682aaabcc79c2d09cc983ca43a",
+      "mainSha256": "c0e4aa1c37bab43641143b8865875d6fb9a9da682aaabcc79c2d09cc983ca43a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 595,
+      "mainBytes": 595
+    },
+    {
+      "path": "packages/coding/src/index.ts",
+      "bytes": 869,
+      "sha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "mainSha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 869,
+      "mainBytes": 869
+    },
+    {
+      "path": "packages/coding/src/quota/index.test.ts",
+      "bytes": 8337,
+      "sha256": "eac8c39111133672f905d71061f4779849109e0a6f7dddc1e9b6ef543e3e2e7e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "eac8c39111133672f905d71061f4779849109e0a6f7dddc1e9b6ef543e3e2e7e",
+      "mainSha256": "eac8c39111133672f905d71061f4779849109e0a6f7dddc1e9b6ef543e3e2e7e",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8337,
+      "mainBytes": 8337
+    },
+    {
+      "path": "packages/coding/src/quota/index.ts",
+      "bytes": 9981,
+      "sha256": "d635615e41db31098e72da255556358e2962fa1f2124659ae8f29d015b2ba6ff",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d635615e41db31098e72da255556358e2962fa1f2124659ae8f29d015b2ba6ff",
+      "mainSha256": "d635615e41db31098e72da255556358e2962fa1f2124659ae8f29d015b2ba6ff",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 9981,
+      "mainBytes": 9981
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/index.ts",
+      "bytes": 4352,
+      "sha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "mainSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 4352,
+      "mainBytes": 4352
+    },
+    {
+      "path": "packages/coding/tsconfig.json",
+      "bytes": 554,
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "mainSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 554,
+      "mainBytes": 554
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "mainSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3452,
+      "mainBytes": 3452
+    },
+    {
+      "path": "packages/core/src/automation/index.ts",
+      "bytes": 3049,
+      "sha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "mainSha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3049,
+      "mainBytes": 3049
+    },
+    {
+      "path": "packages/core/src/capabilities/index.ts",
+      "bytes": 2505,
+      "sha256": "e0c6016bde42e087254bb5c22dcc57a84427712591272cb6c680d373aa9802bc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e0c6016bde42e087254bb5c22dcc57a84427712591272cb6c680d373aa9802bc",
+      "mainSha256": "e0c6016bde42e087254bb5c22dcc57a84427712591272cb6c680d373aa9802bc",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2505,
+      "mainBytes": 2505
+    },
+    {
+      "path": "packages/core/src/capability-control/index.ts",
+      "bytes": 337,
+      "sha256": "114d7898aa669cace88b07b3fc8c506d73e920afc874b2cf6e42f67cc31d10b0",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "114d7898aa669cace88b07b3fc8c506d73e920afc874b2cf6e42f67cc31d10b0",
+      "mainSha256": "114d7898aa669cace88b07b3fc8c506d73e920afc874b2cf6e42f67cc31d10b0",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 337,
+      "mainBytes": 337
+    },
+    {
+      "path": "packages/core/src/composition/index.ts",
+      "bytes": 566,
+      "sha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "mainSha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 566,
+      "mainBytes": 566
+    },
+    {
+      "path": "packages/core/src/cost-ledger/index.ts",
+      "bytes": 424,
+      "sha256": "897c9702b2e202c6fe927d3c0d3a97214f0b2ffc7c76c8e411c264174c723498",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "897c9702b2e202c6fe927d3c0d3a97214f0b2ffc7c76c8e411c264174c723498",
+      "mainSha256": "897c9702b2e202c6fe927d3c0d3a97214f0b2ffc7c76c8e411c264174c723498",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 424,
+      "mainBytes": 424
+    },
+    {
+      "path": "packages/core/src/credentials/index.ts",
+      "bytes": 1623,
+      "sha256": "2781ee20f07eff6e24d9e92cfa8ad10354e2b31ef54af40a8524c0e73d01064b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2781ee20f07eff6e24d9e92cfa8ad10354e2b31ef54af40a8524c0e73d01064b",
+      "mainSha256": "2781ee20f07eff6e24d9e92cfa8ad10354e2b31ef54af40a8524c0e73d01064b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1623,
+      "mainBytes": 1623
+    },
+    {
+      "path": "packages/core/src/index.exports.test.ts",
+      "bytes": 18450,
+      "sha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "mainSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 18450,
+      "mainBytes": 18450
+    },
+    {
+      "path": "packages/core/src/index.extension.tool-host.test.ts",
+      "bytes": 2047,
+      "sha256": "421984d561307e1a9bf2282bea309b3a9b54c7f84db273d022979b6eb82895e3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "421984d561307e1a9bf2282bea309b3a9b54c7f84db273d022979b6eb82895e3",
+      "mainSha256": "421984d561307e1a9bf2282bea309b3a9b54c7f84db273d022979b6eb82895e3",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2047,
+      "mainBytes": 2047
+    },
+    {
+      "path": "packages/core/src/index.extension.ts",
+      "bytes": 8779,
+      "sha256": "2e0b51dd372246db234b9519e711ab2a10792657caa47bf656826646b533f164",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2e0b51dd372246db234b9519e711ab2a10792657caa47bf656826646b533f164",
+      "mainSha256": "2e0b51dd372246db234b9519e711ab2a10792657caa47bf656826646b533f164",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8779,
+      "mainBytes": 8779
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "mainSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 17401,
+      "mainBytes": 17401
+    },
+    {
+      "path": "packages/core/src/index.skills.ts",
+      "bytes": 165,
+      "sha256": "86b71c28f313f4ca03bd6885f3e8037f35eaa05be5f131d73aff170d54386d1b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "86b71c28f313f4ca03bd6885f3e8037f35eaa05be5f131d73aff170d54386d1b",
+      "mainSha256": "86b71c28f313f4ca03bd6885f3e8037f35eaa05be5f131d73aff170d54386d1b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 165,
+      "mainBytes": 165
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27572,
+      "sha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "mainSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 27572,
+      "mainBytes": 27572
+    },
+    {
+      "path": "packages/core/src/links/index.ts",
+      "bytes": 1952,
+      "sha256": "9f84856ae5029e8df0510f016690c010c11e2d20f6a7fbbb2454ae0f25ada540",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "9f84856ae5029e8df0510f016690c010c11e2d20f6a7fbbb2454ae0f25ada540",
+      "mainSha256": "9f84856ae5029e8df0510f016690c010c11e2d20f6a7fbbb2454ae0f25ada540",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1952,
+      "mainBytes": 1952
+    },
+    {
+      "path": "packages/core/src/llm/capabilities/index.ts",
+      "bytes": 2507,
+      "sha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "mainSha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2507,
+      "mainBytes": 2507
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "bytes": 4933,
+      "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "mainSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 4933,
+      "mainBytes": 4933
+    },
+    {
+      "path": "packages/core/src/model-traces/index.ts",
+      "bytes": 795,
+      "sha256": "3b3fba1f37c8fa85bd24d1665a58eb7a99e9206d100f6c93fbbe41a940b6ae46",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "3b3fba1f37c8fa85bd24d1665a58eb7a99e9206d100f6c93fbbe41a940b6ae46",
+      "mainSha256": "3b3fba1f37c8fa85bd24d1665a58eb7a99e9206d100f6c93fbbe41a940b6ae46",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 795,
+      "mainBytes": 795
+    },
+    {
+      "path": "packages/core/src/panel-apps/index.ts",
+      "bytes": 1851,
+      "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "mainSha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1851,
+      "mainBytes": 1851
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "bytes": 10423,
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "mainSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10423,
+      "mainBytes": 10423
+    },
+    {
+      "path": "packages/core/src/product/index.ts",
+      "bytes": 301,
+      "sha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "mainSha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 301,
+      "mainBytes": 301
+    },
+    {
+      "path": "packages/core/src/profile/index.ts",
+      "bytes": 1599,
+      "sha256": "ba8c03a1eb82601cb9e563d14409375cc87fe9a2f81d916904d327d524344710",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ba8c03a1eb82601cb9e563d14409375cc87fe9a2f81d916904d327d524344710",
+      "mainSha256": "ba8c03a1eb82601cb9e563d14409375cc87fe9a2f81d916904d327d524344710",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1599,
+      "mainBytes": 1599
+    },
+    {
+      "path": "packages/core/src/protocol/index.ts",
+      "bytes": 468,
+      "sha256": "bd9d427a665e274b9871feb29582b94b5d59a4873c5b64f1ea4310c3d0572099",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "bd9d427a665e274b9871feb29582b94b5d59a4873c5b64f1ea4310c3d0572099",
+      "mainSha256": "bd9d427a665e274b9871feb29582b94b5d59a4873c5b64f1ea4310c3d0572099",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 468,
+      "mainBytes": 468
+    },
+    {
+      "path": "packages/core/src/run/index.ts",
+      "bytes": 1769,
+      "sha256": "a2ac2c0f00acca8130aeae535bdd83ba9c95acf231b46a77fe338f9a8c48aff6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "a2ac2c0f00acca8130aeae535bdd83ba9c95acf231b46a77fe338f9a8c48aff6",
+      "mainSha256": "a2ac2c0f00acca8130aeae535bdd83ba9c95acf231b46a77fe338f9a8c48aff6",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1769,
+      "mainBytes": 1769
+    },
+    {
+      "path": "packages/core/src/services/index.ts",
+      "bytes": 1401,
+      "sha256": "372c9cd204846a4b9ac4db2a6dff53f6dcfca134f24a77774537d2809debaabe",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "372c9cd204846a4b9ac4db2a6dff53f6dcfca134f24a77774537d2809debaabe",
+      "mainSha256": "372c9cd204846a4b9ac4db2a6dff53f6dcfca134f24a77774537d2809debaabe",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1401,
+      "mainBytes": 1401
+    },
+    {
+      "path": "packages/core/src/skills/index.ts",
+      "bytes": 335,
+      "sha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "mainSha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 335,
+      "mainBytes": 335
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.test.ts",
+      "bytes": 15737,
+      "sha256": "294106952a42efb0133825887f25966b14f8876b216bcea31b46cb7bbd75d97d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "294106952a42efb0133825887f25966b14f8876b216bcea31b46cb7bbd75d97d",
+      "mainSha256": "294106952a42efb0133825887f25966b14f8876b216bcea31b46cb7bbd75d97d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 15737,
+      "mainBytes": 15737
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.ts",
+      "bytes": 8710,
+      "sha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "mainSha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8710,
+      "mainBytes": 8710
+    },
+    {
+      "path": "packages/core/src/sources/index.ts",
+      "bytes": 421,
+      "sha256": "729f5287a35449949b63b3397618f4ac1b25e46aaa7c68e0a335b31846055f39",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "729f5287a35449949b63b3397618f4ac1b25e46aaa7c68e0a335b31846055f39",
+      "mainSha256": "729f5287a35449949b63b3397618f4ac1b25e46aaa7c68e0a335b31846055f39",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 421,
+      "mainBytes": 421
+    },
+    {
+      "path": "packages/core/src/themes/index.ts",
+      "bytes": 775,
+      "sha256": "c3e6de86281da9835211a98fcb6c5e92c58efece34676821c98c60aa4d426fd4",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c3e6de86281da9835211a98fcb6c5e92c58efece34676821c98c60aa4d426fd4",
+      "mainSha256": "c3e6de86281da9835211a98fcb6c5e92c58efece34676821c98c60aa4d426fd4",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 775,
+      "mainBytes": 775
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "bytes": 39835,
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "mainSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 39835,
+      "mainBytes": 39835
+    },
+    {
+      "path": "packages/core/src/tool-system/sandbox/index.ts",
+      "bytes": 10539,
+      "sha256": "88bd55d0c4090a2945aec2c8cace2f0d9dee39c0ae4301de444f95a9239b17dc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "88bd55d0c4090a2945aec2c8cace2f0d9dee39c0ae4301de444f95a9239b17dc",
+      "mainSha256": "88bd55d0c4090a2945aec2c8cace2f0d9dee39c0ae4301de444f95a9239b17dc",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10539,
+      "mainBytes": 10539
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "bytes": 554,
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "mainSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 554,
+      "mainBytes": 554
+    },
+    {
+      "path": "packages/desktop/package.json",
+      "bytes": 13293,
+      "sha256": "db027a9255c1a37179421d3a4118d5e4798ec70f61852a6f0a9078aff04b5f60",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "db027a9255c1a37179421d3a4118d5e4798ec70f61852a6f0a9078aff04b5f60",
+      "mainSha256": "db027a9255c1a37179421d3a4118d5e4798ec70f61852a6f0a9078aff04b5f60",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 13293,
+      "mainBytes": 13293
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-pet-packaged.mjs",
+      "bytes": 22005,
+      "sha256": "867f01af753a341eeac9d0fb7d8f14ac01623ba5b4ad836191995a34fc76325e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "867f01af753a341eeac9d0fb7d8f14ac01623ba5b4ad836191995a34fc76325e",
+      "mainSha256": "867f01af753a341eeac9d0fb7d8f14ac01623ba5b4ad836191995a34fc76325e",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 22005,
+      "mainBytes": 22005
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "bytes": 18779,
+      "sha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "mainSha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 18779,
+      "mainBytes": 18779
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-updater-packaged.mjs",
+      "bytes": 15652,
+      "sha256": "4afe203b6cbff51f1c31702f7b6dd5d9306c69e58160a321a835a4b4e2fa7ee9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "4afe203b6cbff51f1c31702f7b6dd5d9306c69e58160a321a835a4b4e2fa7ee9",
+      "mainSha256": "4afe203b6cbff51f1c31702f7b6dd5d9306c69e58160a321a835a4b4e2fa7ee9",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 15652,
+      "mainBytes": 15652
+    },
+    {
+      "path": "packages/desktop/scripts/electron-test-watchdog.mjs",
+      "bytes": 7672,
+      "sha256": "8031f736bbb5690bcbda2342382b42f501f89fd9dda3c1a4546712a626de2282",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "8031f736bbb5690bcbda2342382b42f501f89fd9dda3c1a4546712a626de2282",
+      "mainSha256": "8031f736bbb5690bcbda2342382b42f501f89fd9dda3c1a4546712a626de2282",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 7672,
+      "mainBytes": 7672
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-app-integrity.mjs",
+      "bytes": 3966,
+      "sha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "mainSha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3966,
+      "mainBytes": 3966
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-pet-fixture.mjs",
+      "bytes": 19848,
+      "sha256": "690ae8907676c70adf984bae4777143c2f99a8cb6ab388c5c4cff7e64a55d23b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "690ae8907676c70adf984bae4777143c2f99a8cb6ab388c5c4cff7e64a55d23b",
+      "mainSha256": "690ae8907676c70adf984bae4777143c2f99a8cb6ab388c5c4cff7e64a55d23b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 19848,
+      "mainBytes": 19848
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-pet-shutdown.mjs",
+      "bytes": 1113,
+      "sha256": "0f5fdb9365abb5cfad30d26f2a2a6375dcae88a3eb8de7b1167b8dbab88b044a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "0f5fdb9365abb5cfad30d26f2a2a6375dcae88a3eb8de7b1167b8dbab88b044a",
+      "mainSha256": "0f5fdb9365abb5cfad30d26f2a2a6375dcae88a3eb8de7b1167b8dbab88b044a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1113,
+      "mainBytes": 1113
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-pet-shutdown.test.mjs",
+      "bytes": 2372,
+      "sha256": "b7d3599fe36275461e703953f4591a68d7bc41af4e8e80354fd3546b0b3a20b5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "b7d3599fe36275461e703953f4591a68d7bc41af4e8e80354fd3546b0b3a20b5",
+      "mainSha256": "b7d3599fe36275461e703953f4591a68d7bc41af4e8e80354fd3546b0b3a20b5",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2372,
+      "mainBytes": 2372
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-process-exits.mjs",
+      "bytes": 2780,
+      "sha256": "065b6783c10397c8ee43cf609c33d3b80d6aec9a78d008c2782ca82607cd575c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "065b6783c10397c8ee43cf609c33d3b80d6aec9a78d008c2782ca82607cd575c",
+      "mainSha256": "065b6783c10397c8ee43cf609c33d3b80d6aec9a78d008c2782ca82607cd575c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2780,
+      "mainBytes": 2780
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-signal-diagnostics.mjs",
+      "bytes": 927,
+      "sha256": "e42129f3b612d567d60a4dfd077b96feb209102fc94360aefb6988e32f9c6d20",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e42129f3b612d567d60a4dfd077b96feb209102fc94360aefb6988e32f9c6d20",
+      "mainSha256": "e42129f3b612d567d60a4dfd077b96feb209102fc94360aefb6988e32f9c6d20",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 927,
+      "mainBytes": 927
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-signal-diagnostics.test.mjs",
+      "bytes": 1601,
+      "sha256": "fb569026f6edb5c53c03a5b3094e17507362cf2ec909c41b3504fd1448ffe2e8",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "fb569026f6edb5c53c03a5b3094e17507362cf2ec909c41b3504fd1448ffe2e8",
+      "mainSha256": "fb569026f6edb5c53c03a5b3094e17507362cf2ec909c41b3504fd1448ffe2e8",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1601,
+      "mainBytes": 1601
+    },
+    {
+      "path": "packages/desktop/scripts/run-packaged-ui-acceptance.mjs",
+      "bytes": 10930,
+      "sha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "mainSha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10930,
+      "mainBytes": 10930
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-local-package.mjs",
+      "bytes": 10661,
+      "sha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "mainSha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 10661,
+      "mainBytes": 10661
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "bytes": 29370,
+      "sha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "mainSha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 29370,
+      "mainBytes": 29370
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+      "bytes": 8567,
+      "sha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "mainSha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8567,
+      "mainBytes": 8567
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "bytes": 17247,
+      "sha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "mainSha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 17247,
+      "mainBytes": 17247
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+      "bytes": 15088,
+      "sha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "mainSha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 15088,
+      "mainBytes": 15088
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-observe.ps1",
+      "bytes": 5479,
+      "sha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "mainSha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 5479,
+      "mainBytes": 5479
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/index.ts",
+      "bytes": 1203,
+      "sha256": "daf28c3103be2b832e5a6090338db69f26c6e10d519e9c11788d9d8545a0a94f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "daf28c3103be2b832e5a6090338db69f26c6e10d519e9c11788d9d8545a0a94f",
+      "mainSha256": "daf28c3103be2b832e5a6090338db69f26c6e10d519e9c11788d9d8545a0a94f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1203,
+      "mainBytes": 1203
+    },
+    {
+      "path": "packages/desktop/src/main/browser-host/index.test.ts",
+      "bytes": 5376,
+      "sha256": "7f9e333641c5a9b729729cc73b94fe6a1bd189455489f33629f78637b1fec921",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7f9e333641c5a9b729729cc73b94fe6a1bd189455489f33629f78637b1fec921",
+      "mainSha256": "7f9e333641c5a9b729729cc73b94fe6a1bd189455489f33629f78637b1fec921",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 5376,
+      "mainBytes": 5376
+    },
+    {
+      "path": "packages/desktop/src/main/browser-host/index.ts",
+      "bytes": 6959,
+      "sha256": "233c3b19beab502384a4a0230fe0a282f40b847a925ab90be3ba54c0a6c4f344",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "233c3b19beab502384a4a0230fe0a282f40b847a925ab90be3ba54c0a6c4f344",
+      "mainSha256": "233c3b19beab502384a4a0230fe0a282f40b847a925ab90be3ba54c0a6c4f344",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 6959,
+      "mainBytes": 6959
+    },
+    {
+      "path": "packages/desktop/src/main/browser-runtime/index.ts",
+      "bytes": 2082,
+      "sha256": "bedf0d4bb18a1951fde12b4baf3fbec721783a9ef79d186f43861184c1becdb1",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "bedf0d4bb18a1951fde12b4baf3fbec721783a9ef79d186f43861184c1becdb1",
+      "mainSha256": "bedf0d4bb18a1951fde12b4baf3fbec721783a9ef79d186f43861184c1becdb1",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2082,
+      "mainBytes": 2082
+    },
+    {
+      "path": "packages/desktop/src/main/credentials-login/index.test.ts",
+      "bytes": 15017,
+      "sha256": "1aa8eebe3e5fe971ddc1ca9e438c0afa226e884a5224a641d355656cba4fc25b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1aa8eebe3e5fe971ddc1ca9e438c0afa226e884a5224a641d355656cba4fc25b",
+      "mainSha256": "1aa8eebe3e5fe971ddc1ca9e438c0afa226e884a5224a641d355656cba4fc25b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 15017,
+      "mainBytes": 15017
+    },
+    {
+      "path": "packages/desktop/src/main/credentials-login/index.ts",
+      "bytes": 14636,
+      "sha256": "8b20e99b354f58f7a3a797b7e2972d4574433e73300eb127bbd31519e088db25",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "8b20e99b354f58f7a3a797b7e2972d4574433e73300eb127bbd31519e088db25",
+      "mainSha256": "8b20e99b354f58f7a3a797b7e2972d4574433e73300eb127bbd31519e088db25",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 14636,
+      "mainBytes": 14636
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299077,
+      "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "mainSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 299077,
+      "mainBytes": 299077
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 86436,
+      "mainBytes": 86436
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/index.ts",
+      "bytes": 203,
+      "sha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "mainSha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 203,
+      "mainBytes": 203
+    },
+    {
+      "path": "packages/desktop/tsconfig.json",
+      "bytes": 911,
+      "sha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "mainSha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 911,
+      "mainBytes": 911
+    },
+    {
+      "path": "packages/desktop/tsconfig.mobile.json",
+      "bytes": 952,
+      "sha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "mainSha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 952,
+      "mainBytes": 952
+    },
+    {
+      "path": "packages/host/package.json",
+      "bytes": 923,
+      "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "mainSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 923,
+      "mainBytes": 923
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "bytes": 388,
+      "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "mainSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 388,
+      "mainBytes": 388
+    },
+    {
+      "path": "packages/host/tsconfig.json",
+      "bytes": 367,
+      "sha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "mainSha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 367,
+      "mainBytes": 367
+    },
+    {
+      "path": "packages/link/package.json",
+      "bytes": 951,
+      "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "mainSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 951,
+      "mainBytes": 951
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "bytes": 1878,
+      "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "mainSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1878,
+      "mainBytes": 1878
+    },
+    {
+      "path": "packages/link/tsconfig.json",
+      "bytes": 404,
+      "sha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "mainSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 404,
+      "mainBytes": 404
+    },
+    {
+      "path": "packages/optimization-lab/package.json",
+      "bytes": 927,
+      "sha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "mainSha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 927,
+      "mainBytes": 927
+    },
+    {
+      "path": "packages/optimization-lab/src/index.capability.ts",
+      "bytes": 59,
+      "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "mainSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 59,
+      "mainBytes": 59
+    },
+    {
+      "path": "packages/optimization-lab/src/index.exports.test.ts",
+      "bytes": 997,
+      "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "mainSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 997,
+      "mainBytes": 997
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "bytes": 587,
+      "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "mainSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 587,
+      "mainBytes": 587
+    },
+    {
+      "path": "packages/optimization-lab/tsconfig.json",
+      "bytes": 523,
+      "sha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "mainSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 523,
+      "mainBytes": 523
+    },
+    {
+      "path": "packages/pet/package.json",
+      "bytes": 1572,
+      "sha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "mainSha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1572,
+      "mainBytes": 1572
+    },
+    {
+      "path": "packages/pet/src/index.capability.ts",
+      "bytes": 246,
+      "sha256": "9fb11f72d20b8c86e9ac474c1c3c539c7454c92246ff5cf233941eb4dba5194e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "9fb11f72d20b8c86e9ac474c1c3c539c7454c92246ff5cf233941eb4dba5194e",
+      "mainSha256": "9fb11f72d20b8c86e9ac474c1c3c539c7454c92246ff5cf233941eb4dba5194e",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 246,
+      "mainBytes": 246
+    },
+    {
+      "path": "packages/pet/src/index.disclosure.ts",
+      "bytes": 605,
+      "sha256": "3e80494e2029ad08d7329dde4214ae6fbfab09f40d871218c1a5bbca6bd03e3b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "3e80494e2029ad08d7329dde4214ae6fbfab09f40d871218c1a5bbca6bd03e3b",
+      "mainSha256": "3e80494e2029ad08d7329dde4214ae6fbfab09f40d871218c1a5bbca6bd03e3b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 605,
+      "mainBytes": 605
+    },
+    {
+      "path": "packages/pet/src/index.exports.test.ts",
+      "bytes": 4143,
+      "sha256": "83fa58ad5ed6d7098a30ca7bb1bc03465a73bcaccae646a8f3c5d5ce67b19768",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "83fa58ad5ed6d7098a30ca7bb1bc03465a73bcaccae646a8f3c5d5ce67b19768",
+      "mainSha256": "83fa58ad5ed6d7098a30ca7bb1bc03465a73bcaccae646a8f3c5d5ce67b19768",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 4143,
+      "mainBytes": 4143
+    },
+    {
+      "path": "packages/pet/src/index.protocol.ts",
+      "bytes": 825,
+      "sha256": "77e6a38bc5bfd4f47410a71c6ea8a211e6b7efa2ef150ebcf88f75ec64748b53",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "77e6a38bc5bfd4f47410a71c6ea8a211e6b7efa2ef150ebcf88f75ec64748b53",
+      "mainSha256": "77e6a38bc5bfd4f47410a71c6ea8a211e6b7efa2ef150ebcf88f75ec64748b53",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 825,
+      "mainBytes": 825
+    },
+    {
+      "path": "packages/pet/src/index.team.ts",
+      "bytes": 224,
+      "sha256": "e1003d2e99d757b96be24894f0257934e8ae4a2a5e9358f74aafd681ebcccb91",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e1003d2e99d757b96be24894f0257934e8ae4a2a5e9358f74aafd681ebcccb91",
+      "mainSha256": "e1003d2e99d757b96be24894f0257934e8ae4a2a5e9358f74aafd681ebcccb91",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 224,
+      "mainBytes": 224
+    },
+    {
+      "path": "packages/pet/src/index.ts",
+      "bytes": 4002,
+      "sha256": "1d923a0c0c477b1a16b10212f4aa0733529387945aaef2f9d2aad415d91bddf2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1d923a0c0c477b1a16b10212f4aa0733529387945aaef2f9d2aad415d91bddf2",
+      "mainSha256": "1d923a0c0c477b1a16b10212f4aa0733529387945aaef2f9d2aad415d91bddf2",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 4002,
+      "mainBytes": 4002
+    },
+    {
+      "path": "packages/pet/tsconfig.json",
+      "bytes": 523,
+      "sha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "mainSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 523,
+      "mainBytes": 523
+    },
+    {
+      "path": "packages/server/package.json",
+      "bytes": 2789,
+      "sha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "mainSha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2789,
+      "mainBytes": 2789
+    },
+    {
+      "path": "packages/server/src/index.auth.ts",
+      "bytes": 267,
+      "sha256": "1997519305c08ecc5b6c71e7a7bca5bd3950374cb3c640bd04c298bc0802ed8d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1997519305c08ecc5b6c71e7a7bca5bd3950374cb3c640bd04c298bc0802ed8d",
+      "mainSha256": "1997519305c08ecc5b6c71e7a7bca5bd3950374cb3c640bd04c298bc0802ed8d",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 267,
+      "mainBytes": 267
+    },
+    {
+      "path": "packages/server/src/index.desktop-web.ts",
+      "bytes": 164,
+      "sha256": "b0a12777eab150cb4fd4e2d0c71a5265a919fb7c5dbb0d4bb23b3fc9542f71ad",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "b0a12777eab150cb4fd4e2d0c71a5265a919fb7c5dbb0d4bb23b3fc9542f71ad",
+      "mainSha256": "b0a12777eab150cb4fd4e2d0c71a5265a919fb7c5dbb0d4bb23b3fc9542f71ad",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 164,
+      "mainBytes": 164
+    },
+    {
+      "path": "packages/server/src/index.exports.test.ts",
+      "bytes": 7991,
+      "sha256": "dd26f20f00ca6af56c084bce7db79ea512e845f465ab862cedea6dcc2df62c94",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "dd26f20f00ca6af56c084bce7db79ea512e845f465ab862cedea6dcc2df62c94",
+      "mainSha256": "dd26f20f00ca6af56c084bce7db79ea512e845f465ab862cedea6dcc2df62c94",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 7991,
+      "mainBytes": 7991
+    },
+    {
+      "path": "packages/server/src/index.links.ts",
+      "bytes": 831,
+      "sha256": "94a83fa1328271f897bd5292dd345bf97555e1f93719dee2167234710d6f3008",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "94a83fa1328271f897bd5292dd345bf97555e1f93719dee2167234710d6f3008",
+      "mainSha256": "94a83fa1328271f897bd5292dd345bf97555e1f93719dee2167234710d6f3008",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 831,
+      "mainBytes": 831
+    },
+    {
+      "path": "packages/server/src/index.mobile-remote.ts",
+      "bytes": 1111,
+      "sha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a",
+      "mainSha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1111,
+      "mainBytes": 1111
+    },
+    {
+      "path": "packages/server/src/index.panels.ts",
+      "bytes": 1539,
+      "sha256": "31d64fe337a66ad0beb2386c77fc9ed93f6e4dfd4a904092020f762af7efb6d9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "31d64fe337a66ad0beb2386c77fc9ed93f6e4dfd4a904092020f762af7efb6d9",
+      "mainSha256": "31d64fe337a66ad0beb2386c77fc9ed93f6e4dfd4a904092020f762af7efb6d9",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1539,
+      "mainBytes": 1539
+    },
+    {
+      "path": "packages/server/src/index.remote-relay.ts",
+      "bytes": 368,
+      "sha256": "e97cdf7b12bc2c37caa28f062e78abcc0c808111adb861fa0b69cdc6e3c1965a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e97cdf7b12bc2c37caa28f062e78abcc0c808111adb861fa0b69cdc6e3c1965a",
+      "mainSha256": "e97cdf7b12bc2c37caa28f062e78abcc0c808111adb861fa0b69cdc6e3c1965a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 368,
+      "mainBytes": 368
+    },
+    {
+      "path": "packages/server/src/index.serve.ts",
+      "bytes": 1165,
+      "sha256": "afea5afb15eb4f6ab67c6b415d0265b64f6c7cbb8e6c7115511a3debbbb5b5aa",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "afea5afb15eb4f6ab67c6b415d0265b64f6c7cbb8e6c7115511a3debbbb5b5aa",
+      "mainSha256": "afea5afb15eb4f6ab67c6b415d0265b64f6c7cbb8e6c7115511a3debbbb5b5aa",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1165,
+      "mainBytes": 1165
+    },
+    {
+      "path": "packages/server/src/index.storage.ts",
+      "bytes": 499,
+      "sha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "mainSha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 499,
+      "mainBytes": 499
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "bytes": 577,
+      "sha256": "d6d81c1e88b18487620ccb13bfe8dd28eb10e1e55438394cdbddee4544e076b0",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d6d81c1e88b18487620ccb13bfe8dd28eb10e1e55438394cdbddee4544e076b0",
+      "mainSha256": "d6d81c1e88b18487620ccb13bfe8dd28eb10e1e55438394cdbddee4544e076b0",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 577,
+      "mainBytes": 577
+    },
+    {
+      "path": "packages/server/src/index.worker.ts",
+      "bytes": 103,
+      "sha256": "7a96c121acdc7615b4b90ac0b02780156e88e328bb97709e7625a3018c8a3904",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7a96c121acdc7615b4b90ac0b02780156e88e328bb97709e7625a3018c8a3904",
+      "mainSha256": "7a96c121acdc7615b4b90ac0b02780156e88e328bb97709e7625a3018c8a3904",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 103,
+      "mainBytes": 103
+    },
+    {
+      "path": "packages/server/src/links/providers/index.ts",
+      "bytes": 1305,
+      "sha256": "3ae70af7cfb6d469371e5a2a0f9659e3f734d4f1a7ae473f55483ae43743db02",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "3ae70af7cfb6d469371e5a2a0f9659e3f734d4f1a7ae473f55483ae43743db02",
+      "mainSha256": "3ae70af7cfb6d469371e5a2a0f9659e3f734d4f1a7ae473f55483ae43743db02",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1305,
+      "mainBytes": 1305
+    },
+    {
+      "path": "packages/server/tsconfig.json",
+      "bytes": 549,
+      "sha256": "c242366eff5a23fda999ab206caec20ba2735f7a9ca6b05a35b84580ed6f5160",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c242366eff5a23fda999ab206caec20ba2735f7a9ca6b05a35b84580ed6f5160",
+      "mainSha256": "c242366eff5a23fda999ab206caec20ba2735f7a9ca6b05a35b84580ed6f5160",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 549,
+      "mainBytes": 549
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "mainSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2110,
+      "mainBytes": 2110
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+      "bytes": 6498,
+      "sha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "mainSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 6498,
+      "mainBytes": 6498
+    },
+    {
+      "path": "packages/tui/src/index.d.ts",
+      "bytes": 296,
+      "sha256": "2e6e77dae4845c43a1df64dd5244dc7f92fe86fbd199052cde09d28075f79f73",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2e6e77dae4845c43a1df64dd5244dc7f92fe86fbd199052cde09d28075f79f73",
+      "mainSha256": "2e6e77dae4845c43a1df64dd5244dc7f92fe86fbd199052cde09d28075f79f73",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 296,
+      "mainBytes": 296
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "mainSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 297,
+      "mainBytes": 297
+    },
+    {
+      "path": "packages/tui/src/native-ts/yoga-layout/index.ts",
+      "bytes": 83394,
+      "sha256": "bd52998e94a293d23a9e3be30b902ec32e231cb0f2c273c53f99ecc42f21177a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "bd52998e94a293d23a9e3be30b902ec32e231cb0f2c273c53f99ecc42f21177a",
+      "mainSha256": "bd52998e94a293d23a9e3be30b902ec32e231cb0f2c273c53f99ecc42f21177a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 83394,
+      "mainBytes": 83394
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "bytes": 2454,
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "mainSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2454,
+      "mainBytes": 2454
+    },
+    {
+      "path": "packages/tui/src/voice/index.ts",
+      "bytes": 3496,
+      "sha256": "cf1265b5590a30477c1694fd4fa70675cb919f669f114d10fae96693e3ee16b7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "cf1265b5590a30477c1694fd4fa70675cb919f669f114d10fae96693e3ee16b7",
+      "mainSha256": "cf1265b5590a30477c1694fd4fa70675cb919f669f114d10fae96693e3ee16b7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3496,
+      "mainBytes": 3496
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "bytes": 917,
+      "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "mainSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 917,
+      "mainBytes": 917
+    },
+    {
+      "path": "packages/web/package.json",
+      "bytes": 3638,
+      "sha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "mainSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3638,
+      "mainBytes": 3638
+    },
+    {
+      "path": "packages/web/scripts/browser-operation-custody.mjs",
+      "bytes": 17780,
+      "sha256": "984c8acf6301ebdeba71ccb1ca33d1f3a86639d4f9a1af9dbc8930c6b589a00b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "984c8acf6301ebdeba71ccb1ca33d1f3a86639d4f9a1af9dbc8930c6b589a00b",
+      "mainSha256": "984c8acf6301ebdeba71ccb1ca33d1f3a86639d4f9a1af9dbc8930c6b589a00b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 17780,
+      "mainBytes": 17780
+    },
+    {
+      "path": "packages/web/scripts/browser-operation-custody.test.mjs",
+      "bytes": 19033,
+      "sha256": "e12bb6b4739886b95431fd477a174633a84550383c4a75665463138c8028ce5a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e12bb6b4739886b95431fd477a174633a84550383c4a75665463138c8028ce5a",
+      "mainSha256": "e12bb6b4739886b95431fd477a174633a84550383c4a75665463138c8028ce5a",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 19033,
+      "mainBytes": 19033
+    },
+    {
+      "path": "packages/web/scripts/service-worker-browser-executable.mjs",
+      "bytes": 8181,
+      "sha256": "f51f81aa54ea90398a18c7eec869f77e1db7f12a1e7785e2f2b997a97a34bc34",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "f51f81aa54ea90398a18c7eec869f77e1db7f12a1e7785e2f2b997a97a34bc34",
+      "mainSha256": "f51f81aa54ea90398a18c7eec869f77e1db7f12a1e7785e2f2b997a97a34bc34",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8181,
+      "mainBytes": 8181
+    },
+    {
+      "path": "packages/web/scripts/service-worker-browser-executable.test.mjs",
+      "bytes": 8820,
+      "sha256": "438902de13f805760efe8a959b9cc76a7c2474ffbe143ce6cc7a2f8c0d54ad10",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "438902de13f805760efe8a959b9cc76a7c2474ffbe143ce6cc7a2f8c0d54ad10",
+      "mainSha256": "438902de13f805760efe8a959b9cc76a7c2474ffbe143ce6cc7a2f8c0d54ad10",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8820,
+      "mainBytes": 8820
+    },
+    {
+      "path": "packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs",
+      "bytes": 11184,
+      "sha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "mainSha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 11184,
+      "mainBytes": 11184
+    },
+    {
+      "path": "packages/web/scripts/test-auth-boundary-browser.mjs",
+      "bytes": 38352,
+      "sha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "mainSha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 38352,
+      "mainBytes": 38352
+    },
+    {
+      "path": "packages/web/scripts/test-service-worker-browser.mjs",
+      "bytes": 27094,
+      "sha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "mainSha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 27094,
+      "mainBytes": 27094
+    },
+    {
+      "path": "packages/web/scripts/test-service-worker-browser.test.mjs",
+      "bytes": 8518,
+      "sha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "mainSha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 8518,
+      "mainBytes": 8518
+    },
+    {
+      "path": "packages/web/scripts/test-subagent-state-browser.mjs",
+      "bytes": 32008,
+      "sha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "mainSha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 32008,
+      "mainBytes": 32008
+    },
+    {
+      "path": "packages/web/scripts/verify-subagent-failure-home.mjs",
+      "bytes": 6397,
+      "sha256": "c934089ae2f2bd5aed2a5ac377a2b9250eec8ef410fe801fc0e168ee027716c9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "c934089ae2f2bd5aed2a5ac377a2b9250eec8ef410fe801fc0e168ee027716c9",
+      "mainSha256": "c934089ae2f2bd5aed2a5ac377a2b9250eec8ef410fe801fc0e168ee027716c9",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 6397,
+      "mainBytes": 6397
+    },
+    {
+      "path": "packages/web/src/index.ts",
+      "bytes": 2491,
+      "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "mainSha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2491,
+      "mainBytes": 2491
+    },
+    {
+      "path": "packages/web/tsconfig.app.json",
+      "bytes": 544,
+      "sha256": "e33bc880d6ffc1a0f147f89d94b23f5513b930b5af317461e83390d8ff7e07b7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e33bc880d6ffc1a0f147f89d94b23f5513b930b5af317461e83390d8ff7e07b7",
+      "mainSha256": "e33bc880d6ffc1a0f147f89d94b23f5513b930b5af317461e83390d8ff7e07b7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 544,
+      "mainBytes": 544
+    },
+    {
+      "path": "packages/web/tsconfig.json",
+      "bytes": 703,
+      "sha256": "715f5eb05cb7b95e49696314df3407b66335bcb70f6acd08314124b038b2d72e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "715f5eb05cb7b95e49696314df3407b66335bcb70f6acd08314124b038b2d72e",
+      "mainSha256": "715f5eb05cb7b95e49696314df3407b66335bcb70f6acd08314124b038b2d72e",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 703,
+      "mainBytes": 703
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "mainSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1712,
+      "mainBytes": 1712
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "bytes": 6518,
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "mainSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 6518,
+      "mainBytes": 6518
+    },
+    {
+      "path": "scripts/check-workflow-test-paths.mjs",
+      "bytes": 2487,
+      "sha256": "ad6e11576534eeb568a5cdb6c0d5e90c24849fc5136aa1733514948c588e4710",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "ad6e11576534eeb568a5cdb6c0d5e90c24849fc5136aa1733514948c588e4710",
+      "mainSha256": "ad6e11576534eeb568a5cdb6c0d5e90c24849fc5136aa1733514948c588e4710",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 2487,
+      "mainBytes": 2487
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "mainSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 9020,
+      "mainBytes": 9020
+    },
+    {
+      "path": "scripts/run-isolated-node-smoke.mjs",
+      "bytes": 1925,
+      "sha256": "a620596110d1a87a6bc37fe1910d0b4d88fa8ce9c3fff24f9abda68040e9dab7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "a620596110d1a87a6bc37fe1910d0b4d88fa8ce9c3fff24f9abda68040e9dab7",
+      "mainSha256": "a620596110d1a87a6bc37fe1910d0b4d88fa8ce9c3fff24f9abda68040e9dab7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 1925,
+      "mainBytes": 1925
+    },
+    {
+      "path": "tests/package-boundaries.test.ts",
+      "bytes": 14692,
+      "sha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "mainSha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 14692,
+      "mainBytes": 14692
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "mainSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentWorkingTreeMatchesMain": true,
+      "currentBytes": 3723,
+      "mainBytes": 3723
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-pet-fixture.mjs",
+      "sha256": "690ae8907676c70adf984bae4777143c2f99a8cb6ab388c5c4cff7e64a55d23b",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-signal-diagnostics.mjs",
+      "sha256": "e42129f3b612d567d60a4dfd077b96feb209102fc94360aefb6988e32f9c6d20",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-signal-diagnostics.test.mjs",
+      "sha256": "fb569026f6edb5c53c03a5b3094e17507362cf2ec909c41b3504fd1448ffe2e8",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "scripts/check-workflow-test-paths.mjs",
+      "sha256": "ad6e11576534eeb568a5cdb6c0d5e90c24849fc5136aa1733514948c588e4710",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "sha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/e2e-updater-packaged.mjs",
+      "sha256": "4afe203b6cbff51f1c31702f7b6dd5d9306c69e58160a321a835a4b4e2fa7ee9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/e2e-pet-packaged.mjs",
+      "sha256": "867f01af753a341eeac9d0fb7d8f14ac01623ba5b4ad836191995a34fc76325e",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-process-exits.mjs",
+      "sha256": "065b6783c10397c8ee43cf609c33d3b80d6aec9a78d008c2782ca82607cd575c",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-pet-shutdown.mjs",
+      "sha256": "0f5fdb9365abb5cfad30d26f2a2a6375dcae88a3eb8de7b1167b8dbab88b044a",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-pet-shutdown.test.mjs",
+      "sha256": "b7d3599fe36275461e703953f4591a68d7bc41af4e8e80354fd3546b0b3a20b5",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "sha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "sha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+      "sha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "sha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+      "sha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/windows-nsis-observe.ps1",
+      "sha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/packaged-app-integrity.mjs",
+      "sha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "sha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/run-packaged-ui-acceptance.mjs",
+      "sha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "packages/desktop/scripts/smoke-local-package.mjs",
+      "sha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "windows-source-manifest.json",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/browser-operation-custody.mjs",
+      "sha256": "984c8acf6301ebdeba71ccb1ca33d1f3a86639d4f9a1af9dbc8930c6b589a00b",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/browser-operation-custody.test.mjs",
+      "sha256": "e12bb6b4739886b95431fd477a174633a84550383c4a75665463138c8028ce5a",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/service-worker-browser-executable.mjs",
+      "sha256": "f51f81aa54ea90398a18c7eec869f77e1db7f12a1e7785e2f2b997a97a34bc34",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/service-worker-browser-executable.test.mjs",
+      "sha256": "438902de13f805760efe8a959b9cc76a7c2474ffbe143ce6cc7a2f8c0d54ad10",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/verify-subagent-failure-home.mjs",
+      "sha256": "c934089ae2f2bd5aed2a5ac377a2b9250eec8ef410fe801fc0e168ee027716c9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "scripts/run-isolated-node-smoke.mjs",
+      "sha256": "a620596110d1a87a6bc37fe1910d0b4d88fa8ce9c3fff24f9abda68040e9dab7",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "scripts/bun-test-completion.mjs",
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/desktop/scripts/electron-test-watchdog.mjs",
+      "sha256": "8031f736bbb5690bcbda2342382b42f501f89fd9dda3c1a4546712a626de2282",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/test-service-worker-browser.mjs",
+      "sha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/test-auth-boundary-browser.mjs",
+      "sha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "packages/web/scripts/test-subagent-state-browser.mjs",
+      "sha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-helpers-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "sha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-scenes-source-manifest.json",
+      "path": "packages/web/scripts/test-auth-boundary-browser.mjs",
+      "sha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-scenes-source-manifest.json",
+      "path": "packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs",
+      "sha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-scenes-source-manifest.json",
+      "path": "packages/web/scripts/test-service-worker-browser.mjs",
+      "sha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-scenes-source-manifest.json",
+      "path": "packages/web/scripts/test-service-worker-browser.test.mjs",
+      "sha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    },
+    {
+      "manifest": "browser-scenes-source-manifest.json",
+      "path": "packages/web/scripts/test-subagent-state-browser.mjs",
+      "sha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "note": "Author reading-time frozen pin, not final-current equality promise"
+    }
+  ],
+  "priorPrepHashOnlyChecks": [
+    {
+      "path": "docs/architecture/12-package-boundaries-and-release-units.md",
+      "sha256": "0f09b9775a6248936d3e47f9b8a0d7845735c03dee78dfc682cf1e8cef5e0308",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "sha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+      "sha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/root-and-video-download.md",
+      "sha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "package.json",
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/package.json",
+      "sha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/index.exports.test.ts",
+      "sha256": "e0197815c4cd0effc76ca556bc9a8c7357fbe11aa06b5b48a5ecc1e7b3d82a2d",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/index.runtime.ts",
+      "sha256": "1a4a464da62cda6c362e925d2b1369f9f2eecbedfd58d3038d1c33151f9af63b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/index.ts",
+      "sha256": "e1ed0327d7e92da43710cf4bac8ea692fa8b5ee9fce6060fbe7674316dd582cb",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/iterate/formats/index.ts",
+      "sha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/iterate/index.ts",
+      "sha256": "fca5381634c8d489aa4b27028f3adc25dff956d47e7c6e39967b4bad35a88277",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/lenses/index.ts",
+      "sha256": "3cba6fbf4a6dad32217df6f108ddf00e1bedd14772e8783a85b9b5416dec4e8f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/providers/index.ts",
+      "sha256": "22622e6446a8d5b5c4f0d70dbcc6aa3b312489d6642939a93e0693c6b3ef86ef",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/src/strategies/index.ts",
+      "sha256": "3600f972f9e6b4a48c5c21be399016cb05c55a5c2bd960221e9b7189d3ed6984",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/arena/tsconfig.json",
+      "sha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "sha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/browser-devtools/tsconfig.json",
+      "sha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/cdp/package.json",
+      "sha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/cdp/src/index.ts",
+      "sha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/cdp/tsconfig.json",
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/chat/README.md",
+      "sha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/chat/package.json",
+      "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/chat/src/codeshell.ts",
+      "sha256": "4d8800592c357f57b3d6b0f92b680450630398a86b71b6e5f11ec3b1dfcff7da",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/chat/src/index.ts",
+      "sha256": "04f01b99d649c8756e925ec887daacc67e1516daaf1a06265fcd91290825393e",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/chat/tsconfig.json",
+      "sha256": "2f22bd4eda957e3937eee27452c2fa9424492d0eadc78e46b5c28ba039f03baa",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/package.json",
+      "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/index.ts",
+      "sha256": "ab4b9a927eb700da0684bba072d7a7772f8b2894754a65748dc69caec539d657",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/index.ts",
+      "sha256": "545e48bea6882780e96687945300332ae7bc1b0596f26153dbd9230153e0e9bb",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/index.ts",
+      "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/index.ts",
+      "sha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "sha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/index.exports.test.ts",
+      "sha256": "520d33dfcf8feddd4d3dccf19f46e023216a60f325b29ace69a0895b2dd70364",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/index.orchestration.ts",
+      "sha256": "c0e4aa1c37bab43641143b8865875d6fb9a9da682aaabcc79c2d09cc983ca43a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/index.ts",
+      "sha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/quota/index.test.ts",
+      "sha256": "eac8c39111133672f905d71061f4779849109e0a6f7dddc1e9b6ef543e3e2e7e",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/quota/index.ts",
+      "sha256": "d635615e41db31098e72da255556358e2962fa1f2124659ae8f29d015b2ba6ff",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/index.ts",
+      "sha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/coding/tsconfig.json",
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/package.json",
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/automation/index.ts",
+      "sha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/capabilities/index.ts",
+      "sha256": "e0c6016bde42e087254bb5c22dcc57a84427712591272cb6c680d373aa9802bc",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/capability-control/index.ts",
+      "sha256": "114d7898aa669cace88b07b3fc8c506d73e920afc874b2cf6e42f67cc31d10b0",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/composition/index.ts",
+      "sha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/cost-ledger/index.ts",
+      "sha256": "897c9702b2e202c6fe927d3c0d3a97214f0b2ffc7c76c8e411c264174c723498",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/credentials/index.ts",
+      "sha256": "2781ee20f07eff6e24d9e92cfa8ad10354e2b31ef54af40a8524c0e73d01064b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/index.exports.test.ts",
+      "sha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/index.extension.tool-host.test.ts",
+      "sha256": "421984d561307e1a9bf2282bea309b3a9b54c7f84db273d022979b6eb82895e3",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/index.extension.ts",
+      "sha256": "2e0b51dd372246db234b9519e711ab2a10792657caa47bf656826646b533f164",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/index.skills.ts",
+      "sha256": "86b71c28f313f4ca03bd6885f3e8037f35eaa05be5f131d73aff170d54386d1b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "sha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/links/index.ts",
+      "sha256": "9f84856ae5029e8df0510f016690c010c11e2d20f6a7fbbb2454ae0f25ada540",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/llm/capabilities/index.ts",
+      "sha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/model-traces/index.ts",
+      "sha256": "3b3fba1f37c8fa85bd24d1665a58eb7a99e9206d100f6c93fbbe41a940b6ae46",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/panel-apps/index.ts",
+      "sha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/product/index.ts",
+      "sha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/profile/index.ts",
+      "sha256": "ba8c03a1eb82601cb9e563d14409375cc87fe9a2f81d916904d327d524344710",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/protocol/index.ts",
+      "sha256": "bd9d427a665e274b9871feb29582b94b5d59a4873c5b64f1ea4310c3d0572099",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/run/index.ts",
+      "sha256": "a2ac2c0f00acca8130aeae535bdd83ba9c95acf231b46a77fe338f9a8c48aff6",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/services/index.ts",
+      "sha256": "372c9cd204846a4b9ac4db2a6dff53f6dcfca134f24a77774537d2809debaabe",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/skills/index.ts",
+      "sha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.test.ts",
+      "sha256": "294106952a42efb0133825887f25966b14f8876b216bcea31b46cb7bbd75d97d",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.ts",
+      "sha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/sources/index.ts",
+      "sha256": "729f5287a35449949b63b3397618f4ac1b25e46aaa7c68e0a335b31846055f39",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/themes/index.ts",
+      "sha256": "c3e6de86281da9835211a98fcb6c5e92c58efece34676821c98c60aa4d426fd4",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/src/tool-system/sandbox/index.ts",
+      "sha256": "88bd55d0c4090a2945aec2c8cace2f0d9dee39c0ae4301de444f95a9239b17dc",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/package.json",
+      "sha256": "db027a9255c1a37179421d3a4118d5e4798ec70f61852a6f0a9078aff04b5f60",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/index.ts",
+      "sha256": "daf28c3103be2b832e5a6090338db69f26c6e10d519e9c11788d9d8545a0a94f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-host/index.test.ts",
+      "sha256": "7f9e333641c5a9b729729cc73b94fe6a1bd189455489f33629f78637b1fec921",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-host/index.ts",
+      "sha256": "233c3b19beab502384a4a0230fe0a282f40b847a925ab90be3ba54c0a6c4f344",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-runtime/index.ts",
+      "sha256": "bedf0d4bb18a1951fde12b4baf3fbec721783a9ef79d186f43861184c1becdb1",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/credentials-login/index.test.ts",
+      "sha256": "1aa8eebe3e5fe971ddc1ca9e438c0afa226e884a5224a641d355656cba4fc25b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/credentials-login/index.ts",
+      "sha256": "8b20e99b354f58f7a3a797b7e2972d4574433e73300eb127bbd31519e088db25",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/index.ts",
+      "sha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/tsconfig.json",
+      "sha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/desktop/tsconfig.mobile.json",
+      "sha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/host/package.json",
+      "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/host/tsconfig.json",
+      "sha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/link/package.json",
+      "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/link/tsconfig.json",
+      "sha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/optimization-lab/package.json",
+      "sha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.capability.ts",
+      "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.exports.test.ts",
+      "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/optimization-lab/tsconfig.json",
+      "sha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/package.json",
+      "sha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/src/index.capability.ts",
+      "sha256": "9fb11f72d20b8c86e9ac474c1c3c539c7454c92246ff5cf233941eb4dba5194e",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/src/index.disclosure.ts",
+      "sha256": "3e80494e2029ad08d7329dde4214ae6fbfab09f40d871218c1a5bbca6bd03e3b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/src/index.exports.test.ts",
+      "sha256": "83fa58ad5ed6d7098a30ca7bb1bc03465a73bcaccae646a8f3c5d5ce67b19768",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/src/index.protocol.ts",
+      "sha256": "77e6a38bc5bfd4f47410a71c6ea8a211e6b7efa2ef150ebcf88f75ec64748b53",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/src/index.team.ts",
+      "sha256": "e1003d2e99d757b96be24894f0257934e8ae4a2a5e9358f74aafd681ebcccb91",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/src/index.ts",
+      "sha256": "1d923a0c0c477b1a16b10212f4aa0733529387945aaef2f9d2aad415d91bddf2",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/pet/tsconfig.json",
+      "sha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/package.json",
+      "sha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.auth.ts",
+      "sha256": "1997519305c08ecc5b6c71e7a7bca5bd3950374cb3c640bd04c298bc0802ed8d",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.desktop-web.ts",
+      "sha256": "b0a12777eab150cb4fd4e2d0c71a5265a919fb7c5dbb0d4bb23b3fc9542f71ad",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.exports.test.ts",
+      "sha256": "dd26f20f00ca6af56c084bce7db79ea512e845f465ab862cedea6dcc2df62c94",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.links.ts",
+      "sha256": "94a83fa1328271f897bd5292dd345bf97555e1f93719dee2167234710d6f3008",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.mobile-remote.ts",
+      "sha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.panels.ts",
+      "sha256": "31d64fe337a66ad0beb2386c77fc9ed93f6e4dfd4a904092020f762af7efb6d9",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.remote-relay.ts",
+      "sha256": "e97cdf7b12bc2c37caa28f062e78abcc0c808111adb861fa0b69cdc6e3c1965a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.serve.ts",
+      "sha256": "afea5afb15eb4f6ab67c6b415d0265b64f6c7cbb8e6c7115511a3debbbb5b5aa",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.storage.ts",
+      "sha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "sha256": "d6d81c1e88b18487620ccb13bfe8dd28eb10e1e55438394cdbddee4544e076b0",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/index.worker.ts",
+      "sha256": "7a96c121acdc7615b4b90ac0b02780156e88e328bb97709e7625a3018c8a3904",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/src/links/providers/index.ts",
+      "sha256": "3ae70af7cfb6d469371e5a2a0f9659e3f734d4f1a7ae473f55483ae43743db02",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/server/tsconfig.json",
+      "sha256": "c242366eff5a23fda999ab206caec20ba2735f7a9ca6b05a35b84580ed6f5160",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+      "sha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/src/index.d.ts",
+      "sha256": "2e6e77dae4845c43a1df64dd5244dc7f92fe86fbd199052cde09d28075f79f73",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/src/native-ts/yoga-layout/index.ts",
+      "sha256": "bd52998e94a293d23a9e3be30b902ec32e231cb0f2c273c53f99ecc42f21177a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/src/voice/index.ts",
+      "sha256": "cf1265b5590a30477c1694fd4fa70675cb919f669f114d10fae96693e3ee16b7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/web/package.json",
+      "sha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/web/src/index.ts",
+      "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/web/tsconfig.app.json",
+      "sha256": "e33bc880d6ffc1a0f147f89d94b23f5513b930b5af317461e83390d8ff7e07b7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "packages/web/tsconfig.json",
+      "sha256": "715f5eb05cb7b95e49696314df3407b66335bcb70f6acd08314124b038b2d72e",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "tests/package-boundaries.test.ts",
+      "sha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+    }
+  ],
+  "changedFromFrozenPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md"
+  ],
+  "note": "Frozenreading pins versus current/main hashes separate;2known concurrent updates.135prep checks not new fullsemantic reading."
+}

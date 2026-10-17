@@ -20,6 +20,29 @@ afterEach(() => {
 });
 
 describe("composer seed request bridge", () => {
+  test("review drafts require a bounded Session identity", () => {
+    expect(normalizeComposerSeedRequest({ source: "code-review", text: "review" })).toBeNull();
+    expect(
+      normalizeComposerSeedRequest({ source: "code-review", text: "review", sessionId: "" }),
+    ).toBeNull();
+    expect(
+      normalizeComposerSeedRequest({
+        source: "code-review",
+        text: "review",
+        sessionId: "session-a",
+      }),
+    ).toEqual({ source: "code-review", text: "review", sessionId: "session-a" });
+  });
+
+  test("acknowledges a review draft only after the target chat accepts it", () => {
+    const review = { source: "code-review", text: "review", sessionId: "session-a" } as const;
+    expect(requestComposerSeed(review)).toBe(false);
+    unsubscribe = onComposerSeedRequest(() => false);
+    expect(requestComposerSeed(review)).toBe(false);
+    unsubscribe();
+    unsubscribe = onComposerSeedRequest(() => true);
+    expect(requestComposerSeed(review)).toBe(true);
+  });
   test("delivers an exact reviewed plugin prompt to the App listener", () => {
     const received: unknown[] = [];
     unsubscribe = onComposerSeedRequest((request) => received.push(request));

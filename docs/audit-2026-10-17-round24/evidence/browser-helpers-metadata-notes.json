@@ -1,0 +1,18 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "metadataNotes": [
+    {
+      "kind": "bounded source navigation",
+      "detail": "Initial combined five-target cat output was truncated. Five targets were then fully read with bounded actual line chunks; no unshown output treated as full reading."
+    },
+    {
+      "kind": "bounded broad documentation navigation",
+      "detail": "One broad historical keyword search exceeded output cap. The actual relevant parent250-313 was then selected and read completely; count/inventory is distinct from semantic coverage."
+    }
+  ],
+  "productFailures": 0,
+  "productReruns": 0,
+  "gitWrites": 0,
+  "productWrites": 0,
+  "priorTmpProposal": "Not written or used as new reading coverage."
+}

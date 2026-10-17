@@ -1,0 +1,23 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "count": 0,
+  "sourceChanges": [],
+  "sourceMetadataChanges": [
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "frozenSha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "mainSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+      "frozenBytes": 32518,
+      "mainBytes": 33037
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "frozenSha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "mainSha256": "3a8e251255d41687f76056ed3aaacd75726f213b1b8d533b1ad4c2305e9a35d9",
+      "frozenBytes": 134232,
+      "mainBytes": 150208
+    }
+  ],
+  "runtimeRetested": false,
+  "note": "No addressedbug/fix claim. Concurrentworkflow9insertions/releasehistory214insertions observed in metadata;other5paths outside this frozen scope."
+}

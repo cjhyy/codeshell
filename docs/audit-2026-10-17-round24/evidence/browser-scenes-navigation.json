@@ -1,0 +1,46 @@
+{
+  "instructionSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+  "unchangedFromFullReadRound23": true,
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "stdout": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "exitCode": 0,
+      "stdout": "codex/audit/acceptance-contracts-round24-20261017\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exitCode": 0,
+      "stdout": "?? docs/audit-2026-10-17-round24/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rg",
+        "--files",
+        "packages/web/scripts"
+      ],
+      "exitCode": 0,
+      "stdout": "packages/web/scripts/test-service-worker-browser.mjs\npackages/web/scripts/browser-operation-custody.test.mjs\npackages/web/scripts/test-settings-browser.mjs\npackages/web/scripts/test-chat-operations-browser.mjs\npackages/web/scripts/test-mcp-settings-browser.mjs\npackages/web/scripts/test-mobile-workbench-browser.mjs\npackages/web/scripts/test-links-browser.mjs\npackages/web/scripts/service-worker-browser-executable.mjs\npackages/web/scripts/browser-operation-custody.mjs\npackages/web/scripts/test-sidebar-focus-browser.mjs\npackages/web/scripts/test-skills-browser.mjs\npackages/web/scripts/verify-subagent-failure-home.mjs\npackages/web/scripts/test-latest-messages.mjs\npackages/web/scripts/test-subagent-state-browser.mjs\npackages/web/scripts/test-history-browser.mjs\npackages/web/scripts/test-service-worker-browser.test.mjs\npackages/web/scripts/test-auth-boundary-browser.mjs\npackages/web/scripts/test-model-traces-browser.mjs\npackages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs\npackages/web/scripts/service-worker-browser-executable.test.mjs\npackages/web/scripts/test-devices-browser.mjs\npackages/web/scripts/test-model-actions-browser.mjs\npackages/web/scripts/test-file-browser.mjs\npackages/web/scripts/test-sidebar-navigation.mjs\n",
+      "stderr": ""
+    }
+  ]
+}

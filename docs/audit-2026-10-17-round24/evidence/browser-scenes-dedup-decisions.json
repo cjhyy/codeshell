@@ -1,0 +1,59 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "selectedHistory": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "selectedLineRanges": [
+        [
+          235,
+          325
+        ],
+        [
+          1096,
+          1121
+        ]
+      ],
+      "scope": "selected prior lifecycle/retention and original operation boundaries",
+      "bytes": 134232,
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "runtime": "not executed, old receipts not opened outside repository"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/root-web.md",
+      "selectedLineRanges": [
+        [
+          1,
+          33
+        ]
+      ],
+      "scope": "full oldWEB-R5-01/02 report",
+      "bytes": 6450,
+      "sha256": "a88d62bea04cfea633559fc4931752fef6ca77537ecd906f8ab3e72c6b0969fc",
+      "runtime": "not executed, old receipts not opened outside repository"
+    }
+  ],
+  "decisions": [
+    {
+      "family": "Browser operation/lifecycle preservation",
+      "prior": "docs/todo/release-real-operations-2026-10-16.md:250-313,1113",
+      "decision": "Prior red/green/selected cleanup and64Node contract results are not current attempts or proof. Existing known final-report-after-successful-removal limitation at272 not newly counted."
+    },
+    {
+      "family": "Child global state and orphan display",
+      "prior": "docs/audit-2026-10-17-round5/root-web.md:5-23",
+      "decision": "OldWEB-R5-01/02 mechanisms; matching scene expectations not new reproduction or repair verification."
+    },
+    {
+      "family": "Negative UI failure labels",
+      "decision": "Source case catch accepts any action Error under that case name. Name/status alone cannot classify each error's semantic root cause; narrow UI-failure/HOME-retention contract may still hold. No independent ordinaryfalsepass producer or stronger contrary contract established, so not ranked/counted."
+    },
+    {
+      "family": "OS/Playwright/network semantics",
+      "decision": "No current platform behavior assumed or validated; no external fact needed for0classification. Test confinement not OS sandbox; existing comment expectations not current execution proof."
+    }
+  ],
+  "limits": "Full working history inventory plus bounded keyword contexts and selected prior report reads, not semantic exhaustion."
+}

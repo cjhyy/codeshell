@@ -1,0 +1,90 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "report": "docs/audit-2026-10-17-round24/windows-report.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-candidates.json",
+      "bytes": 81,
+      "sha256": "82ebb0b7102072855ab598af6d3257414b3365b7d12cf3b64067f7825a0d35c8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-contract-review.json",
+      "bytes": 4509,
+      "sha256": "5b49644ab63ff6d7b768c09f0bbbfc5c2402c8192222bb224cd2248d267a8891"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup-decisions.json",
+      "bytes": 2005,
+      "sha256": "0c1e861c8db49e0adc8190b917220ce201697ed352c673696b7fa6637fee05c2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+      "bytes": 498694,
+      "sha256": "2f97179bed408b25a03e1e9bea557a2f261b005b2ba8f778c53d178b2ab4338a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.py",
+      "bytes": 2905,
+      "sha256": "195fd8e431c46b0ebaa1f013a397425f0f1f9ad2726a60fb0f408aa646abce0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-findings.json",
+      "bytes": 79,
+      "sha256": "f93dea99a884a3dd71048b141cf9bac573aac70516b891e716dd75421bd2a060"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-metadata-check.json",
+      "bytes": 6897,
+      "sha256": "f0e4cadbcb87024740d775c90eb7081cdcce43ba7e04baa4432a229cd9dca154"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-metadata-notes.json",
+      "bytes": 572,
+      "sha256": "1c870407360ceebe491be6cc4517dac4c7ed8a8073c3870ea5f78b78be3117a5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-receipt.py",
+      "bytes": 2937,
+      "sha256": "bb80855736e81bf0a5940895cef2a958a2d6d8d7b81c027ea937b9b39ad5f837"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-related.json",
+      "bytes": 78,
+      "sha256": "350f17986969465c7c08cc477b6d45529dffc2c6aed87f8263bc0634e2eb67cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-selected-history.json",
+      "bytes": 9753,
+      "sha256": "5744f067d7dc27c6d112d7290138caae2e2e6b64480967944412d8a892a67a1e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-source-manifest.json",
+      "bytes": 6484,
+      "sha256": "3ee0c73bd98cda60efaad44f8095640491ed64b93a2ba3f81614fce4e3c568ed"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-validation.json",
+      "bytes": 1365,
+      "sha256": "a23eb5b818e41f6f39b41ff63124802d5c448ecd7e8e75b8c68463afcbbbcdce"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/windows-report.md",
+      "bytes": 7970,
+      "sha256": "7bb799fe2796b8fb9b8e2a5abb08d563cc1893dd56ccd1b70e715d6d01b4e1fc"
+    }
+  ],
+  "sourceChecks": 11,
+  "markdownLinks": 22,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "productReruns": 0,
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true,
+  "rawLogs": [],
+  "guardedRuns": 0,
+  "scope": "Deepstaticonly; no targetmodule/test/PowerShell/installer/process/native execution. Hashes donotattestsemanticcoverage or actualWindowsacceptance."
+}

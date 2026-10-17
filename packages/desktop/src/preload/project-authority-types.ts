@@ -1,5 +1,7 @@
 import type { SessionWorkspace } from "@cjhyy/code-shell-core";
 import type {
+  ReviewAiPromptRequest,
+  ReviewAiPromptResult,
   ReviewGitCommit,
   ReviewGitDiffRequest,
   ReviewGitDiffResult,
@@ -97,6 +99,10 @@ export interface ProjectAuthorityApi {
   getSessionGitBranches(sessionId: string): Promise<GitBranches>;
   getReviewStatus(sessionId: string): Promise<ReviewGitStatusResult>;
   getReviewDiff(sessionId: string, request: ReviewGitDiffRequest): Promise<ReviewGitDiffResult>;
+  prepareReviewPrompt(
+    sessionId: string,
+    request: ReviewAiPromptRequest,
+  ): Promise<ReviewAiPromptResult>;
   getReviewRecentCommits(sessionId: string, limit?: number): Promise<ReviewGitCommit[]>;
   listSessionProfiles(sessionId: string): Promise<WorkspaceProfileSummary[]>;
   listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;

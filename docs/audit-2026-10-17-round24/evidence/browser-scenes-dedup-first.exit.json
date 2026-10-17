@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "python3",
+    "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.py"
+  ],
+  "exitCode": 0,
+  "raw": "evidence/browser-scenes-dedup-first.txt",
+  "bytes": 1589,
+  "sha256": "05b84bfeed864afd9e624ed7c806ea19b27e93918e7b85c4efda73153722e649",
+  "productRuntimeAttempts": 0,
+  "testsRun": 0
+}

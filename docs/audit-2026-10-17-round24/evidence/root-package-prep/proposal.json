@@ -1,0 +1,57 @@
+{
+  "status": "no new independent package export/build lane recommended from examined evidence",
+  "initialReadHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "historyReadHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "currentHead": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "frozenComparisonBase": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "inventory": {
+    "manifests": 15,
+    "description": "root + fourteen packages",
+    "packageLevelTsconfigs": 17,
+    "allIndexPatternPaths": 92,
+    "inventoryOnlyNotFullReview": true
+  },
+  "history": {
+    "totals": {
+      "files": 2374,
+      "markdown": 1222,
+      "json": 1152,
+      "stringLeaves": 370701,
+      "scalarLeaves": 523452,
+      "parseErrors": 0
+    },
+    "matchCounts": {
+      "chat-public": 55,
+      "package-build": 221
+    },
+    "contextCap": 60,
+    "actualParentObjects": "selected-history.json",
+    "note": "All docs/bugs MD and recursive JSON scalar leaves searched; numeric and broad keyword noise, contexts capped; no semantic exhaustion claim."
+  },
+  "consideredEntryGroup": {
+    "paths": [
+      "packages/chat/package.json",
+      "packages/chat/tsconfig.json",
+      "packages/chat/src/index.ts",
+      "packages/chat/src/codeshell.ts",
+      "packages/chat/src/adapter-factory.ts"
+    ],
+    "contract": "Standalone Node/Bun gateway public root and optional integration/factory subpaths; platform modules loaded selectively, currentSDKdependencies intentionally mandatory.",
+    "runtimeBoundary": "Rootindex literal reexports, codeshell integration reexports, factory runtime channel import + selected dynamic adapter imports; no transitive graph, module evaluation or SDK construction performed.",
+    "prior": "Current source docs plus real prior source-directed Chat report and actual postdelivery parent object; parent packaging report records installed9tarball47typed45runtime acceptance, round6 has17existing metadata/build-meta controls. These are historical results, not current reruns.",
+    "decision": "No independent new break or contract selected. Inventory-only index coverage is not treated as complete semantic coverage; nevertheless repeating availability/type/package smoke would overlap prior acceptance and forbidden failed publish/declaration paths. Optional future source graph review only if a new concrete contract or changed source demands it."
+  },
+  "excluded": [
+    "No absent/unbuilt dist file checks used as bug evidence.",
+    "No recovery of previous package release/declaration/metadata failure direction.",
+    "Private Arena/CDP/browser-devtools/optimization/desktop output is not automatically a public release bug.",
+    "Chat dependency install size is explicitly documented policy, not a missing optional-dependency defect.",
+    "Initial nonexistent root src metadata query skipped; exact first response recorded in metadata-notes.json."
+  ],
+  "safeFollowupSuggestion": "Root identified a separate potential round24 lane: source-only review of 20 new or changed CI and Desktop/Web acceptance scripts across 22 parallel commits in the round22 integration plan. This preparation did not inventory/read or run them; no browser/installer/native/auth/custody experiment is suggested. Resolve actual files and prior evidence before assigning.",
+  "productAttempts": 0,
+  "buildInstallTypecheckRuntimeImportAttempts": 0,
+  "gitWrites": 0,
+  "round23Writes": 0,
+  "proposalHasBugOrFixture": false
+}

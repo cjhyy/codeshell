@@ -1,0 +1,49 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "history": {
+    "files": 2375,
+    "markdown": 1223,
+    "json": 1152,
+    "stringLeaves": 370703,
+    "scalarLeaves": 523455,
+    "parseErrors": 0
+  },
+  "matchCounts": {
+    "exact": 5,
+    "receipt": 898
+  },
+  "contextCap": 100,
+  "decisions": [
+    {
+      "topic": "Five exact helper matches",
+      "classification": "prior inventory only",
+      "parent": "round22 integration-plan externalMainPaths",
+      "reason": "Not prior completed source/runtime coverage; no finding inferred from novelty."
+    },
+    {
+      "topic": "Failure HOME retention vs final report write",
+      "classification": "known limitation excluded, no new related count",
+      "parent": "docs/todo/release-real-operations-2026-10-16.md:262-288",
+      "reason": "Prior source segment experiments/negative CI gate explicitly separate; no repro or actual HOME access."
+    },
+    {
+      "topic": "Expected2pass6fail verifier",
+      "classification": "evidence scope limit only, no new finding/candidate/related",
+      "reason": "Case-name/status plus sourcepins and real retention check are the implemented contract. Per-case failure cause is not independently classified; no ordinary false-verification record observed. No injected failure or attack."
+    },
+    {
+      "topic": "Pinned resolver version/platform",
+      "classification": "not promoted",
+      "reason": "Unknown version/platform refusal is explicit locked contract; actual SDK/browser/OS not inspected or run."
+    },
+    {
+      "topic": "Native authority/watchdog internals",
+      "classification": "unexecuted and partial static only",
+      "reason": "No OS snapshot/process/signal/identity/HOME/network/security test, no extrapolation from source guards."
+    }
+  ],
+  "limits": [
+    "Broad receipt regex produces unrelated and recursive old evidence contexts; not semantic exhaustion.",
+    "Historical receipts and paths are provenance only; no current passed tests or browser acceptance asserted."
+  ]
+}

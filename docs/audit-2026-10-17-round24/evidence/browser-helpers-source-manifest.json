@@ -1,0 +1,239 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "files": [
+    {
+      "path": "packages/web/scripts/browser-operation-custody.mjs",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          468
+        ]
+      ],
+      "lineCount": 468,
+      "bytes": 17780,
+      "sha256": "984c8acf6301ebdeba71ccb1ca33d1f3a86639d4f9a1af9dbc8930c6b589a00b",
+      "frozenSha256": "984c8acf6301ebdeba71ccb1ca33d1f3a86639d4f9a1af9dbc8930c6b589a00b",
+      "matchesFrozen": true,
+      "note": "Full468lines static; no import/authority/process/identity/filesystem experiment."
+    },
+    {
+      "path": "packages/web/scripts/browser-operation-custody.test.mjs",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          475
+        ]
+      ],
+      "lineCount": 475,
+      "bytes": 19033,
+      "sha256": "e12bb6b4739886b95431fd477a174633a84550383c4a75665463138c8028ce5a",
+      "frozenSha256": "e12bb6b4739886b95431fd477a174633a84550383c4a75665463138c8028ce5a",
+      "matchesFrozen": true,
+      "note": "Full475lines static; real tempfs/timer/stub test suite unexecuted."
+    },
+    {
+      "path": "packages/web/scripts/service-worker-browser-executable.mjs",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          199
+        ]
+      ],
+      "lineCount": 199,
+      "bytes": 8181,
+      "sha256": "f51f81aa54ea90398a18c7eec869f77e1db7f12a1e7785e2f2b997a97a34bc34",
+      "frozenSha256": "f51f81aa54ea90398a18c7eec869f77e1db7f12a1e7785e2f2b997a97a34bc34",
+      "matchesFrozen": true,
+      "note": "Full199lines static; no resolver/native/installed SDK/binary reads."
+    },
+    {
+      "path": "packages/web/scripts/service-worker-browser-executable.test.mjs",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          226
+        ]
+      ],
+      "lineCount": 226,
+      "bytes": 8820,
+      "sha256": "438902de13f805760efe8a959b9cc76a7c2474ffbe143ce6cc7a2f8c0d54ad10",
+      "frozenSha256": "438902de13f805760efe8a959b9cc76a7c2474ffbe143ce6cc7a2f8c0d54ad10",
+      "matchesFrozen": true,
+      "note": "Full226lines static; top-level installedmetadata reads not run."
+    },
+    {
+      "path": "packages/web/scripts/verify-subagent-failure-home.mjs",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          143
+        ]
+      ],
+      "lineCount": 143,
+      "bytes": 6397,
+      "sha256": "c934089ae2f2bd5aed2a5ac377a2b9250eec8ef410fe801fc0e168ee027716c9",
+      "frozenSha256": "c934089ae2f2bd5aed2a5ac377a2b9250eec8ef410fe801fc0e168ee027716c9",
+      "matchesFrozen": true,
+      "note": "Full143lines static; no existing receipt/profile/HOME read, no Git/process execution of this script."
+    },
+    {
+      "path": "scripts/run-isolated-node-smoke.mjs",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "lineCount": 46,
+      "bytes": 1925,
+      "sha256": "a620596110d1a87a6bc37fe1910d0b4d88fa8ce9c3fff24f9abda68040e9dab7",
+      "frozenSha256": "a620596110d1a87a6bc37fe1910d0b4d88fa8ce9c3fff24f9abda68040e9dab7",
+      "matchesFrozen": true,
+      "note": "Full46lines runner source only; no launch/privatekeyring or HOME mutation."
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "lineCount": 152,
+      "bytes": 6518,
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "note": "createBunTestEnvironment dependency only; incidental assertion source47-113 visible but not target coverage."
+    },
+    {
+      "path": "packages/desktop/scripts/electron-test-watchdog.mjs",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          88
+        ],
+        [
+          160,
+          210
+        ]
+      ],
+      "lineCount": 210,
+      "bytes": 7672,
+      "sha256": "8031f736bbb5690bcbda2342382b42f501f89fd9dda3c1a4546712a626de2282",
+      "frozenSha256": "8031f736bbb5690bcbda2342382b42f501f89fd9dda3c1a4546712a626de2282",
+      "matchesFrozen": true,
+      "note": "Receipt/interface/terminate and return contract; no OS snapshot/authority implementation audit or execution."
+    },
+    {
+      "path": "packages/web/scripts/test-service-worker-browser.mjs",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          258,
+          291
+        ],
+        [
+          653,
+          698
+        ]
+      ],
+      "lineCount": 722,
+      "bytes": 27094,
+      "sha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "frozenSha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "matchesFrozen": true,
+      "note": "Resolver/custody setup and final consumer gating only; other worker audit owns full scenario."
+    },
+    {
+      "path": "packages/web/scripts/test-auth-boundary-browser.mjs",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          674,
+          706
+        ],
+        [
+          982,
+          1019
+        ]
+      ],
+      "lineCount": 1035,
+      "bytes": 38352,
+      "sha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "frozenSha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "matchesFrozen": true,
+      "note": "Resolver/custody setup and final consumer gating only; no auth/boundary experiment, other worker owns full scenario."
+    },
+    {
+      "path": "packages/web/scripts/test-subagent-state-browser.mjs",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          458,
+          496
+        ]
+      ],
+      "lineCount": 799,
+      "bytes": 32008,
+      "sha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "frozenSha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "matchesFrozen": true,
+      "note": "runCase ordinary error-to-case recording; no UI or old reducer execution."
+    },
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          101,
+          115
+        ]
+      ],
+      "lineCount": 580,
+      "bytes": 32518,
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "frozenSha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "matchesFrozen": true,
+      "note": "Expected negative exit/tee gate + verifier invocation only; no workflow execution."
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          250,
+          313
+        ]
+      ],
+      "lineCount": 1155,
+      "bytes": 134232,
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "frozenSha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "matchesFrozen": true,
+      "note": "Historical prior negative run/source cleanup proof/known final-write limitation/64Node vs31browser scope; not this round execution."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "coverage": "selected JSON object",
+      "selectedLineRanges": null,
+      "lineCount": 112,
+      "bytes": 6327,
+      "sha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "frozenSha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "matchesFrozen": true,
+      "note": "externalMainPaths five helper names are inventory only; not full source coverage."
+    }
+  ],
+  "targetFullFiles": 5,
+  "targetFullLines": 1511,
+  "note": "Frozen/current byte checks only; full vs selected reading explicit. No runtime or authority experiments."
+}

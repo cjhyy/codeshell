@@ -6445,6 +6445,14 @@ ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: num
   return reviewService.getRecentCommits(sessionId, limit);
 });
 
+ipcMain.handle("review:preparePrompt", async (_e, sessionId: string, request: unknown) => {
+  assertDesktopSessionId(sessionId);
+  return reviewService.preparePrompt(
+    sessionId,
+    request as import("../shared/review.js").ReviewAiPromptRequest,
+  );
+});
+
 interface MainGitPrefs {
   branchPrefix: string;
   autoDeleteWorktrees: boolean;

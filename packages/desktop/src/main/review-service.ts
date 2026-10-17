@@ -1,5 +1,8 @@
 import { canonicalKey } from "@cjhyy/code-shell-core/internal";
+import { buildReviewPrompt } from "@cjhyy/code-shell-capability-coding/git";
 import type {
+  ReviewAiPromptRequest,
+  ReviewAiPromptResult,
   ReviewGitCommit,
   ReviewGitDiffRequest,
   ReviewGitDiffResult,
@@ -149,6 +152,86 @@ export class ReviewService {
       }),
     );
     return outcomes.flat();
+  }
+
+  async preparePrompt(
+    sessionId: string,
+    request: ReviewAiPromptRequest,
+  ): Promise<ReviewAiPromptResult> {
+    if (!request || typeof request !== "object") throw new Error("invalid Review prompt request");
+    if (
+      request.instructions !== undefined &&
+      (typeof request.instructions !== "string" || request.instructions.length > 2_000)
+    ) {
+      throw new Error("Review instructions must be at most 2000 characters");
+    }
+    let content: string;
+    let label: string;
+    if (request.kind === "git") {
+      const result = await this.getDiff(sessionId, request.scope);
+      // Partial repository failure must never turn into a reassuring review of
+      // the surviving repositories. Let the user retry the failed operation.
+      if (result.errors.length) {
+        throw new Error(
+          result.errors
+            .map((error) => `[${error.repoRoot ?? error.rootId}] ${error.message}`)
+            .join("\n"),
+        );
+      }
+      content = result.repositories
+        .filter((repository) => repository.diff.trim())
+        .map(
+          (repository) => `Repository: ${JSON.stringify(repository.repoRoot)}\n${repository.diff}`,
+        )
+        .join("\n\n");
+      label =
+        request.scope.kind === "working"
+          ? `uncommitted changes (${request.scope.mode})`
+          : request.scope.kind === "committed"
+            ? `commit ${request.scope.commitHash ?? "HEAD"}`
+            : "branch changes against the merge base";
+    } else if (request.kind === "snapshot") {
+      if (typeof sessionId !== "string" || !sessionId) throw new Error("Review requires a Session");
+      await this.resolveWorkspace(sessionId);
+      if (typeof request.diff !== "string" || request.diff.length > 2_000_000) {
+        throw new Error("invalid Review snapshot (maximum 2000000 characters)");
+      }
+      if (
+        request.label !== undefined &&
+        (typeof request.label !== "string" || request.label.length > 1_024)
+      ) {
+        throw new Error("invalid Review snapshot label");
+      }
+      content = request.diff;
+      label = `historical turn snapshot${request.label ? `: ${request.label}` : ""}`;
+    } else {
+      throw new Error("invalid Review prompt kind");
+    }
+    if (!content.trim()) throw new Error("No changes to review");
+    let maxChars = 24_000;
+    const coverage = /^Binary files |^GIT binary patch/m.test(content)
+      ? "Coverage is incomplete: binary file contents are not supplied. Inspect their metadata only, mention this gap in the summary, and do not conclude that their contents are free of defects.\n\n"
+      : "";
+    const build = () =>
+      coverage +
+      buildReviewPrompt({
+        content,
+        label,
+        instructions: request.instructions,
+        maxChars,
+      });
+    let prompt = build();
+    // Dynamic evidence fences and escaped filenames also consume the bounded
+    // composer budget, especially when reviewing generated Markdown.
+    while (prompt.length > 32_000 && maxChars > 0) {
+      maxChars = Math.max(0, maxChars - Math.max(1_000, prompt.length - 32_000));
+      prompt = build();
+    }
+    if (prompt.length > 32_000) throw new Error("Review instructions exceed the draft limit");
+    return {
+      prompt,
+      truncated: content.length > maxChars,
+    };
   }
 
   private async diffRepository(

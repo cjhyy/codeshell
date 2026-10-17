@@ -1,0 +1,45 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/dedup.py",
+      "bytes": 3045,
+      "sha256": "84f48a9715413de84d3c74fc122bc95eda648727033cfbd0318067710ea604ee"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/history.json",
+      "bytes": 520281,
+      "sha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/inventory.json",
+      "bytes": 27574,
+      "sha256": "f46c47265d8ac8dda06459c94d119f936845559f6bdb9d6e3f8912c66aff44aa"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/metadata-notes.json",
+      "bytes": 791,
+      "sha256": "b3984a1917afb8e07751fa7dc7437d3b62e209388339281309452b55a87a54ab"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/package-summary.json",
+      "bytes": 15695,
+      "sha256": "89fdf5f5001defd71cb4e20866240873835d1aefbb4bee3f8f8a0d34c65459dd"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/proposal.json",
+      "bytes": 3441,
+      "sha256": "e50425ef22d7b4467370f829d54afa5ea8c2581a26e67462ee607db62752a4f8"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/selected-history.json",
+      "bytes": 8556,
+      "sha256": "fc53daa4febca616539d857110fa9d22d06541b8ef463bab57130bdf4f41b926"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round24-package-contract-frontier/source-manifest.json",
+      "bytes": 55598,
+      "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533"
+    }
+  ],
+  "note": "Self excluded, metadata preparation only, no product/runtime/Git or round23 mutation."
+}

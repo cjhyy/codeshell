@@ -1,0 +1,80 @@
+[
+  {
+    "path": "docs/review-remaining-2026-10-12/root-and-video-download.md",
+    "range": [
+      49,
+      49
+    ],
+    "reason": "Actual parent report packaging coverage9 tarballs/47typed/45runtime; historical receipt, not new execution.",
+    "excerpt": "| 根 scripts/打包 | 阅读 release、版本声明/验证、package-release-smoke、build-meta、guarded runners；安装后包合同成功：9 tarballs、47 typed entries、45 runtime imports，另验证 packed owner-auth HTTP 生命周期和 uploaded documents。 | 不运行 release --push、真实 npm 发布、自动更新/回滚、Windows/Linux 安装器。release helper 分支前置条件仅静态建议，未列确认 bug。 |"
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+    "range": [
+      213,
+      215
+    ],
+    "reason": "Actual source-directed Chat coverage, with index/protocol leaf contracts explicitly inventory-only rather than fully validated.",
+    "excerpt": "**chat — source-directed:** all12 adapter production files `telegram,discord,slack,lark,dingtalk,wecom,wechat,matrix,mattermost,line,whatsapp,teams`; `src/{channel,adapter-factory,chat-gateway,delivery-queue,cli,gateway,bound-session-chat,ingress,attachments,lifecycle,media,webhook,config,desktop-control-client,instance-lock,notification-relay,notification-progress,wechat-storage,wechat-login,service-manager,codeshell}.ts`. Actual pre-load sender filtering was checked at adapter construction and adapter handlers: allowlist middleware is gateway dispatch-time, not an adapter admission callback. Signed webhook/SDK sender parsing, queues/dedupe/retry, reconnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence.\n\n**chat — remaining limits:** SDK/network protocol replacement is only dynamic for Telegram, Slack and DingTalk above. No real Discord/Lark/WeCom/Matrix/Mattermost/LINE/WhatsApp/Teams/iLink account, webhook credentials, QR login, platform retries, service install or Desktop auto-launch occurred. `platform-canary.ts`, vendor types and protocol/index leaf contracts were inventoried, with no live canary. Service definitions/config/load/status were reviewed statically across darwin/linux/win32, without claiming native service execution."
+  },
+  {
+    "path": "docs/audit-2026-10-17-round6/root-package.md",
+    "range": [
+      1,
+      25
+    ],
+    "reason": "Prior exact build-meta/package-boundaries17pass123expect source/metadata suite; no proposed rerun.",
+    "excerpt": "# 构建、发布元数据与测试入口\n\n本方向新增确认 **0 项**。冻结源码为 `cef9ff76167d33a6a6e5b4464ba5313f7fd35f79`；这是有限源码核对和现有基线测试结果，不代表发布链、全部包或全仓无 bug。\n\n## 已核对范围与结果\n\n读取 `scripts/build-meta.ts`、`scripts/check-node.cjs`、`scripts/verify-release-versions.ts`、`scripts/package-release-audit-config.ts`、`scripts/publish-release-packages.ts`、`scripts/package-release-smoke.ts`、根 `package.json` 和测试隔离入口。核对包声明、公开/私有包分类、版本来源、依赖顺序、CLI 兼容路径、发布确认和参数模式。既有任务分支打标签缺陷已有旧记录，本批不重复计入。未找到足够证据确认新的发布缺陷。\n\n唯一首次 guarded 分片：\n\n```sh\nnode scripts/run-bun-test-shard.mjs --timeout 30000 tests/build-meta.test.ts tests/package-boundaries.test.ts\n```\n\n结果为 **17 pass / 123 expect / 0 fail / 0 skip**，有 `Completed Bun shard`，exit 0。原始合并 stdout/stderr 为 [root-package-baseline.first.log](evidence/root-package-baseline.first.log)，[exit](evidence/root-package-baseline.first.exit.txt)，[receipt](evidence/root-package-baseline.receipt.json)。17 项均为现有测试，未为静态代码字符串增加镜像断言。\n\n`tests/build-meta.test.ts` 将生产构建脚本逐字复制到自己创建的临时目录，使用 fake TUI 验证当前和旧 CLI 入口、传参及清除过时文件。它没有构建本仓共享 `dist`，也没有启动真实 CLI 产品功能。包边界测试只读取源码/manifest，并调用元数据验证函数；没有 npm 查询、发布或网络请求。\n\n## 保留的静态候选，未计入确认\n\n`package.json:42` 的 `test:watch` 仍直接调用 `bun test --watch`，与 `CODESHELL.md:140–145` 所述 unit shard 采用 guarded runner 的操作要求不一致；`scripts/bun-test-completion.mjs:117` 又明确拒绝 watch 参数。静态上可确定两条入口不同，但本批未运行 watch，未检查操作者状态、凭据或外部行为，也没有进一步确认该脚本的维护意图和实际运行影响。因此仅记录为待核对的测试入口配置候选，不定优先级、不作为产品缺陷、不展开安全实验。\n\n## 证据边界\n\n未在共享 checkout 执行构建脚本或构建共享 `dist`；仅执行临时目录中的逐字副本。未执行完整 package release smoke、打包安装、真实发布、CLI watch、真实应用、模型、远端服务或平台实验。`package-release-smoke.ts` 的完整模式会 clean-build 多个包，包含本批范围以外的消费者验证，因此只读审查。未运行全仓 build/typecheck/lint/test；复用现有依赖，不能由这 17 个测试推断干净安装后发布成功。所有产品文件保持不变。"
+  },
+  {
+    "path": "docs/architecture/12-package-boundaries-and-release-units.md",
+    "range": [
+      24,
+      39
+    ],
+    "reason": "Historical packaging boundary scope; release roster later changed, not current10package proof.",
+    "excerpt": "   `/storage`, `/worker`, and `/mobile-remote` entries with no static Coding or\n   Web imports. The `/serve` entry deliberately owns ready-made Coding worker\n   and Web app resolution.\n4. `chat` is logically standalone, but its install unit is too coarse: every\n   platform SDK is a mandatory dependency even when a consumer uses one\n   adapter.\n5. Package builds must clean `dist` before compiling. Before this audit,\n   `@cjhyy/code-shell-core` would have published stale Arena/Pet code and lint\n   probes left by earlier refactors.\n6. A clean-build tarball audit of all ten public packages — Link, Core, Pet, Arena,\n   Coding, Web, Server, TUI, Chat, and the root meta package — verifies every\n   export/bin target, workspace-version rewrite, focused-entry identity, and\n   required copied asset. It also caught declaration-only dependency leaks.\n7. That audit is now automated by `bun run test:package-release`. The release\n   workflow runs it as a dedicated ten-tarball job before npm publication,\n   without adding pack work to the normal targeted unit-test job."
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+    "location": "$[\"module_coverage\"][3]",
+    "reason": "Parent object around chat package metadata citations; initial file-name inventory hits are not treated as complete export audit.",
+    "value": {
+      "module": "packages/chat",
+      "actual_module_evidence": [
+        "CODESHELL.md:31",
+        "packages/chat/package.json:8",
+        "packages/chat/package.json:70"
+      ],
+      "status": "通知relay静态消费链；整包/各渠道未专项审查",
+      "covered": [
+        {
+          "file": "automation-quality-round18.md",
+          "lines": [
+            45,
+            46,
+            47,
+            48
+          ],
+          "claim": "notification-relay消费配置授权目标，未向渠道外发",
+          "mode": "static"
+        },
+        {
+          "file": "quality-round5.md",
+          "lines": [
+            55
+          ],
+          "claim": "relay/gateway正常生产消费者只读确认",
+          "mode": "static"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "telegram/discord/slack/lark/dingtalk/wecom/wechat/matrix/mattermost/line/whatsapp/teams各adapter",
+        "ingress/media/attachments/webhook/delivery-queue",
+        "bound-session-chat/instance-lock/config/service-manager/CLI启动",
+        "账号连接、重连、撤销与实际消息送达"
+      ],
+      "boundary": "这里Chat不是Desktop ChatView/Quick Chat或Web聊天；有静态覆盖，不能称完全没提及，也不能称多渠道动态已通过。"
+    }
+  }
+]

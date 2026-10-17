@@ -1,0 +1,172 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "exact": [
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainCommits\"][15]",
+      "excerpt": "2468f78b2 test(desktop): define confined Windows NSIS acceptance contracts",
+      "wholeValueCharacters": 74
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][5]",
+      "excerpt": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "wholeValueCharacters": 55
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][6]",
+      "excerpt": "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+      "wholeValueCharacters": 60
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][7]",
+      "excerpt": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "wholeValueCharacters": 52
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][8]",
+      "excerpt": "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+      "wholeValueCharacters": 57
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][9]",
+      "excerpt": "packages/desktop/scripts/windows-nsis-observe.ps1",
+      "wholeValueCharacters": 49
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "location": "379",
+      "excerpt": "Mac's independent receipt audit passes 98 consistency/acceptance checks",
+      "wholeValueCharacters": 71
+    }
+  ],
+  "primaryMarkdown": [
+    {
+      "group": "exact",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "location": "379",
+      "excerpt": "Mac's independent receipt audit passes 98 consistency/acceptance checks",
+      "wholeValueCharacters": 71
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/archive/HANDOFF-beta-rc2-2026-07-03.md",
+      "location": "16",
+      "excerpt": "6. **nsis 安装器** — 加 nsis 段(oneClick:false + 可选目录)。⚠️ 待 Win 验。",
+      "wholeValueCharacters": 61
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/archive/architecture/16-core-overall-design-standard.md",
+      "location": "346",
+      "excerpt": "- [x] sandbox backend resolution is cached consistently. *(A2 — `runtime.ts:resolveSandbox` per-(mode, cwd) cache.)*",
+      "wholeValueCharacters": 116
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/archive/review-2026-07-09/16-consistency-audit.md",
+      "location": "24",
+      "excerpt": "| `16-consistency-audit.md` | 新增本审计记录，记录校验维度、修订项、锚点抽查、剩余风险。 |",
+      "wholeValueCharacters": 61
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-2026-07-09/README.md",
+      "location": "40",
+      "excerpt": "| `../archive/review-2026-07-09/16-consistency-audit.md`                             | 本次一致性交叉校验记录                                        | 维护这套文档的人                            | 需要查看本轮修订留痕时读                                |",
+      "wholeValueCharacters": 223
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-2026-10-12/quality-round25.md",
+      "location": "40",
+      "excerpt": " cleanups report removed=true/errors=[]; every exact recorded isolatedHOME and its maintained runner parent is independently absent on disk. First failure's two owned-path cleanup receipts and exact old privateHOME/root are also gone, consistent with the root correction receipt. The audit only read these exact paths and removed nothing. attempts=[] reports no attempts through the installed guarded APIs; it is not a universal native syscall/network proof.",
+      "wholeValueCharacters": 500
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-2026-10-12/updater-candidate-audit.md",
+      "location": "25",
+      "excerpt": "lCalled 置 true（54 行）。[NsisUpdater.js:101](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/electron-updater@6.8.3/node_modules/electron-updater/out/NsisUpdater.js:101) 真实安装分支启动 installer / elevation（123–148 行）；[AppImageUpdater.js:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/electron-updater@6.8.3/node_modules/electron-updater/out/AppImageUpdater.js:72) 已移动/替换 AppImage 并可能启动新进程（95–110 行）。所以模拟“installations++ 但无安装器”的 fixture 尚未证明安装实际停下、失败、无法恢复或状态不真实。",
+      "wholeValueCharacters": 577
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-final-quality.raw.md",
+      "location": "40",
+      "excerpt": " cleanups report removed=true/errors=[]; every exact recorded isolatedHOME and its maintained runner parent is independently absent on disk. First failure's two owned-path cleanup receipts and exact old privateHOME/root are also gone, consistent with the root correction receipt. The audit only read these exact paths and removed nothing. attempts=[] reports no attempts through the installed guarded APIs; it is not a universal native syscall/network proof.",
+      "wholeValueCharacters": 500
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-integration-quality.raw.md",
+      "location": "15",
+      "excerpt": "ttempts=[]; their63 source and4 resolution-only receipts were already independently verified. Two Core public-barrel differences are only VERSION0.9.32→0.9.33. Source/resolve-only receipts are consistently excluded from actual module-cache graph claims.",
+      "wholeValueCharacters": 932
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "location": "16",
+      "excerpt": "sly noted `rg --pre`/package-manager classification idea remains **static, unexecuted and unfiled**. No such command was run. Further work is limited to LLM parsing/retry/output consistency, auth refresh, budget/accounting and resource cleanup, using no-network fetch substitutes.",
+      "wholeValueCharacters": 375
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "location": "16",
+      "excerpt": "sly noted `rg --pre`/package-manager classification idea remains **static, unexecuted and unfiled**. No such command was run. Further work is limited to LLM parsing/retry/output consistency, auth refresh, budget/accounting and resource cleanup, using no-network fetch substitutes.",
+      "wholeValueCharacters": 375
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/superpowers/plans/2026-05-29-plugin-cc-codex-installer.md",
+      "location": "1004",
+      "excerpt": "- **Type consistency:** `installPluginFromPath(sourceDir, name, installedAt)`, `convertCodexAgentToml(toml, sourceName, pluginName)`, `resolveCodexMcpServers(sourceDir, decl)`, `copyCodexSkills(sourceDir, destDir)`, `CSMeta`/`CodexPluginManifest`/`PluginInstallError` — names stable across T2–T10.",
+      "wholeValueCharacters": 297
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/superpowers/plans/2026-05-29-plugin-runtime-and-commands.md",
+      "location": "826",
+      "excerpt": "- **Type consistency:** `mergePluginMcpServers(base, disabledPlugins)`, `pluginAgentDirs(disabledPlugins)`, `uninstallPluginByName(name)`, `listInstalledPlugins()`, `updatePluginByName(name, installedAt, force)` — stable across tasks. `installedAt`/timestamp passed in (Date.now unavailable in core); CLI stamps.",
+      "wholeValueCharacters": 312
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/superpowers/plans/2026-06-02-goal-mode-p0.md",
+      "location": "836",
+      "excerpt": "**Type consistency:** `GoalConfig`/`normalizeGoal`/`GoalBudgetTracker`/`createGoalBudgetTracker`/`recordGoalUsage`/`goalBudgetExceeded`/`completeGoalTool`/`\"goal_budget_exhausted\"` 在所有 Task 中命名一致。",
+      "wholeValueCharacters": 196
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/superpowers/plans/2026-06-02-reasoning-config.md",
+      "location": "524",
+      "excerpt": "**Type consistency:** `ReasoningSetting`/`ReasoningSettingSchema`/`normalizeReasoning`/`REASONING_EFFORTS`/`ReasoningControl`/`reasoningControlFor`/`DEFAULT_EFFORT` 命名贯穿一致。`reasoning`(字段名)替换 `thinking` 全链路统一。",
+      "wholeValueCharacters": 208
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "location": "317",
+      "excerpt": "covers a directory package, not production NSIS install/replace/uninstall. The",
+      "wholeValueCharacters": 78
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "location": "379",
+      "excerpt": "Mac's independent receipt audit passes 98 consistency/acceptance checks",
+      "wholeValueCharacters": 71
+    }
+  ],
+  "limits": [
+    "Read only bounded savedexcerpts and selectedpriorcontractfile; no full semantic history claim.",
+    "Unanchored NSIS term also matches coNSIStency/incoNSIStent in mechanismpattern; these are disclosed noise, notinstallerissues."
+  ]
+}

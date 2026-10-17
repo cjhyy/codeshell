@@ -1,0 +1,41 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "parents": [
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"]",
+      "value": [
+        ".github/workflows/desktop-ui-acceptance.yml",
+        "docs/todo/release-real-operations-2026-10-16.md",
+        "packages/desktop/scripts/packaged-pet-fixture.mjs",
+        "packages/desktop/scripts/packaged-signal-diagnostics.mjs",
+        "packages/desktop/scripts/packaged-signal-diagnostics.test.mjs",
+        "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+        "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+        "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+        "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+        "packages/desktop/scripts/windows-nsis-observe.ps1",
+        "packages/web/scripts/browser-operation-custody.mjs",
+        "packages/web/scripts/browser-operation-custody.test.mjs",
+        "packages/web/scripts/service-worker-browser-executable.mjs",
+        "packages/web/scripts/service-worker-browser-executable.test.mjs",
+        "packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs",
+        "packages/web/scripts/test-auth-boundary-browser.mjs",
+        "packages/web/scripts/test-service-worker-browser.mjs",
+        "packages/web/scripts/test-service-worker-browser.test.mjs",
+        "packages/web/scripts/test-subagent-state-browser.mjs",
+        "packages/web/scripts/verify-subagent-failure-home.mjs"
+      ],
+      "interpretation": "Five exact helper hits occur as changed path inventory; not old runtime/source audit coverage."
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "range": [
+        250,
+        313
+      ],
+      "excerpt": "The next operation cycle closes lifecycle and installation coverage gaps; CI14\nremains the latest completed matrix and does not cover these subsequent changes.\nThe existing real child-browser red receipt\n`/private/tmp/codeshell-web-subagent-browser-red-verified-20261017/receipt.json`\n(SHA256 `ca8e4dd5a81ff9d1daaffc6c7ba190b1d774c41996d98c6b3f1a46a2e89382a2`)\nproves six UI assertions can fail while Chrome exits normally, all nine observed\nincarnations settle cleaned and the fixture still deletes HOME. The fixed old\nreducer is `a3a735643bf6acd1f53d86bb7c13112a6ca8fd18`, SHA256\n`3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5`;\nthe two ordinary Send controls pass in that same run. This is an actual old\nbrowser failure receipt, not a new browser launch or reconstructed result.\n\nIndependently reviewed `6f8108744` now makes owned HOME deletion require both\nthe original lifecycle gates and all eight UI cases passing without failures;\nits successful-result criteria are unchanged. A guarded pure Node experiment\nexecutes the exact selected cleanup source against actual exclusive directories:\nthe old source deletes two failed/incomplete scenarios, while the new source\ncorrectly preserves three failed/incomplete scenarios and deletes the successful\ncontrol. The frozen summary is\n`/private/tmp/codeshell-subagent-home-retention-proof-GbzDYr/verified-summary.json`,\nSHA256 `ed3b8940a913979c2e2b5ce0f35aa579c7c8c517009485912c8bf336d4039aea`.\nThis proves that cleanup segment's filesystem behavior, not full browser execution.\nThe known final-report-write-after-successful-HOME-removal limitation remains.\n\nReviewed tasks `fb04bc8d0` and `b34c16cd0` add a separate expected-negative CI run of that fixed\nold reducer, retaining the normal current-reducer eight-case run. Its verifier\nrequires exactly the two passing controls/six known UI failures, normal Chrome\nexit, cleaned observed custody with no query/truncation/late ledger failures,\ncurrent source fingerprints and a physically retained owned HOME/profile.\nThe old real report is correctly rejected because its HOME was deleted, with\nthe original report bytes unchanged. The pipeline now captures both `PIPESTATUS`\nvalues before any other command and requires Node=1 plus tee=0. Six harmless\nactual Bash exit combinations accept only 1/0; the former 2/1 false-positive\ncombination is rejected. The frozen proof SHA256 is\n`da49036428a563dfe21ac47ec6784b532b785df2eeab3dda0c90a39a7db038f9`.\nThis new browser\nfailure proof is still pending remote execution and is not counted among the\nnormal 31 passing browser behaviors. Only precise receipts/logs/screenshots are\nuploaded; the retained private profile is excluded.\n\nAuth and ServiceWorker lifecycle changes are being prepared separately. They\nmust preserve all four Auth/eleven SW operations and original time limits,\nincluding real trusted focus and exact-origin SW proxy behavior. The installed\nPlaywright 1.64 client/dispatcher source confirms that a public persistent owner\ncontext can provide a Browser whose independent `newContext()` calls remain\nincognito. This uses [the public persistent-context API](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-persistent-context)\nwithout rewriting SDK arguments; its fresh background blank context will not\nparticipate in login, SW operations or focus. The former default headless-shell\nbinary selection must also be preserved. No new lifecycle fields are treated\nas passing before actual CI evidence.\n\nThe reviewed implementation is now integrated: shared browser custody\n`caec1ce9f`, locked browser selection `b2e73de73`, SW driver `e6029e6eb` and\nAuth driver `cda1f797d` (integrated as `8f2859fac`). Original SW eleven-operation\nand proxy syntax trees, Auth four callbacks/order/HTTP behavior, incognito\noptions, trusted native focus sequence and original operation/watch deadlines\nremain protected by frozen-source contracts. Root's final combined guarded\nNode run passes **64 tests / 0 fail / 0 skip**: 38 custody, nine resolver,\neight Auth and nine SW contracts. Its raw log is\n`/private/tmp/codeshell-real-operation-cycles-20261016/ci15-combined-web-lifecycle-node-20261017.log`,\nSHA256 `e54e45b0b357dc53bcc2bb896ba095be5c090cd9394877eee54710856b133cba`.\nLocked lint/format pass. These are pure fault/path/source-preservation tests,\nnot 64 additional real browser operations. Actual new lifecycle execution\nstill awaits CI; the latest verified 31-browser-operation run remains CI14.",
+      "interpretation": "Historical separate failure/control runs and expected CI verification; no actual receipt/temp-path access or new execution."
+    }
+  ]
+}

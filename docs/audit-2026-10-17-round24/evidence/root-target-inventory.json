@@ -1,0 +1,37 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "selectionSource": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+  "priorExternalCommits": 22,
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/packaged-pet-fixture.mjs",
+    "packages/desktop/scripts/packaged-signal-diagnostics.mjs",
+    "packages/desktop/scripts/packaged-signal-diagnostics.test.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+    "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+    "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+    "packages/desktop/scripts/windows-nsis-observe.ps1",
+    "packages/web/scripts/browser-operation-custody.mjs",
+    "packages/web/scripts/browser-operation-custody.test.mjs",
+    "packages/web/scripts/service-worker-browser-executable.mjs",
+    "packages/web/scripts/service-worker-browser-executable.test.mjs",
+    "packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs",
+    "packages/web/scripts/test-auth-boundary-browser.mjs",
+    "packages/web/scripts/test-service-worker-browser.mjs",
+    "packages/web/scripts/test-service-worker-browser.test.mjs",
+    "packages/web/scripts/test-subagent-state-browser.mjs",
+    "packages/web/scripts/verify-subagent-failure-home.mjs"
+  ],
+  "newFullTargetFiles": 19,
+  "newFullTargetLines": 7776,
+  "oneReleaseHistoryPathSelectedOnly": true,
+  "ownership": {
+    "root": 4,
+    "windows": 5,
+    "browserHelpers": 5,
+    "browserScenes": 5
+  },
+  "note": "19changed targets fully static acrossauthors;historydoc selected.0product/tests."
+}

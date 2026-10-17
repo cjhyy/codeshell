@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ReviewGitCommit } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { ReviewPanel, useWorkspaceRecentCommits } from "./ReviewPanel";
+import { onComposerSeedRequest } from "../chat/composerSeed";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -47,6 +48,78 @@ afterEach(async () => {
 });
 
 describe("ReviewPanel workspace requests", () => {
+  test("the AI review action prepares the historical snapshot and custom focus as a draft", async () => {
+    const requests: unknown[][] = [];
+    const drafts: unknown[] = [];
+    Object.assign(window, {
+      codeshell: {
+        prepareReviewPrompt: async (...args: unknown[]) => {
+          requests.push(args);
+          return { prompt: "Review the historical changes", truncated: false };
+        },
+      },
+    });
+    const unsubscribe = onComposerSeedRequest((draft) => {
+      drafts.push(draft);
+      return true;
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    const propsOf = (node: any) => {
+      const key = Object.keys(node).find((key) => key.startsWith("__reactProps$"));
+      return key ? node[key] : null;
+    };
+    try {
+      await act(async () => {
+        root?.render(
+          <ReviewPanel
+            cwd="/repo"
+            sessionId="session-a"
+            gitAvailable={false}
+            turnDiff={snapshot}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      const open = nodes(container).find(
+        (node) => node.getAttribute?.("aria-label") === "准备 AI 代码审查",
+      );
+      await act(async () => {
+        propsOf(open).onClick();
+        await flushMicrotasks();
+      });
+      const textarea = nodes(container).find((node) => node.tagName?.toLowerCase() === "textarea");
+      await act(async () => {
+        propsOf(textarea).onChange({ target: { value: "检查权限边界" } });
+        await flushMicrotasks();
+      });
+      const add = nodes(container).find(
+        (node) => node.tagName?.toLowerCase() === "button" && text(node) === "添加审查草稿",
+      );
+      await act(async () => {
+        propsOf(add).onClick();
+        await flushMicrotasks();
+      });
+      expect(requests).toEqual([
+        [
+          "session-a",
+          {
+            kind: "snapshot",
+            diff: snapshot,
+            label: undefined,
+            instructions: "检查权限边界",
+          },
+        ],
+      ]);
+      expect(drafts).toEqual([
+        { source: "code-review", text: "Review the historical changes", sessionId: "session-a" },
+      ]);
+      expect(text(container)).toContain("已添加到对话输入框");
+    } finally {
+      unsubscribe();
+    }
+  });
+
   test("ignores an older workspace's commit response", async () => {
     const requests = [deferred<ReviewGitCommit[]>(), deferred<ReviewGitCommit[]>()];
     let requestIndex = 0;

@@ -1,0 +1,102 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "report": "docs/audit-2026-10-17-round24/browser-scenes-report.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round24/browser-scenes-report.md",
+      "bytes": 7969,
+      "sha256": "f17cd1eb7ff0735cd22249509b247b02c923e2e92e299dc3f9d8d4243c96166e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-assemble.py",
+      "bytes": 7107,
+      "sha256": "2fd7a778c72981e47abea562a90fab6ad7a6be0c166bf3584304e2a89df59fb8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-decisions.json",
+      "bytes": 2434,
+      "sha256": "37e7e44dedd3fbbbb8c209131e868c0e4288c4b9285cc62319765c442607eed8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-first.exit.json",
+      "bytes": 318,
+      "sha256": "2c826c75d721f685fcd38d0597de9fb61f443551c8eba03ed05397a383fd4fe6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-first.txt",
+      "bytes": 1589,
+      "sha256": "05b84bfeed864afd9e624ed7c806ea19b27e93918e7b85c4efda73153722e649"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+      "bytes": 148897,
+      "sha256": "5d68a33d710902998e4bc9b5a28c905ac9694bf2a5d1fb6563167b003a7a0fa9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.json",
+      "bytes": 523579,
+      "sha256": "11b4082dcb4264f555019a1cde72b7ccdcf9ab63200d214825a06451f7cf7c9a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.py",
+      "bytes": 3477,
+      "sha256": "ee48a6c169fcd2a109af4754c4c1d034a199703c5100599c0477e77138281138"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-metadata-notes.json",
+      "bytes": 731,
+      "sha256": "c77aec26bb2d17b0c37b75824274f25d50e2a71074044d9c1aef7b0e2947a168"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-navigation.json",
+      "bytes": 2170,
+      "sha256": "af38546c7c417ffd8d9e0d6122520ccbb67c110e0fff044a669e87e4b2adb1a0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-prior-navigation.json",
+      "bytes": 8569,
+      "sha256": "35adaefaf24d601449dced4953e23b67c5e694b2a4014b9279e211cb82a1c7e8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-source-checks.json",
+      "bytes": 1801,
+      "sha256": "abe89b3bd15d7f6dacc5340baceea07a6d2053d2f0d99023883cff9986277a00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-source-manifest.json",
+      "bytes": 3975,
+      "sha256": "8265882c55e7d87364f7102679a67c6b06d64ecf5556b1acbabfbe770b8086b8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-validation.json",
+      "bytes": 1299,
+      "sha256": "406bbb22f9b16e4be3be6c0b36f834c04580208b7b7656abcb6250eb2e94a2b3"
+    }
+  ],
+  "sourceChecks": 5,
+  "productRuntimeAttempts": 0,
+  "testsRun": 0,
+  "guardedRuns": 0,
+  "rawLogs": [],
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true
+}
