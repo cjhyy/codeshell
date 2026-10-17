@@ -2048,3 +2048,31 @@ rerun its corrected pure tests or reached native acceptance. Historical Windows
 Review GC and NSIS causes remain unknown, and installer revalidation is pending.
 No local native/browser, Keychain, PowerShell, installer or provider is run for
 this preparation. No CI21 dispatch or runtime result is asserted.
+
+### CI21 seed acknowledgement supplement
+
+Fixture-only commit `493ef92e27cbcc5ab934b31f2fa2702214b25be1` separates
+composer-seed attempts from App acceptance. Pure tests execute the actual
+publisher/consumer source and App bucket guard: late A is rejected while B is
+active without writing either draft, yet the old recorder counts four attempts
+as three expected accepted events. Both listener registration orders reproduce
+the error: 31 controls pass and two fail across 33 tests. The fixed 37 contracts
+pass, including optional absence of a late attempt, pending acknowledgements,
+bounded overflow and rejection of unknown or extra events. Proof
+`codeshell-review-draft-seed-ack-proof-20261017/verified-source-summary.json`
+has SHA-256 `fe77fff42e36207c56053f4083bfc133be030bbf18cbbbc6ca57ffd1dcdc5801`.
+
+All attempts remain recorded; acknowledgement is read after synchronous event
+dispatch in a microtask. Success still requires exactly three accepted tuples
+for preparations 1/3/5. At most one additional rejected tuple may match held
+preparation 4 after the first two accepted entries. Events carry no Main request
+ID; the real five-call ledger, ordering and complete A/B draft checks provide
+the cross-binding. Original UI actions, guards, budgets and cleanup gates stay.
+
+Root's final six-file Node gate passes 81: NSIS/signal 31, original Review 13
+and draft 37, with zero failure/skip. The six new contracts are not added to the earlier
+344-test product shard. Production sources and build manifests remain unchanged
+from `5b353ba81579cff4fa318c864d4fc9978eed5e63`; this is fixture instrumentation
+and pure verification only. Three-platform native and installer revalidation
+remain pending, with historical GC/NSIS causes unknown. No CI21 execution or
+runtime result is asserted.
