@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { filterMentionSkills } from "./mention";
 import { ComposerSuggestions, suggestionOptionId } from "./ComposerSuggestions";
+import { nativeBasename } from "../nativePath";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
@@ -328,7 +329,8 @@ export function MentionPopover({
                 filteredSkills.length + visibleFolders.length + visibleFiles.length + idx;
               const active = flatIndex === selected;
               const name =
-                attachment.originalName || attachment.path.split("/").pop() || attachment.path;
+                attachment.originalName ||
+                nativeBasename(attachment.path, window.codeshell?.platform);
               return (
                 <li
                   key={attachment.id}

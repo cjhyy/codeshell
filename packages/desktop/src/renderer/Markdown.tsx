@@ -154,6 +154,7 @@ import type { SessionUiAuthority } from "./sessionUiAuthority";
 import { classifyMediaPath } from "../shared/media-preview";
 import { InlineMedia } from "./chat/InlineMedia";
 import { useLocalRuntimeActions } from "./runtime/RuntimeCapabilities";
+import { nativeBasename } from "./nativePath";
 
 export type MarkdownRootStatus = SessionUiAuthority["rootStatus"];
 
@@ -451,8 +452,10 @@ function decodeLocalMediaPath(value: string): string | null {
 
 /** Last path segment — the filename we show as the link label. */
 function basename(path: string): string {
-  const parts = path.replace(/\/+$/, "").split("/");
-  return parts[parts.length - 1] || path;
+  return nativeBasename(
+    path,
+    typeof window === "undefined" ? undefined : window.codeshell?.platform,
+  );
 }
 
 function isAbsolutePath(path: string): boolean {
@@ -650,7 +653,7 @@ function InlineImageLink({
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
-  const filename = path.split("/").pop() ?? path;
+  const filename = basename(path);
   const imageLabel = alt?.trim() || filename;
   // Resolve to an absolute path, then load via the images:readDataUrl IPC.
   // We can't use `file://` directly — webSecurity blocks it and the CSP only

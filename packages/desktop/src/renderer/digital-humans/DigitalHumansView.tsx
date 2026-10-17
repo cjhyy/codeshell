@@ -32,6 +32,7 @@ import {
 } from "../../shared/digital-human-team";
 import type { DigitalHumanProfileImportPreview } from "../../shared/digital-human-profile-transfer";
 import type { RendererConfigurationTarget } from "../../preload/types";
+import { nativeBasename } from "../nativePath";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -285,7 +286,7 @@ export function DigitalHumansView({
                 ...preview.blockingSessions.map((session) => {
                   const label = session.title ?? session.id;
                   const where = session.workspace
-                    ? ` — ${session.workspace.split("/").pop() ?? session.workspace}`
+                    ? ` — ${nativeBasename(session.workspace, window.codeshell?.platform)}`
                     : "";
                   return `  · ${label}${where}`;
                 }),

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
+import { nativeBasename } from "../nativePath";
 
 interface Props extends AttachmentContext {
   attachment: Attachment;
@@ -24,7 +25,10 @@ function AttachmentCardImpl({ attachment, cwd, sessionId, sessionMainRootId, roo
   const { t } = useT();
   const localActions = useLocalRuntimeActions();
   const { path, kind } = attachment;
-  const filename = path.split("/").pop() ?? path;
+  const filename = nativeBasename(
+    path,
+    typeof window === "undefined" ? undefined : window.codeshell?.platform,
+  );
   const ext = (filename.split(".").pop() ?? "").toLowerCase();
 
   if (localActions && (kind === "audio" || kind === "video")) {
@@ -109,6 +113,7 @@ function iconFor(kind: Attachment["kind"]) {
  */
 function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
   const localActions = useLocalRuntimeActions();
+  const platform = typeof window === "undefined" ? undefined : window.codeshell?.platform;
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -117,14 +122,18 @@ function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
     setFailed(false);
     setSrc(null);
     if (!localActions) return;
-    const isAbs = path.startsWith("/");
+    const windows = platform === "win32";
+    const isAbs =
+      path.startsWith("/") || (windows && (/^[A-Za-z]:[\\/]/.test(path) || path.startsWith("\\")));
     if (!isAbs && !cwd) {
       setFailed(true);
       return () => {
         cancelled = true;
       };
     }
-    const abs = isAbs ? path : `${cwd!.replace(/\/$/, "")}/${path}`;
+    const separator = windows ? "\\" : "/";
+    const base = cwd?.replace(windows ? /[\\/]+$/ : /\/+$/, "");
+    const abs = isAbs ? path : `${base}${separator}${path}`;
     // Load via the images:readDataUrl IPC, not `file://` — the renderer can't
     // load file:// (webSecurity + CSP block it); main returns a base64 data:
     // URL the CSP's `img-src ... data:` allows.
@@ -136,7 +145,7 @@ function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [path, cwd, localActions]);
+  }, [path, cwd, localActions, platform]);
 
   if (!localActions || failed || !src) {
     return (

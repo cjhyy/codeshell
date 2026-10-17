@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { OpenWithMenu } from "./OpenWithMenu";
 import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
+import { nativeBasename } from "../nativePath";
 
 interface Props {
   path: string;
@@ -44,7 +45,10 @@ function MediaPlayer({ path, kind, cwd, sessionId, sessionMainRootId, rootStatus
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState<MediaPreviewResult | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable" | "error">("loading");
-  const filename = path.replace(/\\/g, "/").split("/").pop() || path;
+  const filename = nativeBasename(
+    path,
+    typeof window === "undefined" ? undefined : window.codeshell?.platform,
+  );
   const name = label?.trim() || preview?.name || filename;
   const authorityAvailable =
     localActions && Boolean(sessionId) && (rootStatus == null || rootStatus === "ok");
