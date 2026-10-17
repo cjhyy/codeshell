@@ -1,0 +1,56 @@
+{
+  "capturedUTC": "2026-10-17T14:55:23.052547+00:00",
+  "scope": "Separate instruction/known frozen tmp metadata only; not formal history, never contributes full/selected classifications. Rank exclusion. Root may later integrate.",
+  "files": [
+    {
+      "round": "46",
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts",
+      "reason": "Root provided pending dataset-editor direction; omitted from rank, not classified from tmp reads"
+    },
+    {
+      "round": "46",
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+      "reason": "Root provided pending dataset-editor direction; omitted from rank, not classified from tmp reads"
+    },
+    {
+      "round": "47",
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "reason": "Root provided pending47 ordinary draft direction, old D5/R04 gate; no tmp backfill"
+    },
+    {
+      "round": "48",
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "reason": "Own pending48 frozen selected source; excluded from rank without merging its semantic scope into formal historical index",
+      "pendingManifest": "/tmp/codeshell-audit-round48-ui-data-frontier/source-manifest.json",
+      "pendingManifestSha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "round": "48",
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "reason": "Own pending48 frozen selected source; excluded from rank without merging its semantic scope into formal historical index",
+      "pendingManifest": "/tmp/codeshell-audit-round48-ui-data-frontier/source-manifest.json",
+      "pendingManifestSha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "round": "48",
+      "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+      "reason": "Own pending48 frozen selected source; excluded from rank without merging its semantic scope into formal historical index",
+      "pendingManifest": "/tmp/codeshell-audit-round48-ui-data-frontier/source-manifest.json",
+      "pendingManifestSha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "round": "48",
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "reason": "Own pending48 frozen selected source; excluded from rank without merging its semantic scope into formal historical index",
+      "pendingManifest": "/tmp/codeshell-audit-round48-ui-data-frontier/source-manifest.json",
+      "pendingManifestSha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "round": "48",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "reason": "Own pending48 frozen selected source; excluded from rank without merging its semantic scope into formal historical index",
+      "pendingManifest": "/tmp/codeshell-audit-round48-ui-data-frontier/source-manifest.json",
+      "pendingManifestSha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    }
+  ]
+}

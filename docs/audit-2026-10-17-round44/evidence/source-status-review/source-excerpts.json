@@ -1,0 +1,226 @@
+{
+  "createdUTC": "2026-10-17T15:01:20.973010+00:00",
+  "purpose": "Metadata snapshot after same reading, not additional semantic coverage",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "sha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "ranges": [
+        {
+          "start": 13,
+          "end": 36,
+          "text": "import { assertSafePluginName, pluginsRoot } from \"./installer/paths.js\";\nimport {\n  CANONICAL_PLUGIN_MANIFEST_FILE,\n  CanonicalPluginManifest,\n  type PluginAutomationTemplate,\n  type CanonicalPluginManifest as CanonicalPluginManifestData,\n} from \"./installer/types.js\";\nimport { resolveSafePluginPath } from \"./pluginInstaller.js\";\nimport type { InstalledPluginsV2 } from \"./types.js\";\n\nconst MAX_CANONICAL_MANIFEST_BYTES = 4 * 1024 * 1024;\n\n/** Core-owned, trusted view of one installed plugin. */\nexport interface PluginCatalogEntry {\n  installKey: string;\n  name: string;\n  marketplace: string | null;\n  /** Validated install layout, independent of marketplace names such as \"local\". */\n  installationKind: \"marketplace\" | \"direct\" | \"unknown\";\n  installPath: string;\n  version: string;\n  installedAt: string;\n  lastUpdated: string;\n  manifest: CanonicalPluginManifestData | null;\n"
+        },
+        {
+          "start": 88,
+          "end": 98,
+          "text": "      metadata.size > MAX_CANONICAL_MANIFEST_BYTES\n    ) {\n      return null;\n    }\n    descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));\n    const opened = fstatSync(descriptor);\n    if (!opened.isFile() || opened.size > MAX_CANONICAL_MANIFEST_BYTES) return null;\n    return CanonicalPluginManifest.parse(JSON.parse(readFileSync(descriptor, \"utf-8\")));\n  } catch {\n    return null;\n  } finally {\n"
+        },
+        {
+          "start": 118,
+          "end": 151,
+          "text": "function installationKind(\n  root: string,\n  installKey: string,\n  installPath: string,\n  identity: { name: string; marketplace: string | null },\n  version: string,\n): PluginCatalogEntry[\"installationKind\"] {\n  const { name, marketplace } = identity;\n  if (installKey !== (marketplace === null ? name : `${name}@${marketplace}`)) return \"unknown\";\n  if (marketplace === null && name.includes(\"@\")) return \"unknown\";\n  try {\n    assertSafePluginName(name);\n    if (marketplace !== null) assertSafePluginName(marketplace);\n    assertSafePluginName(version);\n  } catch {\n    return \"unknown\";\n  }\n  const parts = relative(root, installPath).split(sep);\n  if (parts.length === 1 && parts[0] === name && (!marketplace || marketplace === \"local\")) {\n    return \"direct\";\n  }\n  if (\n    marketplace &&\n    parts.length === 4 &&\n    parts[0] === \"cache\" &&\n    parts[1] === marketplace &&\n    parts[2] === name &&\n    parts[3] === version\n  ) {\n    return \"marketplace\";\n  }\n  return \"unknown\";\n}\n\n"
+        },
+        {
+          "start": 164,
+          "end": 204,
+          "text": "  let canonicalRoot: string;\n  try {\n    canonicalRoot = realpathSync(root);\n  } catch {\n    return catalog;\n  }\n\n  for (const installKey of Object.keys(installed.plugins).sort()) {\n    const keyIdentity = identityFromInstallKey(installKey, null);\n    const rows = (installed.plugins[installKey] ?? []).flatMap((entry) => {\n      const installPath = resolveSafePluginPath(entry.installPath, root);\n      if (!installPath) return [];\n      return [\n        {\n          entry,\n          installPath,\n          installationKind: installationKind(\n            canonicalRoot,\n            installKey,\n            installPath,\n            keyIdentity,\n            entry.version,\n          ),\n        },\n      ];\n    });\n    const first = rows[0];\n    if (!first) continue;\n    const kinds = new Set(rows.map((row) => row.installationKind));\n    const manifest = readCatalogPluginManifest(first.installPath);\n    const identity = identityFromInstallKey(installKey, manifest);\n    catalog.push({\n      installKey,\n      ...identity,\n      installationKind:\n        kinds.size === 1 && identity.name === keyIdentity.name ? first.installationKind : \"unknown\",\n      installPath: first.installPath,\n      version: first.entry.version,\n      installedAt: first.entry.installedAt,\n      lastUpdated: first.entry.lastUpdated,\n      manifest,\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "sha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "ranges": [
+        {
+          "start": 43,
+          "end": 56,
+          "text": "export interface PluginSummary {\n  /** Display name (without the `@marketplace` suffix). */\n  name: string;\n  /** Author-provided marketplace/install surface name. */\n  displayName: string;\n  /** Full install key from installed-plugins.json (e.g. \"superpowers@official\"). */\n  installKey: string;\n  /** Marketplace source — null for direct git / GitHub installs without marketplace. */\n  marketplace: string | null;\n  installationKind: PluginCatalogEntry[\"installationKind\"];\n  /** Source line shown under the plugin name. */\n  sourceLabel: string;\n  /** Plugin install path (truncated display elsewhere). */\n  installPath: string;\n"
+        },
+        {
+          "start": 121,
+          "end": 168,
+          "text": "  }\n  let count = 0;\n  for (const e of entries) {\n    if (!e.isDirectory() && !e.isSymbolicLink()) continue;\n    if (existsSync(path.join(skillsDir, e.name, \"SKILL.md\"))) count++;\n  }\n  return count;\n}\n\nfunction deriveSourceLabel(marketplace: string | null): string {\n  if (!marketplace) return \"本地安装\";\n  return `installed from ${marketplace}`;\n}\n\nexport function listPlugins(\n  _cwd: string,\n  listCatalog: () => PluginCatalogEntry[] = loadPluginCatalog,\n): PluginSummary[] {\n  let plugins: ReturnType<typeof loadPluginCatalog>;\n  try {\n    plugins = listCatalog();\n  } catch {\n    return [];\n  }\n\n  const out: PluginSummary[] = [];\n  for (const plugin of plugins) {\n    const { installKey, name, marketplace, installPath } = plugin;\n    const manifest = plugin.manifest ?? readLegacyPluginManifest(installPath);\n    const metadata = normalizePluginDisplayMetadata(name, manifest);\n\n    out.push({\n      name,\n      ...metadata,\n      mediaAvailability: pluginMediaAvailability(plugin.manifest?.interface),\n      installKey,\n      marketplace,\n      installationKind: plugin.installationKind,\n      sourceLabel: deriveSourceLabel(marketplace),\n      installPath,\n      installedAt: plugin.installedAt,\n      version: plugin.version,\n      skillCount: countSkills(installPath),\n    });\n  }\n  return out;\n}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "sha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 29,
+          "text": "/** Minimal shape needed from PluginSummary to decide uninstall. */\nexport interface UninstallablePlugin {\n  name: string;\n  installKey: string;\n  marketplace: string | null;\n  installationKind?: \"marketplace\" | \"direct\" | \"unknown\";\n}\n\nexport type UninstallTarget =\n  | { uninstallable: false }\n  | { uninstallable: true; kind: \"marketplace\"; pluginName: string; marketplaceName: string }\n  | { uninstallable: true; kind: \"local\"; pluginName: string };\n\n/** Resolve only the Core-validated source; \"local\" is a valid marketplace name. */\nexport function resolveUninstallTarget(p: UninstallablePlugin): UninstallTarget {\n  const at = p.installKey.lastIndexOf(\"@\");\n  const pluginName = at > 0 ? p.installKey.slice(0, at) : p.installKey;\n  if (!pluginName) return { uninstallable: false };\n  if (p.installationKind === \"direct\") {\n    return { uninstallable: true, kind: \"local\", pluginName };\n  }\n  if (p.installationKind === \"marketplace\" && p.marketplace) {\n    const marketplaceName = at > 0 ? p.installKey.slice(at + 1) : p.marketplace;\n    if (marketplaceName && marketplaceName === p.marketplace) {\n      return { uninstallable: true, kind: \"marketplace\", pluginName, marketplaceName };\n    }\n  }\n  return { uninstallable: false };\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "ranges": [
+        {
+          "start": 2795,
+          "end": 2812,
+          "text": "}\n\nexport interface PluginSummary {\n  /** Display name (without the `@marketplace` suffix). */\n  name: string;\n  /** Author-provided marketplace/install surface name. */\n  displayName: string;\n  /** Full install key from installed-plugins.json (e.g. \"superpowers@official\"). */\n  installKey: string;\n  /** Marketplace source — null for direct git / GitHub installs without marketplace. */\n  marketplace: string | null;\n  /** Core-validated source; absent/unknown origins cannot be uninstalled. */\n  installationKind: \"marketplace\" | \"direct\" | \"unknown\";\n  /** Source line shown under the plugin name. */\n  sourceLabel: string;\n  /** Plugin install path (truncated display elsewhere). */\n  installPath: string;\n  installedAt: string;\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "ranges": [
+        {
+          "start": 127,
+          "end": 156,
+          "text": "    return () => {\n      alive = false;\n    };\n  }, [configurationTarget, reloadKey]);\n  const uninstall = async (p: PluginSummary) => {\n    const target = resolveUninstallTarget(p);\n    if (!target.uninstallable) {\n      void alert({\n        title: t(\"ext.plugins.cannotUninstallTitle\"),\n        message: t(\"ext.plugins.cannotUninstallMsg\"),\n      });\n      return;\n    }\n    const ok = await confirm({\n      title: t(\"ext.plugins.uninstallTitle\"),\n      message: t(\"ext.plugins.uninstallConfirm\", { name: p.name }),\n      confirmLabel: t(\"ext.common.uninstall\"),\n      destructive: true,\n    });\n    if (!ok) return;\n    setBusy(p.installKey);\n    try {\n      if (target.kind === \"local\") {\n        await window.codeshell.uninstallLocalPlugin(target.pluginName);\n      } else {\n        await window.codeshell.uninstallPlugin(target.pluginName, target.marketplaceName);\n      }\n      setReloadKey((k) => k + 1);\n      onChanged();\n    } catch (e) {\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "ranges": [
+        {
+          "start": 26,
+          "end": 51,
+          "text": "  transport?: \"stdio\" | \"streamable-http\" | \"sse\";\n  env?: Record<string, string>;\n  headers?: Record<string, string>;\n  /** (stdio) NAMES of env vars forwarded from the parent process. */\n  envVars?: string[];\n  /**\n   * (HTTP) NAME of an env var sent as `Authorization: Bearer <value>` —\n   * the value is read from the environment at connect time, never stored.\n   */\n  bearerTokenEnvVar?: string;\n  /** (HTTP) header-name → env-var-NAME map, values read at connect time. */\n  envHeaders?: Record<string, string>;\n  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */\n  credentialRef?: string;\n  /** Codex-style toggle. Absent/true = on; only false disables. */\n  enabled?: boolean;\n  /** Exact raw MCP tool-name policy. Deny is applied after allow. */\n  allowedTools?: string[];\n  disabledTools?: string[];\n  /** Supported settings options retained across editor renames, not authored here. */\n  connectTimeoutMs?: number;\n  connectRetries?: number;\n  inlineImages?: boolean;\n  source?: \"settings\" | \"plugin\";\n  editable?: boolean;\n  /** Plugin server whose OWNER plugin is disabled — listed but inert\n"
+        },
+        {
+          "start": 250,
+          "end": 279,
+          "text": "    if (!mounted.current) return;\n    const generation = ++loadGeneration.current;\n    const isCurrent = () => mounted.current && generation === loadGeneration.current;\n    setError(null);\n    try {\n      const s = (await readScopedSettings(scope, projectPath)) ?? {};\n      if (!isCurrent()) return;\n      const disabledPlugins = Array.isArray(s.disabledPlugins)\n        ? s.disabledPlugins.filter((x): x is string => typeof x === \"string\")\n        : [];\n      const merged = await window.codeshell.listMergedMcpServers(\n        settingsRecordOf(s.mcpServers),\n        disabledPlugins,\n        // Global scope previews the active session's effective plugin state.\n        // Project scope must preview the SELECTED project instead; otherwise\n        // editing project B while project A is active shows A's on/off badges\n        // under B's settings header.\n        optionalProjectConfigurationTarget(\n          mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),\n        ),\n      );\n      if (!isCurrent()) return;\n      const trust = await window.codeshell.listPluginMcpTrust();\n      if (!isCurrent()) return;\n      const list = mcpServersFromSettings(merged);\n      setServers(list);\n      setPluginMcpTrust(visiblePluginMcpTrustEntries(trust));\n      void runProbe(list, false);\n    } catch (e) {\n      if (isCurrent()) setError(String(e instanceof Error ? e.message : e));\n"
+        },
+        {
+          "start": 408,
+          "end": 466,
+          "text": "        // Drop the stale \"connected\" probe so the card doesn't look live.\n        await window.codeshell.invalidateMcpProbeCache(s.name);\n        setProbes((prev) => {\n          const { [s.name]: _, ...rest } = prev;\n          return rest;\n        });\n      } else {\n        void runProbe(\n          updated.filter((x) => x.name === s.name),\n          true,\n        );\n      }\n    });\n\n  const saveEdit = async (next: McpServer, originalName?: string) =>\n    mutate(async () => {\n      if (!mounted.current) return;\n      const owner = editRef.current;\n      // Rename must be ATOMIC: write the new server AND delete the old key in ONE\n      // updateSettings patch. The old two-step (persist new, then a separate patch\n      // to null the old key) could persist BOTH old+new if the second write\n      // failed/crashed. deepMerge in settings-service honors nested `null` to\n      // delete a key, so { mcpServers: { new: {...}, old: null } } does both.\n      // Patch only the edited server; replaying the loaded list could overwrite\n      // an unrelated server changed by another window while this editor was open.\n      const previous = servers.find((server) => server.name === originalName);\n      const preserved: Pick<McpServer, \"connectTimeoutMs\" | \"connectRetries\" | \"inlineImages\"> = {\n        ...(previous?.connectTimeoutMs !== undefined\n          ? { connectTimeoutMs: previous.connectTimeoutMs }\n          : {}),\n        ...(previous?.connectRetries !== undefined\n          ? { connectRetries: previous.connectRetries }\n          : {}),\n        ...(previous?.inlineImages !== undefined ? { inlineImages: previous.inlineImages } : {}),\n      };\n      const savedNext = { ...preserved, ...next };\n      const record: Record<string, unknown> = {\n        [next.name]: {\n          // A new name has no previous object for the settings merge to retain.\n          // Transfer only supported non-editor options, then apply edits/clears.\n          ...(originalName && originalName !== next.name ? preserved : {}),\n          ...buildMcpSettingsPatch(next, previous),\n        },\n        ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),\n      };\n      await updateScopedSettings(scope, { mcpServers: record }, projectPath);\n      if (mounted.current) {\n        setServers((current) => [\n          ...current.filter((s) => s.name !== originalName && s.name !== next.name),\n          savedNext,\n        ]);\n      }\n      if (originalName && originalName !== next.name) {\n        await window.codeshell.invalidateMcpProbeCache(originalName);\n      }\n      await window.codeshell.invalidateMcpProbeCache(next.name);\n      broadcastSettingsChanged();\n      if (!mounted.current) return;\n      if (editRef.current === owner) setEdit({ kind: \"closed\" });\n"
+        },
+        {
+          "start": 717,
+          "end": 735,
+          "text": "        <McpEditor\n          key={edit.kind === \"new\" ? \"new\" : `${edit.kind}:${edit.original}`}\n          existingNames={servers.map((s) => s.name)}\n          initial={\n            edit.kind === \"edit\" || edit.kind === \"override\"\n              ? (servers.find((s) => s.name === edit.original) ?? null)\n              : null\n          }\n          mode={edit.kind === \"override\" ? \"override\" : \"full\"}\n          onCancel={() => setEdit({ kind: \"closed\" })}\n          onSave={(next) =>\n            edit.kind === \"override\"\n              ? saveOverride(edit.original, next)\n              : saveEdit(next, edit.kind === \"edit\" ? edit.original : undefined)\n          }\n        />\n      )}\n\n      {toolsViewer && (\n"
+        },
+        {
+          "start": 1118,
+          "end": 1142,
+          "text": "  return new Date(iso).toLocaleString();\n}\n\ninterface EditorProps {\n  initial: McpServer | null;\n  existingNames: string[];\n  /** \"override\" locks identity fields (name/transport/command/args/url) and\n   *  only lets the user supplement env/credential for a plugin server. */\n  mode?: \"full\" | \"override\";\n  onCancel: () => void;\n  onSave: (next: McpServer) => Promise<void>;\n}\n\nfunction McpEditor({ initial, existingNames, mode = \"full\", onCancel, onSave }: EditorProps) {\n  const isOverride = mode === \"override\";\n  const toast = useToast();\n  const [transport, setTransport] = useState<\"stdio\" | \"streamable-http\" | \"sse\">(\n    initial?.transport ?? (initial?.url ? \"streamable-http\" : \"stdio\"),\n  );\n  const [name, setName] = useState(initial?.name ?? \"\");\n  const [command, setCommand] = useState(initial?.command ?? \"\");\n  const initialArgsText = (initial?.args ?? []).join(\" \");\n  const [args, setArgs] = useState(initialArgsText);\n  const [url, setUrl] = useState(initial?.url ?? \"\");\n  const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));\n"
+        },
+        {
+          "start": 1310,
+          "end": 1325,
+          "text": "      await reloadCredentials();\n      toast({\n        message: result.remoteRevoked\n          ? t(\"settingsX.mcp.oauthLogoutDone\")\n          : t(\"settingsX.mcp.oauthLogoutWarning\"),\n      });\n    });\n  };\n\n  const submit = () => {\n    if (savePending.current || oauthBusy || !editorMounted.current) return;\n    const trimmedName = name.trim();\n    // Override mode locks identity fields, so skip their validation — the user\n    // only supplies env/credential supplements for an existing plugin server.\n    if (!isOverride) {\n      if (!trimmedName) return setValidationError(t(\"settingsX.mcp.nameEmpty\"));\n"
+        },
+        {
+          "start": 1388,
+          "end": 1429,
+          "text": "                credentialRef: nextCredentialRef,\n                bearerTokenEnvVar: nextBearerEnvVar,\n                envHeaders: nextEnvHeaders,\n              }),\n        }\n      : {\n          name: trimmedName,\n          transport,\n          enabled: initial?.enabled,\n          allowedTools,\n          disabledTools,\n          ...(isStdio\n            ? {\n                command: command.trim(),\n                // The display join loses quoting. Keep the original boundaries\n                // until the user actually changes the Args field.\n                args:\n                  args === initialArgsText\n                    ? initial?.args?.slice()\n                    : args.trim()\n                      ? splitArgs(args.trim())\n                      : undefined,\n                env: env && Object.keys(env).length ? env : undefined,\n                envVars: envVars && envVars.length ? envVars : undefined,\n              }\n            : {\n                url: url.trim(),\n                headers: nextHeaders,\n                credentialRef: nextCredentialRef,\n                bearerTokenEnvVar: nextBearerEnvVar,\n                envHeaders: nextEnvHeaders,\n              }),\n        };\n    savePending.current = true;\n    setSaving(true);\n    setValidationError(null);\n    void (async () => {\n      try {\n        await onSave(next);\n      } catch (cause) {\n        if (editorMounted.current) {\n          setValidationError(cause instanceof Error ? cause.message : String(cause));\n"
+        },
+        {
+          "start": 1781,
+          "end": 1813,
+          "text": "export function mcpServersFromSettings(value: unknown): McpServer[] {\n  if (Array.isArray(value)) {\n    return value.filter(\n      (x): x is McpServer =>\n        !!x && typeof x === \"object\" && typeof (x as McpServer).name === \"string\",\n    );\n  }\n  if (value && typeof value === \"object\") {\n    return Object.entries(value as Record<string, unknown>)\n      .map(([name, raw]) => ({\n        name,\n        ...(raw && typeof raw === \"object\" ? (raw as Record<string, unknown>) : {}),\n      }))\n      .filter((x): x is McpServer => typeof x.name === \"string\");\n  }\n  return [];\n}\n\nfunction settingsRecordOf(value: unknown): Record<string, unknown> {\n  if (value && typeof value === \"object\" && !Array.isArray(value)) {\n    return value as Record<string, unknown>;\n  }\n  if (Array.isArray(value)) {\n    return Object.fromEntries(\n      value\n        .filter(\n          (x): x is McpServer =>\n            !!x && typeof x === \"object\" && typeof (x as McpServer).name === \"string\",\n        )\n        .map((s) => [s.name, stripNameFromServer(s)]),\n    );\n  }\n  return {};\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "ranges": [
+        {
+          "start": 42,
+          "end": 57,
+          "text": "}\n\nfunction pluginCacheRoot(): string {\n  return join(userHome(), \".code-shell\", \"plugins\", \"cache\");\n}\n\n/**\n * Compose the on-disk cache directory for a plugin version. Every path segment\n * (marketplace / plugin / version) can originate from an attacker-controlled\n * marketplace manifest, so each must be validated as a single safe path\n * segment before it enters `join`. Without this a manifest entry named `..`\n * (or containing a separator) would let the materialized plugin tree be\n * written outside the plugin cache root — a supply-chain path traversal.\n *\n * Reuses `assertSafePluginName` (rejects empty / \".\" / \"..\" / separators /\n * NUL). Exported so the segment-validation contract can be unit-tested\n"
+        },
+        {
+          "start": 60,
+          "end": 67,
+          "text": "export function pluginCacheDir(marketplace: string, plugin: string, version: string): string {\n  assertSafePluginName(marketplace);\n  assertSafePluginName(plugin);\n  assertSafePluginName(version);\n  return join(pluginCacheRoot(), marketplace, plugin, version);\n}\n\n/**\n"
+        },
+        {
+          "start": 267,
+          "end": 267,
+          "text": "    const finalDir = pluginCacheDir(marketplace, plugin, \"local\");\n"
+        },
+        {
+          "start": 272,
+          "end": 272,
+          "text": "    return { ok: true, cacheDir: finalDir, version: \"local\", sha: undefined };\n"
+        },
+        {
+          "start": 293,
+          "end": 293,
+          "text": "    const finalDir = pluginCacheDir(marketplace, plugin, version);\n"
+        },
+        {
+          "start": 298,
+          "end": 298,
+          "text": "    return { ok: true, cacheDir: finalDir, version, sha: r.sha };\n"
+        },
+        {
+          "start": 315,
+          "end": 315,
+          "text": "    const finalDir = pluginCacheDir(marketplace, plugin, version);\n"
+        },
+        {
+          "start": 320,
+          "end": 320,
+          "text": "    return { ok: true, cacheDir: finalDir, version, sha: r.sha };\n"
+        },
+        {
+          "start": 337,
+          "end": 340,
+          "text": "): Promise<InstallResult> {\n  const key = pluginInstallKey(pluginName, marketplaceName);\n  const previousEntries = readInstalledPlugins().plugins[key] ?? [];\n  const known = readKnownMarketplaces();\n"
+        },
+        {
+          "start": 356,
+          "end": 374,
+          "text": "    (p) => p.name === pluginName,\n  );\n  if (!entry) {\n    return {\n      ok: false,\n      error: `plugin \"${pluginName}\" not found in marketplace \"${marketplaceName}\".`,\n    };\n  }\n\n  // materialize() validates every cache path segment (marketplace / plugin /\n  // version) and throws a PluginInstallError on an unsafe one. Convert that to\n  // a clean failure result — every caller (bootstrap / marketplace-service /\n  // tui handler) consumes { ok, error } and must not be crashed by a hostile\n  // marketplace manifest.\n  let mat: Awaited<ReturnType<typeof materialize>>;\n  try {\n    mat = await materialize(entry.source, km.installLocation, marketplaceName, pluginName);\n  } catch (e) {\n    return { ok: false, error: (e as Error).message };\n"
+        },
+        {
+          "start": 401,
+          "end": 427,
+          "text": "  // breadcrumb documents the rewrite for users debugging upstream diffs.\n  const rewriteSummary = rewritePluginVars(mat.cacheDir);\n\n  // Remove old install entries for the same key so we don't pile up\n  // historical versions (Phase A: single-scope only).\n  removeInstallEntries(key);\n\n  const now = new Date().toISOString();\n  const installEntry: PluginInstallEntry = {\n    scope: \"user\",\n    installPath: mat.cacheDir,\n    version: mat.version,\n    installedAt: now,\n    lastUpdated: now,\n    ...(mat.sha ? { gitCommitSha: mat.sha } : {}),\n    ...pluginHookInstallRecord(mat.cacheDir, previousEntries),\n    ...pluginMcpInstallRecord(\n      mat.cacheDir,\n      Object.keys(readPluginMcp(mat.cacheDir, pluginName)).length > 0,\n      previousEntries,\n    ),\n  };\n  appendInstallEntry(key, installEntry);\n\n  return {\n    ok: true,\n    entry: installEntry,\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "ranges": [
+        {
+          "start": 30,
+          "end": 37,
+          "text": "  options: InstallPluginFromPathOptions = {},\n): Promise<string> {\n  assertSafePluginName(name);\n  if (!existsSync(sourceDir) || !statSync(sourceDir).isDirectory()) {\n    throw new PluginInstallError(`source is not a directory: ${sourceDir}`);\n  }\n  const finalDir = pluginInstallDir(name);\n  if (existsSync(finalDir)) {\n"
+        },
+        {
+          "start": 55,
+          "end": 68,
+          "text": "    await writeFile(join(tmpDir, \".cs-meta.json\"), JSON.stringify(meta, null, 2));\n    await rename(tmpDir, finalDir);\n    // Register so existing loaders (scanInstalledPlugins / loadPluginHooks)\n    // discover this local install. Marketplace tag \"local\" distinguishes it\n    // from cache/marketplace installs.\n    appendInstallEntry(pluginInstallKey(name, \"local\"), {\n      scope: \"user\",\n      installPath: finalDir,\n      version: meta.version ?? \"local\",\n      installedAt,\n      lastUpdated: installedAt,\n      ...pluginHookInstallRecord(finalDir),\n      ...pluginMcpInstallRecord(finalDir, Object.keys(readPluginMcp(finalDir, name)).length > 0),\n    });\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "ranges": [
+        {
+          "start": 19,
+          "end": 26,
+          "text": "export function pluginsRoot(): string {\n  return join(userHome(), \".code-shell\", \"plugins\");\n}\n\nexport function pluginInstallDir(name: string): string {\n  assertSafePluginName(name);\n  return join(pluginsRoot(), name);\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 62,
+          "text": "/** Fields that the MCP editor can author; server identity is the enclosing map key. */\nexport interface McpSettingsPatchInput {\n  transport?: \"stdio\" | \"streamable-http\" | \"sse\";\n  command?: string;\n  args?: string[];\n  url?: string;\n  env?: Record<string, string>;\n  envVars?: string[];\n  headers?: Record<string, string>;\n  bearerTokenEnvVar?: string;\n  credentialRef?: string;\n  envHeaders?: Record<string, string>;\n  enabled?: boolean;\n  allowedTools?: string[];\n  disabledTools?: string[];\n}\n\ntype McpSettingsField = keyof McpSettingsPatchInput;\n\nconst MCP_SERVER_SETTINGS_FIELDS = [\n  \"transport\",\n  \"command\",\n  \"args\",\n  \"url\",\n  \"env\",\n  \"envVars\",\n  \"headers\",\n  \"bearerTokenEnvVar\",\n  \"credentialRef\",\n  \"envHeaders\",\n  \"enabled\",\n  \"allowedTools\",\n  \"disabledTools\",\n] as const satisfies readonly McpSettingsField[];\n\n/**\n * Settings patches recursively merge records. Explicit nulls are necessary to\n * remove omitted fields and deleted map entries, including across JSON hosts\n * where undefined disappears before the patch reaches the settings service.\n * Override editors pass their narrower field list so plugin-owned identity is\n * never included in the resulting patch.\n */\nexport function buildMcpSettingsPatch(\n  next: McpSettingsPatchInput,\n  previous: McpSettingsPatchInput = {},\n  fields: readonly McpSettingsField[] = MCP_SERVER_SETTINGS_FIELDS,\n): Record<string, unknown> {\n  return Object.fromEntries(\n    fields.map((field) => {\n      const value = next[field];\n      if (value === undefined) return [field, null];\n      if (field === \"env\" || field === \"headers\" || field === \"envHeaders\") {\n        const incoming = next[field]!;\n        const removed = Object.keys(previous[field] ?? {})\n          .filter((key) => !Object.hasOwn(incoming, key))\n          .map((key) => [key, null]);\n        return [field, Object.fromEntries([...removed, ...Object.entries(incoming)])];\n      }\n      return [field, Array.isArray(value) ? [...value] : value];\n    }),\n  );\n}\n"
+        }
+      ]
+    }
+  ]
+}

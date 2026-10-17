@@ -1,0 +1,120 @@
+{
+  "frozenUTC": "2026-10-17T15:00:33.287091+00:00",
+  "scope": "Metadata-only49 exact /tmp/codeshell-audit-round49-coverage-frontier; excludes receipt self. Original dated source/history inventories and real ending drift retained. No product body/execution/Git. Do not mutate after freeze.",
+  "files": [
+    {
+      "path": "build-index.py",
+      "bytes": 15317,
+      "sha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c"
+    },
+    {
+      "path": "candidate-ranking.json",
+      "bytes": 17773,
+      "sha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+    },
+    {
+      "path": "capture-inventories.py",
+      "bytes": 2343,
+      "sha256": "f1c976b5072818f34c886e954567816e53b34a72244198baab02e999ad36baca"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 953,
+      "sha256": "f967fdeb13d73a4a33fa876235e214b6356014534a69e658a58d8cec577ebc01"
+    },
+    {
+      "path": "classification-examples.json",
+      "bytes": 7548,
+      "sha256": "90615a6de6e4cffd50815a2e95e48cbc8ca43b657aabbfa4eb3dba66f08bd1b8"
+    },
+    {
+      "path": "classifier-first-script.py",
+      "bytes": 14124,
+      "sha256": "d0382315ce6776ef91408f205b9c2e53a653d1901dd1a53a972a045fa67a315e"
+    },
+    {
+      "path": "classifier-first-summary.json",
+      "bytes": 1422,
+      "sha256": "65488930208f2747bab566c231259d5bd5479364f243015d71cd27b58ae5bb45"
+    },
+    {
+      "path": "classifier-revision-notes.json",
+      "bytes": 1915,
+      "sha256": "008635d952e9edaf6a078403793d1f945c88f363d8bd6c44a0d6503550097348"
+    },
+    {
+      "path": "coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "path": "coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "path": "ending-coverage-overlay.json",
+      "bytes": 13255,
+      "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+    },
+    {
+      "path": "history-ending-checks.json",
+      "bytes": 632,
+      "sha256": "c834bde4869a72aaf75d3371957ff6fd7f0be1c25dccaef69ce55bc564aabf2a"
+    },
+    {
+      "path": "history-inventory.json",
+      "bytes": 851237,
+      "sha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 2656,
+      "sha256": "5f786ea6d4de84255ce973e4564b5a74def21e7fdd4907bca505e54648135a31"
+    },
+    {
+      "path": "method.md",
+      "bytes": 5264,
+      "sha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df"
+    },
+    {
+      "path": "package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    },
+    {
+      "path": "pending-scopes.json",
+      "bytes": 3094,
+      "sha256": "1cb892ed3ee795b5ef6c0d544c666db3ada371e0c8e152ac417cc2cd0efa6941"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4436,
+      "sha256": "980123513213a2538d592475628fea9710dfe166c60bae0d0e83cc01dad23c3f"
+    },
+    {
+      "path": "source-ending-checks.json",
+      "bytes": 3168,
+      "sha256": "e391b315a357d473fe7fdeda22a096797cc27fbae7c5453f74b78d95b504a2cb"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 1049,
+      "sha256": "065c7b406ac41cdfcde467c26f2f6fe0a63e7214c255855d12f34254476e05cf"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 1812,
+      "sha256": "4a640a945674b2e325998bec462eab981d5ae3bbc0b1b478de8b0a5cb9cfafe7"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 821,
+      "sha256": "b8cdaa40b98495cf3c30f05ed47d5ef8c2348d4d102e2197329db4f595400bd9"
+    }
+  ],
+  "artifactCountExcludingSelf": 22,
+  "totalFilesIncludingSelf": 23,
+  "productAttempts": 0,
+  "sourceSemanticLines": 0
+}

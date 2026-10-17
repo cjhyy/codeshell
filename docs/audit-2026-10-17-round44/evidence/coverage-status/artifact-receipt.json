@@ -1,0 +1,51 @@
+{
+  "frozenUTC": "2026-10-17T15:11:40.399634+00:00",
+  "scope": "Exact /tmp/codeshell-audit-round51-coverage-status only; excludes receipt self. Metadata-only primary workspace current SHA comparison. Frozen49 inputs unchanged.",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 299,
+      "sha256": "2406f35d9b0e83456f27d49f5e20a938a26102c27d5e544186ddbb433e650a10"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+    },
+    {
+      "path": "current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+    },
+    {
+      "path": "input-pins.json",
+      "bytes": 953,
+      "sha256": "6640af77e2562b4fea8927169f79d007c8266215b15b9d373f0438a27eacfc31"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 762,
+      "sha256": "df84a4b048fd0939b14716877f899467b521e29802f1f57cedc2de90f4f093c4"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2319,
+      "sha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 589,
+      "sha256": "bf3de53a345ff66d39900cd1625947a20ec0cdf29aeff5bb40074425a757efc4"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 1195,
+      "sha256": "4ff599f06db3c6889fe81987bddc03af1d5b2fe3e71474bdbdbb6c5453c17551"
+    }
+  ],
+  "artifactCountExcludingSelf": 8,
+  "totalFilesIncludingSelf": 9,
+  "semanticSourceLines": 0,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

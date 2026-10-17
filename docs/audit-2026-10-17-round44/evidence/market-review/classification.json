@@ -1,0 +1,57 @@
+{
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "readBeforeExclusions": [
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "sameSHAOldSelectedRanges": [
+        [
+          1,
+          108
+        ],
+        [
+          150,
+          193
+        ]
+      ],
+      "oldSelectedLines": 152,
+      "lineCount": 193,
+      "reason": "Original R36 same ordinary filtering/markRead/clear contract already selected; current product body read 0. Reviewer was original R36 author; this is reuse, not independent re-review."
+    }
+  ],
+  "priorPartialCoverage": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "round": 37,
+      "sameSHAOldSelectedRanges": [
+        [
+          175,
+          194
+        ],
+        [
+          308,
+          330
+        ]
+      ],
+      "oldSelectedLines": 43,
+      "limit": "No explicit current-SHA full-read evidence established in this gate. This is not a proof of historical unreadness. Old local namespace/uninstall mechanism not reopened or counted."
+    }
+  ],
+  "boundedNegative": [
+    "ManagePage 177 hides search controls on market; absence of MarketList query prop does not establish a displayed search contract violation.",
+    "DTO decorateRecommended matches name OR source; added is not treated as name-only. MarketList recommended/custom arrays use predicate and negation.",
+    "MarketList passes selected original market name to MarketDetail; detail effect depends on that name and rejects stale completion with alive guard.",
+    "Separate list/recommended async snapshots and source-key normalization are not certified universally correct; no ordinary contradictory producer case established in this scope."
+  ],
+  "runtime": {
+    "product": 0,
+    "functions": 0,
+    "testsRead": 0,
+    "testsExecuted": 0,
+    "fixtures": 0,
+    "reactBrowserDOM": 0,
+    "nativeNetwork": 0,
+    "git": 0
+  }
+}

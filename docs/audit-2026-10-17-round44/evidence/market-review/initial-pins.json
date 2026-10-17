@@ -1,0 +1,23 @@
+{
+  "scope": "Independent48 prep gate only; Root reports frozen42 c2db5d9; replacement author gate pending, no product body read",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "lineCount": 193,
+      "pinUTC": "2026-10-17T14:42:58.171351+00:00",
+      "coverage": "hash-only before independent body reading",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "lineCount": 550,
+      "pinUTC": "2026-10-17T14:42:58.173462+00:00",
+      "coverage": "hash-only before independent body reading",
+      "semanticRead": false
+    }
+  ]
+}

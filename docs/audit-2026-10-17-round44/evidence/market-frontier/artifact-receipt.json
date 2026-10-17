@@ -1,0 +1,130 @@
+{
+  "frozenUTC": "2026-10-17T14:45:57.219338+00:00",
+  "scope": "Only exact /tmp/codeshell-audit-round48-ui-data-frontier; excludes receipt self. Original prep context and source times retained; no formal baseline invented. Frozen after this metadata receipt.",
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1070,
+      "sha256": "3b9e289da47862990946de0d36c174880cfe3c38020e1448dcc9744fa6041162"
+    },
+    {
+      "path": "dto-producer-initial-pins.json",
+      "bytes": 1148,
+      "sha256": "25de805945505011557a893c16bc6d0294208e345b30f854c4a16824de96330a"
+    },
+    {
+      "path": "ending-source-checks.json",
+      "bytes": 2674,
+      "sha256": "3a909f8a6fd9cae66bbe4a214aa23c5e3ee3196572936a62f3ad0de85301d903"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 51365,
+      "sha256": "a54d344a9c8860a27941e78eb3c8e00ca932959fad9fac1fac5be85ed7be34f0"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 3615,
+      "sha256": "e8b513352657c6150124b83cc7fb8bf2b4d3705837dcf846927b5a957cf209f5"
+    },
+    {
+      "path": "history-finish-check.json",
+      "bytes": 317,
+      "sha256": "11369f5a38c4ff6b1f56031df79c238e3c481107eabbefe5f6f997c1c50ecf21"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 850314,
+      "sha256": "3340179fb0868ecb9a4beca389c5e964a7678b8652ea893f190196e563447434"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 248941,
+      "sha256": "d1c43581fd635507aa956a262639b3f006b09af25408f745ece0a428c2128be6"
+    },
+    {
+      "path": "history-selected-contexts.json",
+      "bytes": 39177,
+      "sha256": "832e5b28dcb412d95f389f2aab8ee422f1c1498310875c56bcc804c9a791f9b0"
+    },
+    {
+      "path": "history.json",
+      "bytes": 851585,
+      "sha256": "a45d7d047a9a008eb2f1611b3a31f6dda5f190826419f7874085345c2abd25aa"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 1276,
+      "sha256": "03a738790e631aae7d4afaecd3aa08915bbe81264384c83be3386e6fc3cb17ae"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 716,
+      "sha256": "bca5ab502d607e2c9ecb14be16231f7229177bc3bc76ba725fa8287f83cb86ca"
+    },
+    {
+      "path": "replacement-history-contexts.json",
+      "bytes": 78052,
+      "sha256": "74c5c5347ba635588c093c2b22364306d1f0952cdd6fecb135f29b7dde3b1dfd"
+    },
+    {
+      "path": "replacement-history-initial-pins.json",
+      "bytes": 850314,
+      "sha256": "813178a34f8f2813123233ffdd042f2e2c3e3f23d8890077fd9df57219e2bfa6"
+    },
+    {
+      "path": "replacement-history-inventory.raw.txt",
+      "bytes": 248941,
+      "sha256": "06f1b05023e8559fa6427caccedb89124ed36c4ee31b68831a409923240c9a4d"
+    },
+    {
+      "path": "replacement-history-selected-contexts.json",
+      "bytes": 44640,
+      "sha256": "b0a98eeaa3af6a4ee8988a88f9496826663a19a6c5c0c96477e86016d661c863"
+    },
+    {
+      "path": "replacement-history.json",
+      "bytes": 851537,
+      "sha256": "55f6beb1756983bef353a4510866c2081a600ed9cff0327a11bcedc3331adaaa"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5245,
+      "sha256": "836f1ad8962892b5c32dad72003338fafc08c9382a1b4f37e3696dc8a3952643"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5563,
+      "sha256": "3b86f0584e73937878b81195368015a6edad57bdf21eecf2fd6b743f7b1ad5a1"
+    },
+    {
+      "path": "scan-replacement-history.py",
+      "bytes": 5582,
+      "sha256": "c561f0e407ac90cee180399e5cc55e33a0f3673ab938bb31848b6ee974a9b95c"
+    },
+    {
+      "path": "selection-pins.json",
+      "bytes": 3378,
+      "sha256": "e42542dc7c01007f27618789fb8278a897acc8c15aaf8cf4d9945d9433ccc429"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 33547,
+      "sha256": "5fca162014af579a20e7596801928ee0a79d49b8ba3119544f421970df8e1473"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 18315,
+      "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1146,
+      "sha256": "78e6bb180fe94f339df609fec55be26819dadb3e7f928846ddd4f71e93096897"
+    }
+  ],
+  "artifactCountExcludingSelf": 24,
+  "totalFilesIncludingSelf": 25,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

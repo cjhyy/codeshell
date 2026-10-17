@@ -1,0 +1,22 @@
+{
+  "observations": [
+    {
+      "tool": "9ba226",
+      "aggregateExitCode": 0,
+      "kind": "read-only navigation locator miss",
+      "detail": "rg reported absent packages/core/src/plugins/installer.ts and marketplace.ts; actual pluginInstaller.ts and installer/install.ts were located/pinned. rg individual exit not separately captured; combined command completed0 after source text display. No product attempt or retry."
+    },
+    {
+      "tool": "9ba226",
+      "kind": "bounded navigation",
+      "detail": "Second navigation pipeline explicitly used head70; its output is not complete cross-repository references or semantic source coverage. Incidental test matches from rg are navigation only, no test body read/execution."
+    },
+    {
+      "tool": "3c704b",
+      "kind": "wrong selected navigation range displayed",
+      "detail": "catalog88–98 was an unwanted manifest/descriptor custody adjacent range. Excluded from semantic ranges, no mechanism was followed, invoked or certified. Original display retained in snapshot without promoting to audit scope."
+    }
+  ],
+  "sourcePinEnding": "All10 source files same as own read-before pins",
+  "errorsAreNotProductFailures": true
+}

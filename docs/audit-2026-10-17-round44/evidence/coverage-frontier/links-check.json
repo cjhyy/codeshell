@@ -1,0 +1,127 @@
+{
+  "capturedUTC": "2026-10-17T15:00:33.087117+00:00",
+  "count": 20,
+  "links": [
+    {
+      "document": "report.md",
+      "link": "package-inventory.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "history-inventory.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "coverage-index.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "coverage-claims.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "classification-examples.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "method.md",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "source-ending-checks.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "history-ending-checks.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "ending-coverage-overlay.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "candidate-ranking.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "pending-scopes.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "checks.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "source-manifest.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "validation.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "report.md",
+      "link": "artifact-receipt.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "method.md",
+      "link": "capture-inventories.py",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "method.md",
+      "link": "classifier-first-script.py",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "method.md",
+      "link": "build-index.py",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "method.md",
+      "link": "classifier-revision-notes.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "document": "method.md",
+      "link": "ending-coverage-overlay.json",
+      "inside": true,
+      "exists": true
+    }
+  ],
+  "outsideRelativeAliasesNeeded": false
+}

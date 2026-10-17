@@ -1,0 +1,21 @@
+{
+  "scope": "before selected ordinary DTO shape/list decoration, after prior metadata locator failure; no backend operation execution or native/network mechanics",
+  "files": [
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "lineCount": 612,
+      "pinUTC": "2026-10-17T14:52:29.603748+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "lineCount": 2982,
+      "pinUTC": "2026-10-17T14:52:29.605052+00:00",
+      "semanticRead": false
+    }
+  ]
+}

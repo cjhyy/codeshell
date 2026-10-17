@@ -1,0 +1,18 @@
+{
+  "capturedUTC": "2026-10-17T14:56:53.121095+00:00",
+  "initial": 3869,
+  "ending": 3869,
+  "added": [],
+  "removed": [],
+  "changed": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "initialSha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3",
+      "endingSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e",
+      "initialBytes": 199956,
+      "endingBytes": 212262
+    }
+  ],
+  "allUnchanged": false,
+  "scope": "Original3869 dated corpus retained; mutable43 remains excluded, any late byte drift recorded rather than rewriting original claims."
+}

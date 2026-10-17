@@ -1,0 +1,1133 @@
+{
+  "checks": [
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/consumer-initial-pins.json",
+      "bytes": 1070,
+      "sha256": "3b9e289da47862990946de0d36c174880cfe3c38020e1448dcc9744fa6041162"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/dto-producer-initial-pins.json",
+      "bytes": 1148,
+      "sha256": "25de805945505011557a893c16bc6d0294208e345b30f854c4a16824de96330a"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/ending-source-checks.json",
+      "bytes": 2674,
+      "sha256": "3a909f8a6fd9cae66bbe4a214aa23c5e3ee3196572936a62f3ad0de85301d903"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history-contexts.json",
+      "bytes": 51365,
+      "sha256": "a54d344a9c8860a27941e78eb3c8e00ca932959fad9fac1fac5be85ed7be34f0"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history-decisions.json",
+      "bytes": 3615,
+      "sha256": "e8b513352657c6150124b83cc7fb8bf2b4d3705837dcf846927b5a957cf209f5"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history-finish-check.json",
+      "bytes": 317,
+      "sha256": "11369f5a38c4ff6b1f56031df79c238e3c481107eabbefe5f6f997c1c50ecf21"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history-initial-pins.json",
+      "bytes": 850314,
+      "sha256": "3340179fb0868ecb9a4beca389c5e964a7678b8652ea893f190196e563447434"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history-inventory.raw.txt",
+      "bytes": 248941,
+      "sha256": "d1c43581fd635507aa956a262639b3f006b09af25408f745ece0a428c2128be6"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history-selected-contexts.json",
+      "bytes": 39177,
+      "sha256": "832e5b28dcb412d95f389f2aab8ee422f1c1498310875c56bcc804c9a791f9b0"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/history.json",
+      "bytes": 851585,
+      "sha256": "a45d7d047a9a008eb2f1611b3a31f6dda5f190826419f7874085345c2abd25aa"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/links-check.json",
+      "bytes": 1276,
+      "sha256": "03a738790e631aae7d4afaecd3aa08915bbe81264384c83be3386e6fc3cb17ae"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/metadata-diagnostics.json",
+      "bytes": 716,
+      "sha256": "bca5ab502d607e2c9ecb14be16231f7229177bc3bc76ba725fa8287f83cb86ca"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-contexts.json",
+      "bytes": 78052,
+      "sha256": "74c5c5347ba635588c093c2b22364306d1f0952cdd6fecb135f29b7dde3b1dfd"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-initial-pins.json",
+      "bytes": 850314,
+      "sha256": "813178a34f8f2813123233ffdd042f2e2c3e3f23d8890077fd9df57219e2bfa6"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-inventory.raw.txt",
+      "bytes": 248941,
+      "sha256": "06f1b05023e8559fa6427caccedb89124ed36c4ee31b68831a409923240c9a4d"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-selected-contexts.json",
+      "bytes": 44640,
+      "sha256": "b0a98eeaa3af6a4ee8988a88f9496826663a19a6c5c0c96477e86016d661c863"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/replacement-history.json",
+      "bytes": 851537,
+      "sha256": "55f6beb1756983bef353a4510866c2081a600ed9cff0327a11bcedc3331adaaa"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/report.md",
+      "bytes": 5245,
+      "sha256": "836f1ad8962892b5c32dad72003338fafc08c9382a1b4f37e3696dc8a3952643"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/scan-history.py",
+      "bytes": 5563,
+      "sha256": "3b86f0584e73937878b81195368015a6edad57bdf21eecf2fd6b743f7b1ad5a1"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/scan-replacement-history.py",
+      "bytes": 5582,
+      "sha256": "c561f0e407ac90cee180399e5cc55e33a0f3673ab938bb31848b6ee974a9b95c"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/selection-pins.json",
+      "bytes": 3378,
+      "sha256": "e42542dc7c01007f27618789fb8278a897acc8c15aaf8cf4d9945d9433ccc429"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/source-excerpts.json",
+      "bytes": 33547,
+      "sha256": "5fca162014af579a20e7596801928ee0a79d49b8ba3119544f421970df8e1473"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/source-manifest.json",
+      "bytes": 18315,
+      "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "receipt": "evidence/market-frontier/artifact-receipt.json",
+      "path": "evidence/market-frontier/validation.json",
+      "bytes": 1146,
+      "sha256": "78e6bb180fe94f339df609fec55be26819dadb3e7f928846ddd4f71e93096897"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/classification.json",
+      "bytes": 1938,
+      "sha256": "e4807f7ef1feac5b0f844ca84cd3b92dcb22e2510f4ce3439a9cb472a470b462"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/consumer-initial-pins.json",
+      "bytes": 742,
+      "sha256": "98e4faad126914a5eb56191e57d22abecce399e3ce6a038c766ae630f5d50672"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/coverage-gate-rows.json",
+      "bytes": 7531,
+      "sha256": "1cd89a962f88fe213b9f71d94c0f53312271adb53fa0e7b5768f9a49538acd3f"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/dto-initial-pins.json",
+      "bytes": 754,
+      "sha256": "2ebad27bec952402ce667f43ccc944ff65247f68da049941df3d331f04a4a80a"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/dto-range-drift-check.json",
+      "bytes": 2921,
+      "sha256": "4a9a520406570ae53f56990274b385948ddb6ab8a69c1036035f8f57f5a3a800"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/ending-checks.first.json",
+      "bytes": 5680,
+      "sha256": "286fe16d6eda8f84249aadbab7027befddca4dd6ea040707af29990e18c798ca"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/ending-checks.json",
+      "bytes": 6059,
+      "sha256": "f75711cfa36ce56345331b318d4b91dfa5cfe3cc7d9c3d1d38e907ba5798ce4d"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/history-contexts.json",
+      "bytes": 27677,
+      "sha256": "938485cce16dbfdc4f7219c5d60bb89c518b7b003aebebe6abb2d76bf516a382"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/history-method.py",
+      "bytes": 3793,
+      "sha256": "b85761b939531a7cde3207b35a91bc5305179255a088671651c10a35c36022c0"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/history.json",
+      "bytes": 768834,
+      "sha256": "207037d1a3fce38d9a389a8d62b907435a11b28818afad25bb85ac6ad7e44336"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/initial-pins.json",
+      "bytes": 867,
+      "sha256": "33960e18956ed7a8bdcbad0c906015817aceaba0c537b8f73d4c391583bdf345"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/metadata-diagnostics.json",
+      "bytes": 1893,
+      "sha256": "0c7b4bbd535616d5f3b9233b1d5709cebfb76bc091f12e0c8da6059e729a2ea6"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/review.md",
+      "bytes": 4477,
+      "sha256": "90bc33f8265e7c6026f63ffd66ba97556aa46bf7d42849d028887c83e6fceafe"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/source-excerpts.first.json",
+      "bytes": 36611,
+      "sha256": "cf924a9ad8502c8e6e9e5c5d4cd779205198c923cffc93e30cbf5e85aa280dd2"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/source-excerpts.json",
+      "bytes": 37099,
+      "sha256": "3dc9deea1bd68bf0cba42d0575fbcf5ffa1c1ea4eddf23466feb5f5bec64a9ff"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/source-manifest.first.json",
+      "bytes": 9852,
+      "sha256": "a7e5c165469637f9247f91b29468b5ef4b8c79a171300408118d5dac8329c286"
+    },
+    {
+      "receipt": "evidence/market-review/reviewer-receipt.json",
+      "path": "evidence/market-review/source-manifest.json",
+      "bytes": 10723,
+      "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8"
+    },
+    {
+      "receipt": "evidence/market-aggregate/artifact-receipt.json",
+      "path": "evidence/market-aggregate/checks.json",
+      "bytes": 41131,
+      "sha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a"
+    },
+    {
+      "receipt": "evidence/market-aggregate/artifact-receipt.json",
+      "path": "evidence/market-aggregate/review.md",
+      "bytes": 3233,
+      "sha256": "7e8fb8da9628c1cb3042754e801af836e6085e835d5decd5b4efb35915cf1051"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/build-index.py",
+      "bytes": 15317,
+      "sha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/candidate-ranking.json",
+      "bytes": 17773,
+      "sha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/capture-inventories.py",
+      "bytes": 2343,
+      "sha256": "f1c976b5072818f34c886e954567816e53b34a72244198baab02e999ad36baca"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/checks.json",
+      "bytes": 953,
+      "sha256": "f967fdeb13d73a4a33fa876235e214b6356014534a69e658a58d8cec577ebc01"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/classification-examples.json",
+      "bytes": 7548,
+      "sha256": "90615a6de6e4cffd50815a2e95e48cbc8ca43b657aabbfa4eb3dba66f08bd1b8"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/classifier-first-script.py",
+      "bytes": 14124,
+      "sha256": "d0382315ce6776ef91408f205b9c2e53a653d1901dd1a53a972a045fa67a315e"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/classifier-first-summary.json",
+      "bytes": 1422,
+      "sha256": "65488930208f2747bab566c231259d5bd5479364f243015d71cd27b58ae5bb45"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/classifier-revision-notes.json",
+      "bytes": 1915,
+      "sha256": "008635d952e9edaf6a078403793d1f945c88f363d8bd6c44a0d6503550097348"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/ending-coverage-overlay.json",
+      "bytes": 13255,
+      "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/history-ending-checks.json",
+      "bytes": 632,
+      "sha256": "c834bde4869a72aaf75d3371957ff6fd7f0be1c25dccaef69ce55bc564aabf2a"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/history-inventory.json",
+      "bytes": 851237,
+      "sha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/links-check.json",
+      "bytes": 2656,
+      "sha256": "5f786ea6d4de84255ce973e4564b5a74def21e7fdd4907bca505e54648135a31"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/method.md",
+      "bytes": 5264,
+      "sha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/pending-scopes.json",
+      "bytes": 3094,
+      "sha256": "1cb892ed3ee795b5ef6c0d544c666db3ada371e0c8e152ac417cc2cd0efa6941"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/report.md",
+      "bytes": 4436,
+      "sha256": "980123513213a2538d592475628fea9710dfe166c60bae0d0e83cc01dad23c3f"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/source-ending-checks.json",
+      "bytes": 3168,
+      "sha256": "e391b315a357d473fe7fdeda22a096797cc27fbae7c5453f74b78d95b504a2cb"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/source-manifest.json",
+      "bytes": 1049,
+      "sha256": "065c7b406ac41cdfcde467c26f2f6fe0a63e7214c255855d12f34254476e05cf"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/summary.json",
+      "bytes": 1812,
+      "sha256": "4a640a945674b2e325998bec462eab981d5ae3bbc0b1b478de8b0a5cb9cfafe7"
+    },
+    {
+      "receipt": "evidence/coverage-frontier/artifact-receipt.json",
+      "path": "evidence/coverage-frontier/validation.json",
+      "bytes": 821,
+      "sha256": "b8cdaa40b98495cf3c30f05ed47d5ef8c2348d4d102e2197329db4f595400bd9"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/checks.json",
+      "bytes": 299,
+      "sha256": "2406f35d9b0e83456f27d49f5e20a938a26102c27d5e544186ddbb433e650a10"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/input-pins.json",
+      "bytes": 953,
+      "sha256": "6640af77e2562b4fea8927169f79d007c8266215b15b9d373f0438a27eacfc31"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/links-check.json",
+      "bytes": 762,
+      "sha256": "df84a4b048fd0939b14716877f899467b521e29802f1f57cedc2de90f4f093c4"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/report.md",
+      "bytes": 2319,
+      "sha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/source-manifest.json",
+      "bytes": 589,
+      "sha256": "bf3de53a345ff66d39900cd1625947a20ec0cdf29aeff5bb40074425a757efc4"
+    },
+    {
+      "receipt": "evidence/coverage-status/artifact-receipt.json",
+      "path": "evidence/coverage-status/summary.json",
+      "bytes": 1195,
+      "sha256": "4ff599f06db3c6889fe81987bddc03af1d5b2fe3e71474bdbdbb6c5453c17551"
+    },
+    {
+      "receipt": "evidence/source-status-root/artifact-receipt.json",
+      "path": "evidence/source-status-root/initial-pins.json",
+      "bytes": 1856,
+      "sha256": "27a5a956866cc6f7d21908ac2a7b915371b7fdee50094c9df4fc0d90c767c9fc"
+    },
+    {
+      "receipt": "evidence/source-status-root/artifact-receipt.json",
+      "path": "evidence/source-status-root/report.md",
+      "bytes": 1668,
+      "sha256": "7c5943798f57e6f19847fc7f85913a539df97226e5f6093e53c5ed0bd8e41518"
+    },
+    {
+      "receipt": "evidence/source-status-root/artifact-receipt.json",
+      "path": "evidence/source-status-root/source-diff-preserved.json",
+      "bytes": 22576,
+      "sha256": "69a190ae41aa0ca3ef40eab1ff494a39bd08176f152278c479f004fa5b4c4682"
+    },
+    {
+      "receipt": "evidence/source-status-root/artifact-receipt.json",
+      "path": "evidence/source-status-root/source-diff.first-exit.json",
+      "bytes": 58,
+      "sha256": "e290fae1a2445d22b9cfe268bc0ead8a20c3235e8a3798e2932e05a7cc9e7046"
+    },
+    {
+      "receipt": "evidence/source-status-root/artifact-receipt.json",
+      "path": "evidence/source-status-root/source-manifest.json",
+      "bytes": 5794,
+      "sha256": "82d2b23034d4aabba3c253db405a234969a230f0c27497f0bb6ada84f8357a2e"
+    },
+    {
+      "receipt": "evidence/source-status-root/artifact-receipt.json",
+      "path": "evidence/source-status-root/source-status-updates.json",
+      "bytes": 1852,
+      "sha256": "0fc21a4d63bdff7d9ffe139e7d6749171730b05ad138e50f455c3ca81efe7f65"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/checks.json",
+      "bytes": 3905,
+      "sha256": "7fbd5fc084ad36208654e13a815e2d76d71214e51cbfc8db9a91f5fbf7bfbe0b"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/initial-pins.json",
+      "bytes": 1975,
+      "sha256": "feaacdf940ad0f321f1e57793ba5d30dfe7faa3cea9dcd574e5f792ee31d4e34"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/metadata-notes.json",
+      "bytes": 1201,
+      "sha256": "ddb8d98be7b530f969cf101e49133fe889f0dbd33b88ab7a936d6f38ef2ce4a9"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/patch-pins.json",
+      "bytes": 398,
+      "sha256": "32620da37e49ae5d1720cd62a990d667c0270bc323ea2d1804fbb083a85b3ca8"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/producer-pins.json",
+      "bytes": 988,
+      "sha256": "4a171ae95a2446087723d767d4f34c58592f8012c2c18ab4ae254835bac7e3c6"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/review.md",
+      "bytes": 3266,
+      "sha256": "2a3776d504fd37f3235f48a4d7b844b8d2153b59f9e34594aa363bf80518d40c"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/source-excerpts.json",
+      "bytes": 30932,
+      "sha256": "391f16fe260d4cdfafea1961e878ae2d99c3a9b7632cdd6d2663d54ae15272ea"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179"
+    },
+    {
+      "receipt": "evidence/source-status-review/reviewer-receipt.json",
+      "path": "evidence/source-status-review/stages.json",
+      "bytes": 2983,
+      "sha256": "670fec60139570694ee1fdb700ad1c207bf97322bf453ede32e8b8ae3b537643"
+    },
+    {
+      "receipt": "evidence/source-status-aggregate/artifact-receipt.json",
+      "path": "evidence/source-status-aggregate/checks.json",
+      "bytes": 15595,
+      "sha256": "eacce273b2452065b7529822708bb79c092831a005e81ef019783e7c6d21ca85"
+    },
+    {
+      "receipt": "evidence/source-status-aggregate/artifact-receipt.json",
+      "path": "evidence/source-status-aggregate/review.md",
+      "bytes": 1503,
+      "sha256": "1835dbf329ea67e66f76a0de4b5358118a196e17ab1fa8d74f13f4312ce1afe8"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/artifact-receipt.json",
+      "bytes": 4229,
+      "sha256": "a6ffc05d173821bd26cc1226102365bbd579430e429afdb94d97014d1b933198"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/consumer-initial-pins.json",
+      "bytes": 1070,
+      "sha256": "3b9e289da47862990946de0d36c174880cfe3c38020e1448dcc9744fa6041162"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/dto-producer-initial-pins.json",
+      "bytes": 1148,
+      "sha256": "25de805945505011557a893c16bc6d0294208e345b30f854c4a16824de96330a"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/ending-source-checks.json",
+      "bytes": 2674,
+      "sha256": "3a909f8a6fd9cae66bbe4a214aa23c5e3ee3196572936a62f3ad0de85301d903"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history-contexts.json",
+      "bytes": 51365,
+      "sha256": "a54d344a9c8860a27941e78eb3c8e00ca932959fad9fac1fac5be85ed7be34f0"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history-decisions.json",
+      "bytes": 3615,
+      "sha256": "e8b513352657c6150124b83cc7fb8bf2b4d3705837dcf846927b5a957cf209f5"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history-finish-check.json",
+      "bytes": 317,
+      "sha256": "11369f5a38c4ff6b1f56031df79c238e3c481107eabbefe5f6f997c1c50ecf21"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history-initial-pins.json",
+      "bytes": 850314,
+      "sha256": "3340179fb0868ecb9a4beca389c5e964a7678b8652ea893f190196e563447434"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history-inventory.raw.txt",
+      "bytes": 248941,
+      "sha256": "d1c43581fd635507aa956a262639b3f006b09af25408f745ece0a428c2128be6"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history-selected-contexts.json",
+      "bytes": 39177,
+      "sha256": "832e5b28dcb412d95f389f2aab8ee422f1c1498310875c56bcc804c9a791f9b0"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/history.json",
+      "bytes": 851585,
+      "sha256": "a45d7d047a9a008eb2f1611b3a31f6dda5f190826419f7874085345c2abd25aa"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/links-check.json",
+      "bytes": 1276,
+      "sha256": "03a738790e631aae7d4afaecd3aa08915bbe81264384c83be3386e6fc3cb17ae"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/metadata-diagnostics.json",
+      "bytes": 716,
+      "sha256": "bca5ab502d607e2c9ecb14be16231f7229177bc3bc76ba725fa8287f83cb86ca"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-contexts.json",
+      "bytes": 78052,
+      "sha256": "74c5c5347ba635588c093c2b22364306d1f0952cdd6fecb135f29b7dde3b1dfd"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-initial-pins.json",
+      "bytes": 850314,
+      "sha256": "813178a34f8f2813123233ffdd042f2e2c3e3f23d8890077fd9df57219e2bfa6"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-inventory.raw.txt",
+      "bytes": 248941,
+      "sha256": "06f1b05023e8559fa6427caccedb89124ed36c4ee31b68831a409923240c9a4d"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/replacement-history-selected-contexts.json",
+      "bytes": 44640,
+      "sha256": "b0a98eeaa3af6a4ee8988a88f9496826663a19a6c5c0c96477e86016d661c863"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/replacement-history.json",
+      "bytes": 851537,
+      "sha256": "55f6beb1756983bef353a4510866c2081a600ed9cff0327a11bcedc3331adaaa"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/report.md",
+      "bytes": 5245,
+      "sha256": "836f1ad8962892b5c32dad72003338fafc08c9382a1b4f37e3696dc8a3952643"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/scan-history.py",
+      "bytes": 5563,
+      "sha256": "3b86f0584e73937878b81195368015a6edad57bdf21eecf2fd6b743f7b1ad5a1"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/scan-replacement-history.py",
+      "bytes": 5582,
+      "sha256": "c561f0e407ac90cee180399e5cc55e33a0f3673ab938bb31848b6ee974a9b95c"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/selection-pins.json",
+      "bytes": 3378,
+      "sha256": "e42542dc7c01007f27618789fb8278a897acc8c15aaf8cf4d9945d9433ccc429"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/source-excerpts.json",
+      "bytes": 33547,
+      "sha256": "5fca162014af579a20e7596801928ee0a79d49b8ba3119544f421970df8e1473"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/source-manifest.json",
+      "bytes": 18315,
+      "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-frontier/validation.json",
+      "bytes": 1146,
+      "sha256": "78e6bb180fe94f339df609fec55be26819dadb3e7f928846ddd4f71e93096897"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/classification.json",
+      "bytes": 1938,
+      "sha256": "e4807f7ef1feac5b0f844ca84cd3b92dcb22e2510f4ce3439a9cb472a470b462"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/consumer-initial-pins.json",
+      "bytes": 742,
+      "sha256": "98e4faad126914a5eb56191e57d22abecce399e3ce6a038c766ae630f5d50672"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/coverage-gate-rows.json",
+      "bytes": 7531,
+      "sha256": "1cd89a962f88fe213b9f71d94c0f53312271adb53fa0e7b5768f9a49538acd3f"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/dto-initial-pins.json",
+      "bytes": 754,
+      "sha256": "2ebad27bec952402ce667f43ccc944ff65247f68da049941df3d331f04a4a80a"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/dto-range-drift-check.json",
+      "bytes": 2921,
+      "sha256": "4a9a520406570ae53f56990274b385948ddb6ab8a69c1036035f8f57f5a3a800"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/ending-checks.first.json",
+      "bytes": 5680,
+      "sha256": "286fe16d6eda8f84249aadbab7027befddca4dd6ea040707af29990e18c798ca"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/ending-checks.json",
+      "bytes": 6059,
+      "sha256": "f75711cfa36ce56345331b318d4b91dfa5cfe3cc7d9c3d1d38e907ba5798ce4d"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/history-contexts.json",
+      "bytes": 27677,
+      "sha256": "938485cce16dbfdc4f7219c5d60bb89c518b7b003aebebe6abb2d76bf516a382"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/history-method.py",
+      "bytes": 3793,
+      "sha256": "b85761b939531a7cde3207b35a91bc5305179255a088671651c10a35c36022c0"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/history.json",
+      "bytes": 768834,
+      "sha256": "207037d1a3fce38d9a389a8d62b907435a11b28818afad25bb85ac6ad7e44336"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/initial-pins.json",
+      "bytes": 867,
+      "sha256": "33960e18956ed7a8bdcbad0c906015817aceaba0c537b8f73d4c391583bdf345"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/metadata-diagnostics.json",
+      "bytes": 1893,
+      "sha256": "0c7b4bbd535616d5f3b9233b1d5709cebfb76bc091f12e0c8da6059e729a2ea6"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/review.md",
+      "bytes": 4477,
+      "sha256": "90bc33f8265e7c6026f63ffd66ba97556aa46bf7d42849d028887c83e6fceafe"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/reviewer-receipt.json",
+      "bytes": 3935,
+      "sha256": "0366c918a1dc034183c3d8b9479adf24b564781e0f8e0a773ebc78a7c4ac5eec"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/source-excerpts.first.json",
+      "bytes": 36611,
+      "sha256": "cf924a9ad8502c8e6e9e5c5d4cd779205198c923cffc93e30cbf5e85aa280dd2"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/source-excerpts.json",
+      "bytes": 37099,
+      "sha256": "3dc9deea1bd68bf0cba42d0575fbcf5ffa1c1ea4eddf23466feb5f5bec64a9ff"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/source-manifest.first.json",
+      "bytes": 9852,
+      "sha256": "a7e5c165469637f9247f91b29468b5ef4b8c79a171300408118d5dac8329c286"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-review/source-manifest.json",
+      "bytes": 10723,
+      "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-aggregate/artifact-receipt.json",
+      "bytes": 667,
+      "sha256": "b94df1050503a8a2627e59ccdec924504eff390d237f487b4ecf190a288cb67a"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-aggregate/checks.json",
+      "bytes": 41131,
+      "sha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/market-aggregate/review.md",
+      "bytes": 3233,
+      "sha256": "7e8fb8da9628c1cb3042754e801af836e6085e835d5decd5b4efb35915cf1051"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/artifact-receipt.json",
+      "bytes": 3858,
+      "sha256": "7f341f4e0b15d8d56988042816d0d105f340e641ae6447cf929769704db225fe"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/build-index.py",
+      "bytes": 15317,
+      "sha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/candidate-ranking.json",
+      "bytes": 17773,
+      "sha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/capture-inventories.py",
+      "bytes": 2343,
+      "sha256": "f1c976b5072818f34c886e954567816e53b34a72244198baab02e999ad36baca"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/checks.json",
+      "bytes": 953,
+      "sha256": "f967fdeb13d73a4a33fa876235e214b6356014534a69e658a58d8cec577ebc01"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/classification-examples.json",
+      "bytes": 7548,
+      "sha256": "90615a6de6e4cffd50815a2e95e48cbc8ca43b657aabbfa4eb3dba66f08bd1b8"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/classifier-first-script.py",
+      "bytes": 14124,
+      "sha256": "d0382315ce6776ef91408f205b9c2e53a653d1901dd1a53a972a045fa67a315e"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/classifier-first-summary.json",
+      "bytes": 1422,
+      "sha256": "65488930208f2747bab566c231259d5bd5479364f243015d71cd27b58ae5bb45"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/classifier-revision-notes.json",
+      "bytes": 1915,
+      "sha256": "008635d952e9edaf6a078403793d1f945c88f363d8bd6c44a0d6503550097348"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/ending-coverage-overlay.json",
+      "bytes": 13255,
+      "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/history-ending-checks.json",
+      "bytes": 632,
+      "sha256": "c834bde4869a72aaf75d3371957ff6fd7f0be1c25dccaef69ce55bc564aabf2a"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/history-inventory.json",
+      "bytes": 851237,
+      "sha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/links-check.json",
+      "bytes": 2656,
+      "sha256": "5f786ea6d4de84255ce973e4564b5a74def21e7fdd4907bca505e54648135a31"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/method.md",
+      "bytes": 5264,
+      "sha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/pending-scopes.json",
+      "bytes": 3094,
+      "sha256": "1cb892ed3ee795b5ef6c0d544c666db3ada371e0c8e152ac417cc2cd0efa6941"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/report.md",
+      "bytes": 4436,
+      "sha256": "980123513213a2538d592475628fea9710dfe166c60bae0d0e83cc01dad23c3f"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/source-ending-checks.json",
+      "bytes": 3168,
+      "sha256": "e391b315a357d473fe7fdeda22a096797cc27fbae7c5453f74b78d95b504a2cb"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/source-manifest.json",
+      "bytes": 1049,
+      "sha256": "065c7b406ac41cdfcde467c26f2f6fe0a63e7214c255855d12f34254476e05cf"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/summary.json",
+      "bytes": 1812,
+      "sha256": "4a640a945674b2e325998bec462eab981d5ae3bbc0b1b478de8b0a5cb9cfafe7"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-frontier/validation.json",
+      "bytes": 821,
+      "sha256": "b8cdaa40b98495cf3c30f05ed47d5ef8c2348d4d102e2197329db4f595400bd9"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/artifact-receipt.json",
+      "bytes": 1588,
+      "sha256": "8e6b791d8152583034078f269566202b362afea834d637f60964194200994bd9"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/checks.json",
+      "bytes": 299,
+      "sha256": "2406f35d9b0e83456f27d49f5e20a938a26102c27d5e544186ddbb433e650a10"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/input-pins.json",
+      "bytes": 953,
+      "sha256": "6640af77e2562b4fea8927169f79d007c8266215b15b9d373f0438a27eacfc31"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/links-check.json",
+      "bytes": 762,
+      "sha256": "df84a4b048fd0939b14716877f899467b521e29802f1f57cedc2de90f4f093c4"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/report.md",
+      "bytes": 2319,
+      "sha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/source-manifest.json",
+      "bytes": 589,
+      "sha256": "bf3de53a345ff66d39900cd1625947a20ec0cdf29aeff5bb40074425a757efc4"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/coverage-status/summary.json",
+      "bytes": 1195,
+      "sha256": "4ff599f06db3c6889fe81987bddc03af1d5b2fe3e71474bdbdbb6c5453c17551"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/artifact-receipt.json",
+      "bytes": 1319,
+      "sha256": "1353b01bfab1e98eff57ca3b2ccbf186b2c372e812a38300783d5d5456d13f18"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/initial-pins.json",
+      "bytes": 1856,
+      "sha256": "27a5a956866cc6f7d21908ac2a7b915371b7fdee50094c9df4fc0d90c767c9fc"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/report.md",
+      "bytes": 1668,
+      "sha256": "7c5943798f57e6f19847fc7f85913a539df97226e5f6093e53c5ed0bd8e41518"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/source-diff-preserved.json",
+      "bytes": 22576,
+      "sha256": "69a190ae41aa0ca3ef40eab1ff494a39bd08176f152278c479f004fa5b4c4682"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/source-diff.first-exit.json",
+      "bytes": 58,
+      "sha256": "e290fae1a2445d22b9cfe268bc0ead8a20c3235e8a3798e2932e05a7cc9e7046"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/source-manifest.json",
+      "bytes": 5794,
+      "sha256": "82d2b23034d4aabba3c253db405a234969a230f0c27497f0bb6ada84f8357a2e"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-root/source-status-updates.json",
+      "bytes": 1852,
+      "sha256": "0fc21a4d63bdff7d9ffe139e7d6749171730b05ad138e50f455c3ca81efe7f65"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/checks.json",
+      "bytes": 3905,
+      "sha256": "7fbd5fc084ad36208654e13a815e2d76d71214e51cbfc8db9a91f5fbf7bfbe0b"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/initial-pins.json",
+      "bytes": 1975,
+      "sha256": "feaacdf940ad0f321f1e57793ba5d30dfe7faa3cea9dcd574e5f792ee31d4e34"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/metadata-notes.json",
+      "bytes": 1201,
+      "sha256": "ddb8d98be7b530f969cf101e49133fe889f0dbd33b88ab7a936d6f38ef2ce4a9"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/patch-pins.json",
+      "bytes": 398,
+      "sha256": "32620da37e49ae5d1720cd62a990d667c0270bc323ea2d1804fbb083a85b3ca8"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/producer-pins.json",
+      "bytes": 988,
+      "sha256": "4a171ae95a2446087723d767d4f34c58592f8012c2c18ab4ae254835bac7e3c6"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/review.md",
+      "bytes": 3266,
+      "sha256": "2a3776d504fd37f3235f48a4d7b844b8d2153b59f9e34594aa363bf80518d40c"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/reviewer-receipt.json",
+      "bytes": 2229,
+      "sha256": "13d7889094c1f5dae24f38e72d1666bc10783e1a015b5e637711fab6cb02b879"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/source-excerpts.json",
+      "bytes": 30932,
+      "sha256": "391f16fe260d4cdfafea1961e878ae2d99c3a9b7632cdd6d2663d54ae15272ea"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-review/stages.json",
+      "bytes": 2983,
+      "sha256": "670fec60139570694ee1fdb700ad1c207bf97322bf453ede32e8b8ae3b537643"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-aggregate/artifact-receipt.json",
+      "bytes": 642,
+      "sha256": "f7cadf63122d8398243f12a58d8b4b2e949f313ea46de020f74476bc4c17c3a0"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-aggregate/checks.json",
+      "bytes": 15595,
+      "sha256": "eacce273b2452065b7529822708bb79c092831a005e81ef019783e7c6d21ca85"
+    },
+    {
+      "receipt": "prep-copy-receipt.json",
+      "path": "evidence/source-status-aggregate/review.md",
+      "bytes": 1503,
+      "sha256": "1835dbf329ea67e66f76a0de4b5358118a196e17ab1fa8d74f13f4312ce1afe8"
+    }
+  ],
+  "productExecution": false
+}

@@ -1,0 +1,742 @@
+{
+  "scope": "All unique initial retained context records after exact dedup; actual display completion recorded separately, not a complete history semantic review",
+  "contexts": [
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPointer": "/source_inventory/1807",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3193/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lines": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d"
+      },
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/23/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "manifest": "/tmp/codeshell-audit-round36-ui-state-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "rootAdditionalProductSemanticRead": false
+      },
+      "sourceSha256": "9c5a6f21484584ca5f6a1b5cc31b5211ad2ed43ef18cce0b07c5b127faa92e0e"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "jsonPointer": "/files/0/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "timing": "before source content lookup/read; filename-only locator preceded pin"
+      },
+      "sourceSha256": "dc744db72b1d2370fb7d46b9226863f9b5c642bc10e2462dc4e22997a0737b05"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "jsonPointer": "/hits/toast-contract/4/context",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$[\"source_inventory\"][1807]",
+        "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx"
+      },
+      "sourceSha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "jsonPointer": "/hits/toast-contract/11/context",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3193][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx"
+      },
+      "sourceSha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/7/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            108
+          ],
+          [
+            150,
+            193
+          ]
+        ],
+        "coveredLineCount": 152,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+        "pinArtifact": "display-pins.json",
+        "runtimeExecuted": false,
+        "gitCompared": false
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/sourcePinsFinish/11/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "unchanged": true
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/20/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentBytes": 7842,
+        "currentSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "mainBytes": 7842,
+        "mainSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "source_path",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/21/path",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/ui/notificationhistory.tsx",
+      "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "immediateParentForExactValue": {
+        "manifest": "ui-state-frontier/source-manifest.json",
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "jsonPointer": "/hits/toast-contract/35/context",
+      "line": 4,
+      "needle": "notificationhistory",
+      "context": ".43` publication;\npreserve that later release and collect UI work under Unreleased.\n\nRoot's production TopBar→NotificationHistory audit passed 16 language/theme/\nwindow combinations down to 320×240 with 40 complete long notifications, native\nwheel, keyboard reachability, full final actions and exact Escape focus return.\nNo product change is needed; evidence\n`/tmp/cod",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/review.md",
+      "jsonPointer": null,
+      "line": 9,
+      "needle": "notificationhistory",
+      "context": "旧库存、测试收据和设计 prose，没有本索引规则下明确 same-SHA full/selected row；这不证明历史未读。只沿普通 toast 数据和展示状态继续静态阅读。\n\n[Source manifest](source-manifest.json) 保留各自 pin 时点、覆盖和结束 SHA：[consumer pins](consumer-pins.json)、[additional pins](additional-pins.json)、[display pins](display-pins.json)。本轮9份产品/测试源：toastState100、ToastProvider249、storage48全文；toast unit162、storage unit140全文；NotificationHistory1–108/150–193、ToolOutputBlock1–57、main69–89、interaction test230–257/278–297选段。合计627产品行+350测试声明行=977行。另读 R28旧 report17行；该 report 早于专用 pin 已在历史扫描中显示片段，故其 initialSemanticReadSha256 保留 null。4份 hash-only 是 dialog、两份此前已读指令和 R28 coverage manifest；不能计作本轮全文。定位 rg 的额外片段只作导航。14 pins 结束全部相同；[source excerpts](source-excerpts.txt) 在上述阅读后按相同 SHA 做元数据快照，不算第二次阅读。\n\n普通合同未建立新反例：\n\n- `addToast` 限定 active 最新4条、history最新100条，历史完整保留 message/detail；active 被 cap 或 dismiss 后，history 仍保留。`initialToastState` 恢复 history 不重播 active。这些差异有明确源码注释和 unit 声明支持。\n- `dismissToast` 仅移除 active；markRead 只改 history read 字段；clearHistory 保留 active。NotificationHistory 真实消费同一 hook，读取/筛选/反转 history，并使用 markRead、clear。没有把这些有意区分报成丢失状态。\n- Prov",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/review.md",
+      "jsonPointer": null,
+      "line": 14,
+      "needle": "notificationhistory",
+      "context": "段只作导航。14 pins 结束全部相同；[source excerpts](source-excerpts.txt) 在上述阅读后按相同 SHA 做元数据快照，不算第二次阅读。\n\n普通合同未建立新反例：\n\n- `addToast` 限定 active 最新4条、history最新100条，历史完整保留 message/detail；active 被 cap 或 dismiss 后，history 仍保留。`initialToastState` 恢复 history 不重播 active。这些差异有明确源码注释和 unit 声明支持。\n- `dismissToast` 仅移除 active；markRead 只改 history read 字段；clearHistory 保留 active。NotificationHistory 真实消费同一 hook，读取/筛选/反转 history，并使用 markRead、clear。没有把这些有意区分报成丢失状态。\n- Provider 的普通路径组成 Toast DTO，使用带 sequence 的 id 与 functional state updater。effect 源码清理不在 active 中的 timer，并对保留 active 建立 timer；popup 渲染 message，history context 传出同一 history。以上仅静态证据，不声称观察过 React、计时或焦点行为。interaction test 只读上述选段，未展开 fake clock 设置或运行任何 fixture。\n- 普通 ToolOutputBlock copy-failure 分支传 message/error variant；main 普通 root 挂载 Provider。没有执行 copy 或确认宿主行为。storage 源码验证 DTO、保存/恢复最新100条；storage 不可用/满额如何实际表现未实验。\n- 未找到真实普通调用者传负数/非有限 duration 或自行构造重复 id；不把任意异常 DTO 当新候选。sessionId 仅记录其普通数据携带，不验证会话路由、身份或权限机制。\n\n历史快照保持原时点：3137文件=1321MD+1816JSON，递归 value scalar 含718308strings/1064468scalars，JSON key不搜，0 parse error。含已冻32/33，排 mutable34/f",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/todo/release-ui-20261015.md",
+      "jsonPointer": null,
+      "line": 400,
+      "needle": "notificationhistory",
+      "context": " starts UI6 from the\ndelivered main while its three independent scopes refresh against that base.\n\nThe repository's later release `v0.9.44` was published at 09:44:42Z with all\n14 native/update assets present. This follows our verified `v0.9.43` publication;\npreserve that later release and collect UI work under Unreleased.\n\nRoot's production TopBar→NotificationHistory audit passed 16 language/theme/\nwindow combinations down to 320×240 with 40 complete long notifications, native\nwheel, keyboard reachability, full final actions and exact Escape focus return.\nNo product change is needed; evidence\n`/tmp/codeshell-notifications-ui-audit-20261015/report.json`. The initial immediate\npost-unmount focus sample was premature; waiting for Radix close autofocus\nconfirmed correct return in every case without modifying product behavior.\n\nNext independent candidate: valid long cloud environment/project names make\nNewProjectDialog's linked-project view scroll 2073px inside a 286px client width.\nCloudProjectSignIn starts at 2310px scroll width and a rejected owned login ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "17e5d9fa104498c883ead08dbaecde9f26d90515618381f574c6679d06448542"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3193/sha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lines": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d"
+      },
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/23/sha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "manifest": "/tmp/codeshell-audit-round36-ui-state-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "rootAdditionalProductSemanticRead": false
+      },
+      "sourceSha256": "9c5a6f21484584ca5f6a1b5cc31b5211ad2ed43ef18cce0b07c5b127faa92e0e"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "jsonPointer": "/files/0/sha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "timing": "before source content lookup/read; filename-only locator preceded pin"
+      },
+      "sourceSha256": "dc744db72b1d2370fb7d46b9226863f9b5c642bc10e2462dc4e22997a0737b05"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "jsonPointer": "/files/0/initialSemanticReadSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "timing": "before source content lookup/read; filename-only locator preceded pin"
+      },
+      "sourceSha256": "dc744db72b1d2370fb7d46b9226863f9b5c642bc10e2462dc4e22997a0737b05"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/7/sha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            108
+          ],
+          [
+            150,
+            193
+          ]
+        ],
+        "coveredLineCount": 152,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+        "pinArtifact": "display-pins.json",
+        "runtimeExecuted": false,
+        "gitCompared": false
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/7/initialSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            108
+          ],
+          [
+            150,
+            193
+          ]
+        ],
+        "coveredLineCount": 152,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+        "pinArtifact": "display-pins.json",
+        "runtimeExecuted": false,
+        "gitCompared": false
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/7/finishSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            108
+          ],
+          [
+            150,
+            193
+          ]
+        ],
+        "coveredLineCount": 152,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+        "pinArtifact": "display-pins.json",
+        "runtimeExecuted": false,
+        "gitCompared": false
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/7/initialSemanticReadSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lineCount": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            108
+          ],
+          [
+            150,
+            193
+          ]
+        ],
+        "coveredLineCount": 152,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+        "pinArtifact": "display-pins.json",
+        "runtimeExecuted": false,
+        "gitCompared": false
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/sourcePinsFinish/11/initialSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "unchanged": true
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/sourcePinsFinish/11/finishSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "unchanged": true
+      },
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/20/sha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentBytes": 7842,
+        "currentSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "mainBytes": 7842,
+        "mainSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/20/currentSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentBytes": 7842,
+        "currentSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "mainBytes": 7842,
+        "mainSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/20/mainSha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentBytes": 7842,
+        "currentSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "mainBytes": 7842,
+        "mainSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "source_sha",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/21/sha256",
+      "line": 1,
+      "needle": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "context": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "immediateParentForExactValue": {
+        "manifest": "ui-state-frontier/source-manifest.json",
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPointer": "/source_inventory/1814",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3200/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3201/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "jsonPointer": "/hits/ordinary-contract/12/context",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "jsonPointer": "/hits/ordinary-contract/13/context",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "jsonPointer": "/hits/ordinary-contract/14/context",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/20/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9c5a6f21484584ca5f6a1b5cc31b5211ad2ed43ef18cce0b07c5b127faa92e0e"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/21/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9c5a6f21484584ca5f6a1b5cc31b5211ad2ed43ef18cce0b07c5b127faa92e0e"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/additional-pins.json",
+      "jsonPointer": "/files/0/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "10e446bf308afb2045719332e40662b7367053b2142331c2b013c33f2404846c"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/additional-pins.json",
+      "jsonPointer": "/files/1/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "10e446bf308afb2045719332e40662b7367053b2142331c2b013c33f2404846c"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "jsonPointer": "/hits/toast-contract/5/context",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "jsonPointer": "/hits/toast-contract/12/context",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "jsonPointer": "/hits/toast-contract/13/context",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/4/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/files/5/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/sourcePinsFinish/8/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "jsonPointer": "/sourcePinsFinish/9/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/24/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/25/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/18/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "group": "notification_history",
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/19/path",
+      "line": 1,
+      "needle": "toasthistorystorage",
+      "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    }
+  ]
+}
