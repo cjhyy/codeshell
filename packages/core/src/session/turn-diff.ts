@@ -79,14 +79,36 @@ function same(a: FileState, b: FileState): boolean {
   );
 }
 
-/** Canonicalize parents, including paths whose final directories do not exist yet. */
+/** Canonicalize existing regular leaves, retaining spelling for absent or symlink leaves. */
 function canonicalPath(path: string, cwd: string): string {
   const absolute = resolve(cwd, path);
+  try {
+    const before = lstatSync(absolute, { bigint: true });
+    if (before.isFile() && !before.isSymbolicLink()) {
+      // The JS implementation can retain the caller's casing on macOS. Native
+      // realpath supplies the actual directory-entry spelling on insensitive FS.
+      const canonical = realpathSync.native(absolute);
+      const current = lstatSync(absolute, { bigint: true }),
+        resolved = lstatSync(canonical, { bigint: true });
+      if (
+        [current, resolved].every(
+          (info) =>
+            info.isFile() &&
+            !info.isSymbolicLink() &&
+            info.dev === before.dev &&
+            info.ino === before.ino,
+        )
+      )
+        return canonical;
+    }
+  } catch {
+    // A missing/unstable leaf is captured by the existing no-follow path below.
+  }
   let parent = dirname(absolute);
   const tail = [basename(absolute)];
   while (true) {
     try {
-      return resolve(realpathSync(parent), ...tail);
+      return resolve(realpathSync.native(parent), ...tail);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT" || dirname(parent) === parent)
         return absolute;
@@ -187,6 +209,7 @@ export class TurnDiffTracker {
   }
 
   begin(toolCallId: string, targets: readonly string[]): void {
+    this.reconcileAliases();
     const paths: string[] = [];
     for (const target of targets) {
       const path = canonicalPath(target, this.cwd);
@@ -212,6 +235,7 @@ export class TurnDiffTracker {
   }
 
   end(toolCallId: string, success: boolean): TurnDiffSnapshot | undefined {
+    this.reconcileAliases();
     const paths = this.pending.get(toolCallId);
     if (!paths) return undefined;
     this.pending.delete(toolCallId);
@@ -252,6 +276,7 @@ export class TurnDiffTracker {
 
   /** Observe settled work on known paths (for example a foreground child tool). */
   refresh(): TurnDiffSnapshot | undefined {
+    this.reconcileAliases();
     const pendingPaths = new Set([...this.pending.values()].flat());
     let changed = false;
     for (const file of this.files.values()) {
@@ -284,6 +309,32 @@ export class TurnDiffTracker {
     let total = 0;
     for (const file of this.files.values()) total += bytes(file.before) + bytes(file.after);
     return total;
+  }
+
+  /** A previously absent leaf can acquire its actual spelling during execution. */
+  private reconcileAliases(): void {
+    const paths = new Map<string, string>();
+    const merged = new Map<string, TrackedFile>();
+    let changed = false;
+    for (const file of this.files.values()) {
+      const path = canonicalPath(file.path, this.cwd);
+      paths.set(file.path, path);
+      const earlier = merged.get(path);
+      if (earlier) {
+        // Map order is baseline capture order. A later alias must never replace
+        // the first before-state, including a known absent creation baseline.
+        if (file.committed) earlier.after = file.after;
+        earlier.committed ||= file.committed;
+        changed = true;
+      } else merged.set(path, { ...file, path });
+      changed ||= path !== file.path;
+    }
+    if (!changed) return;
+    this.files.clear();
+    for (const [path, file] of merged) this.files.set(path, file);
+    for (const [id, pending] of this.pending)
+      this.pending.set(id, [...new Set(pending.map((path) => paths.get(path) ?? path))]);
+    this.diffCache.clear();
   }
 
   private snapshot(): TurnDiffSnapshot {
