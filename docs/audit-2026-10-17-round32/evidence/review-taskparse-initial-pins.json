@@ -1,0 +1,34 @@
+{
+  "baseline": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "lineCount": 190,
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "firstPinBeforeIndependentSemanticRead": true
+    },
+    {
+      "path": "tests/parse-task.test.ts",
+      "bytes": 6432,
+      "lineCount": 140,
+      "sha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "firstPinBeforeIndependentSemanticRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "lineCount": 391,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "firstPinBeforeIndependentSemanticRead": true
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "bytes": 9480,
+      "lineCount": 243,
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "firstPinBeforeIndependentSemanticRead": true
+    }
+  ],
+  "productExecution": false
+}

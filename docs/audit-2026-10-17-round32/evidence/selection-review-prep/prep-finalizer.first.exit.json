@@ -1,0 +1,22 @@
+{
+  "recordedUTC": "2026-10-17T12:11:06.140644+00:00",
+  "kind": "Independent audit metadata scope finalizer assertion",
+  "toolChunkId": "dd13f8",
+  "observedExitCode": 1,
+  "observedDiagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 14, in <module>\nAssertionError: packages/desktop/src/preload/session-transcript-api.ts\n",
+  "requestedMetadataRange": [
+    1,
+    20
+  ],
+  "actualAlreadyPrintedFullSourceRange": [
+    1,
+    19
+  ],
+  "initialPinAlreadyHadCorrectEOF": true,
+  "sourceSemanticReadRepeated": false,
+  "productFailure": false,
+  "productAttempts": 0,
+  "fullCombinedRawOutputPersisted": false,
+  "captureKind": "Diagnostic excerpt from displayed first tool result, not full raw capture",
+  "handling": "Correct manifest range to the EOF already present in read-start pin; complete bookkeeping only, without source semantic or product retry."
+}

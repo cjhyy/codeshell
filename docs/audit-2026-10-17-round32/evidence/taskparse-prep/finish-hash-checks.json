@@ -1,0 +1,46 @@
+{
+  "checkedUtc": "2026-10-17T12:06:36.590753+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "initialFilesystemSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "frozenFilesystemSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "bytes": 7206,
+      "unchanged": true
+    },
+    {
+      "path": "tests/parse-task.test.ts",
+      "initialFilesystemSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "frozenFilesystemSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "bytes": 6432,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "initialFilesystemSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "frozenFilesystemSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "bytes": 13388,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "initialFilesystemSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "frozenFilesystemSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "bytes": 9480,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.test.ts",
+      "initialFilesystemSha256": "ae5f28f480e197992f6400c97c95c63ffac339b37e2030d8c949f500559446df",
+      "frozenFilesystemSha256": "ae5f28f480e197992f6400c97c95c63ffac339b37e2030d8c949f500559446df",
+      "bytes": 14707,
+      "unchanged": true
+    }
+  ],
+  "sourceCheckCount": 5,
+  "historyInventoryCurrentBytesChecked": 2921,
+  "allUnchanged": true,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "meaning": "Source and history inventory metadata byte checks, not product validation."
+}

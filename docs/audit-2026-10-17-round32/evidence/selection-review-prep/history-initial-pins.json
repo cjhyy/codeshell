@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T12:09:43.221179+00:00",
+  "files": [
+    {
+      "path": "docs/review-2026-10-12/context-cancel-quality-round18.md",
+      "bytes": 4903,
+      "lineCount": 31,
+      "sha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "initialSemanticReadSha256": null,
+      "timing": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed."
+    },
+    {
+      "path": "docs/review-2026-10-12/context-cancel-round18.md",
+      "bytes": 24224,
+      "lineCount": 88,
+      "sha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "initialSemanticReadSha256": null,
+      "timing": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed."
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "bytes": 36930,
+      "lineCount": 244,
+      "sha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+      "initialSemanticReadSha256": null,
+      "timing": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed."
+    }
+  ]
+}

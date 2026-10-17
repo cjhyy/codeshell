@@ -1,0 +1,190 @@
+{
+  "targetedFormalRetainedContextCount": 29,
+  "identicalToAlreadyInspectedPrepContexts": 29,
+  "targetedFormalRetainedContexts": [
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 19,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 20,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 21,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 22,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 23,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 24,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 25,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 26,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 27,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 28,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 29,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 30,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 31,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 56,
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 58,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"source\"]"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 59,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"contractSource\"]"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 60,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"actualEvidence\"]"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 61,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"controls\"]"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 2,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 13,
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 14,
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 48,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"controls\"]"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 81,
+      "path": "docs/audit-2026-10-17-round15/evidence/review-injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 82,
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 83,
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 84,
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "wire-attrs",
+      "retainedIndexZeroBased": 17,
+      "path": "docs/audit-2026-10-17-round16/tasknoise.md",
+      "at": "$"
+    },
+    {
+      "pattern": "wire-attrs",
+      "retainedIndexZeroBased": 23,
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "at": "$"
+    },
+    {
+      "pattern": "wire-attrs",
+      "retainedIndexZeroBased": 24,
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "at": "$"
+    }
+  ],
+  "additionalFrozen31MatchCount": 1,
+  "additionalFrozen31Matches": [
+    {
+      "pattern": "image-text-order",
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"search-case-contract\"][3][\"context\"]",
+      "context": "worktree 能力全量 |\n| TUI | Markdown export、Markdown hybrid/table、选择性 Unicode/render helpers；真实离屏 renderer | 真实终端交互/PTY、完整 REPL；误写的既有 MessageContent suite 未运行 |\n| Desktop | 评论编解码、普通草稿/附件/设置/预览状态选择性阅读、legacy tail 上下文选择、Review parser | 实际 Electron 点击/剪贴板/fork/评论发送；原生/浏览器/Panel 等未新增验证 |\n| Web | cwd 项目归属/分组、DesktopApp target 接线、消息/草稿与 Hub 页面选择性阅读 | Linux 真实 Host 注册/UI、新会话实际创建、网络/移动设备 |\n| Pet | disclosure 搜索/reader、segment/终态隔离/session list/ordinal/receipt、投影关键段 | 真实 Pet/Desktop/IM、协议传输、模型和发送 |\n| Chat | 适配器普通消息文本/附件/命令/thread 投影、gateway/bound-session 接线；真实本地 Adapter/Gateway + fake SDK | 真实连接/平台发送、Discord 依赖失败方向、完整第三方 SDK 验收 |\n| Browser-devtools | 本轮只读 inspector.ts 的普通 DOM/performance/record 数据流程 | 未动态验证，无新增确认项；不把读过一个文件当完整包"
+    }
+  ],
+  "actualSemanticReview": "The29 targeted retained contexts are identical to prep excerpts already read and are reused; the sole additional frozen31 match is inspected as historical metadata text. Not all300 retained contexts or831 total occurrences are claimed read. No product source semantic read."
+}

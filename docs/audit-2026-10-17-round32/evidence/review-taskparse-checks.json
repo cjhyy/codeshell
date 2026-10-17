@@ -1,0 +1,136 @@
+{
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "prepRowPreserved": true
+    },
+    {
+      "path": "tests/parse-task.test.ts",
+      "sha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "prepRowPreserved": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "prepRowPreserved": true
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "prepRowPreserved": true
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.test.ts",
+      "sha256": "ae5f28f480e197992f6400c97c95c63ffac339b37e2030d8c949f500559446df",
+      "prepRowPreserved": true
+    }
+  ],
+  "authorArtifactChecks": [
+    {
+      "path": "taskparse-report.md",
+      "bytes": 4305,
+      "sha256": "b93c60e4b038c843e79f91c397c154eecdfcc3b223b065fbece56aa453c371dc"
+    },
+    {
+      "path": "evidence/taskparse-copy-receipt.json",
+      "bytes": 4910,
+      "sha256": "598e0c421f95a23b3e052c5fcf07c488c8ab094d69db430937603e40ef880bb2"
+    },
+    {
+      "path": "evidence/taskparse-source-manifest.json",
+      "bytes": 9560,
+      "sha256": "d55b22ce661ddbf88ad6110c58d7baa77483ae27c484711e4f1090aa304b1e7d"
+    },
+    {
+      "path": "evidence/taskparse-hash-checks.json",
+      "bytes": 7200,
+      "sha256": "61e1820b705d29ccf5523236c195e4b29b46f6f8f2ca6b538606ce2b1c2ffe28"
+    },
+    {
+      "path": "evidence/taskparse-validation.json",
+      "bytes": 1164,
+      "sha256": "9d3e29b60a0543d716911fa91242ecc1629d5f0a08904d6f54ace95794b9fc72"
+    },
+    {
+      "path": "evidence/taskparse-history.py",
+      "bytes": 3112,
+      "sha256": "1d45e7bd225f62b6e3e5e6dcba78f113e5e107656cbd89fa1071eccd44d7fccf"
+    },
+    {
+      "path": "evidence/taskparse-history.json",
+      "bytes": 817287,
+      "sha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687"
+    },
+    {
+      "path": "evidence/taskparse-decisions.json",
+      "bytes": 3172,
+      "sha256": "77800dcf8fe91d9f5ea5fce737b124607ed15e00bcbbdf2f3146128176dce01f"
+    },
+    {
+      "path": "evidence/taskparse-reviewed-contexts.json",
+      "bytes": 6939,
+      "sha256": "afd8ec8199a1b880fd7fa9c0d2eff75844791639b454ba09914c00275c393095"
+    }
+  ],
+  "verbatimCopies": [
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/author-receipt.json",
+      "bytes": 2840,
+      "sha256": "e389abbb57ace0fcb2eea93660c7e65f2d363e32a34797c6f2a5d809080d2fba"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/consumer-initial-pins.json",
+      "bytes": 2190,
+      "sha256": "17a048a1c95d3c24a51c3cb12c2ee87429a36842f07322baa9f3d504558402bc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/decisions.json",
+      "bytes": 2625,
+      "sha256": "c9462610113631cdb870cf8612b1278f9a7ba30f604df178e5fcfe60d781ede9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/finish-hash-checks.json",
+      "bytes": 1901,
+      "sha256": "e31dd5246a63070b0c77e5e272eb81583077073f51d29c704df48f16bd52022b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "bytes": 803921,
+      "sha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.py",
+      "bytes": 3107,
+      "sha256": "eb7f34da0581b9b81a9c742ae2c33f1190664db10b39b2ec3300acb0e26acf7b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/initial-pins.json",
+      "bytes": 722,
+      "sha256": "8d7b535ec7f41fa75436f4457be50a256bbb5c81f39ca3e48242c7ed6df5ddae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/proposal.md",
+      "bytes": 3689,
+      "sha256": "d79622e2b6793a49641031a683e74002705f437e0fe5061aa190b53c33771aea"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/reviewed-contexts.json",
+      "bytes": 5315,
+      "sha256": "433e9efdf63d72c69242574a3de512050fbd528df3efcf36cb7da349f5c46bef"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/source-manifest.json",
+      "bytes": 5840,
+      "sha256": "e4530cc1718ac2a2168acfc43e0318876507567225f66df5ab7072c2e550334d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/validation.json",
+      "bytes": 1018,
+      "sha256": "1563f5c3064fa1b135824e95ba6f7ab46ab21c55c5a4cbc0e53550e4fde401f9"
+    }
+  ],
+  "historyInventoryHashChecks": 2988,
+  "firstAuthorArtifactPinTiming": "After Root read the frozen author report; checked its explicit freeze SHA and receipt. No reconstruction of reviewer read-start artifact pin.",
+  "productExecution": false
+}

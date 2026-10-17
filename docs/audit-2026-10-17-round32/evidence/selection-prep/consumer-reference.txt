@@ -1,0 +1,42 @@
+packages/desktop/src/renderer/modelSelection.test.ts:2:import { persistDefaultTextModel } from "./modelSelection";
+packages/desktop/src/renderer/modelSelection.test.ts:4:describe("persistDefaultTextModel", () => {
+packages/desktop/src/renderer/modelSelection.test.ts:8:    await persistDefaultTextModel({
+packages/desktop/src/renderer/modelSelection.test.ts:34:    await persistDefaultTextModel({
+packages/desktop/src/renderer/contextSelection.ts:38:export function buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.ts:113:export function groupStreamItemsIntoContextTurns<T extends ContextSelectableDisplayItem>(
+packages/desktop/src/renderer/contextSelection.ts:145:export function alignContextSelectionGroups<T extends ContextSelectableDisplayItem>(
+packages/desktop/src/renderer/contextSelection.ts:181:export function selectedTurnRange(
+packages/desktop/src/renderer/contextSelection.ts:193:export function copyContextPackageOverrides(options: {
+packages/desktop/src/renderer/contextSelection.test.ts:4:  buildSelectableContextTurns,
+packages/desktop/src/renderer/contextSelection.test.ts:5:  alignContextSelectionGroups,
+packages/desktop/src/renderer/contextSelection.test.ts:6:  copyContextPackageOverrides,
+packages/desktop/src/renderer/contextSelection.test.ts:7:  groupStreamItemsIntoContextTurns,
+packages/desktop/src/renderer/contextSelection.test.ts:8:  selectedTurnRange,
+packages/desktop/src/renderer/contextSelection.test.ts:21:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:30:    const groups = groupStreamItemsIntoContextTurns([
+packages/desktop/src/renderer/contextSelection.test.ts:34:    expect(alignContextSelectionGroups(groups, turns)?.[0]?.selectionIndex).toBe(1);
+packages/desktop/src/renderer/contextSelection.test.ts:38:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:50:        alignContextSelectionGroups(groupStreamItemsIntoContextTurns([user]), turns),
+packages/desktop/src/renderer/contextSelection.test.ts:53:      alignContextSelectionGroups(
+packages/desktop/src/renderer/contextSelection.test.ts:54:        groupStreamItemsIntoContextTurns([{ id: "ui", kind: "user", clientMessageId: "client" }]),
+packages/desktop/src/renderer/contextSelection.test.ts:61:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:73:        alignContextSelectionGroups(
+packages/desktop/src/renderer/contextSelection.test.ts:74:          groupStreamItemsIntoContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:87:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:110:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:133:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:177:    const groups = groupStreamItemsIntoContextTurns(messages);
+packages/desktop/src/renderer/contextSelection.test.ts:190:    const turns = buildSelectableContextTurns(
+packages/desktop/src/renderer/contextSelection.test.ts:202:    expect(selectedTurnRange(turns, 0, 1)).toEqual({ fromEventId: "u1", toEventId: "b2" });
+packages/desktop/src/renderer/contextSelection.test.ts:203:    expect(() => selectedTurnRange(turns, 2, 1)).toThrow(/order/i);
+packages/desktop/src/renderer/contextSelection.test.ts:208:      copyContextPackageOverrides({
+packages/desktop/src/renderer/App.tsx:98:import { copyContextPackageOverrides } from "./contextSelection";
+packages/desktop/src/renderer/App.tsx:2055:    const targetOverrides = copyContextPackageOverrides({
+packages/desktop/src/renderer/modelSelection.ts:9:export async function persistDefaultTextModel({
+packages/desktop/src/renderer/MessageStream.tsx:35:  buildSelectableContextTurns,
+packages/desktop/src/renderer/MessageStream.tsx:36:  alignContextSelectionGroups,
+packages/desktop/src/renderer/MessageStream.tsx:37:  groupStreamItemsIntoContextTurns,
+packages/desktop/src/renderer/MessageStream.tsx:39:  selectedTurnRange,
+packages/desktop/src/renderer/MessageStream.tsx:300:      setSelectionTurns(buildSelectableContextTurns(raw, false));
+packages/desktop/src/renderer/MessageStream.tsx:385:      const range = selectedTurnRange(selectionTurns, from, to);
+packages/desktop/src/renderer/MessageStream.tsx:445:    () => alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns),

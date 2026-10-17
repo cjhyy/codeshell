@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "bytes": 8043,
+      "lineCount": 48,
+      "sha256": "830dfc22e9a83f7731b650226075d0fb465bbdee4fa4ff036f862b0971bd00b6",
+      "pinTiming": "Before direct full report reading in this independent review; earlier author references only, not a reconstruction of prior review timing."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "bytes": 6246,
+      "lineCount": 24,
+      "sha256": "1f806623cd40c6be1fcb5f739db67488855c7f659b5c51b63e1ebe882113dd1b",
+      "pinTiming": "Before direct full report reading in this independent review; earlier author references only, not a reconstruction of prior review timing."
+    }
+  ],
+  "productExecution": false
+}

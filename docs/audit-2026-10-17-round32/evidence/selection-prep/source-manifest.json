@@ -1,0 +1,277 @@
+{
+  "parentReportedPrepContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "formalBaseline": null,
+  "prepOnly": true,
+  "initialPinsAtUTC": "2026-10-17T12:03:49.848282+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.ts",
+      "bytes": 7644,
+      "lineCount": 218,
+      "sha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "initialFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "pinTiming": "before source-range semantic read; earlier rg filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "coveredLineCount": 218,
+      "finishFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "matchesFirstDurablePin": true,
+      "role": "product-pure-helper"
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "bytes": 714,
+      "lineCount": 21,
+      "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "initialFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "pinTiming": "before source-range semantic read; earlier rg filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "coveredLineCount": 21,
+      "finishFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "matchesFirstDurablePin": true,
+      "role": "product-pure-helper"
+    },
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.test.ts",
+      "bytes": 8019,
+      "lineCount": 223,
+      "sha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "initialFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "pinTiming": "before source-range semantic read; earlier rg filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          223
+        ]
+      ],
+      "coveredLineCount": 223,
+      "finishFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "matchesFirstDurablePin": true,
+      "role": "existing-test-source"
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+      "bytes": 1235,
+      "lineCount": 53,
+      "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "initialFilesystemSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "pinTiming": "before source-range semantic read; earlier rg filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "coveredLineCount": 53,
+      "finishFilesystemSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "matchesFirstDurablePin": true,
+      "role": "existing-test-source"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinTiming": "before source-range semantic read; earlier rg filename inventory only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2010,
+          2090
+        ],
+        [
+          2200,
+          2245
+        ],
+        [
+          2565,
+          2595
+        ]
+      ],
+      "coveredLineCount": 158,
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesFirstDurablePin": true,
+      "role": "product-source-selected-boundary"
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lineCount": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "pinTiming": "after rg caller snippets, before direct selected range read; earliest semantic SHA stays null",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          250,
+          320
+        ],
+        [
+          350,
+          405
+        ],
+        [
+          435,
+          460
+        ]
+      ],
+      "coveredLineCount": 153,
+      "finishFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "matchesFirstDurablePin": true,
+      "role": "product-source-selected-boundary"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "initialFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "firstDurableSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "pinTiming": "before this prep direct selected source reading; prior filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          530,
+          595
+        ],
+        [
+          1140,
+          1215
+        ],
+        [
+          1245,
+          1290
+        ],
+        [
+          1945,
+          1985
+        ],
+        [
+          2225,
+          2270
+        ]
+      ],
+      "coveredLineCount": 275,
+      "finishFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFirstDurablePin": true,
+      "role": "product-source-selected-boundary"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "firstDurableSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "pinTiming": "before this prep direct selected source reading; prior filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          610,
+          640
+        ]
+      ],
+      "coveredLineCount": 31,
+      "finishFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "matchesFirstDurablePin": true,
+      "role": "product-source-selected-boundary"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/search.md",
+      "bytes": 7070,
+      "lineCount": 45,
+      "sha256": "7843d9bff637e61384301da7173e0e4457b38b6c47b0c5fdaa8ed04f6dc8093e",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "7843d9bff637e61384301da7173e0e4457b38b6c47b0c5fdaa8ed04f6dc8093e",
+      "pinTiming": "dedicated pin after history excerpt inspection, before direct full-text read; initial semantic SHA remains null",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "coveredLineCount": 45,
+      "finishFilesystemSha256": "7843d9bff637e61384301da7173e0e4457b38b6c47b0c5fdaa8ed04f6dc8093e",
+      "matchesFirstDurablePin": true,
+      "role": "old-report"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/review-search.md",
+      "bytes": 1355,
+      "lineCount": 9,
+      "sha256": "9ce89f4ca531d26ed2945328c0897c8d2714a3f59c2e1cd98490e282ec74eb5a",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "9ce89f4ca531d26ed2945328c0897c8d2714a3f59c2e1cd98490e282ec74eb5a",
+      "pinTiming": "dedicated pin after history excerpt inspection, before direct full-text read; initial semantic SHA remains null",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "coveredLineCount": 9,
+      "finishFilesystemSha256": "9ce89f4ca531d26ed2945328c0897c8d2714a3f59c2e1cd98490e282ec74eb5a",
+      "matchesFirstDurablePin": true,
+      "role": "old-report"
+    }
+  ],
+  "gitCommands": 0,
+  "productExecution": false,
+  "selectionHint": "Old inventory statuses prior-version-only/pin-only are navigation hints, not proof of never having been semantically read.",
+  "additionalPinsAtUTC": "2026-10-17T12:04:46.222959+00:00",
+  "metadataTimingNotes": [
+    "MessageStream rg actual caller snippets preceded dedicated byte pin; initial stays null, dedicated pin is only before direct selected range reading. No product failure or retry."
+  ],
+  "oldReportPinsAtUTC": "2026-10-17T12:07:21.310785+00:00",
+  "counts": {
+    "sourcePins": 10,
+    "full": 6,
+    "selected": 4,
+    "totalDeclaredReadLines": 1186,
+    "productAndExistingTestReadLines": 1132,
+    "priorReportReadLines": 54
+  },
+  "finishAtUTC": "2026-10-17T12:08:55.748172+00:00",
+  "priorSourceManifestMetadataOnly": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+      "sha256": "56a37c93b192d3fbf85f40cc62224a16c4423efa0960d116df81a6a507586c4b",
+      "semanticProductCoverage": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "semanticProductCoverage": false
+    }
+  ],
+  "notReviewed": [
+    "Core fork range expansion/rejection backend not read after current producer refuted the ordering hypothesis.",
+    "No full App/MessageStream/turn-loop/transcript lifecycle, authority/permissions/settings/native state behavior audit."
+  ],
+  "reportLocalLinksChecked": [
+    "prior-source-comparison.json",
+    "consumer-reference.txt",
+    "metadata-notes.json",
+    "source-manifest.json",
+    "history.json",
+    "validation.json"
+  ],
+  "freezeAtUTC": "2026-10-17T12:09:33.749537+00:00"
+}

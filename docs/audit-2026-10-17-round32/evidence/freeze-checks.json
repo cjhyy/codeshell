@@ -1,0 +1,59 @@
+{
+  "checks": [
+    {
+      "path": "selection-report.md",
+      "bytes": 4239,
+      "sha256": "44dd3727cbb5a5a28bccdd3d7d8b5a47aa5491522e15c86accd0ba803cd1f5e8",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/selection-source-manifest.json",
+      "bytes": 13953,
+      "sha256": "bcfb42d07b8d20a71a49084e896ed6a596a82f4812b73a895e2e7acea087c988",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/selection-artifact-receipt.json",
+      "bytes": 2235,
+      "sha256": "406e2745e012841d140089fec456d55ce064df8bbd4071dc5e56c4684f28e5e3",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "taskparse-report.md",
+      "bytes": 4305,
+      "sha256": "b93c60e4b038c843e79f91c397c154eecdfcc3b223b065fbece56aa453c371dc",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/taskparse-source-manifest.json",
+      "bytes": 9560,
+      "sha256": "d55b22ce661ddbf88ad6110c58d7baa77483ae27c484711e4f1090aa304b1e7d",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/taskparse-author-receipt.json",
+      "bytes": 2837,
+      "sha256": "ff77b4170e5d94e6031335699bc25975789c6962eb0775fb61564f11ebbdd7e0",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/review-selection.md",
+      "bytes": 3845,
+      "sha256": "ed7eb05d54526ae867dadeb31ae30aac4e59ad1fc7f7f49d8ad1a8385daa593a",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/review-selection-source-manifest.json",
+      "bytes": 68076,
+      "sha256": "95941a427d831da92106051aced689d442aa8eee9fbb63b113a4ffb003a19d2f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/review-selection-copy-receipt.json",
+      "bytes": 5021,
+      "sha256": "6de7b1caf6787fbe50dc9178163509538f98d05b157b135fc7eefc459aeb51e0",
+      "matchesWorkerFreezeMessage": true
+    }
+  ],
+  "productRuns": 0
+}
