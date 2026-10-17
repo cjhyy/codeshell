@@ -87,6 +87,23 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs packages/desktop/src/renderer/chat/Annotations.browser.fixture.mjs --evidence-dir "$ACCEPTANCE_ROOT/annotations" 2>&1 | tee "$ACCEPTANCE_ROOT/annotations.log"
+
+      - name: expected old-reducer UI failure retains owned browser HOME
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          reducer_ref=a3a735643bf6acd1f53d86bb7c13112a6ca8fd18
+          git fetch --no-tags --depth=1 origin "$reducer_ref"
+          set +e
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-subagent-state-browser.mjs --evidence-dir "$ACCEPTANCE_ROOT/subagent-state-failure-retention" --reducer-ref "$reducer_ref" 2>&1 | tee "$ACCEPTANCE_ROOT/subagent-state-failure-retention.log"
+          retention_pipe_status=("${PIPESTATUS[@]}")
+          set -e
+          if [[ "${#retention_pipe_status[@]}" -ne 2 || "${retention_pipe_status[0]}" -ne 1 || "${retention_pipe_status[1]}" -ne 0 ]]; then
+            echo "Expected the fixed old-reducer UI failure Node=1 and tee=0; got ${retention_pipe_status[*]}"
+            exit 1
+          fi
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/verify-subagent-failure-home.mjs "$ACCEPTANCE_ROOT/subagent-state-failure-retention" "$GITHUB_SHA"
       - name: retain public Web UI evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -108,6 +125,12 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/annotations/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/annotations/*.png
             ${{ env.ACCEPTANCE_ROOT }}/annotations/*.log
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state-failure-retention.log
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state-failure-retention/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state-failure-retention/retention-verification.json
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state-failure-retention/reducer-frozen.ts
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state-failure-retention/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state-failure-retention/browser.*.log
           if-no-files-found: error
           retention-days: 7
 
