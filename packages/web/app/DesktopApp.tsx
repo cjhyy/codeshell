@@ -7,7 +7,7 @@ import {
 } from "../src/hooks/useRemoteApp.js";
 import { deviceStore } from "../src/lib/storage.js";
 import { generateSecret } from "../src/lib/deviceCredential.js";
-import { projectForCwd } from "../src/lib/format.js";
+import { projectForCwd, sameProjectPath } from "../src/lib/format.js";
 import {
   MOBILE_MAX_ATTACHMENTS,
   MOBILE_MAX_ATTACHMENT_TOTAL_BYTES,
@@ -117,7 +117,7 @@ function selectedTargetCwd(
 function targetForCwd(app: RemoteApp, cwd: string | null): MobileSessionCreateTarget {
   if (cwd === null) return { projectId: null };
   const project = projectForCwd(cwd, app.projects);
-  const root = project?.roots?.find((item) => item.path === cwd);
+  const root = project?.roots?.find((item) => sameProjectPath(item.path, cwd, project));
   return project?.id ? { projectId: project.id, ...(root ? { rootId: root.id } : {}) } : cwd;
 }
 

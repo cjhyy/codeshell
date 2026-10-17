@@ -76,6 +76,44 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("new-session target and visible history use the remote Host case policy", async () => {
+    const created: unknown[] = [];
+    const projects = [
+      {
+        id: "upper",
+        name: "Upper",
+        path: "/srv/Example",
+        pathCaseSensitive: true,
+        roots: [{ id: "upper-root", name: "main", path: "/srv/Example", role: "primary" as const }],
+      },
+      {
+        id: "lower",
+        name: "Lower",
+        path: "/srv/example",
+        pathCaseSensitive: true,
+        roots: [{ id: "lower-root", name: "main", path: "/srv/example", role: "primary" as const }],
+      },
+    ];
+    const app = remoteApp({
+      activeCwd: "/srv/example",
+      projects,
+      sessions: [
+        { id: "upper-session", title: "Upper session", cwd: "/srv/Example", updatedAt: 1 },
+        { id: "lower-session", title: "Lower session", cwd: "/srv/example", updatedAt: 2 },
+      ],
+      newSession: (target) => created.push(target),
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      const visible = hook.result.current.sessions.map((item) => item.sessionId);
+      await act(async () => hook.result.current.newSession());
+      expect(created).toEqual([{ projectId: "lower", rootId: "lower-root" }]);
+      expect(visible).toEqual(["lower-session"]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("an optional question retains its card while a new message can be sent", async () => {
     const sent: unknown[] = [];
     const app = remoteApp({

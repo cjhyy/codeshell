@@ -28,6 +28,7 @@ describe("mobile project projection", () => {
       name: "Project",
       addedAt: 1,
       pinned: true,
+      pathCaseSensitive: process.platform !== "darwin" && process.platform !== "win32",
       primaryRootId: "r1",
       roots: [
         { id: "r1", path: "/primary", name: "primary", role: "primary" },

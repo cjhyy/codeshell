@@ -75,6 +75,9 @@ export interface MobileProjectMeta {
   name: string;
   addedAt?: number;
   pinned?: boolean;
+  /** Host canonical-key comparison policy; never inferred from the browser OS.
+   * Older Hosts omit this, so unknown POSIX paths must remain case-sensitive. */
+  pathCaseSensitive?: boolean;
   roots?: Array<{ id: string; path: string; name: string; role: "primary" | "secondary" }>;
   primaryRootId?: string;
 }
