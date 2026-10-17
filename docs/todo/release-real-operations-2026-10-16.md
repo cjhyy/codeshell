@@ -8,13 +8,13 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI19, failed overall. Web passes its job. macOS and
-Linux each complete the original 18-operation/four-Main subset, then fail the
-new draft fixture before any completed draft operation. Windows completes
-startup seven/three Main, then the original Review identity RPC rejects with
-PromiseGC before any Review operation. Later native suites and installer
-acceptance remain incomplete. See the
-[CI19 failure record](#ci19--draft-callback-failure-and-windows-review-identity-failure).
+The latest completed run, CI20, failed overall. Web passes its job. macOS and
+Linux each complete the original 18-operation/four-Main subset and two new draft
+operations, then the third draft operation stops on an ambiguous panel locator.
+Windows stops earlier in thirteen platform-dependent pure tests; no Windows
+native suite or installer runs. Later native suites and installer acceptance
+remain incomplete. See the
+[CI20 failure record](#ci20--panel-locator-and-windows-test-portability-failures).
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -1920,3 +1920,82 @@ NSIS revalidation is pending. No local browser, Electron, Keychain, PowerShell,
 installer, paid provider or external account operation is executed for these
 checks. The original native/harness blobs and acceptance gates stay frozen.
 The full CI20 run has not been dispatched; no runtime outcome is asserted.
+
+## CI20 — panel locator and Windows test portability failures
+
+[Run 39034148714](https://github.com/cjhyy/codeshell/actions/runs/39034148714),
+push attempt 1, binds source `cecd79dc876da244bf7dd3277774e82d3d3866db`.
+Web succeeds; all three Desktop jobs fail. The earlier preparation entries keep
+their original local-only scope. The final run API has SHA-256
+`24515e547f743e3dc48ca8c4f19a7e205d12d9e9b22660f3d031fcba6bee5249`.
+
+macOS and Linux each pass the original startup seven/three Main and Review
+eleven/one Main. Their new draft fixture records two completed operations:
+the full staged prompt appends once after the existing unsent prefix, and a
+held staged response cannot append after the real scope changes. The current
+unstaged response then appends exactly once. Actual full input equality and
+unchanged model/permission controls are verified by those operation receipts.
+
+The third operation switches to B, releases the held A response, and reaches
+`reviewPanel` at driver line 150, called from line 536. The first error is a
+strict locator violation: the global `new-tab` locator matches two elements.
+Four actual production preparations, IDs 1–4, return; held results 2 and 4 are
+released. B's fifth preparation is not reached. The later `4 !== 5` ledger
+assertion is secondary. The final renderer-seed snapshot is absent because its
+statement is unreached; this is not evidence that zero seed events occurred.
+
+Both runs have two actual owned `goalGet` reads, seven blocked negative probes
+and empty denied/Worker ledgers. macOS Main exits `0/null` with observed
+full-birth custody 14→0; Linux exits `0/null` with 17→0. Neither requests a
+cleanup signal. Both controllers fail and both owned HOMEs remain recorded as
+retained; private HOME contents are excluded from the artifacts. Failure PNGs
+show B's original unsent prefix and one visible launcher plus button. That image
+does not expose hidden DOM or independently establish locator cardinality.
+The original full 83/12, new complete 3/1, later six suites, AppImage runtime,
+updater and DMG acceptance are not completed in this run.
+
+Windows fails earlier in the guarded twenty-file aggregation shard: 310 tests
+complete with 297 passing, thirteen failing and 2,511 assertions. The failures
+are one POSIX-only omission predicate, ten short/long canonical-path equality
+blocks, one interrupted-state raw-path predicate and a filename containing
+characters Windows cannot create. Its six new physical case-alias tests pass
+on the actual case-insensitive Windows filesystem. These are unit filesystem
+results, not Electron acceptance. All later branch/native/package/early-upload/
+NSIS stages are skipped; there are zero native receipts and zero PNGs.
+The uploaded six public logs pass CRC checks. Git LF and projected CRLF test
+hashes are separately labeled; actual Windows test source files are not uploaded.
+Historical Windows Review GC and NSIS causes remain unknown.
+
+macOS's aggregation shard passes 310/2,578; Linux passes 310/2,575, reflecting
+the explicit filesystem-dependent test controls. Their Write 11/38, output 16/32,
+branch 15/50, original Review Node 13 and draft Node 25 pass separately.
+Windows passes Write 11/38, output 16/32 and Node 31+13+25 before its shard
+failure. Its branch shard is skipped. These counts overlap local and author
+checks and are never added to real UI operations or installer acceptance.
+
+Web independently passes the original 31 real browser behaviors, image nine/45
+and lifecycle contracts 64. Its separate expected-negative run retains two
+controls and six known failures, with runner-verified retained profile. The
+audit binds 106 source hashes, 33 PNGs, normal browser exits, observed birth
+custody, final ledgers and HOME cleanup; current screenshots show readable CJK.
+
+Frozen independent summaries are:
+
+- Web `ci-39034148714-web-independent-20261017/ci-39034148714-web-independent-audit.json`,
+  SHA-256 `b6c5bc56ea1726c5a98c059df377578cb0aa5ff286d516569de6b0f0e9397378`.
+- Linux `ci-39034148714-linux-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `8617826376520128c9a48d5ae6f781b14fd41ad99967318f83fb596652ec5656`.
+- macOS `ci-39034148714-mac-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `d960df9647ca427662d1f89761e9eb3bd62241d8db88a081c03bfae7c104f90f`.
+- Windows `ci-39034148714-windows-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `23425a4c19e944e9303a04eeae9f90f88c1c8d3a2bb69eb43b6f310a471ff9fb`;
+  its eighteen-check raw-evidence peer has SHA-256
+  `73c351c310e78b7becf4daa4f23d76ce30d238d4ba6f516e4d240491d12c83e5`.
+
+The next fixture corrections must preserve strict unique visible panel targeting,
+all original operation assertions, five real preparations, three final seeds,
+failure retention and normal-exit/custody gates. Windows portability corrections
+must preserve all test cases and platform-valid filename coverage. None of
+those corrections establishes native recovery until a fresh run completes.
+No local browser, Electron, Keychain, PowerShell, installer or provider is run
+for this audit. The operation-audit goal remains active.
