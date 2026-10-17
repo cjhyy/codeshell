@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MessageStream } from "./MessageStream";
+import { translate } from "./i18n/translate";
+import { loadUILanguage } from "./uiLanguage";
 import type { StreamEvent, TurnDiffSnapshot } from "@cjhyy/code-shell-core";
 import { parseUnifiedDiff } from "./diff/parseUnifiedDiff";
 import {
@@ -283,5 +288,174 @@ describe("execution-owned turn diff", () => {
     state = applyStreamEvent(state, snapshot());
     expect(cards(state)[0].files.map((file) => file.path)).toEqual(["legacy.ts", "/repo/src/a.ts"]);
     expect(cards(state)[0].sessionDiffs).toHaveLength(2);
+  });
+});
+
+function driveComplete(state: MessagesReducerState, cwd = "/repo", changedFiles = ["src/a.ts"]) {
+  return applyStreamEvent(state, {
+    type: "background_agent_completed",
+    agentId: `drive:${cwd}`,
+    description: "DriveAgent(codex): edit a file",
+    status: "completed",
+    workKind: "cc",
+    finalText: "done",
+    cwd,
+    changedFiles,
+    originClientMessageId: "client:turn-1",
+    enqueuedAt: 1,
+  });
+}
+
+function expectVisibleLateNotice(state: MessagesReducerState, path = "/repo/src/a.ts") {
+  const marker = state.messages.find((message) => message.kind === "system" && message.turnDiff);
+  if (marker?.kind !== "system") throw new Error("missing turn diff marker");
+  const warning = translate(loadUILanguage(), "msg.files.lateChangesDiff");
+  expect(marker.text).toContain(warning);
+  expect(marker.text).toContain(path);
+  // Render the actual public consumer, rather than only inspecting a private
+  // unresolvedPaths field that the user would never see.
+  const html = renderToStaticMarkup(React.createElement(MessageStream, { messages: [marker] }));
+  expect(html).toContain(warning);
+  expect(html).toContain(path);
+}
+
+describe("execution snapshots and DriveAgent completions", () => {
+  test("a late real completion after a net-zero parent capture retains an absolute file card", () => {
+    let state = applyStreamEvent(start(), snapshot({ files: [], capturedAt: 10 }));
+    state = applyStreamEvent(state, complete);
+    expect(cards(state)).toHaveLength(0);
+    const before = state;
+    state = driveComplete(state);
+    expect(cards(state)).toHaveLength(1);
+    expect(cards(state)[0].files).toEqual([
+      { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
+    ]);
+    expect(cards(state)[0].sessionDiffs).toEqual([]);
+    expectVisibleLateNotice(state);
+    expect(
+      before.messages.find((message) => message.kind === "system" && message.turnDiff),
+    ).toMatchObject({ text: "" });
+  });
+
+  test("a late completion never presents the old nonempty snapshot as a final net diff", () => {
+    let state = edit(start(), "edit-1", "A", "B", "/repo/src/a.ts");
+    state = applyStreamEvent(state, snapshot({ capturedAt: 10 }));
+    state = applyStreamEvent(state, complete);
+    state = driveComplete(state, "/repo", ["/repo/src/a.ts"]);
+    expect(cards(state)).toHaveLength(1);
+    const diffs = cards(state)[0].sessionDiffs!.map((item) => item.diff);
+    expect(diffs).not.toContain(finalDiff);
+    expect(cards(state)[0].files).toEqual([
+      { path: "/repo/src/a.ts", added: 1, removed: 1, count: 2 },
+    ]);
+    expect(diffs.join("\n")).toContain("+B");
+    expect(diffs.join("\n")).not.toContain("+C");
+    expectVisibleLateNotice(state);
+  });
+
+  test("late original-turn attribution leaves the newer turn and streaming pointers intact", () => {
+    let state = applyStreamEvent(start(), snapshot({ files: [], capturedAt: 10 }));
+    state = applyStreamEvent(state, complete);
+    state = applyStreamEvent(
+      start(state, "turn-2"),
+      snapshot({
+        turnId: "turn-2",
+        trackedPaths: ["/repo/b.ts"],
+        files: [{ path: "/repo/b.ts", status: "added", added: 1, removed: 0, diff: "new diff" }],
+      }),
+    );
+    const secondCard = cards(state)[0];
+    const pointers = [state.streamingAssistantId, state.activeStreamRunKey, state.turnEpoch];
+    state = driveComplete(state);
+    const secondUser = state.messages.findIndex(
+      (message) => message.kind === "user" && message.clientMessageId === "client:turn-2",
+    );
+    expect(cards(state)).toHaveLength(2);
+    expect(cards(state)[1]).toEqual(secondCard);
+    expect(state.messages.indexOf(cards(state)[0])).toBeLessThan(secondUser);
+    expect(cards(state)[0].files[0].path).toBe("/repo/src/a.ts");
+    expect([state.streamingAssistantId, state.activeStreamRunKey, state.turnEpoch]).toEqual(
+      pointers,
+    );
+    expectVisibleLateNotice(state);
+    const markerCount = state.messages.filter(
+      (message) => message.kind === "system" && message.externalFileChanges,
+    ).length;
+    state = applyStreamEvent(state, snapshot({ files: [], capturedAt: 10_000 }));
+    expect(cards(state)).toHaveLength(2);
+    expect(cards(state)[1]).toEqual(secondCard);
+    expect(cards(state)[0].files[0].path).toBe("/repo/src/a.ts");
+    expectVisibleLateNotice(state);
+    expect(
+      state.messages.filter((message) => message.kind === "system" && message.externalFileChanges),
+    ).toHaveLength(markerCount);
+  });
+
+  test("a snapshot arriving later cannot prove it captured an external completion without coverage identity", () => {
+    let state = driveComplete(start());
+    state = applyStreamEvent(state, { ...snapshot({ capturedAt: 1_000 }), timestamp: 2_000 });
+    expect(cards(state)).toHaveLength(1);
+    expect(cards(state)[0].files).toEqual([
+      { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
+    ]);
+    expect(cards(state)[0].sessionDiffs).toEqual([]);
+    expectVisibleLateNotice(state);
+    state = applyStreamEvent(state, snapshot({ capturedAt: 10_000, files: [] }));
+    expect(cards(state)).toHaveLength(1);
+    expectVisibleLateNotice(state);
+  });
+
+  test("known execution cwd and external attribution keep a relative preview's absolute open target", () => {
+    let state = edit(start(), "edit-1", "A", "B");
+    state = applyStreamEvent(state, snapshot());
+    state = driveComplete(state);
+    expect(cards(state)[0].files).toEqual([
+      { path: "/repo/src/a.ts", added: 1, removed: 1, count: 2 },
+    ]);
+    expect(cards(state)[0].sessionDiffs![0].path).toBe("/repo/src/a.ts");
+    expect(parseUnifiedDiff(cards(state)[0].sessionDiffs![0].diff)[0].newPath).toBe(
+      "/repo/src/a.ts",
+    );
+    expectVisibleLateNotice(state);
+  });
+  test("external late-change notice preserves the capture omission notice and reason", () => {
+    let state = applyStreamEvent(
+      start(),
+      snapshot({
+        files: [],
+        complete: false,
+        omissions: [{ path: "/repo/src/a.ts", reason: "capture unavailable" }],
+      }),
+    );
+    state = driveComplete(state);
+    expect(cards(state)[0].files[0].path).toBe("/repo/src/a.ts");
+    expectVisibleLateNotice(state);
+    const marker = state.messages.find((message) => message.kind === "system" && message.turnDiff);
+    expect(marker?.kind === "system" && marker.text).toContain("capture unavailable");
+    expect(marker?.kind === "system" && marker.text).toContain(
+      translate(loadUILanguage(), "msg.files.incompleteDiff"),
+    );
+  });
+
+  test("the same relative name in a different external root does not invalidate tracked bytes", () => {
+    let state = applyStreamEvent(start(), snapshot());
+    state = driveComplete(state, "/other-worktree");
+    expect(cards(state)[0].files.map((file) => file.path)).toEqual([
+      "/other-worktree/src/a.ts",
+      "/repo/src/a.ts",
+    ]);
+    expect(cards(state)[0].sessionDiffs?.map((item) => item.diff)).toEqual([finalDiff]);
+    const marker = state.messages.find((message) => message.kind === "system" && message.turnDiff);
+    expect(marker?.kind === "system" && marker.text).toBe("");
+  });
+
+  test("legacy completion without a snapshot still preserves its absolute attribution", () => {
+    const state = driveComplete(start(), "/owned path", ["报告.ts"]);
+    expect(cards(state)[0].files).toEqual([
+      { path: "/owned path/报告.ts", added: 0, removed: 0, count: 1 },
+    ]);
+    expect(state.messages.some((message) => message.kind === "system" && message.turnDiff)).toBe(
+      false,
+    );
   });
 });
