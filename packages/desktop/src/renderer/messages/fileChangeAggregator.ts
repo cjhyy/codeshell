@@ -314,11 +314,17 @@ export function aggregateFileChangeSummary(
   const byPath = new Map<string, FileEditEntry>();
   const operationsByPath = new Map<
     string,
-    { firstToolCallId: string; operations: FileEditOperation[] }
+    {
+      firstToolCallId: string;
+      operations: FileEditOperation[];
+      previews: FileEditOperation[];
+      writers: Set<string | null>;
+    }
   >();
   const consume = (
     toolCallId: string,
     raw: ToolEditChange,
+    writer: string | null,
     identity = identityForToolPath(raw.path),
     displayPath = normalizeFilePath(raw.path),
   ): void => {
@@ -339,11 +345,19 @@ export function aggregateFileChangeSummary(
       raw.operations ?? (raw.diff.trim() ? [{ kind: "opaque" as const, diff: raw.diff }] : []);
     if (operations.length) {
       const previous = operationsByPath.get(identity);
-      if (previous) previous.operations.push(...operations);
-      else
+      const previews: FileEditOperation[] = raw.diff.trim()
+        ? [{ kind: "opaque", diff: raw.diff }]
+        : [];
+      if (previous) {
+        previous.operations.push(...operations);
+        previous.previews.push(...previews);
+        previous.writers.add(writer);
+      } else
         operationsByPath.set(identity, {
           firstToolCallId: toolCallId,
           operations: [...operations],
+          previews,
+          writers: new Set([writer]),
         });
     }
   };
@@ -352,13 +366,13 @@ export function aggregateFileChangeSummary(
     const m = messages[i];
     if (m.kind === "tool") {
       const e = entryFor(m);
-      if (Array.isArray(e)) e.forEach((change) => consume(m.id, change));
-      else if (e) consume(m.id, e);
+      if (Array.isArray(e)) e.forEach((change) => consume(m.id, change, null));
+      else if (e) consume(m.id, e, null);
     } else if (m.kind === "agent") {
       for (const t of m.toolCalls) {
         const e = entryFor(t);
-        if (Array.isArray(e)) e.forEach((change) => consume(t.id, change));
-        else if (e) consume(t.id, e);
+        if (Array.isArray(e)) e.forEach((change) => consume(t.id, change, m.id));
+        else if (e) consume(t.id, e, m.id);
       }
     }
   }
@@ -367,6 +381,7 @@ export function aggregateFileChangeSummary(
     consume(
       `external:${external.sourceId}`,
       { path: external.path, added: 0, removed: 0, diff: "" },
+      null,
       external.identity,
       external.displayPath,
     );
@@ -375,7 +390,14 @@ export function aggregateFileChangeSummary(
   const sessionDiffs: SessionFileDiff[] = [];
   for (const [identity, source] of operationsByPath) {
     const entry = byPath.get(identity)!;
-    const composed = composeFileEdits(entry.path, source.operations);
+    // Agent tools are backfilled into the agent's earlier message card. Card
+    // order therefore cannot establish the order of edits from different
+    // writers; wall-clock tool timestamps cannot prove that order either.
+    // Keep each recorded preview instead of guessing a final file version.
+    const composed = composeFileEdits(
+      entry.path,
+      source.writers.size > 1 ? source.previews : source.operations,
+    );
     // A successful edit followed by its exact reversal has no net change.
     // Keep external-only attribution when no payload can establish its result.
     if (!composed.diff && !externalIdentities.has(identity)) {
