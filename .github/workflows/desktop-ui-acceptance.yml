@@ -157,7 +157,32 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb dbus-x11 gnome-keyring libsecret-tools
+          sudo apt-get install -y xvfb dbus-x11 gnome-keyring libsecret-tools fontconfig
+          record_linux_fonts() {
+            node - "$1" <<'NODE'
+          const assert = require("node:assert/strict");
+          const { execFileSync } = require("node:child_process");
+          const { writeFileSync } = require("node:fs");
+          const { join } = require("node:path");
+          const stage = process.argv[2];
+          assert.ok(stage === "before-cjk" || stage === "after-cjk");
+          const value = execFileSync("fc-match", ["-f", "%{family}\n%{file}\n%{lang}\n", ":lang=zh-cn"], {
+            encoding: "utf8", timeout: 10000, maxBuffer: 16384,
+          }).trim();
+          const [family, file, languages, ...extra] = value.split("\n");
+          assert.ok(family && file && languages && extra.length === 0);
+          const supportsChinese = languages.split("|").includes("zh-cn");
+          const body = JSON.stringify({
+            stage, platform: process.platform, pattern: ":lang=zh-cn", family, file, languages, supportsChinese,
+          }, null, 2);
+          assert.ok(Buffer.byteLength(body) <= 16384, "Font evidence must remain bounded");
+          writeFileSync(join(process.env.ACCEPTANCE_ROOT, `linux-fonts-${stage}.json`), body, { flag: "wx", mode: 0o600 });
+          if (stage === "after-cjk") assert.ok(supportsChinese, "CI needs a Chinese-capable font before visual acceptance");
+          NODE
+          }
+          record_linux_fonts before-cjk
+          sudo apt-get install -y fonts-noto-cjk
+          record_linux_fonts after-cjk
 
       - name: install locked native dependencies
         timeout-minutes: 15
@@ -352,6 +377,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/package/build.log
             ${{ env.ACCEPTANCE_ROOT }}/process-metadata/report.json
             ${{ env.ACCEPTANCE_ROOT }}/startup.log
+            ${{ env.ACCEPTANCE_ROOT }}/linux-fonts-*.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/cycle-*.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/*.png
