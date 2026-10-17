@@ -228,9 +228,19 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$RUNNER_OS" == Linux ]]; then
-            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-startup-operation-cycles.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
+            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-startup-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/startup" 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
           else
-            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-startup-operation-cycles.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
+            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-startup-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/startup" 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
+          fi
+
+      - name: actual Review diff lines, rename paths, and file navigation
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-review-diff-path-operations.mjs --evidence-dir "$ACCEPTANCE_ROOT/review" 2>&1 | tee "$ACCEPTANCE_ROOT/review.log"
+          else
+            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-review-diff-path-operations.mjs --evidence-dir "$ACCEPTANCE_ROOT/review" 2>&1 | tee "$ACCEPTANCE_ROOT/review.log"
           fi
 
       - name: actual file mentions, Git, browser guests, and PTY operations
@@ -313,6 +323,25 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/package/build.log
             ${{ env.ACCEPTANCE_ROOT }}/process-metadata/report.json
             ${{ env.ACCEPTANCE_ROOT }}/startup.log
+            ${{ env.ACCEPTANCE_ROOT }}/startup/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/startup/cycle-*.json
+            ${{ env.ACCEPTANCE_ROOT }}/startup/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/startup/main-*.log
+            ${{ env.ACCEPTANCE_ROOT }}/startup/startup-renderer-loads.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/startup-denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/real-keyring-bootstrap.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review.log
+            ${{ env.ACCEPTANCE_ROOT }}/review/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/review/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/review/owned-git.diff
+            ${{ env.ACCEPTANCE_ROOT }}/review/main.*.log
+            ${{ env.ACCEPTANCE_ROOT }}/review/denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/network-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/panels.log
             ${{ env.ACCEPTANCE_ROOT }}/panels/*.png
             ${{ env.ACCEPTANCE_ROOT }}/panels/report.json

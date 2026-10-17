@@ -30,9 +30,12 @@ Cross-platform fixture tests alone are not native acceptance.
 | Web question drafts | Switching sessions while an answer was pending unmounted its form and lost the answer on failure. | Keep unresolved forms by request and hide other sessions accessibly. |
 | Ordinary-session write recovery | Background filtering hid the only uncertain-write review entry for a normal conversation. | Add the existing review UI to conversation management, loaded only on request. Native cancellation, read-only reconciliation, manual uncertainty acceptance and cold Main/Engine recovery preserve the original unknown result and never replay its write. |
 | Execution trace keyboard access | At 820px the focused final type filter was clipped; retrying a failed detail dropped focus to the page body. | Scroll the focused filter into view and move retry focus to the stable detail heading. Native geometry, hit testing and focus checks at 1280/820/390px in light/dark themes. |
-| Web authentication | A real tab status check invalidated an outstanding successful login. An old device-revocation 401 could also expire a newer login. | Suppress status reads during login and bind authentication-loss callbacks to the initiating login identity. Actual cookie HTTP/WebSocket browser sequences cover both races, explicit logout with pending chat work, and a current-login 401 after closing its dialog. Native Linux tab-focus coverage remains under investigation; retain its first failure. |
-| Language and theme preferences | The selected language card stayed stale, another same-origin window did not follow language changes, and switching a manually booted theme to System missed later media changes. | Use the language provider as the selected-card authority, listen to native storage events, and retain the media listener while checking the current stored mode on every event. Seven focused scenarios, six real-browser sequences, and six actual macOS Electron sequences across three cold Main processes pass. Native Windows/Linux coverage awaits the combined CI. |
+| Web authentication | A real tab status check invalidated an outstanding successful login. An old device-revocation 401 could also expire a newer login. | Suppress status reads during login and bind authentication-loss callbacks to the initiating login identity. Actual cookie HTTP/WebSocket browser sequences cover both races, explicit logout with pending chat work, and a current-login 401 after closing its dialog. Hosted Linux Chromium under Xvfb passes all four, including actual blur followed by a trusted focus event. |
+| Language and theme preferences | The selected language card stayed stale, another same-origin window did not follow language changes, and switching a manually booted theme to System missed later media changes. | Use the language provider as the selected-card authority, listen to native storage events, and retain the media listener while checking the current stored mode on every event. Seven focused scenarios, six real-browser sequences, and six actual macOS Electron sequences across three cold Main processes pass. Hosted macOS and Linux native sequences also pass; Windows remains pending. |
 | Packaged update checks | The installed updater emitted an error event and then rejected its promise: a real missing-manifest 404 changed from not-available to error. Filename-only classification also hid 401/403/500/invalid YAML. | Use one error policy for events and promise rejection; only an actual 404 status denotes a missing manifest. Actual packaged Main/preload/Settings/electron-updater verifies five response classes and five healthy retries, ten exact manifest GETs, no asset/download/install action. |
+| Review diff paths and lines | Hunk body lines beginning with `+++`/`---` were mistaken for headers; rename and Git-quoted Unicode paths could target the wrong file. | Parse headers in their actual section, decode Git quoting and preserve real rename paths. Actual macOS Main/Review/preload/renderer passes four diff checks and four plain-click file previews against owned Git. Three-platform CI now includes this operation family. |
+| Host project case policy | A Web client lowercased POSIX paths and could create a session in the wrong case-distinct Linux project. | Project metadata carries the Host's case policy; grouping and session creation share that policy and prefer stable project IDs. Actual React handler and owned path-policy tests pass. This is not native Linux Host registration acceptance. |
+| Context forwarding after truncated history | Selecting RECENT from the actual 512 KiB history tail could forward OLD because visible groups used raw-history ordinals. | Preserve durable source event IDs and resolve the exact raw range; reject unknown, ambiguous or discontinuous mappings. Eight actual reader/fold/React-handler scenarios pass without invoking a fork or provider. |
 
 ## Evidence boundaries
 
@@ -78,6 +81,8 @@ main, tags and publication remain outside that authorization. The branch is
 | [38941376217](https://github.com/cjhyy/codeshell/actions/runs/38941376217), source `2b3f60185` | Web ServiceWorker 11 and the complete macOS native job passed. Ubuntu startup/panels/composer passed, then a metadata `app.evaluate` reported a garbage-collected promise before memory UI operations. Windows failed its initial bounded process query during directory packaging; cleanup remained unproven. |
 | [38943220744](https://github.com/cjhyy/codeshell/actions/runs/38943220744), source `68677b058` | Web ServiceWorker 11 and complete macOS native job passed again. Ubuntu memory 7 also passed; packaged UI failed before App launch because the expected `code-shell` binary was absent. Windows' 30-second diagnostic returned valid identity rows after 17,743ms, but its immediately following normal five-second query failed. This is not accepted native Windows coverage. |
 | [38982907208](https://github.com/cjhyy/codeshell/actions/runs/38982907208), source `6054fa9b6` | Complete macOS native job passed again. Ubuntu startup/panels/composer/memory passed; packaged UI still failed before launch because the first corrected name `code-shell-desktop` also omitted the npm scope. The locked builder actually computes `@cjhyycode-shell-desktop`; the subsequent repair derives its name from that builder and records actual package root entries plus executable hash. Web ServiceWorker and authentication cases 2–4 passed, while case 1 timed out waiting for a trusted native tab focus/visibility event before releasing login. Windows transport/profile timing diagnostics completed, but the original custody query still failed before packaging. |
+| [39003474715](https://github.com/cjhyy/codeshell/actions/runs/39003474715), source `dac146ed2` | Complete macOS job passes, including packaged updater five modes/ten GETs and actual DMG install/replacement 13+13 UI operations. Linux preferences 6 and directory packaged UI 13 pass; updater makes zero requests because this artifact is a directory app without runtime-owned `APPIMAGE`. Windows clean-source build and packaging pass with fixed LF attributes and PowerShell 7 identity queries (472/487ms). Its three cold launches/reloads and second-window operations finish, then one shutdown custody query fails; the overall job fails and no full Windows acceptance is claimed. Headless Web again fails actual blur; other auth cases and ServiceWorker pass. |
+| [39004577231](https://github.com/cjhyy/codeshell/actions/runs/39004577231), source `ccaed3142`, manual `suite=web` | Web ServiceWorker 11 and authentication 4 pass in hosted Linux Chromium under Xvfb. The login tab reports `focused=false` before an actual trusted focus event, with no status read during its pending login. Native jobs are intentionally skipped in this diagnostic run; it is not a complete matrix pass. |
 
 Artifacts are downloaded as ZIPs under the private operation evidence root,
 with individual reports inspected directly. First-failure Main logs missing from
@@ -92,15 +97,22 @@ fixed `Program Files/PowerShell/7/pwsh.exe` path on the canonical SystemRoot dri
 missing installation fails closed, without PATH/profile/fallback discovery. The
 five-second budget, minimal environment, query fields, full precision and fresh
 query before every signal remain unchanged. The combined custody Node shard
-passes 44 tests; full Windows lifecycle still requires the next native run.
+passes 44 tests. The next Windows run passed build/package and actual startup UI,
+but a later custody query failed; its cause remains unknown. A follow-up avoids
+individual queries for incarnations already absent in a fresh cleanup discovery
+and records only fixed failure codes plus monotonic elapsed time. Forty-three
+snapshot/watchdog/custody tests pass, including a 201-departed-process fixture;
+every actual signal still needs a fresh individual identity check and query
+failure remains sticky. This does not establish the earlier failure's cause.
 
 Both generated extension artifacts had raw LF bytes identical to their HEAD
 blobs in the Windows run. Git nevertheless reported M and warned that its next
 touch would produce CRLF. An owned temporary Git reproduction with autocrlf=true
 confirmed that exact behavior and its repair: two exact-path `text eol=lf`
 attributes preserve committed/generated bytes and leave status clean after a
-rebuild. No dirty-source gate was waived. The next native Windows build must
-confirm it; the local Git conversion experiment is not native Windows evidence.
+rebuild. No dirty-source gate was waived. Run `39003474715` confirms a clean native
+Windows source/build/package boundary; the subsequent shutdown failure is retained
+separately.
 
 The combined source passed 35 auth/preferences tests (144 assertions), 12 package
 layout/integrity tests (65 assertions), six actual preference browser sequences,
@@ -127,10 +139,43 @@ switching to a single Main for these feed modes does not explain it.
 The native tab test now disables Playwright's implicit focus override for both
 tabs and observes an actual blur before bringing the login tab forward, avoiding
 coalesced front operations. The local actual Chrome run passes all four cases,
-recording `focused=false` followed by a trusted focus event. Its headed Mac probe
-also failed the event wait and is retained separately; no headed/WM workaround or
-synthetic focus dispatch is accepted as the fix. Linux must verify the final
-ordering change in the next CI run.
+recording `focused=false` followed by a trusted focus event. Headless hosted Linux
+never produced that actual blur; its retained receipt reports an empty event list
+and `focused=true`. The headed Mac probe also failed and remains separate.
+Run `39004577231` verifies the final ordering in headed hosted Linux under Xvfb;
+no synthetic focus dispatch or weaker assertion was introduced.
+
+Run `39003474715` artifacts were independently inspected: macOS source
+`dac146ed2`, ASAR `e8d98662434af69730d2e8865ccb0337f7d3312878d9921d8eafdb58d4d92d86`,
+DMG SHA256 `f2bc462661eb036b886427e545588779b12f3ad9656f84e6106bd078cd188d05`.
+Updater and both DMG UI receipts pass with empty failures, no workers, normal
+Main exits, cleaned observed custody and removed UI HOMEs. The readonly volume
+and ordinary owned image detach receipts pass. This remains local ad-hoc
+same-build installation, with no Developer ID, notarization or version migration.
+The Linux directory updater receipt fails with zero manifest requests while
+closing normally with no worker/native storage calls. The next Linux updater
+acceptance must launch a real production AppImage whose runtime owns `APPIMAGE`;
+fabricating that environment variable or forcing development updater mode would
+not exercise the distributed artifact.
+
+The Review native receipt is
+`/private/tmp/codeshell-review-diff-proof-zyPwQ3a9/native-green-retention/receipt.json`:
+eight operations, normal Main exit, 29 observed incarnations cleaned, no renderer,
+worker or deny-ledger errors, and HOME removed. Context forwarding evidence is
+`/private/tmp/codeshell-context-tail-final-receipt.json` (source `0f4566`):
+actual persisted reader/fold and React handlers, six valid ranges captured once
+each and two refused mappings; actual fork/Engine/provider calls are zero.
+Host case-policy validation passes 33 tests/126 assertions, including a guarded
+Main projection shard; no native Linux Host registration is inferred.
+
+Combined source `aac455c21` includes these repairs and local main `dee38295a`
+(primary-call cache accounting and background tool-continuation preservation).
+Package release verification passes ten tarballs/48 typed entries; root build,
+Desktop build and all 14 workspace typechecks pass. Combined regression passes
+182 UI/history/cache/project tests (578 assertions) with a pre-Core deny guard,
+six negative probes and zero runtime network attempts, plus seven guarded Core
+cache/tool-continuation tests (79 assertions). The next full native matrix remains
+in progress.
 
 Actual native preference evidence is
 `/private/tmp/codeshell-native-preferences-round-006/receipt.json`: one production
