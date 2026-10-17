@@ -1,0 +1,392 @@
+{
+  "terms": "browser.devtools|browser.inspector|DOM.{0,80}(bound|遍历|有界)|Array\\.from\\(element\\.children\\)|queue.length.{0,20}1000|性能.{0,40}摘要",
+  "stats": {
+    "markdownFiles": 1032,
+    "jsonFiles": 512,
+    "jsonDecodeFailures": 0,
+    "embeddedJsonParsed": 154
+  },
+  "matches": [
+    {
+      "path": "docs/worktree-consolidation-2026-10-14.md",
+      "line": 13,
+      "text": "- `codex/browser/devtools-module`: private browser diagnostics workspace,"
+    },
+    {
+      "path": "docs/browser-observation-troubleshooting.md",
+      "line": 134,
+      "text": "vision gating, domain grants, and human-takeover boundaries remain in force."
+    },
+    {
+      "path": "docs/archive/browser-tool-experience-improvements-2026-06-20.md",
+      "line": 44,
+      "text": "  - (b) **底层补**：放宽 flatten 过滤（无 name 的交互角色也保留，用 role 兜底显示），或补 DOM 启发式遍历（收 onclick/cursor:pointer/role=tab，照 browser-use）。**碰感知主干，重，先不做**。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/coverage.md",
+      "line": 12,
+      "text": "| 其他包与独立仓库 | 本批没有新增深度审查；保留前批冻结记录用于查重 | Desktop、Server、Web、Host、Link、Pet、Chat、CDP、browser-devtools、Arena/Lab 等仍有大量未覆盖分支；独立 codeshell-panel-apps 未开展全仓审查 |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "key": "$.files[29].path",
+      "text": "packages/browser-devtools/package.json"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "key": "$.files[30].path",
+      "text": "packages/browser-devtools/src/contracts.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "key": "$.files[31].path",
+      "text": "packages/browser-devtools/src/index.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "key": "$.files[32].path",
+      "text": "packages/browser-devtools/src/inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "key": "$.files[46].path",
+      "text": "packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "line": 7,
+      "text": "读完 `CODESHELL.md` 后审阅 `packages/cdp/src/{driver,keymap,scroll-state,types,sender,index}.ts`、`packages/browser-devtools/src/{inspector,contracts,index}.ts`，相关 README/package metadata 和已有单测；重点是几何、键盘、普通滚动/阅读返回值、Console/DOM/Performance 摘要。导航权限、认证、注入/攻防及真实浏览器操作不在本轮范围。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "line": 9,
+      "text": "`packages/cdp` 是 private 的 legacy compatibility SDK。`packages/desktop/src/main/browser-driver/cdp-driver.ts:3–5,45` 明确生产 Electron/Chrome 使用 Puppeteer、此兼容类为 deprecated；下述 CDP 两项只确认兼容 SDK 输出，不外推为默认 Desktop 已发生。Browser diagnostics 则由 `packages/desktop/src/browser-library/browser-inspector.ts:9–10` 供 Puppeteer/Playwright 适配器复用，Puppeteer `inspect()` 接线见 `puppeteer-browser-driver.ts:624–631`。本轮未运行这些 Desktop 适配器。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "line": 36,
+      "text": "- **位置**：`packages/browser-devtools/src/inspector.ts:137–138`；`visibility:hidden` 与 `display:none` 共用 `continue`，在后续 `children`/shadow children 入队（`:167–173`）前终止整棵子树。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "line": 37,
+      "text": "- **可达触发**：正常 DOM 的祖先为 `visibility:hidden`，其中一个子节点显式为 `visibility:visible`；通过 `inspect({mode:\"dom\",selector:\"#ancestor\"})` 或默认 body 从其上方遍历。这种子节点可见性覆盖是 [W3C CSS2 visibility 规则](https://www.w3.org/TR/CSS2/visufx.html#visibility) 明确允许的。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/findings.json",
+      "key": "$.findings[8].source",
+      "text": "packages/browser-devtools/src/inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/coverage.md",
+      "line": 10,
+      "text": "| browser-devtools | inspector DOM/Console/Performance实际callback与fake page/VM普通数据；生产适配器接线静态 | 真实CSS排版/真实浏览器库事件、Desktop/Electron完整E2E |"
+    },
+    {
+      "path": "docs/todo/platform-s0-protocol-inventory.md",
+      "line": 144,
+      "text": "机制：模块通过 `AgentModule.protocol.queries`（`packages/core/src/composition/types.ts:152`）或 observer 内的 `registerQuery`（`packages/core/src/composition/protocol-attach.ts:45`）登记；同一个名字有两条入口：`agent/query` 的 `type` 走 `engine.queryCapability`（`server.ts:3954`），也可以直接当 JSON-RPC 方法名走 `handleExtensionProtocolMethod`（`server.ts:1519`）。未登记的名字返回 `Unknown query type` / `Unknown method`。`packages/coding`、`packages/link`、`packages/browser-devtools` 没有登记任何查询。"
+    },
+    {
+      "path": "docs/todo/2026-09-11-skipped-test-audit.md",
+      "line": 40,
+      "text": "| 浏览器可执行文件  | Puppeteer、browser-inspector、Playwright、scroll/CDP integration 用本地 Chrome/启动候选门控                                                                                              | 环境依赖；本次 65 条目里没有缺浏览器而跳过的用例                                                                             |"
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "line": 29,
+      "text": "- [独立 Playwright 动作](../../packages/desktop/src/main/browser-runtime/playwright-driver.ts)、[开发者观察](../../packages/desktop/src/browser-library/browser-inspector.ts)。"
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "line": 61,
+      "text": "快照、内容与媒体提取遍历当前页面的 frames 和开放的 shadow DOM。媒体按类别和跨 frame 的配额限制输出；内联图片保留可操作引用，工具结果不展开 data URL 的正文。敏感输入值受到过滤。这是有界 DOM 观察实现，不承诺与完整浏览器可访问性树等价，也不覆盖封闭 shadow root 或 Canvas 的业务数据结构。"
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "line": 75,
+      "text": "| `dom`         | 可选 CSS 子树内有界的标签、简短文本、矩形和少量样式；不返回 input／textarea 值，也不遍历编辑区域的内容 |"
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "line": 81,
+      "text": "记录上限为 100 条；DOM 遍历另有节点上限，页面求值等待上限为 8 秒。网络／性能 URL 去掉凭证、查询参数与 fragment，内联正文不会展开。控制台仍可能包含网站主动打印的内容；所有页面文本和日志都是不可信数据。"
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "line": 138,
+      "text": "CODESHELL_TEST_CHROMIUM='/Users/admin/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium' bun test packages/desktop/src/browser-library/browser-inspector.integration.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17/coverage.md",
+      "line": 16,
+      "text": "| Browser-devtools | 本轮只读 inspector.ts 的普通 DOM/performance/record 数据流程 | 未动态验证，无新增确认项；不把读过一个文件当完整包审阅 |"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-switch-round18.md",
+      "line": 70,
+      "text": "三个早期 harness 失败单独保留，**不计为产品问题或最终通过测试**：`model-preferences.harness-failed.log` 是 `/tmp` 自身 JSX runtime 模块定位；`geometry-harness-failed.log` 是 mini DOM 缺少 `getBoundingClientRect`；`cleanup-harness-failed.log` 是 mini DOM 缺少 `container.remove()`（同时记录未提供尺寸导致的 NaN warning）。已只修改临时 fixture，改用 createElement、提供固定几何并用 parent.removeChild 清理。最终日志没有这些 warning/失败。"
+    },
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "line": 96,
+      "text": "| Link + CDP + browser-devtools，7 文件 | 104 pass / 0 fail / 560 expect，Completed | [server-baseline-link-browser.log](evidence/server-baseline-link-browser.log) |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "line": 19,
+      "text": "| CDP / browser-devtools | helper/inspector和生产消费接线 | 合并baseline同上 | 真实浏览器与全站点适配 |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "key": "$.source_inventory[50]",
+      "text": "packages/browser-devtools/src/contracts.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "key": "$.source_inventory[51]",
+      "text": "packages/browser-devtools/src/index.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "key": "$.source_inventory[52]",
+      "text": "packages/browser-devtools/src/inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "key": "$.source_inventory[861]",
+      "text": "packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "key": "$.sources[29].coverage",
+      "text": "selected ensureMiniDom/renderHook boundary/search hits only"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-17-mimi-session-archival.md",
+      "line": 1486,
+      "text": "- [ ] 写失败测试:向 `PetChatHost.test.ts`(纯契约,无 DOM)追加。先扩展 `selectPetChatRows` 的入参为 `(messages, segments?)`,`segments` 是 `{ boundaryBeforeMessageId: string; brief?: string }[]`;断言在对应 user 消息前插入 `segment-divider` 行、带纪要时插 `work-memory` 行:"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round25-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round24-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round22-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round27-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round23-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round26-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round22-browser-stop-results.json",
+      "key": "$.scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round23-menu-owner-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round28-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/round29-report-audit.json",
+      "key": "$.round22Scope",
+      "text": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-model-switch-round18/report.md",
+      "line": 68,
+      "text": "三个早期 harness 失败单独保留，**不计为产品问题或最终通过测试**：`model-preferences.harness-failed.log` 是 `/tmp` 自身 JSX runtime 模块定位；`geometry-harness-failed.log` 是 mini DOM 缺少 `getBoundingClientRect`；`cleanup-harness-failed.log` 是 mini DOM 缺少 `container.remove()`（同时记录未提供尺寸导致的 NaN warning）。已只修改临时 fixture，改用 createElement、提供固定几何并用 parent.removeChild 清理。最终日志没有这些 warning/失败。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.observations[0].preStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.observations[0].postStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.observations[0].afterEnable.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.observations[1].directSettled.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.observations[2].normal.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.observations[2].afterIdleStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "key": "$.final.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "key": "$.snapshot.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "key": "$.snapshot.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "key": "$.observations[0].preStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "key": "$.observations[0].postStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "key": "$.observations[0].afterEnable.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "key": "$.observations[1].directSettled.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "key": "$.snapshot.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.observations[0].preStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.observations[0].postStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.observations[0].afterEnable.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.observations[1].directSettled.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.observations[2].normal.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.observations[2].afterIdleStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "key": "$.final.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "key": "$.snapshot.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.observations[0].preStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.observations[0].postStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.observations[0].afterEnable.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.observations[1].directSettled.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.observations[2].normal.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.observations[2].afterIdleStop.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "key": "$.final.loadedWorkspaceModules[382]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/browser-library/browser-inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+      "key": "$.files[7].path",
+      "text": "packages/browser-devtools/src/inspector.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+      "key": "$.files[8].path",
+      "text": "packages/browser-devtools/src/contracts.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+      "key": "$.files[9].path",
+      "text": "packages/browser-devtools/src/index.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+      "key": "$.files[11].path",
+      "text": "packages/desktop/src/browser-library/browser-inspector.ts"
+    }
+  ],
+  "excludedCurrentRound": true
+}

@@ -1,0 +1,71 @@
+{
+  "frozen": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "shards": [
+    {
+      "name": "pet-search-display",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round10/evidence/pet-search-display.test.ts"
+      ],
+      "log": "evidence/pet-search-display.first.log",
+      "exitReceipt": "evidence/pet-search-display.first-exit.json",
+      "exitCode": 0,
+      "completed": true,
+      "pass": 2,
+      "expect": 13,
+      "fail": 0,
+      "skip": 0,
+      "files": 1,
+      "kind": "focused-characterization",
+      "firstRun": true,
+      "reruns": 0
+    },
+    {
+      "name": "pet-pure-baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/pet/src/session-index.test.ts",
+        "packages/pet/src/projection-extension.test.ts",
+        "packages/pet/src/topic-segment.test.ts",
+        "packages/pet/src/segment-closure.test.ts",
+        "packages/pet/src/migration-summary.test.ts",
+        "packages/pet/src/im-session-list.test.ts",
+        "packages/pet/src/context-recall.test.ts",
+        "packages/pet/src/session-visit-receipt.test.ts",
+        "packages/pet/src/disclosure/catalog.test.ts",
+        "packages/pet/src/disclosure/latest-result.test.ts",
+        "packages/pet/src/disclosure/todo-snapshot.test.ts",
+        "packages/pet/src/disclosure/search.test.ts"
+      ],
+      "log": "evidence/pet-pure-baseline.first.log",
+      "exitReceipt": "evidence/pet-pure-baseline.first-exit.json",
+      "exitCode": 0,
+      "completed": true,
+      "pass": 89,
+      "expect": 212,
+      "fail": 0,
+      "skip": 0,
+      "files": 12,
+      "kind": "existing-tests",
+      "firstRun": true,
+      "reruns": 0
+    }
+  ],
+  "aggregate": {
+    "cleanShards": 2,
+    "pass": 91,
+    "expect": 225,
+    "fail": 0,
+    "skip": 0,
+    "failedShards": 0,
+    "existingPass": 89,
+    "focusedPass": 2
+  },
+  "note": "Characterization tests passing demonstrate current behavior, not a product correction. No full build/typecheck/lint/real Host verification."
+}

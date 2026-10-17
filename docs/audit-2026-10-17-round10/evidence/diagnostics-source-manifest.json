@@ -1,0 +1,84 @@
+{
+  "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/browser-devtools/README.md",
+      "frozenSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "currentSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "frozenSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "currentSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "frozenSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "currentSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "frozenSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "frozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "frozenSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "currentSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "frozenSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "currentSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "frozenSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "currentSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.integration.test.ts",
+      "frozenSha256": "b3f7d30fc5d14362d2e197cf4dc499ab883b6ec31e9e652b445c1f66200e6bca",
+      "currentSha256": "b3f7d30fc5d14362d2e197cf4dc499ab883b6ec31e9e652b445c1f66200e6bca",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "frozenSha256": "2fa13492f3ad2d7c2c5f7458c50d844a9e00579f809d9479e03d2dde2ff26f4c",
+      "currentSha256": "2fa13492f3ad2d7c2c5f7458c50d844a9e00579f809d9479e03d2dde2ff26f4c",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "frozenSha256": "d5db8c108ca64b60a36ec761389626498223752d41ff251131bc299b01f7a3a2",
+      "currentSha256": "d5db8c108ca64b60a36ec761389626498223752d41ff251131bc299b01f7a3a2",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-diagnostics-projection.test.ts",
+      "frozenSha256": "8135b404d14b3ba92b9b7b3210339dff187db00d7e4b6dab9500e3f6f0a03ec3",
+      "currentSha256": "8135b404d14b3ba92b9b7b3210339dff187db00d7e4b6dab9500e3f6f0a03ec3",
+      "currentEqualsFrozen": true
+    }
+  ],
+  "coverageLimit": "Full browser-devtools src, metadata and tests; Desktop caller excerpt and integration test read only."
+}

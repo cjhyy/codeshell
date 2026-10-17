@@ -1,0 +1,139 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/RunStore.ts",
+      "bytes": 2114,
+      "sha256": "56f9825e93581e8a62cdc99671b219dd1da60a6b656270adac054a10b4467d45",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/FileRunStore.ts",
+      "bytes": 15079,
+      "sha256": "ad7b0f314a93e3a31700e75b28beab0ee3b707c60b7675589fd371eca401ecf5",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/FileRunStore.list-pagination.test.ts",
+      "bytes": 2786,
+      "sha256": "6f4888a238e066f0947bb4203a30e839173935b31db5c6f53c79b7dce6da3e21",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/FileRunStore.appendlock.test.ts",
+      "bytes": 2584,
+      "sha256": "941f0d033c6441696dcf21845e70b45d1b153ef7aee6c5f1c14be87f52106ea9",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/CheckpointWriter.ts",
+      "bytes": 5972,
+      "sha256": "670039b3fd4d24263dcfa6f92cdf11bc996baf37c263b998ed8f32c015dc2368",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/run/types.ts",
+      "bytes": 6028,
+      "sha256": "961ce437b57609872431a05ac99a35b04864d933b8d4d082151b90dec7f8ef27",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 50794,
+      "sha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27572,
+      "sha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/desktop/src/main/runs-service.ts",
+      "bytes": 15255,
+      "sha256": "ad24f50141e8521ec2f6c4b7a197559ea03104aa9fe77f2aadcbe447df37c274",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/desktop/src/main/run-history-service.ts",
+      "bytes": 11376,
+      "sha256": "c5676d1600dfd086f0975a01d2268712c8b9a64fa2e64fea6aa8f28d98cb7c8f",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/desktop/src/main/run-history-service.test.ts",
+      "bytes": 9373,
+      "sha256": "99169e8c3b53925d44153501f8e2c3b47c19ea61c8e9c581aee094778378c94d",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "packages/tui/src/cli/commands/runs.ts",
+      "bytes": 12208,
+      "sha256": "19c28ce128736d4f9132bfa562907534b1f8918bd03af409bad1e662e32a6dfd",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    },
+    {
+      "path": "tests/run-store.test.ts",
+      "bytes": 10629,
+      "sha256": "e5f6ba65b232890df13feba2697c7e641690d1ac6175848f30144e6c2a7a01b6",
+      "currentMatchesFrozen": true,
+      "coverage": "Read selected source/test or excerpts; inclusion alone does not imply full-file or executed coverage."
+    }
+  ],
+  "installedDependencyReceipt": "root-preflight.json"
+}

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/pet/src/session-index.test.ts",
+    "packages/pet/src/projection-extension.test.ts",
+    "packages/pet/src/topic-segment.test.ts",
+    "packages/pet/src/segment-closure.test.ts",
+    "packages/pet/src/migration-summary.test.ts",
+    "packages/pet/src/im-session-list.test.ts",
+    "packages/pet/src/context-recall.test.ts",
+    "packages/pet/src/session-visit-receipt.test.ts",
+    "packages/pet/src/disclosure/catalog.test.ts",
+    "packages/pet/src/disclosure/latest-result.test.ts",
+    "packages/pet/src/disclosure/todo-snapshot.test.ts",
+    "packages/pet/src/disclosure/search.test.ts"
+  ],
+  "exitCode": 0,
+  "rawCombinedLog": "pet-pure-baseline.first.log",
+  "firstRun": true,
+  "retries": 0
+}

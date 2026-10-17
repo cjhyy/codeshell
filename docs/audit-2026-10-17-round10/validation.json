@@ -1,0 +1,134 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "totals": {
+    "firstBunShards": 9,
+    "completedCleanShards": 9,
+    "passedTests": 169,
+    "expectations": 582,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 0,
+    "existingBaselineTests": 154,
+    "newFocusedObservationsAndControls": 15
+  },
+  "runs": [
+    {
+      "log": "evidence/root-run-data.first.log",
+      "exitFile": "evidence/root-run-data.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 15,
+      "skipped": 0,
+      "sha256": "36c1f4711e3ec8e8b2d8b6e50c1c09d1f9b6dcf0563800a6ac4548a64c14294d"
+    },
+    {
+      "log": "evidence/root-run-existing-baseline.first.log",
+      "exitFile": "evidence/root-run-existing-baseline.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 9,
+      "failed": 0,
+      "expectations": 20,
+      "skipped": 0,
+      "sha256": "9d7372a2016d64c32700660bc6a68f44fcd452ee7dcda5914302df5b65147ccc"
+    },
+    {
+      "log": "evidence/catalog-existing.first.log",
+      "exitFile": "evidence/catalog-existing.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 44,
+      "failed": 0,
+      "expectations": 258,
+      "skipped": 0,
+      "sha256": "c16caa5561228d76107079123b110158ace4982b26cfcc2e6432523c76c639ee"
+    },
+    {
+      "log": "evidence/catalog-cache-existing.first.log",
+      "exitFile": "evidence/catalog-cache-existing.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 7,
+      "failed": 0,
+      "expectations": 10,
+      "skipped": 0,
+      "sha256": "e122857bb6b61fe764dc9cfb8040af514bdf1bc5bf1117ea216a3c5ebe7bb128"
+    },
+    {
+      "log": "evidence/catalog-data-controls.first.log",
+      "exitFile": "evidence/catalog-data-controls.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 10,
+      "skipped": 0,
+      "sha256": "fd2e2525cde91f5e22749db22dfe39afd4b62e3a49ad7f8af61e52be8026dd72"
+    },
+    {
+      "log": "evidence/diagnostics-bounded-projection.first.log",
+      "exitFile": "evidence/diagnostics-bounded-projection.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 5,
+      "failed": 0,
+      "expectations": 20,
+      "skipped": 0,
+      "sha256": "5a52a23b01c0caba4838b6e344aaecdc80e898f592fa390e115e0cf9838142e4"
+    },
+    {
+      "log": "evidence/diagnostics-existing-inspector.first.log",
+      "exitFile": "evidence/diagnostics-existing-inspector.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 5,
+      "failed": 0,
+      "expectations": 24,
+      "skipped": 0,
+      "sha256": "64d8c0ac6bf83fa5a295cad2ac563dd4925d3430fa3804fe9c8f9f494b50a5c6"
+    },
+    {
+      "log": "evidence/pet-search-display.first.log",
+      "exitFile": "evidence/pet-search-display.first-exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 13,
+      "skipped": 0,
+      "sha256": "a7b0930e8e513ec1784b04aa28dc95a5e19a797b84b0926c04fcbe5e1beee7a9"
+    },
+    {
+      "log": "evidence/pet-pure-baseline.first.log",
+      "exitFile": "evidence/pet-pure-baseline.first-exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 89,
+      "failed": 0,
+      "expectations": 212,
+      "skipped": 0,
+      "sha256": "664e859e2c8a63c0aa284c40cd6a166478cf9fad20596da21cf5732c94af3fb4"
+    }
+  ],
+  "notes": [
+    "Nine first raw combined stdout/stderr logs and exit receipts saved before inspection; no failed Bun shard/product rerun.",
+    "169 tests = 154 existing baseline tests + 15 focused observations/controls; shared finding logs counted once.",
+    "Characterization pass asserts current wrong behavior and controls, not a product fix.",
+    "Diagnostics callback uses a fake iterable collection in VM; no real DOM/browser performance, timeout or memory peak claim.",
+    "Pet search uses real reader/search over owned temporary transcript metadata, with ASCII/boundary controls. IPC/UI/Host callers are static only.",
+    "Catalog assertions establish frozen repository consistency, not current external model capability or pricing facts.",
+    "Negative checkpoint text remains a contract candidate because keyword heuristic is documented; no Engine/evaluator/UI success-status claim.",
+    "Static path/glob and metadata regex/field/citation diagnostics are separately preserved; add zero product executions and do not recover failed product directions.",
+    "No real models/paid APIs/accounts/user data/external messages/native apps/PTY/auth/permission/security/custody/watchdog experiments, shared dist/dependency rebuild or full build/typecheck/lint/test."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "scope": "Source-relative FileRunStore/Queue/CheckpointWriter with in-memory store or owned temp directories. No Engine/RunManager/native/model/provider tests.",
+  "installedDependency": {
+    "specifier": "nanoid",
+    "resolvedPath": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/nanoid@5.1.11/node_modules/nanoid/index.js",
+    "bytes": 1899,
+    "sha256": "9d4ef4f6df30de75937853a6db38aacbe549b719585a11009df936a90ebf7542",
+    "trackedFrozenSource": false
+  },
+  "preflightOnly": true,
+  "moduleExecutedByPreflight": false
+}

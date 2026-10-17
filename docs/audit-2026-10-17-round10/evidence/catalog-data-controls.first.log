@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round10/evidence/catalog-data-controls.test.ts:
+(pass) wire projection preserves false, zero, empty text and omits undefined [1.28ms]
+(pass) distinct dotted fields share their enclosing object [0.02ms]
+(pass) schema-parsed model id replacement preserves other entries and original arrays [2.02ms]
+(pass) documentation formatter preserves model-specific enum labels and optional docs
+
+ 4 pass
+ 0 fail
+ 10 expect() calls
+Ran 4 tests across 1 file. [228.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

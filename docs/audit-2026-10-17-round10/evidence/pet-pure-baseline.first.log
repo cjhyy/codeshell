@@ -1,0 +1,120 @@
+bun test v1.3.11 (af24e281)
+
+packages/pet/src/context-recall.test.ts:
+(pass) goal-relevant Mimi memory selection > recalls an old relevant fact beyond the recent window and retains recent fallback [5.44ms]
+(pass) goal-relevant Mimi memory selection > uses grounded Chinese objectives for short follow-ups without hiding other-source facts [0.31ms]
+(pass) goal-relevant Mimi memory selection > task associations add recall relevance without treating near-identical facts as equivalent [0.13ms]
+(pass) goal-relevant Mimi memory selection > enforces serialized character and item budgets, skips oversized facts without shortening them [0.27ms]
+(pass) goal-relevant Mimi memory selection > ties are stable regardless of input iteration order [1.01ms]
+
+packages/pet/src/session-visit-receipt.test.ts:
+(pass) opening a visit > starts with nothing counted and no outcome claimed [0.84ms]
+(pass) counting during a visit > tracks what the user sent and what the Session finished [0.01ms]
+(pass) closing a visit > captures where the Session was left [0.09ms]
+(pass) closing a visit > bounds the text so one visit cannot flood Mimi's context [0.23ms]
+(pass) closing a visit > collapses whitespace and drops empty steps [0.03ms]
+(pass) closing a visit > records why the visit ended, including an unwanted ending [0.03ms]
+(pass) closing a visit > a pending approval survives into the receipt [0.01ms]
+(pass) building Mimi's context > labels the receipts untrusted [0.13ms]
+(pass) building Mimi's context > shows the most recent visits first and bounds how many [0.13ms]
+(pass) building Mimi's context > no visits means no context rather than an empty block
+
+packages/pet/src/topic-segment.test.ts:
+(pass) topic segment boundaries > starts a new segment after the idle threshold
+(pass) topic segment boundaries > treats exactly the idle threshold as a boundary [0.06ms]
+(pass) topic segment boundaries > carryover brief includes unfinished tasks and latest conclusions [0.05ms]
+(pass) topic segment boundaries > carryover brief is empty when there is nothing to carry
+(pass) topic segment boundaries > carryover brief omits the workspace suffix when absent [0.05ms]
+(pass) topic segment boundaries > work memory entry captures task, outcome and refs [0.03ms]
+(pass) topic segment boundaries > work memory entry is a defensive copy
+
+packages/pet/src/segment-closure.test.ts:
+(pass) locateClosureWindow > slices between the closing boundary and the next boundary
+(pass) locateClosureWindow > runs a closing boundary to the end of the transcript [0.23ms]
+(pass) locateClosureWindow > treats an absent closing boundary as starting at index 0 [0.02ms]
+(pass) locateClosureWindow > returns null when a boundary id is not in the transcript or window is empty [0.05ms]
+(pass) buildClosureInput > labels speakers and skips empty turns [0.04ms]
+(pass) parseClosureResponse > parses a bare JSON object [0.38ms]
+(pass) parseClosureResponse > recovers JSON wrapped in a code fence with prose around it [0.05ms]
+(pass) parseClosureResponse > clamps memories to two and drops non-strings and blanks [0.09ms]
+(pass) parseClosureResponse > returns null without a usable title and summary [0.02ms]
+
+packages/pet/src/projection-extension.test.ts:
+(pass) Pet projection observer > withdraws a newly hidden session first exposed by a snapshot without a delta [1.62ms]
+(pass) Pet projection observer > withdraws an initial default-kind projection once the session becomes Pet (stream) [0.09ms]
+(pass) Pet projection observer > withdraws an initial default-kind projection once the session becomes Pet (boundary) [0.09ms]
+(pass) Pet projection observer > drops closed session state before the same id is attached again [1.25ms]
+(pass) Pet projection observer > declares only the durable Pet session kind as hidden
+(pass) Pet projection observer > keeps ephemeral quick chats out of Mimi's live projection [0.22ms]
+(pass) Pet projection observer > preserves the indexed terminal when the host becomes idle at turn completion [0.29ms]
+
+packages/pet/src/migration-summary.test.ts:
+(pass) buildMigrationSummary > joins journal entries oldest-first with title + summary
+(pass) buildMigrationSummary > returns empty string for no entries [0.05ms]
+
+packages/pet/src/session-index.test.ts:
+(pass) SessionIndex > budget exhaustion is visibly incomplete even when final text claims completion
+(pass) SessionIndex > does not replace the current projection with an older run start [0.10ms]
+(pass) SessionIndex > isolates child terminals while retaining child progress [0.26ms]
+(pass) SessionIndex > rejects a previous run terminal even with a newer timestamp and cursor [0.09ms]
+(pass) SessionIndex > projects disk-only work sessions without creating a live session [0.03ms]
+(pass) SessionIndex > maps live idle, queued, running and pending decision state [0.17ms]
+(pass) SessionIndex > waiting is a display phase and does not turn a dormant session into running [0.01ms]
+(pass) SessionIndex > reduces ordered stream events and rejects stale versions [0.08ms]
+(pass) SessionIndex > keeps background-wait boundaries non-terminal across live and disk projection [0.05ms]
+(pass) SessionIndex > builds safe bounded summaries without copying event payloads [0.01ms]
+(pass) SessionIndex > distinguishes abnormal disconnect from normal worker reclaim [0.34ms]
+(pass) SessionIndex > filters non-local, pet, ephemeral and sub-agent catalog entries [0.04ms]
+(pass) SessionIndex > does not retain live state after catalog removal and same-id recreation [0.02ms]
+(pass) crash-orphaned active sessions > does not present a long-idle active session as resumable [0.04ms]
+(pass) crash-orphaned active sessions > keeps a recently-active session dormant so a live resume still works [0.03ms]
+
+packages/pet/src/im-session-list.test.ts:
+(pass) display status > a completed run reads completed, any other terminal reads interrupted [0.01ms]
+(pass) display status > a pending decision outranks running [0.02ms]
+(pass) display status > queued counts as running to the user
+(pass) display status > a crashed session that still claims active is not shown as running [0.01ms]
+(pass) building the list > numbers rows from one and never emits a raw session id
+(pass) building the list > archived sessions are dropped, not offered then refused [0.04ms]
+(pass) building the list > caps the list so a phone message stays scannable [0.03ms]
+(pass) resolving an ordinal > picks the row the user actually saw [0.01ms]
+(pass) resolving an ordinal > an out-of-range or nonsense ordinal resolves to nothing [0.02ms]
+(pass) ambiguity > duplicate titles are reported so the host keeps asking [0.03ms]
+(pass) ambiguity > distinct titles are unambiguous [0.02ms]
+
+packages/pet/src/disclosure/catalog.test.ts:
+(pass) listWorkSessionsOnDisk > filters pet/subagent/child/ephemeral sessions, keeps a work session with title/cwd [36.09ms]
+(pass) listWorkSessionsOnDisk > sorts by updatedAt desc and honours limit [10.81ms]
+(pass) listWorkSessionsOnDisk > missing root directory returns empty array [0.88ms]
+(pass) listWorkSessionsOnDisk > a session with non-string title/summary/status does not break adjacent sessions [12.59ms]
+(pass) listWorkSessionsOnDisk > single-session reads enforce the same ordinary-work policy as the list [15.85ms]
+(pass) listWorkSessionsOnDisk > resolves an opaque selector independently of the visible catalog limit [13.00ms]
+(pass) sessionSelectorId > matches the desktop pet-dispatch-service reusableSessionId convention [0.01ms]
+
+packages/pet/src/disclosure/search.test.ts:
+(pass) searchSessionTranscripts > finds a keyword across sessions case-insensitively with multiple snippets [11.85ms]
+(pass) searchSessionTranscripts > excludes pet/subagent sessions and respects maxSessions [18.05ms]
+(pass) searchSessionTranscripts > truncated is true when the deadline is exceeded before all candidates are scanned [10.06ms]
+(pass) searchSessionTranscripts > blank query returns empty matches [2.99ms]
+(pass) searchSessionTranscripts > truncated is false when all candidates are processed and matches exactly fill maxSessions [10.17ms]
+(pass) searchSessionTranscripts > scannedSessions does not count a candidate missing transcript.jsonl [11.19ms]
+
+packages/pet/src/disclosure/latest-result.test.ts:
+(pass) readLatestAssistantText > recent work context excludes injected reminders and system/agent authored user-role inputs [13.18ms]
+(pass) readLatestAssistantText > returns the newest assistant text, skipping a trailing user message [3.55ms]
+(pass) readLatestAssistantText > truncates to maxChars and sets truncated: true [6.08ms]
+(pass) readLatestAssistantText > returns null when there is no assistant message [4.43ms]
+(pass) readLatestAssistantText > returns null for a nonexistent directory [0.04ms]
+(pass) readLatestAssistantText > skips malformed lines and supports plain-string content [5.11ms]
+(pass) readLatestAssistantText > does not split a surrogate pair when truncating at the boundary [4.01ms]
+
+packages/pet/src/disclosure/todo-snapshot.test.ts:
+(pass) readSessionTodos > newest snapshot wins, returns items in order with statuses [4.76ms]
+(pass) readSessionTodos > all-completed snapshot returns an empty array [4.29ms]
+(pass) readSessionTodos > no TodoWrite event returns null [4.09ms]
+
+ 89 pass
+ 0 fail
+ 212 expect() calls
+Ran 89 tests across 12 files. [422.00ms]
+Completed Bun shard: 89 tests, 0 skipped; 0 failures.

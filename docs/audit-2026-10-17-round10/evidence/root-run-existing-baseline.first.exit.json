@@ -1,0 +1,16 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/run/FileRunStore.list-pagination.test.ts",
+    "packages/core/src/run/RunQueue.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true,
+  "elapsedSeconds": 0.4207589626312256,
+  "scope": "Existing plain pagination and in-memory FIFO/slot-release baseline only; no IDs/security/approval/locks/crash recovery fixtures."
+}

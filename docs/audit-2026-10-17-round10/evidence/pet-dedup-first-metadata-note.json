@@ -1,0 +1,6 @@
+{
+  "kind": "metadata-only correction; no product execution",
+  "firstScannedFiles": 1054,
+  "firstMatchingFiles": 1043,
+  "reason": "Python re.IGNORECASE applied to literal U+0130 also matches ASCII i; refined matching to test U+0130 separately without IGNORECASE."
+}
