@@ -74,13 +74,15 @@ async function canvasJpeg(file: File): Promise<File> {
 }
 
 export async function normalizeMobileImage(file: File): Promise<File> {
-  const mime = file.type.toLowerCase();
-  if (mime === "image/jpg") {
-    return new File([await file.arrayBuffer()], file.name, {
+  // An accepted MIME alias still follows the ordinary conversion/size rules.
+  // Wrap the Blob directly to preserve bytes without an extra full-buffer copy.
+  if (file.type.toLowerCase() === "image/jpg") {
+    file = new File([file], file.name, {
       type: "image/jpeg",
       lastModified: file.lastModified,
     });
   }
+  const mime = file.type.toLowerCase();
   if (SUPPORTED_MIMES.has(mime as MobileImageMime) && file.size <= MOBILE_MAX_IMAGE_BYTES) {
     return file;
   }
