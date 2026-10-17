@@ -1,0 +1,113 @@
+{
+  "baseline": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "count": 6,
+  "candidates": [
+    {
+      "id": "TAB-R16-C1",
+      "title": "TUI tab measurement uses relative column zero while static screen writer uses absolute origin",
+      "status": "candidate",
+      "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+      "source": [
+        {
+          "path": "packages/tui/src/render/tabstops.ts",
+          "line": 22
+        },
+        {
+          "path": "packages/tui/src/render/dom.ts",
+          "line": 350
+        },
+        {
+          "path": "packages/tui/src/render/output.ts",
+          "line": 683
+        }
+      ],
+      "observed": "Actual expandTabs and Bun.stringWidth produce width 9 for aaaaaaa\\tX. Static output arithmetic at origin 5 implies relative width 12.",
+      "normalProducer": "CodeBlock.tsx:29,41,42 keeps code tabs in a Text node after margin/prefix; source-only.",
+      "whyCandidate": "Actual DOM/Yoga/writer/terminal not executed; final visible/layout impact and correction by other constraints unproven. The 12 result is standalone integer arithmetic from static source, not an executed product writer.",
+      "controls": "Default leading/consecutive/exact-boundary tabs, newline reset and positive custom interval.",
+      "runtimeEvidence": "evidence/tabstops-pure.first.raw.log",
+      "runtimeScope": "Actual pure expandTabs, real tokenizer and real Bun.stringWidth; static output arithmetic."
+    },
+    {
+      "id": "TAB-R16-C2",
+      "title": "SGR boundary inside a hand-built ZWJ cluster changes tab padding",
+      "status": "candidate",
+      "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+      "source": [
+        {
+          "path": "packages/tui/src/render/tabstops.ts",
+          "line": 24
+        },
+        {
+          "path": "packages/tui/src/render/tabstops.ts",
+          "line": 39
+        }
+      ],
+      "observed": "Actual whole emoji width 2 and styled whole prefix width 2, but text-token widths 2+2 cause tab padding 6→4; actual styled expanded line width 7.",
+      "normalProducer": "Unproven; SGR boundary inside the grapheme is hand-built. Ordinary markdown/highlighter not executed.",
+      "whyCandidate": "No ordinary producer or terminal rendering evidence for a style change inside a ZWJ grapheme. No confirmed product impact.",
+      "controls": "ASCII SGR boundaries, complete OSC 8 string, Chinese width, decomposed Latin width, unsplit emoji.",
+      "runtimeEvidence": "evidence/tabstops-pure.first.raw.log",
+      "runtimeScope": "Actual pure expandTabs, real tokenizer and real Bun.stringWidth; no JS fallback, ANSI Parser, UI or terminal."
+    },
+    {
+      "id": "TASKNOISE-R16-C1",
+      "status": "candidate",
+      "title": "BOX_RE does not recognize project-defined dashed border glyphs",
+      "source": "packages/core/src/utils/task-sanitizer.ts",
+      "line": 2,
+      "observed": "Actual helper accepts 140 ╌ and 140 ╎ as signal; solid ─ and │ controls reject as noise.",
+      "staticProducer": "packages/tui/src/render/render-border.ts:17-29 defines supported dashed style; actual ordinary UI selection not established.",
+      "contract": "Archived utils role describes box-heavy pasted task detection; no exhaustive glyph requirement.",
+      "limitation": "Renderer, clipboard, Host/Engine and real user path not executed. Hand-constructed helper inputs do not prove normal reachability.",
+      "evidence": [
+        "evidence/tasknoise-pure.test.ts",
+        "evidence/tasknoise-pure.first.raw.log"
+      ]
+    },
+    {
+      "id": "TASKNOISE-R16-C2",
+      "status": "candidate",
+      "title": "ANSI noise stripping does not cover locally supported colon SGR and OSC",
+      "source": "packages/core/src/utils/task-sanitizer.ts",
+      "line": 1,
+      "observed": "Actual helper retains colon RGB SGR-only and OSC8-only strings as signal; semicolon RGB/basic SGR controls reject.",
+      "staticProducer": "Local SGR parser supports colon; local OSC link producer emits OSC8. Neither module imported/invoked.",
+      "contract": "Broad archived ANSI-heavy detection description; no exhaustive terminal protocol promise.",
+      "limitation": "Raw control-preserving ordinary input transport not established. TUI TextInput statically removes ESC. No terminal/Engine/provider invocation.",
+      "evidence": [
+        "evidence/tasknoise-pure.test.ts",
+        "evidence/tasknoise-pure.first.raw.log"
+      ]
+    },
+    {
+      "id": "BIDI-R16-C1",
+      "status": "candidate",
+      "title": "Hard-coded RTL fast filter excludes Adlam strong RTL letters",
+      "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+      "source": "packages/tui/src/render/bidi.ts:132",
+      "consumer": "packages/tui/src/render/bidi.ts:63",
+      "evidence": "Exact frozen-source predicate returns false for U+1E900/U+1E901; returns true when ordinary Hebrew appended. Unicode DerivedBidiClass marks 1E900..1E943 as R.",
+      "execution": "source-extracted predicate only; no actual module export or bidi-js call",
+      "ordinaryInput": "Two normal Adlam Unicode letters; no explicit formatting control needed.",
+      "limits": "Platform gate, complete reorder, font/terminal display and explicit current Adlam product support contract were not verified. Candidate only.",
+      "externalContract": "https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedBidiClass.txt",
+      "formalSeverity": null
+    },
+    {
+      "id": "BIDI-R16-C2",
+      "status": "candidate",
+      "title": "No mirroring step visible in object-only bidi permutation",
+      "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+      "source": "packages/tui/src/render/bidi.ts:67",
+      "consumer": "packages/tui/src/render/output.ts:805",
+      "evidence": "Static function returns original value fields after object permutation; direct Output consumer passes value to setCellAt. UAX #9 L4/section 7 requires mirrored glyph handling for odd resolved levels.",
+      "execution": "source only; the embedding levels and reordered result for parenthesized Hebrew were not executed",
+      "ordinaryInput": "Parenthesized ordinary Hebrew text such as (שלום), only an illustrative unexecuted input.",
+      "limits": "No verified downstream font/terminal mirroring contract; no observed bad bracket output. Candidate only, not a claim that code-point substitution is always required.",
+      "externalContract": "https://www.unicode.org/reports/tr9/",
+      "formalSeverity": null
+    }
+  ],
+  "note": "Four actual-helper observations, one source-extracted predicate observation, one static mirroring concern; none establishes complete ordinary user-visible failure. No severity assigned."
+}

@@ -1,0 +1,78 @@
+{
+  "baseline": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "instruction digest revalidated unchanged from prior full read"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "instruction digest revalidated unchanged from prior full read"
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "bytes": 1329,
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "full source read; actual pure function called by one first shard"
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "bytes": 11605,
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected198-215 resolver/clear only; loader not imported"
+    },
+    {
+      "path": "packages/core/src/skills/scanner.ts",
+      "bytes": 16891,
+      "sha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected350-390,460-482 and resolver/call references429; scanner not imported"
+    },
+    {
+      "path": "packages/tui/src/render/bidi.ts",
+      "bytes": 4305,
+      "sha256": "561670cc97aaba05770800bd15e13021c817f550a3438f8800a57073faf988aa",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "full static source read for worker boundary discussion; no module/function execution by root"
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "bytes": 27146,
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected640-680 writer consumer and795-811 value/setCellAt only; not imported or run"
+    },
+    {
+      "path": "packages/tui/src/render/tabstops.ts",
+      "bytes": 1113,
+      "sha256": "c042f512eb4817fae1de9b46c75f8487ebfe9f30cfb6ad87fab4fad2f5531484",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "full static source read for worker scope; no root execution"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "guard wrapper pin; actual prescribed command used"
+    }
+  ],
+  "note": "Exact source pins and explicit selected scope, not whole scanner/loader/renderer or transitive coverage."
+}

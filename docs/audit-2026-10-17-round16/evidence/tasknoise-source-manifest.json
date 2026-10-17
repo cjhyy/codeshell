@@ -1,0 +1,119 @@
+{
+  "base": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "sourceCount": 14,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true,
+      "scope": "full static workflow guidance"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentEqualsFrozen": true,
+      "scope": "full static repository alias guidance"
+    },
+    {
+      "path": "packages/core/src/utils/task-sanitizer.ts",
+      "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "bytes": 963,
+      "currentSha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "currentEqualsFrozen": true,
+      "scope": "full static + actual direct module pure-function execution"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "bytes": 210013,
+      "currentSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentEqualsFrozen": true,
+      "scope": "selected static imports, rejection 1684-1700 and continuing taskText consumer 1725; not imported/executed"
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "bytes": 9480,
+      "currentSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "currentEqualsFrozen": true,
+      "scope": "full static input preparation and content composition; not imported/executed"
+    },
+    {
+      "path": "packages/tui/src/ui/components/TextInput.tsx",
+      "sha256": "8b8296eaa6d3c5b17643bbd6e2cbcc07560384db912f9391a49f1f069e120a30",
+      "bytes": 9638,
+      "currentSha256": "8b8296eaa6d3c5b17643bbd6e2cbcc07560384db912f9391a49f1f069e120a30",
+      "currentEqualsFrozen": true,
+      "scope": "selected static paste normalization 194-214; not imported/executed"
+    },
+    {
+      "path": "packages/tui/src/render/render-border.ts",
+      "sha256": "73a2c6e71d8ef54ad830a47bbb5a901493a635542fd90507bc5422a3b4a8be0a",
+      "bytes": 6929,
+      "currentSha256": "73a2c6e71d8ef54ad830a47bbb5a901493a635542fd90507bc5422a3b4a8be0a",
+      "currentEqualsFrozen": true,
+      "scope": "full static custom border definitions and rendering; not imported/executed"
+    },
+    {
+      "path": "packages/tui/src/render/termio/sgr.ts",
+      "sha256": "e7f5b94bd74cad765f7d898984a75c442b6277fc7fb333fe9a120ab3a8d9d330",
+      "bytes": 6400,
+      "currentSha256": "e7f5b94bd74cad765f7d898984a75c442b6277fc7fb333fe9a120ab3a8d9d330",
+      "currentEqualsFrozen": true,
+      "scope": "full static local colon/semicolon SGR support; not imported/executed"
+    },
+    {
+      "path": "packages/tui/src/render/termio/osc.ts",
+      "sha256": "5fec71ea0316f1bd580e81823bba9559111957ba9318bb5af183e1f7abe3e85e",
+      "bytes": 16955,
+      "currentSha256": "5fec71ea0316f1bd580e81823bba9559111957ba9318bb5af183e1f7abe3e85e",
+      "currentEqualsFrozen": true,
+      "scope": "full static OSC generation/parser including link; never imported or invoked; no clipboard/native calls"
+    },
+    {
+      "path": "packages/tui/src/render/components/Link.tsx",
+      "sha256": "38c7894192aad50395dc1fde3f20e21748ef2170450601b1a11676b1efc4a142",
+      "bytes": 919,
+      "currentSha256": "38c7894192aad50395dc1fde3f20e21748ef2170450601b1a11676b1efc4a142",
+      "currentEqualsFrozen": true,
+      "scope": "full static link output shape; not imported/executed"
+    },
+    {
+      "path": "packages/core/src/utils/theme.ts",
+      "sha256": "13b425bf8f9fd0d768fd7f630561e669855d411329e3909c07252d2a8ba51849",
+      "bytes": 27387,
+      "currentSha256": "13b425bf8f9fd0d768fd7f630561e669855d411329e3909c07252d2a8ba51849",
+      "currentEqualsFrozen": true,
+      "scope": "selected static ordinary semicolon truecolor producer 613-637; not imported/executed"
+    },
+    {
+      "path": "packages/tui/src/render/split-numeric-params.test.ts",
+      "sha256": "477830f1f5e1d9d58644d95ca35a2b7fbf38642ba4ad8a43e75ab1284efa9dcb",
+      "bytes": 746,
+      "currentSha256": "477830f1f5e1d9d58644d95ca35a2b7fbf38642ba4ad8a43e75ab1284efa9dcb",
+      "currentEqualsFrozen": true,
+      "scope": "full static control/old issue exclusion; not executed"
+    },
+    {
+      "path": "docs/archive/core-modules/utils.md",
+      "sha256": "f48c0c63c91d00dfa3e6102223f8082da5c58d35e8b02089e468b6e90ef9cdc2",
+      "bytes": 8235,
+      "currentSha256": "f48c0c63c91d00dfa3e6102223f8082da5c58d35e8b02089e468b6e90ef9cdc2",
+      "currentEqualsFrozen": true,
+      "scope": "full static task-sanitizer descriptive policy; archived broad description is not an exhaustive ANSI promise"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentEqualsFrozen": true,
+      "scope": "guarded runner invoked once; bytes pinned, no full static runner review claim"
+    }
+  ],
+  "manifestMeaning": "selected file bytes are pinned; execution only task-sanitizer direct helper, not full-file/transitive dynamic coverage"
+}

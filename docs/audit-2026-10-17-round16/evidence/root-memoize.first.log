@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts:
+(pass) actual minimal memoize pure callbacks and supported cache API > resolver sees arguments and equal keys retain the computed object [1.31ms]
+(pass) actual minimal memoize pure callbacks and supported cache API > undefined is an actual cached result [0.20ms]
+(pass) actual minimal memoize pure callbacks and supported cache API > resolver side-channel changes select a new entry and preserve old entries [0.02ms]
+(pass) actual minimal memoize pure callbacks and supported cache API > documented cache.clear invalidates cached results [0.03ms]
+(pass) actual minimal memoize pure callbacks and supported cache API > ordinary string keys do not collide with object property names [0.04ms]
+(pass) actual minimal memoize pure callbacks and supported cache API > a synchronous callback exception creates no cached value [0.76ms]
+(pass) actual minimal memoize pure callbacks and supported cache API > falsy callback values are retained per resolver key [0.04ms]
+
+ 7 pass
+ 0 fail
+ 36 expect() calls
+Ran 7 tests across 1 file. [196.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

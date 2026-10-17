@@ -1,0 +1,28 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "sourcePath": "packages/tui/src/render/bidi.ts",
+  "sourceSha256": "561670cc97aaba05770800bd15e13021c817f550a3438f8800a57073faf988aa",
+  "currentMatchesFrozen": true,
+  "sourceFunctionLines": [
+    132,
+    140
+  ],
+  "sourceFunctionSha256": "93fbb4adb16d88450a66eb66065f36df95fb8253e511303c82453337558c85ae",
+  "regexLine": 137,
+  "regexLinePythonRepr": "'  return /[\\\\u0590-\\\\u05FF\\\\uFB1D-\\\\uFB4F\\\\u0600-\\\\u06FF\\\\u0750-\\\\u077F\\\\u08A0-\\\\u08FF\\\\uFB50-\\\\uFDFF\\\\uFE70-\\\\uFEFF\\\\u0780-\\\\u07BF\\\\u0700-\\\\u074F]/u.test('",
+  "firstEscapeUtf8Bytes": [
+    92,
+    117,
+    48,
+    53,
+    57,
+    48,
+    45,
+    92
+  ],
+  "doubleBackslashUnicodeEscapeCount": 0,
+  "compiledTransformation": "Remove only `: string` and `: boolean` from function signature; regex and body copied verbatim.",
+  "importsExecuted": [],
+  "platformGateExecuted": false,
+  "dependencyResolutionAttempted": false
+}

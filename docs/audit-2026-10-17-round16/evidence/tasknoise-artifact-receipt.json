@@ -1,0 +1,64 @@
+{
+  "base": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "ownedReport": "tasknoise.md",
+  "pathBase": "docs/audit-2026-10-17-round16",
+  "selfExcluded": true,
+  "artifacts": [
+    {
+      "path": "tasknoise.md",
+      "bytes": 5751,
+      "sha256": "4a77837071c75a6a41c8e2ed596c1bfb52cf66500e9e02ef36660e5fd48d78b1"
+    },
+    {
+      "path": "evidence/tasknoise-candidates.json",
+      "bytes": 1739,
+      "sha256": "e0ada2ea6794f9ae75e11b67246b48564a63d1315bb3d0df8c50fd53a7e272f0"
+    },
+    {
+      "path": "evidence/tasknoise-dedup.json",
+      "bytes": 386338,
+      "sha256": "bc896bc8f47188d6769abd217c7b3c57229a01417164ab47a3b938150e40663d"
+    },
+    {
+      "path": "evidence/tasknoise-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/tasknoise-navigation-skip.md",
+      "bytes": 1381,
+      "sha256": "b0df1af8ee562f35c9782bf252142852be8027e8e6d99955411352ba90cf1522"
+    },
+    {
+      "path": "evidence/tasknoise-preflight.json",
+      "bytes": 433,
+      "sha256": "d36bcb8bbb0b9eb6881b3f144a7be07c91fbbc32c65a9103b3452ff223f47694"
+    },
+    {
+      "path": "evidence/tasknoise-pure.first.exit.json",
+      "bytes": 498,
+      "sha256": "23e2bc3bf82b9f0416c81f609a66abfca32a68a53a2af8746a3c739dc5b25be7"
+    },
+    {
+      "path": "evidence/tasknoise-pure.first.raw.log",
+      "bytes": 1880,
+      "sha256": "fc7fc1d152cbbed6078d48a0e3cf82660fc16120c5225ee394b99b414f560f10"
+    },
+    {
+      "path": "evidence/tasknoise-pure.test.ts",
+      "bytes": 4506,
+      "sha256": "e010423b0b41f2d5e0e5a5eb43b7770e90672b5d18031372a500dc85900e7bdd"
+    },
+    {
+      "path": "evidence/tasknoise-source-manifest.json",
+      "bytes": 5634,
+      "sha256": "454493ddd8b5b5b86f061c90c8538e58d36a514d63e19dbe5e9cfcbfa0bac83c"
+    },
+    {
+      "path": "evidence/tasknoise-validation.json",
+      "bytes": 1569,
+      "sha256": "e735d8d8c8065c9555f2850280ed1fa60d4e02a100a6f66c4893bd6641faf5ef"
+    }
+  ],
+  "artifactCount": 11
+}

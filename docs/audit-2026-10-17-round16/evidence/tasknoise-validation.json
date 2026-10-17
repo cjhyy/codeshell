@@ -1,0 +1,56 @@
+{
+  "base": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "formalCount": 0,
+  "candidateCount": 2,
+  "relatedCount": 0,
+  "firstExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/tasknoise-pure.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round16/evidence/tasknoise-pure.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round16/evidence/tasknoise-pure.first.exit.json",
+      "exitCode": 0,
+      "guardCompleted": true,
+      "pass": 17,
+      "expect": 27,
+      "fail": 0,
+      "skip": 0,
+      "existingTests": 0,
+      "focusedTests": 17,
+      "scope": "Only actual detectPastedNoise pure helper; no Engine/renderer/clipboard/SGR/OSC imports"
+    }
+  ],
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "successfulTests": 17,
+  "expectations": 27,
+  "existingTests": 0,
+  "focusedTests": 17,
+  "productReruns": 0,
+  "metadataFailures": 2,
+  "metadataFailureTranscript": "evidence/tasknoise-navigation-skip.md",
+  "metadataFailuresAreProductFailures": false,
+  "staticOnlyConsumers": [
+    "Engine",
+    "run-image-input",
+    "TextInput",
+    "render-border",
+    "SGR parser",
+    "OSC producer",
+    "Link",
+    "theme"
+  ],
+  "skippedDirections": [
+    "Malformed navigation regex expression",
+    "Guessed nonexistent Core internal.ts and extension.ts entry references"
+  ],
+  "preservedOldFailedDirections": [
+    "round14 sliceAnsi focused dynamics"
+  ],
+  "cleanedDoesNotRewriteNormalTaskText": true
+}

@@ -1,0 +1,177 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "sourceCount": 17,
+  "sources": [
+    {
+      "path": "packages/tui/src/render/tabstops.ts",
+      "frozenBytes": 1113,
+      "bytes": 1113,
+      "frozenSha256": "c042f512eb4817fae1de9b46c75f8487ebfe9f30cfb6ad87fab4fad2f5531484",
+      "sha256": "c042f512eb4817fae1de9b46c75f8487ebfe9f30cfb6ad87fab4fad2f5531484",
+      "currentSha256": "c042f512eb4817fae1de9b46c75f8487ebfe9f30cfb6ad87fab4fad2f5531484",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read and actual expandTabs called once guarded shard; no source edits."
+    },
+    {
+      "path": "packages/tui/src/render/stringWidth.ts",
+      "frozenBytes": 7186,
+      "bytes": 7186,
+      "frozenSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "sha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read; actual Bun.stringWidth fast path called; JavaScript fallback not executed."
+    },
+    {
+      "path": "packages/tui/src/render/termio/tokenize.ts",
+      "frozenBytes": 9284,
+      "bytes": 9284,
+      "frozenSha256": "227dfde6faa53250aa1c71a407ebb4b5cceaddb6f99ab52fb6ea33c749ba1735",
+      "sha256": "227dfde6faa53250aa1c71a407ebb4b5cceaddb6f99ab52fb6ea33c749ba1735",
+      "currentSha256": "227dfde6faa53250aa1c71a407ebb4b5cceaddb6f99ab52fb6ea33c749ba1735",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read; actual default tokenizer used transitively by expandTabs. No stdin/X10 path."
+    },
+    {
+      "path": "packages/tui/src/render/termio/ansi.ts",
+      "frozenBytes": 1490,
+      "bytes": 1490,
+      "frozenSha256": "aaec4c43878bc28293f96583ebe4211c8de92afc76191cc788a8bddf695a4644",
+      "sha256": "aaec4c43878bc28293f96583ebe4211c8de92afc76191cc788a8bddf695a4644",
+      "currentSha256": "aaec4c43878bc28293f96583ebe4211c8de92afc76191cc788a8bddf695a4644",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read; actual constants/helpers imported transitively; not all exports independently tested."
+    },
+    {
+      "path": "packages/tui/src/render/termio/csi.ts",
+      "frozenBytes": 8677,
+      "bytes": 8677,
+      "frozenSha256": "76171009bf287df27c330845fe4e8b5a07c2eecfe892229e88bca195be7236b6",
+      "sha256": "76171009bf287df27c330845fe4e8b5a07c2eecfe892229e88bca195be7236b6",
+      "currentSha256": "76171009bf287df27c330845fe4e8b5a07c2eecfe892229e88bca195be7236b6",
+      "currentMatchesFrozen": true,
+      "scope": "Selected static read lines 1–85; actual boundary helpers used transitively, not all exports tested."
+    },
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "frozenBytes": 2824,
+      "bytes": 2824,
+      "frozenSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read and imported actual pure source; fallback segmentation not executed under Bun.stringWidth."
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "frozenBytes": 17401,
+      "bytes": 17401,
+      "frozenSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentMatchesFrozen": true,
+      "scope": "Selected static read lines 67–79 for export seam; barrel not imported/executed."
+    },
+    {
+      "path": "packages/tui/src/render/dom.ts",
+      "frozenBytes": 15492,
+      "bytes": 15492,
+      "frozenSha256": "63cc990b44a1a5d593abc3b83518085226031b9b41a1c7701359e3d46fc5d7e4",
+      "sha256": "63cc990b44a1a5d593abc3b83518085226031b9b41a1c7701359e3d46fc5d7e4",
+      "currentSha256": "63cc990b44a1a5d593abc3b83518085226031b9b41a1c7701359e3d46fc5d7e4",
+      "currentMatchesFrozen": true,
+      "scope": "Selected static read lines 300–425 plus actual references; measurement caller not executed."
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "frozenBytes": 27146,
+      "bytes": 27146,
+      "frozenSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentMatchesFrozen": true,
+      "scope": "Selected static read lines 635–780; writer not imported/executed; integer formula mirrored explicitly."
+    },
+    {
+      "path": "packages/tui/src/render/squash-text-nodes.ts",
+      "frozenBytes": 2293,
+      "bytes": 2293,
+      "frozenSha256": "804ff3636fd3905465807f107a2c063cc823c53a50ec1d5f1ec1cbb40dbad2ea",
+      "sha256": "804ff3636fd3905465807f107a2c063cc823c53a50ec1d5f1ec1cbb40dbad2ea",
+      "currentSha256": "804ff3636fd3905465807f107a2c063cc823c53a50ec1d5f1ec1cbb40dbad2ea",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read static only; no DOM objects or squash execution."
+    },
+    {
+      "path": "packages/tui/src/render/measure-text.ts",
+      "frozenBytes": 1138,
+      "bytes": 1138,
+      "frozenSha256": "0445f5365140b17a93cd6b9aa3b4414079b6f79b92052c81f4c72807d5c400ab",
+      "sha256": "0445f5365140b17a93cd6b9aa3b4414079b6f79b92052c81f4c72807d5c400ab",
+      "currentSha256": "0445f5365140b17a93cd6b9aa3b4414079b6f79b92052c81f4c72807d5c400ab",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read static only; not imported/executed."
+    },
+    {
+      "path": "packages/tui/src/render/line-width-cache.ts",
+      "frozenBytes": 734,
+      "bytes": 734,
+      "frozenSha256": "27c2f86fa33066cc0d2a4aee688037030397e420a45b2afff57e13d25f24ecaa",
+      "sha256": "27c2f86fa33066cc0d2a4aee688037030397e420a45b2afff57e13d25f24ecaa",
+      "currentSha256": "27c2f86fa33066cc0d2a4aee688037030397e420a45b2afff57e13d25f24ecaa",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read static only; not imported/executed."
+    },
+    {
+      "path": "packages/tui/src/ui/components/CodeBlock.tsx",
+      "frozenBytes": 1558,
+      "bytes": 1558,
+      "frozenSha256": "3119547355ec28ec0dafbc4afc671fdff107a35c81280cc5eee1762469a81224",
+      "sha256": "3119547355ec28ec0dafbc4afc671fdff107a35c81280cc5eee1762469a81224",
+      "currentSha256": "3119547355ec28ec0dafbc4afc671fdff107a35c81280cc5eee1762469a81224",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read static producer only; React/CLI highlight not imported/executed."
+    },
+    {
+      "path": "packages/tui/package.json",
+      "frozenBytes": 2110,
+      "bytes": 2110,
+      "frozenSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentMatchesFrozen": true,
+      "scope": "Selected dependency/export metadata read lines 1–65; package runtime not imported."
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenBytes": 17639,
+      "bytes": 17639,
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read governing instructions; metadata pin only."
+    },
+    {
+      "path": "AGENTS.md",
+      "frozenBytes": 206,
+      "bytes": 206,
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentMatchesFrozen": true,
+      "scope": "Instruction alias metadata pin only; user-provided content accepted."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenBytes": 233,
+      "bytes": 233,
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "scope": "Guard runner executed as prescribed; metadata pin, not independent full runner correctness audit."
+    }
+  ],
+  "excludes": "Known failed sliceAnsi direction, actual Core barrel, terminal, renderer integration and unrelated modules. Source pins do not establish full-file dynamic coverage."
+}

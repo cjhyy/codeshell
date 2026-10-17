@@ -1,0 +1,42 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "formalFindings": 0,
+  "candidates": 2,
+  "relatedCount": 0,
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "metadataNavigationSkips": 2,
+  "successfulTests": 9,
+  "expectations": 27,
+  "existingTests": 0,
+  "focusedTests": 9,
+  "focusedOrdinaryControls": 7,
+  "focusedCandidateCharacterizations": 2,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "productReruns": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/tabstops-pure.test.ts"
+      ],
+      "exitCode": 0,
+      "rawLog": "docs/audit-2026-10-17-round16/evidence/tabstops-pure.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round16/evidence/tabstops-pure.first.exit.json",
+      "tests": 9,
+      "expectations": 27,
+      "fail": 0,
+      "skip": 0,
+      "guardCompleted": true,
+      "existingTests": 0,
+      "focusedTests": 9
+    }
+  ],
+  "boundary": "Pre-import mock exposes actual utils/intl.ts getGraphemeSegmenter through Core internal barrel; real Bun.stringWidth retained. No DOM/Yoga/screen writer/CLI/UI/native/TTY/network/model/user data or JS width fallback execution.",
+  "failurePolicy": "First combined stdout/stderr and exit saved before inspection. Any product fixture failure would stop dynamic direction with no repair/retry/alternative validation; none occurred.",
+  "metadataAssemblyFailures": 1
+}
