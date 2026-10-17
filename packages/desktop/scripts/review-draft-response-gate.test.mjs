@@ -730,7 +730,7 @@ test("allowed source routes remain non-run metadata and production no-Worker fal
   }
 });
 
-test("readonly guard leaves the original three UI operation bodies frozen", () => {
+test("only Electron argument binding changes the original three UI operation bodies", () => {
   const source = readFileSync(
     new URL("./e2e-review-draft-operations.mjs", import.meta.url),
     "utf8",
@@ -738,8 +738,11 @@ test("readonly guard leaves the original three UI operation bodies frozen", () =
   const start = source.indexOf('  diagnostics.phase("review-ui-operations");');
   const end = source.indexOf("\n} catch (error) {", start);
   assert.ok(start > 0 && end > start);
+  const originalBody = source
+    .slice(start, end)
+    .replaceAll("app.evaluate((_electron, { id })", "app.evaluate(({ id })");
   assert.equal(
-    createHash("sha256").update(source.slice(start, end)).digest("hex"),
+    createHash("sha256").update(originalBody).digest("hex"),
     "ac5e7e1f291decef502e72aefe487807340b1f58f29ce49892c6d65c1e3b2202",
   );
 });
@@ -809,4 +812,146 @@ test("the actual pre-Core template parses and its IPC writer emits complete JSON
   );
   assert.equal(writes[0][2].mode, 0o600);
   assert.equal(JSON.parse(writes[0][1]).sessionId, "owned-a");
+});
+
+function electronEvaluationSource() {
+  const source = readFileSync(
+    new URL("./e2e-review-draft-operations.mjs", import.meta.url),
+    "utf8",
+  );
+  const parsed = ts.createSourceFile(
+    "driver.mjs",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  const calls = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(parsed) === "app.evaluate")
+      calls.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  return { source, parsed, calls };
+}
+
+test("actual waitGate uses Electron's module plus payload signature and waits false then true", async () => {
+  const { parsed } = electronEvaluationSource();
+  const harnessSource = readFileSync(new URL("./electron-harness.mjs", import.meta.url), "utf8");
+  const harness = ts.createSourceFile(
+    "harness.mjs",
+    harnessSource,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  const declaration = (file, name) => {
+    const node = file.statements.find(
+      (node) => ts.isFunctionDeclaration(node) && node.name.text === name,
+    );
+    assert.ok(node, name);
+    return node.getText(file).replace(/^export\s+/, "");
+  };
+  const electronModule = Object.freeze({ app: {}, ipcMain: {} });
+  const call = { id: 1, status: "calling", response: null };
+  const evaluations = [];
+  const app = {
+    async evaluate(predicate, arg) {
+      // Public ElectronApplication.evaluate is PageFunctionOn<ElectronType,Arg>.
+      const value = await predicate(electronModule, arg);
+      if (typeof value === "boolean") {
+        evaluations.push(value);
+        if (!value)
+          Object.assign(call, {
+            status: "returned",
+            response: { prompt: "owned original prompt" },
+          });
+      }
+      return globalThis.structuredClone(value);
+    },
+  };
+  const found = await vm.runInNewContext(
+    [
+      declaration(harness, "waitForAsyncFunction"),
+      declaration(parsed, "gate"),
+      declaration(parsed, "waitGate"),
+      'waitGate(1,"returned")',
+    ].join("\n"),
+    {
+      app,
+      setTimeout,
+      clearTimeout,
+      __ownedReviewDraft: { gate: { snapshot: () => ({ calls: [call] }) } },
+    },
+  );
+  assert.equal(found.response.prompt, "owned original prompt");
+  assert.equal(found.status, "returned");
+  assert.deepEqual(evaluations, [false, true]);
+});
+
+test("both actual arm callbacks bind owned Session payloads for held calls2 and4", async () => {
+  const { parsed, calls } = electronEvaluationSource();
+  const arm = calls.filter((node) => node.arguments[0].getText(parsed).includes(".gate.arm("));
+  const release = calls.filter((node) =>
+    node.arguments[0].getText(parsed).includes(".gate.release("),
+  );
+  assert.equal(arm.length, 2);
+  assert.equal(release.length, 2);
+  const gate = createReviewDraftResponseGate(ids);
+  const input = args();
+  const app = {
+    evaluate: async (predicate, arg) => predicate(Object.freeze({ app: {}, ipcMain: {} }), arg),
+  };
+  const context = { app, a: { id: ids[0] }, __ownedReviewDraft: { gate } };
+  assert.equal(await gate.invoke(() => result, input), result);
+  for (const index of [0, 1]) {
+    await vm.runInNewContext(arm[index].getText(parsed), context);
+    assert.deepEqual(gate.snapshot().hold, {
+      sessionId: ids[0],
+      mode: "staged",
+      status: "armed",
+      callId: null,
+    });
+    const pending = gate.invoke(() => result, input);
+    await tick();
+    assert.equal(gate.snapshot().calls.at(-1).status, "held-after-production-result");
+    await vm.runInNewContext(release[index].getText(parsed), context);
+    assert.equal(await pending, result);
+    if (index === 0)
+      assert.equal(await gate.invoke(() => result, args(ids[0], "unstaged")), result);
+  }
+  assert.equal(await gate.invoke(() => result, args(ids[1])), result);
+  assert.deepEqual(
+    gate.snapshot().calls.map((call) => call.held),
+    [false, true, false, true, false],
+  );
+  assert.deepEqual(gate.snapshot().violations, []);
+});
+
+test("all native evaluate payloads use the second parameter while Page signatures remain unchanged", () => {
+  const { parsed, calls } = electronEvaluationSource();
+  assert.equal(calls.length, 6);
+  const payloads = calls.filter((node) => node.arguments.length === 2);
+  assert.equal(payloads.length, 2);
+  assert.ok(payloads.every((node) => node.arguments[0].parameters.length === 2));
+  assert.ok(
+    calls
+      .filter((node) => node.arguments.length === 1)
+      .every((node) => node.arguments[0].parameters.length === 0),
+  );
+  const wait = parsed.statements.find(
+    (node) => ts.isFunctionDeclaration(node) && node.name.text === "waitGate",
+  );
+  const waits = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(parsed) === "waitForAsyncFunction")
+      waits.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(wait);
+  assert.equal(waits.length, 1);
+  assert.equal(waits[0].arguments[0].getText(parsed), "app");
+  assert.equal(waits[0].arguments[1].parameters.length, 2);
+  assert.equal(waits[0].arguments[3].getText(parsed), "{ timeout: 5000, polling: 50 }");
 });
