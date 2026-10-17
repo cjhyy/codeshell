@@ -1,0 +1,62 @@
+{
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round30/root-report.md",
+      "bytes": 2774,
+      "sha256": "ba8f8b48f9481b5aed9b2d3723b89dd4c5bb4588f3bb33b9ec248d24f02a3e20"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-source-manifest.json",
+      "bytes": 4449,
+      "sha256": "83fda6b09e6a0656b351facf2c71f539c8676238335ed2554bc40e3c0f93edb7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-validation.json",
+      "bytes": 344,
+      "sha256": "bd98eb586e013a94381609016b9a148d88785d2a679e27a441c155e64acac447"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-history-decisions.json",
+      "bytes": 535,
+      "sha256": "a4addea71410d4022c3b288c75d58bdfc25c3f58f1c62a814e17118e98bfc258"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-dedup.py",
+      "bytes": 3288,
+      "sha256": "7155ae3a6faa955c83e7256128bf858da7aff1e4cf0d6963ac97c61199c81cd2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-dedup.json",
+      "bytes": 632399,
+      "sha256": "ebae3bfe5f497c46470b0bca81f417d58adcfa08afcc9a6eea2a683682ebd195"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-prep-copy-receipt.json",
+      "bytes": 4043,
+      "sha256": "6b701fa913c6bef0cdd8cb68e9ed46cbf7cf864da50475e9b711338cc82d87c9"
+    }
+  ],
+  "artifactCount": 10,
+  "selfExcluded": true,
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "productExecution": false,
+  "newSemanticReadsDuringFormalization": 0
+}

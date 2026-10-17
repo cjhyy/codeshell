@@ -1,0 +1,48 @@
+{
+  "parentReportedHead": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "capturedUtc": "2026-10-17T11:43:05.903688+00:00",
+  "files": [
+    {
+      "path": "packages/chat/src/channel.test.ts",
+      "bytes": 3090,
+      "lines": 93,
+      "firstFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "lines": 272,
+      "firstFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "lines": 301,
+      "firstFilesystemSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.test.ts",
+      "bytes": 1177,
+      "lines": 33,
+      "firstFilesystemSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "bytes": 6524,
+      "lines": 178,
+      "firstFilesystemSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+      "gitBlobCompared": false
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

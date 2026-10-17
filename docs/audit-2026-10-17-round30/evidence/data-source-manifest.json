@@ -1,0 +1,601 @@
+{
+  "schemaVersion": 1,
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "baselineAuthority": "Reported by Root; author performed no Git commands. Root owns frozen Git blob binding.",
+  "branchReportedByRoot": "codex/audit/data-helper-round30-20261017",
+  "frozenUtc": "2026-10-17T11:51:19.733022+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "scope": "Reuse the exact same prep semantic reading: 600 product/test lines +78 prior-report lines. No additional product semantic reading.",
+  "readProvenance": {
+    "preservedPrepParent": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+    "prepSourceManifest": "data-prep/source-manifest.json",
+    "prepSourceManifestSha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71",
+    "formalSourceSemanticReadUtc": null,
+    "reason": "No new source semantic read; prep per-read timestamps were not captured, and two historical-report pins were late to history-excerpt inspection."
+  },
+  "stats": {
+    "semanticSourcePaths": 11,
+    "productAndTestPaths": 9,
+    "productAndTestSemanticLines": 600,
+    "priorReportPaths": 2,
+    "priorReportSemanticLines": 78,
+    "fullLeafLines": 222,
+    "fullTestDeclarationLines": 126,
+    "otherProductSelectedLines": 252,
+    "hashOnlyUnusedPaths": 1,
+    "latePriorReportSemanticPins": 2
+  },
+  "files": [
+    {
+      "path": "packages/chat/src/channel.ts",
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "bytes": 7027,
+      "lines": 193,
+      "coverage": "full",
+      "selectedRanges": [
+        [
+          1,
+          193
+        ]
+      ],
+      "semanticLines": 193,
+      "firstFilesystemSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "initialSemanticReadSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/chat/src/channel.ts",
+        "kind": "full",
+        "selectedRanges": [
+          [
+            1,
+            193
+          ]
+        ],
+        "semanticLines": 193,
+        "bytes": 7027,
+        "lines": 193,
+        "initialFilesystemSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+        "initialCaptureUtc": "2026-10-17T11:41:59.577612+00:00",
+        "initialSemanticReadSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+        "captureTiming": "Before first full semantic leaf read",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Ordinary immutable-looking capability defaults, compatibility helpers and adapter DTO declarations; no runtime imports beyond type import."
+      }
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.ts",
+      "sha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "bytes": 811,
+      "lines": 29,
+      "coverage": "full",
+      "selectedRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "semanticLines": 29,
+      "firstFilesystemSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "initialSemanticReadSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/coding/src/git/parse-log.ts",
+        "kind": "full",
+        "selectedRanges": [
+          [
+            1,
+            29
+          ]
+        ],
+        "semanticLines": 29,
+        "bytes": 811,
+        "lines": 29,
+        "initialFilesystemSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+        "initialCaptureUtc": "2026-10-17T11:41:59.577612+00:00",
+        "initialSemanticReadSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+        "captureTiming": "Before first full semantic leaf read",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Line/pipe string DTO parser; current ordinary-delimiter behavior is excluded as existing A04."
+      }
+    },
+    {
+      "path": "packages/chat/src/channel.test.ts",
+      "sha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "bytes": 3090,
+      "lines": 93,
+      "coverage": "full",
+      "selectedRanges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "semanticLines": 93,
+      "firstFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "initialSemanticReadSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/chat/src/channel.test.ts",
+        "kind": "full",
+        "selectedRanges": [
+          [
+            1,
+            93
+          ]
+        ],
+        "semanticLines": 93,
+        "bytes": 3090,
+        "lines": 93,
+        "initialFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Existing test declarations only; matrix and granular legacy compatibility, not executed."
+      }
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.test.ts",
+      "sha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "bytes": 1177,
+      "lines": 33,
+      "coverage": "full",
+      "selectedRanges": [
+        [
+          1,
+          33
+        ]
+      ],
+      "semanticLines": 33,
+      "firstFilesystemSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "initialSemanticReadSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/coding/src/git/parse-log.test.ts",
+        "kind": "full",
+        "selectedRanges": [
+          [
+            1,
+            33
+          ]
+        ],
+        "semanticLines": 33,
+        "bytes": 1177,
+        "lines": 33,
+        "initialFilesystemSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Existing test declarations only; ordinary/blank/malformed parsing, not executed."
+      }
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "bytes": 6524,
+      "lines": 178,
+      "coverage": "selected",
+      "selectedRanges": [
+        [
+          1,
+          24
+        ],
+        [
+          85,
+          109
+        ]
+      ],
+      "semanticLines": 49,
+      "firstFilesystemSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "initialSemanticReadSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/coding/src/git/utils.ts",
+        "kind": "selected",
+        "selectedRanges": [
+          [
+            1,
+            24
+          ],
+          [
+            85,
+            109
+          ]
+        ],
+        "semanticLines": 49,
+        "bytes": 6524,
+        "lines": 178,
+        "initialFilesystemSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Imports and ordinary getGitLog pretty-format producer; no Git command/helper invoked."
+      }
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "bytes": 10429,
+      "lines": 301,
+      "coverage": "selected",
+      "selectedRanges": [
+        [
+          138,
+          172
+        ]
+      ],
+      "semanticLines": 35,
+      "firstFilesystemSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "initialSemanticReadSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/chat/src/chat-gateway.ts",
+        "kind": "selected",
+        "selectedRanges": [
+          [
+            138,
+            172
+          ]
+        ],
+        "semanticLines": 35,
+        "bytes": 10429,
+        "lines": 301,
+        "initialFilesystemSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Ordinary adapter inventory and webhook predicate consumption; no server or webhook execution."
+      }
+    },
+    {
+      "path": "packages/coding/src/capability-runtime.ts",
+      "sha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "bytes": 3681,
+      "lines": 112,
+      "coverage": "selected",
+      "selectedRanges": [
+        [
+          1,
+          15
+        ],
+        [
+          68,
+          88
+        ]
+      ],
+      "semanticLines": 36,
+      "firstFilesystemSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "initialSemanticReadSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/coding/src/capability-runtime.ts",
+        "kind": "selected",
+        "selectedRanges": [
+          [
+            1,
+            15
+          ],
+          [
+            68,
+            88
+          ]
+        ],
+        "semanticLines": 36,
+        "bytes": 3681,
+        "lines": 112,
+        "initialFilesystemSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+        "initialCaptureUtc": "2026-10-17T11:45:04.968745+00:00",
+        "initialSemanticReadSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+        "captureTiming": "Before direct selected source read; prior rg locators only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Imports and ordinary recent-commit dynamic context consumer; no provider or filesystem/Git call invoked."
+      }
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "bytes": 8173,
+      "lines": 262,
+      "coverage": "selected",
+      "selectedRanges": [
+        [
+          1,
+          16
+        ],
+        [
+          62,
+          88
+        ]
+      ],
+      "semanticLines": 43,
+      "firstFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "initialSemanticReadSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+        "kind": "selected",
+        "selectedRanges": [
+          [
+            1,
+            16
+          ],
+          [
+            62,
+            88
+          ]
+        ],
+        "semanticLines": 43,
+        "bytes": 8173,
+        "lines": 262,
+        "initialFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+        "initialCaptureUtc": "2026-10-17T11:45:04.969614+00:00",
+        "initialSemanticReadSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+        "captureTiming": "Before direct selected source read; prior rg locators only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Imports and ordinary recent-message prompt consumption; no guard/model/commit/helper invoked."
+      }
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "bytes": 12984,
+      "lines": 347,
+      "coverage": "selected",
+      "selectedRanges": [
+        [
+          55,
+          73
+        ],
+        [
+          130,
+          174
+        ],
+        [
+          260,
+          284
+        ]
+      ],
+      "semanticLines": 89,
+      "firstFilesystemSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "initialSemanticReadSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/chat/src/gateway.ts",
+        "kind": "selected",
+        "selectedRanges": [
+          [
+            55,
+            73
+          ],
+          [
+            130,
+            174
+          ],
+          [
+            260,
+            284
+          ]
+        ],
+        "semanticLines": 89,
+        "bytes": 12984,
+        "lines": 347,
+        "initialFilesystemSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+        "initialCaptureUtc": "2026-10-17T11:45:04.969987+00:00",
+        "initialSemanticReadSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+        "captureTiming": "Before direct selected source read; prior rg locators only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Read capability predicates, passed capability object and catalog projection only. Incidental open/pairing/cache context is not an authentication/identity/lock audit; no action executed."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "sha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "bytes": 14642,
+      "lines": 119,
+      "coverage": "selected",
+      "selectedRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "semanticLines": 45,
+      "firstFilesystemSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "initialSemanticReadSha256": null,
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "docs/audit-2026-10-16/root.md",
+        "kind": "selected",
+        "selectedRanges": [
+          [
+            1,
+            45
+          ]
+        ],
+        "semanticLines": 45,
+        "bytes": 14642,
+        "lines": 119,
+        "initialFilesystemSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+        "initialCaptureUtc": "2026-10-17T11:45:04.970274+00:00",
+        "initialSemanticReadSha256": null,
+        "captureTiming": "After prior history scanner excerpts of this report were inspected; before direct selected source read. First durable per-report pin is late to excerpt inspection.",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Historical A04 same-cause exclusion; adjacent old claims/test descriptions remain historical only."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/git-text.md",
+      "sha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "bytes": 4460,
+      "lines": 33,
+      "coverage": "full",
+      "selectedRanges": [
+        [
+          1,
+          33
+        ]
+      ],
+      "semanticLines": 33,
+      "firstFilesystemSha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "initialSemanticReadSha256": null,
+      "semanticReadReusedFromPrep": true,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "docs/audit-2026-10-17-round13/git-text.md",
+        "kind": "full",
+        "selectedRanges": [
+          [
+            1,
+            33
+          ]
+        ],
+        "semanticLines": 33,
+        "bytes": 4460,
+        "lines": 33,
+        "initialFilesystemSha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+        "initialCaptureUtc": "2026-10-17T11:45:04.970514+00:00",
+        "initialSemanticReadSha256": null,
+        "captureTiming": "After prior history scanner excerpts of this report were inspected; before direct selected source read. First durable per-report pin is late to excerpt inspection.",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Per-read timestamp was not recorded; specified reads were completed before this manifest freeze.",
+        "frozenFilesystemSha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Historical parser consumer review and explicit A04 exclusion, never transferred old test success into this prep."
+      }
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/chat/src/media.ts",
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "bytes": 9244,
+      "lines": 272,
+      "coverage": "hash-only",
+      "selectedRanges": [],
+      "semanticLines": 0,
+      "firstFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "initialSemanticReadSha256": null,
+      "semanticReadReusedFromPrep": false,
+      "newSemanticReadForFormalRound": false,
+      "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+      "gitBlobComparedByAuthor": false,
+      "prepSourceRow": {
+        "path": "packages/chat/src/media.ts",
+        "kind": "hash-only",
+        "selectedRanges": [],
+        "semanticLines": 0,
+        "bytes": 9244,
+        "lines": 272,
+        "initialFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": null,
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Never semantically read in this prep.",
+        "frozenFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Pinned from an initial consumer locator but not semantically read or included in this prep semantic line coverage."
+      }
+    }
+  ],
+  "limits": [
+    "coverage/sha256/selectedRanges are normalized fields; exact original prep rows are retained as prepSourceRow.",
+    "Prep parent b348 and dated history are immutable provenance, not the formal baseline.",
+    "Unused media.ts is hash-only and contributes no semantic coverage.",
+    "First semantic SHA stays null for both previously excerpt-read historical reports; no retroactive before-read pin.",
+    "Existing tests were read statically; no tests or helpers were run.",
+    "No product source or frozen Round29 file was edited."
+  ],
+  "productAttempts": 0,
+  "newProductSemanticReadLines": 0,
+  "gitCommands": 0
+}

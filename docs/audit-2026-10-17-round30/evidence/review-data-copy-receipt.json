@@ -1,0 +1,62 @@
+{
+  "copiedUTC": "2026-10-17T11:50:40.626308+00:00",
+  "formalBaselineProvidedByRoot": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "formalBranchProvidedByRoot": "codex/audit/data-helper-round30-20261017",
+  "prepParentBaselinePreserved": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "prepHistoryFilesPreserved": 2765,
+  "verbatimCopies": [
+    {
+      "source": "/tmp/codeshell-audit-round30-data-review/author-freeze-pins.json",
+      "destination": "docs/audit-2026-10-17-round30/evidence/data-review-prep/author-freeze-pins.json",
+      "bytes": 2805,
+      "sourceSha256": "146e1755302ddcee05ce1c1d35a8e0bbd8922fd347d0136a9859bb9b510566ff",
+      "destinationSha256": "146e1755302ddcee05ce1c1d35a8e0bbd8922fd347d0136a9859bb9b510566ff",
+      "verbatimEqual": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-review/consumer-initial-pins.json",
+      "destination": "docs/audit-2026-10-17-round30/evidence/data-review-prep/consumer-initial-pins.json",
+      "bytes": 4404,
+      "sourceSha256": "a4d113aa69c6d17574a450b519b423cfa86c16da617d6e67b2f413ad7aefac94",
+      "destinationSha256": "a4d113aa69c6d17574a450b519b423cfa86c16da617d6e67b2f413ad7aefac94",
+      "verbatimEqual": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-review/initial-pins.json",
+      "destination": "docs/audit-2026-10-17-round30/evidence/data-review-prep/initial-pins.json",
+      "bytes": 1791,
+      "sourceSha256": "0c37f20fd0eb8b4ecec129a8e9b3d30c58b2701aed49ec0b5310d129b62d432e",
+      "destinationSha256": "0c37f20fd0eb8b4ecec129a8e9b3d30c58b2701aed49ec0b5310d129b62d432e",
+      "verbatimEqual": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-review/review.md",
+      "destination": "docs/audit-2026-10-17-round30/evidence/data-review-prep/review.md",
+      "bytes": 5328,
+      "sourceSha256": "7cb94669804cd2b5926c8810cc601285feaabd86af2d5aa75ded45af6d7fbbf2",
+      "destinationSha256": "7cb94669804cd2b5926c8810cc601285feaabd86af2d5aa75ded45af6d7fbbf2",
+      "verbatimEqual": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-review/reviewer-receipt.json",
+      "destination": "docs/audit-2026-10-17-round30/evidence/data-review-prep/reviewer-receipt.json",
+      "bytes": 1426,
+      "sourceSha256": "3eab7b1c70063d62fb93469a8f9be0b8cf07d2a8f59111842f6c4ab6b3d4fd5a",
+      "destinationSha256": "3eab7b1c70063d62fb93469a8f9be0b8cf07d2a8f59111842f6c4ab6b3d4fd5a",
+      "verbatimEqual": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-review/source-manifest.json",
+      "destination": "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "bytes": 25436,
+      "sourceSha256": "62f59cb23554ce1908971014d5bea65ac2cadc37078c950539faafafd1936419",
+      "destinationSha256": "62f59cb23554ce1908971014d5bea65ac2cadc37078c950539faafafd1936419",
+      "verbatimEqual": true
+    }
+  ],
+  "artifactCount": 6,
+  "semanticReadsAdded": 0,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "note": "Formal copy metadata is outside the six immutable prep files. Original parent context, times, history exclusions, source coverage and receipt remain byte-for-byte unchanged."
+}

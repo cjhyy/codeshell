@@ -1,0 +1,101 @@
+{
+  "capturedUTC": "2026-10-17T11:47:08.872328+00:00",
+  "files": [
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "lineCount": 193,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.ts",
+      "bytes": 811,
+      "lineCount": 29,
+      "sha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/chat/src/channel.test.ts",
+      "bytes": 3090,
+      "lineCount": 93,
+      "sha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.test.ts",
+      "bytes": 1177,
+      "lineCount": 33,
+      "sha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "bytes": 6524,
+      "lineCount": 178,
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "lineCount": 301,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/coding/src/capability-runtime.ts",
+      "bytes": 3681,
+      "lineCount": 112,
+      "sha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "bytes": 8173,
+      "lineCount": 262,
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "lineCount": 347,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "bytes": 14642,
+      "lineCount": 119,
+      "sha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/git-text.md",
+      "bytes": 4460,
+      "lineCount": 33,
+      "sha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "lineCount": 272,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "timing": "Before independent consumer/source semantic read; author manifest read only as metadata to locate sources",
+      "coverage": "hash-only at capture"
+    }
+  ]
+}

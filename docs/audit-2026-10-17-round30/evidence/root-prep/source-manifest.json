@@ -1,0 +1,107 @@
+{
+  "parentReportedPrepBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "bytes": 2824,
+      "lineCount": 94,
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          94
+        ]
+      ],
+      "coveredLineCount": 94,
+      "role": "product",
+      "initialSemanticReadSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "firstDurableSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "finishSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "bytes": 9304,
+      "lineCount": 300,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          139,
+          300
+        ]
+      ],
+      "coveredLineCount": 162,
+      "role": "ordinary-formatter-consumer",
+      "initialSemanticReadSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "firstDurableSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "finishSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "packages/core/src/utils/earlyInput.ts",
+      "bytes": 5398,
+      "lineCount": 191,
+      "sha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          60,
+          110
+        ]
+      ],
+      "coveredLineCount": 51,
+      "role": "static-consumer-boundary-no-stdin-execution",
+      "initialSemanticReadSha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "firstDurableSha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "finishSha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lineCount": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          60,
+          90
+        ]
+      ],
+      "coveredLineCount": 31,
+      "role": "internal-export-boundary",
+      "initialSemanticReadSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstDurableSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "finishSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "bytes": 6276,
+      "lineCount": 40,
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "coveredLineCount": 40,
+      "role": "old-report",
+      "initialSemanticReadSha256": null,
+      "firstDurableSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "finishSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "firstPinTiming": "Dedicated source pin after history excerpt was inspected, before direct full text; initial semantic SHA remains null."
+    }
+  ],
+  "sourcePinCount": 5,
+  "ordinaryProductSemanticLines": 338,
+  "priorReportSemanticLines": 40,
+  "gitCommandsByAuthor": 0,
+  "productExecution": false
+}

@@ -1,0 +1,58 @@
+{
+  "frozenUtc": "2026-10-17T11:46:36.098427+00:00",
+  "prepParentContextBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "existingCauseExclusions": 1
+  },
+  "decisions": [
+    {
+      "id": "parse-log-existing-A04",
+      "status": "existing-cause-excluded",
+      "newFinding": false,
+      "locations": [
+        "packages/coding/src/git/parse-log.ts:20-27",
+        "packages/coding/src/git/utils.ts:101-108",
+        "packages/coding/src/capability-runtime.ts:72-88",
+        "packages/tui/src/cli/commands/builtin/git-commands.ts:70-82"
+      ],
+      "reason": "The unescaped pipe subject truncation is exactly October16 A04; Round13 git-text already excludes it with these ordinary consumers. No new causal path or stronger independent defect.",
+      "prior": [
+        "docs/audit-2026-10-16/root.md:33",
+        "docs/audit-2026-10-17-round13/git-text.md:7"
+      ]
+    },
+    {
+      "id": "channel-helper-negative",
+      "status": "negative-in-inspected-scope",
+      "newFinding": false,
+      "reason": "Default capability DTO construction, explicit granular capability preference, legacy attachment fallback, attachment-kind predicate and webhook structural predicate were read with ordinary inventory/catalog consumption. No ordinary producer/consumer counterexample established. No promise of complete Slack thread support is inferred.",
+      "limits": "No Discord imports/editReply/chunk experiment; no actual adapter/platform operation, send, pairing, native/auth/identity experiment. Unused media.ts is hash-only."
+    }
+  ],
+  "history": {
+    "inventoryFiles": 2765,
+    "markdownFiles": 1275,
+    "jsonFiles": 1490,
+    "stringLeaves": 562917,
+    "scalarLeaves": 833428,
+    "occurrenceCounts": {
+      "parse-log": 127,
+      "pipe-contract": 175,
+      "channel-contract": 16
+    },
+    "savedContextCounts": {
+      "parse-log": 100,
+      "pipe-contract": 100,
+      "channel-contract": 16
+    },
+    "parseErrors": 0,
+    "exclusions": [
+      "mutable Round29",
+      "future Round30"
+    ],
+    "limits": "Dated prep snapshot, prior archives included; keywords and capped excerpts are not semantic exhaustion. Channel contexts inspected all16; relevant exact A04 and Round13 excerpts plus selected direct report reads establish exclusion."
+  }
+}

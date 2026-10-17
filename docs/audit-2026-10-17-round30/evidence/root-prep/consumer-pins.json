@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "bytes": 9304,
+      "lineCount": 300,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "firstPinBeforeSelectedSemanticRead": true
+    },
+    {
+      "path": "packages/core/src/utils/earlyInput.ts",
+      "bytes": 5398,
+      "lineCount": 191,
+      "sha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "firstPinBeforeSelectedSemanticRead": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lineCount": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstPinBeforeSelectedSemanticRead": true
+    }
+  ],
+  "productExecution": false
+}

@@ -1,0 +1,50 @@
+{
+  "finishedUTC": "2026-10-17T11:49:19.923554+00:00",
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "prepReviewOnly": true,
+  "futureFormalBaseline": null,
+  "artifactRoot": "/tmp/codeshell-audit-round30-data-review",
+  "selfExcluded": true,
+  "artifactCount": 5,
+  "files": [
+    {
+      "path": "author-freeze-pins.json",
+      "bytes": 2805,
+      "sha256": "146e1755302ddcee05ce1c1d35a8e0bbd8922fd347d0136a9859bb9b510566ff"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 4404,
+      "sha256": "a4d113aa69c6d17574a450b519b423cfa86c16da617d6e67b2f413ad7aefac94"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1791,
+      "sha256": "0c37f20fd0eb8b4ecec129a8e9b3d30c58b2701aed49ec0b5310d129b62d432e"
+    },
+    {
+      "path": "review.md",
+      "bytes": 5328,
+      "sha256": "7cb94669804cd2b5926c8810cc601285feaabd86af2d5aa75ded45af6d7fbbf2"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 25436,
+      "sha256": "62f59cb23554ce1908971014d5bea65ac2cadc37078c950539faafafd1936419"
+    }
+  ],
+  "sourceFinishChecks": 14,
+  "authorFreezeFinishChecks": 11,
+  "finishMismatches": [],
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "existingCauseExclusions": 1
+  },
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0
+}

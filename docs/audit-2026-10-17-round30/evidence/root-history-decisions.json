@@ -1,0 +1,16 @@
+{
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "oldExclusions": [
+    {
+      "subject": "Reset time showTime=false and relative style",
+      "prior": "docs/audit-2026-10-17-round14/utils.md:31",
+      "decision": "Exact old unused-helper clue; no new current ordinary consumer contract. Do not upgrade or count related."
+    }
+  ],
+  "samePrepDecisions": "evidence/root-prep/decisions.json",
+  "currentHistory": "evidence/root-dedup.json",
+  "noProductReruns": true
+}

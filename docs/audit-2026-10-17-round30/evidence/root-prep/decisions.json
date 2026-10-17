@@ -1,0 +1,17 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "oldCauseExclusions": [
+    {
+      "subject": "formatResetTime(showTime=false), relative style",
+      "prior": "docs/audit-2026-10-17-round14/utils.md:31",
+      "reason": "Exact clue already excluded without current ordinary consumer. Search still only finds definitions/same helper family, no stronger live contract; do not add candidate or repeat old issue."
+    }
+  ],
+  "notes": [
+    "Intl helper caches/first+last segmentation retain ordinary source contracts; no concrete counterexample established.",
+    "No R7 i18n failed runtime or R14 Slice/import direction reopened.",
+    "earlyInput was only selected as static lastGrapheme consumer, no input capture/TTY/stdin/native execution."
+  ]
+}
