@@ -1,0 +1,15 @@
+{
+  "corrections": [
+    {
+      "firstDescription": "The first error was initially called a trailing-comma/core-tsconfig JSONC issue. The first followup pin table also incorrectly marked coding/TUI as not reached.",
+      "corrected": "The batch loop had processed core and coding before TUI failed. Current core/coding configs have22 lines; TUI line25 is a JSONC comment matching the observed strict JSON error location. The failure is attributed to this comment, not a trailing comma. All three initial-attempt pins remained in memory and are not reconstructed as durable before pins.",
+      "basis": "Original command sequence plus successful followup text snapshot, not rerun of strict parser or product.",
+      "preservedFirstArtifacts": [
+        "tsconfig-parse.first.observed.txt",
+        "tsconfig-parse.first.exit-observation.json",
+        "tsconfig-pins.first.json"
+      ]
+    }
+  ],
+  "rawFirstCaptureBoundary": "No separately captured first full stdout/stderr. Tool responses f25360 and b4606c retain original observations. Transcribed diagnostic is labeled and never presented as a raw stream."
+}

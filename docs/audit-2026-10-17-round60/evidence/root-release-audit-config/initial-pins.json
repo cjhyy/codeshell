@@ -1,0 +1,37 @@
+{
+  "atUTC": "2026-10-17T19:54:26.100913+00:00",
+  "files": [
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "lines": 38,
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared history query hash only; semantic audit delegated"
+    },
+    {
+      "path": "scripts/copy-assets.mjs",
+      "bytes": 2079,
+      "lines": 60,
+      "sha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared history query hash only; semantic audit delegated"
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "bytes": 6500,
+      "lines": 189,
+      "sha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared history query hash only; semantic audit delegated"
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "lines": 297,
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Root target"
+    }
+  ]
+}

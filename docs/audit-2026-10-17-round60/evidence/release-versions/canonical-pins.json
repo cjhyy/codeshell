@@ -1,0 +1,16 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+    "bytes": 27024,
+    "sha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+    "pinnedAtUTC": "2026-10-17T19:56:05.749335+00:00",
+    "timing": "before own canonical read"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round6/root-package.md",
+    "bytes": 2847,
+    "sha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+    "pinnedAtUTC": "2026-10-17T19:56:05.750866+00:00",
+    "timing": "before own canonical read"
+  }
+]

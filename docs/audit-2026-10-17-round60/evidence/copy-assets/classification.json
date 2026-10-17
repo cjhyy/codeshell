@@ -1,0 +1,29 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "disposition": "bounded-negative-no-new-normal-producer/path-counterexample-established",
+  "ordinaryContracts": [
+    "Three package scripts call from package cwd and compile src→dist. Core/coding use supported simple *.md/*.json/*.txt suffix patterns and explicit notice/license files.",
+    "Directory branch appends source basename. TUI explicitly passes templates parent destination, producing the templates directory expected by runtime module URLs.",
+    "Core section/coding prompt and selected JSON readers use module-relative names matching static destinations. Current named source filename inventories are nonempty and correspond to those names."
+  ],
+  "oldCauseExclusion": {
+    "cause": "copy-assets zero-match glob succeeds with missing assets",
+    "canonical": "docs/archive/todo/review-infra-2026-07-08.md:144–153; review-master:76; fix-batch-4:15",
+    "currentSource": "scripts/copy-assets.mjs:54–56 has explicit files.length===0 nonzero exit",
+    "status": "Do not rereport or claim current runtime validation; old fix/test record retained as history."
+  },
+  "limitations": [
+    "No actual build, tsc, cpSync/script import, dist artifact inspection, package installation, release or runtime read executed.",
+    "No current ordinary producer requiring prefix globs, recursive globs, arbitrary symlink/path handling or space-containing sources was established; isolated hypothetical inputs not findings.",
+    "Filename comparison does not certify source asset bytes, all consumers, directory/custody semantics or all platforms/shells.",
+    "Supporting consumer overlap remains unspecified; hash/rank/no-row is not first-reading evidence.",
+    "Old failed dynamic directions not reopened."
+  ]
+}

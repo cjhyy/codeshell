@@ -1,0 +1,28 @@
+[
+  [
+    "scripts/package-release-smoke.ts",
+    [
+      [
+        101,
+        152
+      ],
+      [
+        330,
+        356
+      ],
+      [
+        388,
+        442
+      ]
+    ]
+  ],
+  [
+    "scripts/publish-release-packages.ts",
+    [
+      [
+        386,
+        448
+      ]
+    ]
+  ]
+]

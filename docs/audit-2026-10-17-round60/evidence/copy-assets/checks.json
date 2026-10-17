@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-17T19:59:46.001677+00:00",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "durablePinCount": 13,
+  "allPinsUnchanged": true,
+  "historicalDocumentPins": 3,
+  "sharedBatchUnchanged": true,
+  "reportInternalLinks": 12,
+  "ordinaryTargetsPresent": true,
+  "receiptGeneratedLast": true,
+  "semanticRangesWithinDisplay": true,
+  "totals": {
+    "productFiles": 5,
+    "productSemanticLines": 110,
+    "bodyDisplayedLines": 213,
+    "fullProductFiles": 1,
+    "selectedProductFiles": 4,
+    "metadataFiles": 6,
+    "metadataPresentPackagePointers": 5,
+    "absentPackagePointerQueries": 1,
+    "compilerSelectedTextLines": 11,
+    "compilerDisplayedTextLines": 78,
+    "testDeclarationLines": 0,
+    "hashOnlyInstructionFiles": 2,
+    "newUniqueCoverageClaim": false
+  },
+  "productBuildAndTestExecutions": 0,
+  "GitCalls": 0
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "path": "packages/core/src/prompt/section-loader.ts",
+    "bytes": 1723,
+    "lines": 54,
+    "sha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+    "pinAt": "2026-10-17T19:56:24.329620+00:00",
+    "coverage": "hash-only before runtime-consumer body/line-navigation"
+  },
+  {
+    "path": "packages/core/src/data/static-catalogs.ts",
+    "bytes": 1601,
+    "lines": 50,
+    "sha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+    "pinAt": "2026-10-17T19:56:24.330624+00:00",
+    "coverage": "hash-only before runtime-consumer body/line-navigation"
+  },
+  {
+    "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+    "bytes": 6498,
+    "lines": 155,
+    "sha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+    "pinAt": "2026-10-17T19:56:24.331037+00:00",
+    "coverage": "hash-only before runtime-consumer body/line-navigation"
+  },
+  {
+    "path": "packages/coding/src/index.capability.ts",
+    "bytes": 11585,
+    "lines": 377,
+    "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+    "pinAt": "2026-10-17T19:56:24.331356+00:00",
+    "coverage": "hash-only before runtime-consumer body/line-navigation"
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "atUTC": "2026-10-17T19:55:48.455907+00:00",
+  "files": [
+    {
+      "path": "scripts/package-release-smoke.ts",
+      "bytes": 18806,
+      "lines": 579,
+      "sha256": "4d4504c2991695d33d8b58a1e39aa8b6361f6a5ede10d304db792b079dac07a7",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "scripts/publish-release-packages.ts",
+      "bytes": 16487,
+      "lines": 470,
+      "sha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lines": 129,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/web/package.json",
+      "bytes": 3638,
+      "lines": 77,
+      "sha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

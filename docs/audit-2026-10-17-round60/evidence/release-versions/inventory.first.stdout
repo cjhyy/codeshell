@@ -1,0 +1,8 @@
+scripts/package-release-smoke.ts
+scripts/verify-release-versions.ts
+scripts/release.ts
+scripts/package-release-audit-config.ts
+scripts/fixtures/package-release-auth.ts
+scripts/validate-release-recovery.cjs
+scripts/smoke-cloud-panel-version-ui.mjs
+scripts/publish-release-packages.ts

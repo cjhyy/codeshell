@@ -1,0 +1,263 @@
+{
+  "files": [
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "lines": 297,
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          297
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          297
+        ]
+      ],
+      "semanticLines": 297,
+      "displayedLines": 297,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary release roster/export classification and direct consumer field selection. No build, package installation, publishing, subprocess, filesystem cleanup or security mechanism certified.",
+      "overlap": "R6 report names this direction without explicit per-file full range; R24 config selected45–105 is retained as overlap. No first/unread/new-unique claim."
+    },
+    {
+      "path": "scripts/package-release-smoke.ts",
+      "bytes": 18806,
+      "lines": 579,
+      "sha256": "4d4504c2991695d33d8b58a1e39aa8b6361f6a5ede10d304db792b079dac07a7",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          112,
+          145
+        ],
+        [
+          335,
+          349
+        ],
+        [
+          391,
+          419
+        ],
+        [
+          422,
+          442
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          101,
+          152
+        ],
+        [
+          330,
+          356
+        ],
+        [
+          388,
+          442
+        ]
+      ],
+      "semanticLines": 99,
+      "displayedLines": 134,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary release roster/export classification and direct consumer field selection. No build, package installation, publishing, subprocess, filesystem cleanup or security mechanism certified.",
+      "overlap": "R6 report names this direction without explicit per-file full range; R24 config selected45–105 is retained as overlap. No first/unread/new-unique claim."
+    },
+    {
+      "path": "scripts/publish-release-packages.ts",
+      "bytes": 16487,
+      "lines": 470,
+      "sha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          388,
+          407
+        ],
+        [
+          414,
+          432
+        ],
+        [
+          435,
+          447
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          386,
+          448
+        ]
+      ],
+      "semanticLines": 52,
+      "displayedLines": 63,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary release roster/export classification and direct consumer field selection. No build, package installation, publishing, subprocess, filesystem cleanup or security mechanism certified.",
+      "overlap": "R6 report names this direction without explicit per-file full range; R24 config selected45–105 is retained as overlap. No first/unread/new-unique claim."
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lines": 129,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "coverage": "selected-metadata",
+      "selectedLineRanges": [],
+      "jsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/main",
+        "/types",
+        "/exports",
+        "/bin",
+        "/files",
+        "/dependencies"
+      ],
+      "semanticLines": null,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only displayed manifest property values, not whole JSON line coverage or installed-package outcome."
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "coverage": "selected-metadata",
+      "selectedLineRanges": [],
+      "jsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/main",
+        "/types",
+        "/exports",
+        "/bin",
+        "/files",
+        "/dependencies",
+        "/optionalDependencies"
+      ],
+      "semanticLines": null,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only displayed manifest property values, not whole JSON line coverage or installed-package outcome."
+    },
+    {
+      "path": "packages/web/package.json",
+      "bytes": 3638,
+      "lines": 77,
+      "sha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "coverage": "selected-metadata",
+      "selectedLineRanges": [],
+      "jsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/main",
+        "/types",
+        "/exports",
+        "/files",
+        "/dependencies",
+        "/peerDependencies"
+      ],
+      "semanticLines": null,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only displayed manifest property values, not whole JSON line coverage or installed-package outcome."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "lines": 38,
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "coverage": "hash-only",
+      "scope": "Shared query target pinned; body review delegated150–152."
+    },
+    {
+      "path": "scripts/copy-assets.mjs",
+      "bytes": 2079,
+      "lines": 60,
+      "sha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "coverage": "hash-only",
+      "scope": "Shared query target pinned; body review delegated150–152."
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "bytes": 6500,
+      "lines": 189,
+      "sha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "coverage": "hash-only",
+      "scope": "Shared query target pinned; body review delegated150–152."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Prior actual instruction read reused after same-SHA check, not new product coverage."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Prior actual instruction read reused after same-SHA check, not new product coverage."
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "bytes": 55598,
+      "lines": 1088,
+      "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533",
+      "coverage": "selected-metadata",
+      "selectedObjects": [
+        "/sources/132"
+      ],
+      "pinTiming": "Metadata hash captured with selected-object read, not asserted before read."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "bytes": 27024,
+      "lines": 715,
+      "sha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "coverage": "selected-metadata",
+      "selectedObjects": [
+        "/files/90"
+      ],
+      "pinTiming": "Metadata hash captured with selected-object read, not asserted before read."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "bytes": 2847,
+      "lines": 25,
+      "sha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "coverage": "selected-metadata",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "pinTiming": "Late after the actual report read; no initial metadata pin invented."
+    }
+  ],
+  "scope": "Release-config ordinary field chain only. Actual root/core/web manifests selected, not all manifests or every release/platform.",
+  "executions": {
+    "product": 0,
+    "helper": 0,
+    "build": 0,
+    "test": 0,
+    "install": 0,
+    "publish": 0,
+    "network": 0,
+    "Git": 0
+  },
+  "newUniqueCoverageClaim": false
+}

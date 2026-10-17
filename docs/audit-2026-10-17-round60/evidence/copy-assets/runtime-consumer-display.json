@@ -1,0 +1,87 @@
+[
+  {
+    "path": "packages/core/src/prompt/section-loader.ts",
+    "sha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+    "displayAt": "2026-10-17T19:56:57.927381+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        54
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 54,
+        "text": "1: /**\n2:  * Load prompt section markdown files.\n3:  *\n4:  * Sections are read from disk at module load. The package build copies these\n5:  * files to dist/prompt/sections so plain Node ESM can import core without a\n6:  * custom .md loader.\n7:  */\n8: \n9: import { readFileSync } from \"node:fs\";\n10: \n11: function readSectionFile(name: string): string {\n12:   return readFileSync(new URL(`./sections/${name}.md`, import.meta.url), \"utf-8\");\n13: }\n14: \n15: const BUILTIN_SECTIONS: Record<string, string> = {\n16:   \"harness-base\": readSectionFile(\"harness-base\"),\n17:   base: readSectionFile(\"base\"),\n18:   orchestration: readSectionFile(\"orchestration\"),\n19:   browser: readSectionFile(\"browser\"),\n20:   tone: readSectionFile(\"tone\"),\n21:   \"context-notes\": readSectionFile(\"context-notes\"),\n22: };\n23: \n24: /**\n25:  * Read a named prompt section. Returns the trimmed markdown content.\n26:  * Contributed (module) sections win over built-ins; throws on unknown names.\n27:  */\n28: export function loadSection(name: string, sections?: Readonly<Record<string, string>>): string {\n29:   const contributed = sections?.[name];\n30:   if (contributed !== undefined) return contributed.trim();\n31: \n32:   const builtin = BUILTIN_SECTIONS[name];\n33:   if (builtin !== undefined) return builtin.trim();\n34: \n35:   const available = Object.keys(BUILTIN_SECTIONS).join(\", \");\n36:   throw new Error(`Unknown prompt section \"${name}\". Available sections: ${available}`);\n37: }\n38: \n39: /**\n40:  * Load multiple sections and join them with double newlines.\n41:  */\n42: export function loadSections(\n43:   names: readonly string[],\n44:   sections?: Readonly<Record<string, string>>,\n45: ): string {\n46:   return names.map((name) => loadSection(name, sections)).join(\"\\n\\n\");\n47: }\n48: \n49: /**\n50:  * List the built-in section names.\n51:  */\n52: export function availableSections(): string[] {\n53:   return [...Object.keys(BUILTIN_SECTIONS)];\n54: }"
+      }
+    ],
+    "pinReference": "runtime-consumer-pins.json"
+  },
+  {
+    "path": "packages/core/src/data/static-catalogs.ts",
+    "sha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+    "displayAt": "2026-10-17T19:56:57.928297+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        50
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 50,
+        "text": "1: /**\n2:  * Hand-maintained static model catalogs for providers whose /v1/models\n3:  * endpoint returns only ids — no context window, max output, or pricing.\n4:  *\n5:  * At runtime we still call the live /models endpoint to discover ids\n6:  * (so newly-released models work without a code update), then left-join\n7:  * this table on `id` to fill in metadata. Edit the JSONs in src/data/\n8:  * when a vendor ships a new model.\n9:  *\n10:  * OpenRouter is NOT here — its catalog is generated at build time by\n11:  * scripts/sync-models.ts because OpenRouter exposes full metadata.\n12:  */\n13: \n14: import { createRequire } from \"node:module\";\n15: import type { ProviderKindName } from \"../llm/provider-kinds.js\";\n16: \n17: const requireJson = createRequire(import.meta.url);\n18: \n19: export interface StaticModel {\n20:   id: string;\n21:   name: string;\n22:   contextLength: number;\n23:   maxOutputTokens: number;\n24:   inputPricePerMillion: number;\n25:   outputPricePerMillion: number;\n26:   modalities: string[];\n27:   thinking?: boolean;\n28: }\n29: \n30: interface StaticCatalog {\n31:   fetchedAt: string;\n32:   source: string;\n33:   count: number;\n34:   models: StaticModel[];\n35: }\n36: \n37: const TABLES: Partial<Record<ProviderKindName, StaticCatalog>> = {\n38:   deepseek: requireJson(\"./deepseek-models.json\") as StaticCatalog,\n39:   zai: requireJson(\"./zai-models.json\") as StaticCatalog,\n40:   openai: requireJson(\"./openai-models.json\") as StaticCatalog,\n41:   google: requireJson(\"./gemini-models.json\") as StaticCatalog,\n42: };\n43: \n44: export function listStaticModels(kind: ProviderKindName): StaticModel[] {\n45:   return TABLES[kind]?.models ?? [];\n46: }\n47: \n48: export function hasStaticCatalog(kind: ProviderKindName): boolean {\n49:   return TABLES[kind] !== undefined;\n50: }"
+      }
+    ],
+    "pinReference": "runtime-consumer-pins.json"
+  },
+  {
+    "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+    "sha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+    "displayAt": "2026-10-17T19:56:57.928654+00:00",
+    "displayedLineRanges": [
+      [
+        17,
+        34
+      ],
+      [
+        55,
+        80
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 17,
+        "last": 34,
+        "text": "17:  */\n18: \n19: import { existsSync, readFileSync } from \"node:fs\";\n20: import { join } from \"node:path\";\n21: \n22: import type { SlashCommand } from \"../../registry.js\";\n23: import { detect, pickIntent, summarize, type Detection, type Intent } from \"./detect.js\";\n24: \n25: function readTemplate(name: string): string {\n26:   return readFileSync(new URL(`./templates/${name}.md`, import.meta.url), \"utf-8\");\n27: }\n28: \n29: const createTemplate = readTemplate(\"create\");\n30: const migrateTemplate = readTemplate(\"migrate\");\n31: const improveTemplate = readTemplate(\"improve\");\n32: const emptyTemplate = readTemplate(\"empty\");\n33: const rulesScaffoldSuffix = readTemplate(\"rules-scaffold-suffix\");\n34: "
+      },
+      {
+        "first": 55,
+        "last": 80,
+        "text": "55:   const template = pickTemplate(intent);\n56:   // Append the rules-scaffold opt-in only for create/migrate when the user\n57:   // doesn't already have a .codeshell/rules/ directory. improve doesn't get\n58:   // it (they already have CODESHELL.md and presumably know the layout).\n59:   const offerRulesSplit = (intent === \"create\" || intent === \"migrate\") && !d.hasCodeshellRulesDir;\n60:   const body = offerRulesSplit ? `${template}\\n\\n${rulesScaffoldSuffix}` : template;\n61: \n62:   return body\n63:     .replaceAll(\"${targetPath}\", targetPath)\n64:     .replaceAll(\"${cwd}\", cwd)\n65:     .replaceAll(\"${existingConfigs}\", existingConfigs.map((p) => `- ${p}`).join(\"\\n\"));\n66: }\n67: \n68: function pickTemplate(intent: Intent): string {\n69:   switch (intent) {\n70:     case \"improve\":\n71:       return improveTemplate;\n72:     case \"migrate\":\n73:       return migrateTemplate;\n74:     case \"create\":\n75:       return createTemplate;\n76:     case \"empty\":\n77:       return emptyTemplate;\n78:   }\n79: }\n80: "
+      }
+    ],
+    "pinReference": "runtime-consumer-pins.json"
+  },
+  {
+    "path": "packages/coding/src/index.capability.ts",
+    "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+    "displayAt": "2026-10-17T19:56:57.929037+00:00",
+    "displayedLineRanges": [
+      [
+        318,
+        322
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 318,
+        "last": 322,
+        "text": "318: };\n319: \n320: const CODING_PROMPT_SECTIONS = {\n321:   coding: readFileSync(new URL(\"./prompt/coding.md\", import.meta.url), \"utf-8\"),\n322: } as const;"
+      }
+    ],
+    "pinReference": "runtime-consumer-pins.json"
+  }
+]

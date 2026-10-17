@@ -1,0 +1,14 @@
+{
+  "productBuildInstallReleaseExecution": 0,
+  "helperImportsExecution": 0,
+  "testsOrFixturesRead": 0,
+  "testsRun": 0,
+  "realCliNativeNetworkGit": 0,
+  "generatedDistRead": false,
+  "resourceBinaryRead": false,
+  "oldTests": "Only old R6 report describes its existing tests and limits; no old logs/fixtures opened or pass borrowed as current validation.",
+  "metadataOnlyFinalization": {
+    "checks.files": [],
+    "method": "Python standard-library JSON/source-text/range/hash/link/receipt processing; no build/helper/import/compiler invoked."
+  }
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "command": [
+      "rg",
+      "--files",
+      "--hidden",
+      "packages/core/src/prompt/sections"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/prompt/sections/md.d.ts\npackages/core/src/prompt/sections/tone.md\npackages/core/src/prompt/sections/harness-base.md\npackages/core/src/prompt/sections/context-notes.md\npackages/core/src/prompt/sections/base.md\npackages/core/src/prompt/sections/browser.md\npackages/core/src/prompt/sections/orchestration.md\n",
+    "stderr": "",
+    "scope": "Source filename inventory only; no asset copy or content semantics."
+  },
+  {
+    "command": [
+      "rg",
+      "--files",
+      "--hidden",
+      "packages/core/src/data"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/data/openrouter-models.test.ts\npackages/core/src/data/zai-models.json\npackages/core/src/data/model-metadata.test.ts\npackages/core/src/data/deepseek-models.json\npackages/core/src/data/model-metadata.ts\npackages/core/src/data/static-catalogs.ts\npackages/core/src/data/openrouter-models.ts\npackages/core/src/data/constrained-process-seccomp.NOTICE.txt\npackages/core/src/data/openai-models.json\npackages/core/src/data/constrained-process-seccomp.LICENSE.txt\npackages/core/src/data/openrouter-models.json\npackages/core/src/data/constrained-process-seccomp.json\npackages/core/src/data/model-metadata.json\npackages/core/src/data/gemini-models.json\npackages/core/src/data/openrouter-sync.ts\n",
+    "stderr": "",
+    "scope": "Source filename inventory only; no asset copy or content semantics."
+  },
+  {
+    "command": [
+      "rg",
+      "--files",
+      "--hidden",
+      "packages/coding/src/prompt"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/coding/src/prompt/coding.md\n",
+    "stderr": "",
+    "scope": "Source filename inventory only; no asset copy or content semantics."
+  },
+  {
+    "command": [
+      "rg",
+      "--files",
+      "--hidden",
+      "packages/coding/src/tools/apply-patch"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/coding/src/tools/apply-patch/NOTICE.md\npackages/coding/src/tools/apply-patch/atomicity.test.ts\npackages/coding/src/tools/apply-patch/path-escape.test.ts\npackages/coding/src/tools/apply-patch/index.ts\npackages/coding/src/tools/apply-patch/cache-invalidate.test.ts\npackages/coding/src/tools/apply-patch/seek-sequence.ts\npackages/coding/src/tools/apply-patch/backup-targets.ts\npackages/coding/src/tools/apply-patch/LICENSE-codex\npackages/coding/src/tools/apply-patch/types.ts\npackages/coding/src/tools/apply-patch/applier.ts\npackages/coding/src/tools/apply-patch/backup-targets.test.ts\npackages/coding/src/tools/apply-patch/parser.ts\npackages/coding/src/tools/apply-patch/backup-targets.execution.test.ts\npackages/coding/src/tools/apply-patch/eol.ts\n",
+    "stderr": "",
+    "scope": "Source filename inventory only; no asset copy or content semantics."
+  },
+  {
+    "command": [
+      "rg",
+      "--files",
+      "--hidden",
+      "packages/tui/src/cli/commands/builtin/init/templates"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/tui/src/cli/commands/builtin/init/templates/empty.md\npackages/tui/src/cli/commands/builtin/init/templates/create.md\npackages/tui/src/cli/commands/builtin/init/templates/migrate.md\npackages/tui/src/cli/commands/builtin/init/templates/improve.md\npackages/tui/src/cli/commands/builtin/init/templates/rules-scaffold-suffix.md\n",
+    "stderr": "",
+    "scope": "Source filename inventory only; no asset copy or content semantics."
+  }
+]

@@ -1,0 +1,47 @@
+{
+  "exactTrailingWhitespaceLines": {
+    "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-read-01.txt": [
+      5,
+      23,
+      32,
+      41,
+      131,
+      135,
+      138,
+      142,
+      146,
+      150,
+      158,
+      182,
+      185,
+      205,
+      214,
+      233,
+      239,
+      248,
+      255,
+      267,
+      276,
+      282,
+      289,
+      295
+    ],
+    "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-read-02.txt": [
+      12,
+      34,
+      48,
+      60,
+      70,
+      76,
+      100,
+      118,
+      143,
+      152,
+      165,
+      179,
+      183,
+      190
+    ]
+  },
+  "scope": "Only exact frozen provenance copies retain original whitespace. All new nonfrozen files must pass ordinary checks."
+}

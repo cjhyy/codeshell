@@ -1,0 +1,20 @@
+{
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "packages/desktop/scripts/e2e-preferences-operation-cycles.mjs",
+    "packages/desktop/scripts/packaged-pet-fixture.mjs",
+    "packages/desktop/scripts/packaged-startup-observation.mjs",
+    "packages/desktop/scripts/packaged-startup-observation.test.mjs",
+    "packages/desktop/scripts/preference-goal-delete-acceptance.mjs",
+    "packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs",
+    "packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs"
+  ],
+  "sourceSemanticsReviewed": false,
+  "scope": "Filename inventory only: eight unrelated Desktop operation/observer MJS and workflow paths, no selected60 source pin or original TS/TSX universe path. New code not certified by this audit.",
+  "firstFinalize": {
+    "exitCode": 1,
+    "reason": "Primary HEAD moved; original dirty status and bytes unchanged",
+    "stagedOrCommitted": false
+  },
+  "productReruns": 0
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "path": "packages/core/tsconfig.json",
+    "bytes": 554,
+    "lines": 22,
+    "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+    "pinAt": "2026-10-17T19:57:33.710059+00:00",
+    "coverage": "hash-only before followup JSONC text metadata reading",
+    "initialBatchAttemptSha256": null,
+    "initialBatchAttemptPinDurablyCaptured": false,
+    "priorAttempt": "Core/coding JSON parsed in the failed batch; TUI JSONC comment at line25 caused exception before any config pins/objects were durably written. Current pin is before successful reviewer text reading, after that batch attempt."
+  },
+  {
+    "path": "packages/coding/tsconfig.json",
+    "bytes": 554,
+    "lines": 22,
+    "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+    "pinAt": "2026-10-17T19:57:33.710974+00:00",
+    "coverage": "hash-only before followup JSONC text metadata reading",
+    "initialBatchAttemptSha256": null,
+    "initialBatchAttemptPinDurablyCaptured": false,
+    "priorAttempt": "Core/coding JSON parsed in the failed batch; TUI JSONC comment at line25 caused exception before any config pins/objects were durably written. Current pin is before successful reviewer text reading, after that batch attempt."
+  },
+  {
+    "path": "packages/tui/tsconfig.json",
+    "bytes": 917,
+    "lines": 34,
+    "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+    "pinAt": "2026-10-17T19:57:33.711218+00:00",
+    "coverage": "hash-only before followup JSONC text metadata reading",
+    "initialBatchAttemptSha256": null,
+    "initialBatchAttemptPinDurablyCaptured": false,
+    "priorAttempt": "Core/coding JSON parsed in the failed batch; TUI JSONC comment at line25 caused exception before any config pins/objects were durably written. Current pin is before successful reviewer text reading, after that batch attempt."
+  }
+]

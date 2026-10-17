@@ -1,0 +1,1376 @@
+{
+  "atUTC": "2026-10-17T19:59:10.750889+00:00",
+  "rootReportedBaseline": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "gitCertified": false,
+  "purpose": "Static release version producer/check/caller contract; no global coverage upgrade",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T19:54:32.017269+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest",
+      "category": "instruction-hash-reuse",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "coverage": "hash-only",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "oldCoverageLimitation": "No inference of historical unread status.",
+      "instructionReuse": "Previously fully read instructions, same SHA; no new body read in prep152."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T19:54:32.017960+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest",
+      "category": "instruction-hash-reuse",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "coverage": "hash-only",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "oldCoverageLimitation": "No inference of historical unread status.",
+      "instructionReuse": "Previously fully read instructions, same SHA; no new body read in prep152."
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "bytes": 6500,
+      "lineCount": 189,
+      "sha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "pinnedAtUTC": "2026-10-17T19:54:32.018605+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest",
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          189
+        ]
+      ],
+      "bodyDisplayedLineCount": 189,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          1,
+          189
+        ]
+      ],
+      "semanticLineCount": 189,
+      "coverage": "full",
+      "semanticFull": true,
+      "displayedLineRanges": [
+        [
+          1,
+          189
+        ]
+      ],
+      "displayedLineCount": 189,
+      "oldCoverageLimitation": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading."
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lineCount": 129,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "pinnedAtUTC": "2026-10-17T19:54:32.019230+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest",
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          129
+        ]
+      ],
+      "bodyDisplayedLineCount": 129,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          65,
+          66
+        ],
+        [
+          68,
+          70
+        ],
+        [
+          83,
+          84
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-core",
+        "/dependencies/@cjhyy~1code-shell-tui"
+      ],
+      "semanticLineCount": 9,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          1,
+          129
+        ]
+      ],
+      "displayedLineCount": 129,
+      "oldCoverageLimitation": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading."
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "pinnedAtUTC": "2026-10-17T19:56:23.811865+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 297,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          297
+        ]
+      ],
+      "bodyDisplayedLineCount": 297,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          1,
+          184
+        ]
+      ],
+      "semanticLineCount": 184,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          1,
+          297
+        ]
+      ],
+      "displayedLineCount": 297,
+      "oldCoverageLimitation": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading."
+    },
+    {
+      "path": "scripts/release.ts",
+      "bytes": 9343,
+      "sha256": "c2cc6e0ea1b1ac6997825c779eeaae6747ea3d96e5d5bea8f1ff7f10ee345ec7",
+      "pinnedAtUTC": "2026-10-17T19:56:23.812607+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 208,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          43,
+          197
+        ]
+      ],
+      "bodyDisplayedLineCount": 155,
+      "additionalNavigationLineRanges": [
+        [
+          3,
+          4
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          206,
+          207
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          45,
+          182
+        ]
+      ],
+      "semanticLineCount": 138,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          3,
+          4
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          43,
+          197
+        ],
+        [
+          206,
+          207
+        ]
+      ],
+      "displayedLineCount": 167,
+      "oldCoverageLimitation": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading."
+    },
+    {
+      "path": "scripts/publish-release-packages.ts",
+      "bytes": 16487,
+      "sha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "pinnedAtUTC": "2026-10-17T19:56:23.812881+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 470,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          410,
+          470
+        ]
+      ],
+      "bodyDisplayedLineCount": 61,
+      "additionalNavigationLineRanges": [
+        [
+          14,
+          14
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          410,
+          426
+        ],
+        [
+          459,
+          470
+        ]
+      ],
+      "semanticLineCount": 29,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          14,
+          14
+        ],
+        [
+          410,
+          470
+        ]
+      ],
+      "displayedLineCount": 62,
+      "oldCoverageLimitation": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading."
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 15885,
+      "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "pinnedAtUTC": "2026-10-17T19:56:23.813172+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 368,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          368
+        ]
+      ],
+      "bodyDisplayedLineCount": 368,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          23,
+          50
+        ],
+        [
+          74,
+          109
+        ],
+        [
+          117,
+          135
+        ]
+      ],
+      "semanticLineCount": 83,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          1,
+          368
+        ]
+      ],
+      "displayedLineCount": 368,
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": ".github/workflows/release-recovery.yml",
+      "bytes": 4915,
+      "sha256": "000e878c0954d42fc1f541b9c06c9a682682777f8ea85ccb5bd21b00cbdedac6",
+      "pinnedAtUTC": "2026-10-17T19:56:23.813457+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 128,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          128
+        ]
+      ],
+      "bodyDisplayedLineCount": 128,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          78,
+          84
+        ]
+      ],
+      "semanticLineCount": 7,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          1,
+          128
+        ]
+      ],
+      "displayedLineCount": 128,
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27608,
+      "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "pinnedAtUTC": "2026-10-17T19:56:23.814203+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 864,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          664,
+          664
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          7,
+          7
+        ]
+      ],
+      "semanticLineCount": 1,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          664,
+          664
+        ]
+      ],
+      "displayedLineCount": 2,
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "pinnedAtUTC": "2026-10-17T19:56:23.815202+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 3080,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          280
+        ]
+      ],
+      "bodyDisplayedLineCount": 280,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          4,
+          6
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          28,
+          30
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          36,
+          38
+        ],
+        [
+          40,
+          42
+        ],
+        [
+          44,
+          46
+        ],
+        [
+          67,
+          69
+        ],
+        [
+          71,
+          71
+        ],
+        [
+          74,
+          76
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          106,
+          108
+        ],
+        [
+          110,
+          113
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          174,
+          176
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          181,
+          183
+        ],
+        [
+          185,
+          187
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          193,
+          195
+        ],
+        [
+          197,
+          197
+        ],
+        [
+          200,
+          202
+        ],
+        [
+          210,
+          214
+        ],
+        [
+          220,
+          222
+        ],
+        [
+          228,
+          230
+        ],
+        [
+          257,
+          259
+        ],
+        [
+          261,
+          262
+        ]
+      ],
+      "truncatedNavigation": {
+        "query": "^  \"(workspaces|overrides|packages)\"|^    \"|^      \"(name|version)\"",
+        "firstOutputTruncated": true,
+        "allActuallyVisibleExtraLinesNotCertified": true,
+        "fullRawAvailableOnlyAsLaterRecapture": "lock-navigation.recaptured.stdout",
+        "semanticExpansionFromTruncatedOrRecapturedExtraLines": 0
+      },
+      "semanticLineCount": 74,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          1,
+          280
+        ]
+      ],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "tests/package-boundaries.test.ts",
+      "bytes": 14692,
+      "sha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "pinnedAtUTC": "2026-10-17T19:56:46.133944+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 364,
+      "category": "test-declaration",
+      "bodyDisplayedLineRanges": [
+        [
+          239,
+          306
+        ]
+      ],
+      "bodyDisplayedLineCount": 68,
+      "additionalNavigationLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          78,
+          79
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          205,
+          205
+        ],
+        [
+          213,
+          213
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          313,
+          313
+        ],
+        [
+          326,
+          326
+        ],
+        [
+          350,
+          350
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          239,
+          306
+        ]
+      ],
+      "semanticLineCount": 68,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          78,
+          79
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          205,
+          205
+        ],
+        [
+          213,
+          213
+        ],
+        [
+          239,
+          306
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          313,
+          313
+        ],
+        [
+          326,
+          326
+        ],
+        [
+          350,
+          350
+        ]
+      ],
+      "displayedLineCount": 82,
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/arena/package.json",
+      "bytes": 1188,
+      "sha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "pinnedAtUTC": "2026-10-17T19:56:46.135131+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 47,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          4
+        ],
+        [
+          28,
+          28
+        ],
+        [
+          43,
+          44
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/private",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-core"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/private",
+        "/publishConfig",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 6,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "bytes": 910,
+      "sha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "pinnedAtUTC": "2026-10-17T19:56:46.135514+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 34,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          4
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/private"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/private"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 3,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/cdp/package.json",
+      "bytes": 1146,
+      "sha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "pinnedAtUTC": "2026-10-17T19:56:46.135871+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 40,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          4
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/private"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/private"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 3,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/chat/package.json",
+      "bytes": 2936,
+      "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "pinnedAtUTC": "2026-10-17T19:56:46.136281+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 123,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          85,
+          86
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies",
+        "/devDependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 4,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "pinnedAtUTC": "2026-10-17T19:56:46.136899+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 60,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          57,
+          58
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-core"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 5,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "pinnedAtUTC": "2026-10-17T19:56:46.137225+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 110,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          98,
+          99
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-link"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies",
+        "/devDependencies",
+        "/optionalDependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 5,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/desktop/package.json",
+      "bytes": 13339,
+      "sha256": "a5d1d02d3534c1a5d54e7d5de6b26214af4e41287d96406eebe28cb4ff7e0fe9",
+      "pinnedAtUTC": "2026-10-17T19:56:46.137583+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 264,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          4
+        ],
+        [
+          201,
+          204
+        ],
+        [
+          209,
+          215
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/private",
+        "/dependencies/@cjhyy~1code-shell-capability-coding",
+        "/dependencies/@cjhyy~1code-shell-capability-optimization-lab",
+        "/dependencies/@cjhyy~1code-shell-core",
+        "/dependencies/@cjhyy~1code-shell-pet",
+        "/devDependencies/@cjhyy~1code-shell-browser-devtools",
+        "/devDependencies/@cjhyy~1code-shell-cdp",
+        "/devDependencies/@cjhyy~1code-shell-chat",
+        "/devDependencies/@cjhyy~1code-shell-host",
+        "/devDependencies/@cjhyy~1code-shell-link",
+        "/devDependencies/@cjhyy~1code-shell-server",
+        "/devDependencies/@cjhyy~1code-shell-web"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/private",
+        "/dependencies",
+        "/devDependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 14,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/host/package.json",
+      "bytes": 923,
+      "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "pinnedAtUTC": "2026-10-17T19:56:46.137900+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 38,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          34,
+          35
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-core"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 5,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/link/package.json",
+      "bytes": 951,
+      "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "pinnedAtUTC": "2026-10-17T19:56:46.138187+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 37,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          33,
+          34
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 4,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/optimization-lab/package.json",
+      "bytes": 927,
+      "sha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "pinnedAtUTC": "2026-10-17T19:56:46.138515+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 35,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          4
+        ],
+        [
+          28,
+          28
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/private",
+        "/dependencies/@cjhyy~1code-shell-core"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/private",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 4,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/pet/package.json",
+      "bytes": 1572,
+      "sha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "pinnedAtUTC": "2026-10-17T19:56:46.138823+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 57,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          53,
+          54
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-core"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 5,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/server/package.json",
+      "bytes": 2789,
+      "sha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "pinnedAtUTC": "2026-10-17T19:56:46.139157+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 90,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          65,
+          67
+        ],
+        [
+          71,
+          72
+        ],
+        [
+          86,
+          87
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-capability-coding",
+        "/dependencies/@cjhyy~1code-shell-core",
+        "/dependencies/@cjhyy~1code-shell-web",
+        "/dependencies/@cjhyy~1code-shell-link",
+        "/dependencies/@cjhyy~1code-shell-host"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 9,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "pinnedAtUTC": "2026-10-17T19:56:46.139494+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 73,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          41,
+          43
+        ],
+        [
+          70,
+          71
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-capability-coding",
+        "/dependencies/@cjhyy~1code-shell-core",
+        "/dependencies/@cjhyy~1code-shell-server"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 7,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    },
+    {
+      "path": "packages/web/package.json",
+      "bytes": 3638,
+      "sha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "pinnedAtUTC": "2026-10-17T19:56:46.139807+00:00",
+      "timing": "before own body/nav",
+      "lineCount": 77,
+      "category": "product-or-release-data",
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationLineRanges": [],
+      "selectedLineRanges": [
+        [
+          2,
+          3
+        ],
+        [
+          43,
+          44
+        ],
+        [
+          73,
+          74
+        ]
+      ],
+      "semanticJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies/@cjhyy~1code-shell-core",
+        "/dependencies/@cjhyy~1code-shell-link"
+      ],
+      "displayedJsonPointers": [
+        "/name",
+        "/version",
+        "/publishConfig",
+        "/dependencies",
+        "/devDependencies",
+        "/peerDependencies"
+      ],
+      "projectionDisplayNote": "JSON field values printed in a synthesized one-line representation, not source lines/full source body. Exact source line display total is not asserted.",
+      "semanticLineCount": 6,
+      "coverage": "selected",
+      "semanticFull": false,
+      "displayedLineRanges": [],
+      "displayedLineCount": null,
+      "displayedLineCountLimitation": "Bounded body ranges are exact; truncated navigation or synthesized JSON projection is not converted into an exact total source-line display count.",
+      "oldCoverageLimitation": "No inference of historical unread status."
+    }
+  ],
+  "summary": {
+    "sourceRows": 26,
+    "semanticProductRows": 23,
+    "semanticProductLines": 794,
+    "testDeclarationRows": 1,
+    "testDeclarationLines": 68,
+    "semanticFullRows": 1,
+    "instructionHashOnlyRows": 2,
+    "boundedBodyDisplayedLines": 1675,
+    "allDisplayUnionCount": null,
+    "allDisplayUnionLimitation": "Lock navigation was truncated and manifest JSON projections are not original source-line display. Do not add attempted/machine-matched lines as semantic reading."
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "productAttempts": 0,
+  "productFailures": 0,
+  "navigationFailures": [],
+  "metadataErrors": [],
+  "truncations": [],
+  "note": "All actual bounded source/canonical tool output for prep150 completed without observed nonzero/truncation. Shared match cap109/100 is explicitly separate from tool truncation. Waited for Root153 final batch signal before canonical/source body."
+}

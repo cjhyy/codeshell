@@ -1,0 +1,354 @@
+{
+  "files": [
+    {
+      "path": "scripts/build-meta.ts",
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 38,
+          "lines": [
+            "/**",
+            " * Build the @cjhyy/code-shell metapackage's tiny dist/.",
+            " *",
+            " * The metapackage carries no source of its own — at runtime it just",
+            " * re-exports @cjhyy/code-shell-core (so `import { Engine } from",
+            " * \"@cjhyy/code-shell\"` still works for legacy SDK users) and ships a",
+            " * shim bin that loads @cjhyy/code-shell-tui's CLI.",
+            " *",
+            " * IMPORTANT: nuke dist/ first. Earlier monorepo iterations left",
+            " * thousands of stale tsup chunks here (anthropic-*.js, chunk-*.js, ...).",
+            " * Without the wipe, `bun run build` would ADD our entry files alongside",
+            " * those stale chunks, and `npm publish` would tarball the whole mess.",
+            " */",
+            "",
+            "import { chmod, mkdir, rm, writeFile } from \"node:fs/promises\";",
+            "import { dirname, resolve } from \"node:path\";",
+            "import { fileURLToPath } from \"node:url\";",
+            "",
+            "const scriptDir = dirname(fileURLToPath(import.meta.url));",
+            "const root = resolve(scriptDir, \"..\");",
+            "const dist = resolve(root, \"dist\");",
+            "",
+            "await rm(dist, { recursive: true, force: true });",
+            "await mkdir(dist, { recursive: true });",
+            "",
+            "await writeFile(resolve(dist, \"index.js\"), 'export * from \"@cjhyy/code-shell-core\";\\n');",
+            "await writeFile(resolve(dist, \"index.d.ts\"), 'export * from \"@cjhyy/code-shell-core\";\\n');",
+            "",
+            "const cliPath = resolve(dist, \"cli.js\");",
+            "await writeFile(cliPath, '#!/usr/bin/env node\\nimport \"@cjhyy/code-shell-tui/cli\";\\n');",
+            "await chmod(cliPath, 0o755);",
+            "",
+            "// Existing global links may still target the pre-metapackage bin path. Keep",
+            "// that launcher working after a rebuild without retaining old bundled code.",
+            "const legacyCliPath = resolve(dist, \"cli\", \"main.js\");",
+            "await mkdir(dirname(legacyCliPath), { recursive: true });",
+            "await writeFile(legacyCliPath, '#!/usr/bin/env node\\nimport \"../cli.js\";\\n');",
+            "await chmod(legacyCliPath, 0o755);"
+          ]
+        }
+      ],
+      "captureTiming": "After actual complete source display, not runtime execution or new semantic read."
+    },
+    {
+      "path": "package.json",
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "objects": [
+        {
+          "pointer": "/name",
+          "value": "@cjhyy/code-shell"
+        },
+        {
+          "pointer": "/type",
+          "value": "module"
+        },
+        {
+          "pointer": "/version",
+          "value": "0.9.45"
+        },
+        {
+          "pointer": "/main",
+          "value": "./dist/index.js"
+        },
+        {
+          "pointer": "/types",
+          "value": "./dist/index.d.ts"
+        },
+        {
+          "pointer": "/bin",
+          "value": {
+            "code-shell": "./dist/cli.js"
+          }
+        },
+        {
+          "pointer": "/exports",
+          "value": {
+            ".": {
+              "types": "./dist/index.d.ts",
+              "import": "./dist/index.js"
+            }
+          }
+        },
+        {
+          "pointer": "/files",
+          "value": [
+            "assets/codeshell-dog-icon.png",
+            "assets/codeshell-promo.png",
+            "assets/codeshell-desktop-screenshot-en.png",
+            "docs/architecture/images/overview-runtime-layers.png",
+            "dist",
+            "scripts/check-node.cjs",
+            "README.md",
+            "README.zh-CN.md",
+            "LICENSE",
+            "CHANGELOG.md"
+          ]
+        },
+        {
+          "pointer": "/workspaces",
+          "value": [
+            "packages/*"
+          ]
+        },
+        {
+          "pointer": "/dependencies",
+          "value": {
+            "@cjhyy/code-shell-core": "workspace:*",
+            "@cjhyy/code-shell-tui": "workspace:*"
+          }
+        },
+        {
+          "pointer": "/scripts/build",
+          "value": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-pet' build && bun run --filter '@cjhyy/code-shell-capability-optimization-lab' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-cdp' build && bun run --filter '@cjhyy/code-shell-browser-devtools' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts"
+        },
+        {
+          "pointer": "/scripts/build:server",
+          "value": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build"
+        },
+        {
+          "pointer": "/scripts/test:package-release",
+          "value": "bun run scripts/package-release-smoke.ts"
+        }
+      ],
+      "captureTiming": "After actual selected original JSON values displayed; byte hash not full JSON semantic reading."
+    },
+    {
+      "path": "packages/core/package.json",
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "objects": [
+        {
+          "pointer": "/name",
+          "value": "@cjhyy/code-shell-core"
+        },
+        {
+          "pointer": "/type",
+          "value": "module"
+        },
+        {
+          "pointer": "/main",
+          "value": "./dist/index.js"
+        },
+        {
+          "pointer": "/types",
+          "value": "./dist/index.d.ts"
+        },
+        {
+          "pointer": "/bin",
+          "value": {
+            "code-shell-output-journal": "./dist/cli/output-journal-repair.js"
+          }
+        },
+        {
+          "pointer": "/exports",
+          "value": {
+            ".": {
+              "types": "./dist/index.d.ts",
+              "import": "./dist/index.js"
+            },
+            "./internal": {
+              "types": "./dist/index.internal.d.ts",
+              "import": "./dist/index.internal.js"
+            },
+            "./internal/skills": {
+              "types": "./dist/index.skills.d.ts",
+              "import": "./dist/index.skills.js"
+            },
+            "./panel-app-runtime": {
+              "types": "./dist/panel-apps/runtime.d.ts",
+              "import": "./dist/panel-apps/runtime.js"
+            },
+            "./browser/panel-app-runtime": {
+              "types": "./dist/panel-apps/runtime.d.ts",
+              "import": "./dist/panel-apps/runtime.js"
+            },
+            "./extension": {
+              "types": "./dist/index.extension.d.ts",
+              "import": "./dist/index.extension.js"
+            },
+            "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
+          }
+        },
+        {
+          "pointer": "/files",
+          "value": [
+            "dist"
+          ]
+        },
+        {
+          "pointer": "/scripts/build",
+          "value": "bun run clean && tsc -p tsconfig.json && bun run copy-assets"
+        },
+        {
+          "pointer": "/scripts/copy-assets",
+          "value": "node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json src/data/*.txt"
+        },
+        {
+          "pointer": "/scripts/clean",
+          "value": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+        }
+      ],
+      "captureTiming": "After actual selected original JSON values displayed; byte hash not full JSON semantic reading."
+    },
+    {
+      "path": "packages/tui/package.json",
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "objects": [
+        {
+          "pointer": "/name",
+          "value": "@cjhyy/code-shell-tui"
+        },
+        {
+          "pointer": "/type",
+          "value": "module"
+        },
+        {
+          "pointer": "/main",
+          "value": "./dist/index.js"
+        },
+        {
+          "pointer": "/types",
+          "value": "./dist/index.d.ts"
+        },
+        {
+          "pointer": "/bin",
+          "value": {
+            "code-shell": "./dist/cli/main.js"
+          }
+        },
+        {
+          "pointer": "/exports",
+          "value": {
+            ".": {
+              "types": "./dist/index.d.ts",
+              "import": "./dist/index.js"
+            },
+            "./cli": {
+              "types": "./dist/cli/main.d.ts",
+              "import": "./dist/cli/main.js"
+            }
+          }
+        },
+        {
+          "pointer": "/files",
+          "value": [
+            "dist",
+            "THIRD_PARTY_NOTICES.md"
+          ]
+        },
+        {
+          "pointer": "/scripts/build",
+          "value": "bun run clean && tsc -p tsconfig.json && node ../../scripts/copy-assets.mjs dist/cli/commands/builtin/init src/cli/commands/builtin/init/templates"
+        },
+        {
+          "pointer": "/scripts/clean",
+          "value": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+        }
+      ],
+      "captureTiming": "After actual selected original JSON values displayed; byte hash not full JSON semantic reading."
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 22,
+          "lines": [
+            "{",
+            "  \"compilerOptions\": {",
+            "    \"target\": \"ES2022\",",
+            "    \"module\": \"ESNext\",",
+            "    \"moduleResolution\": \"bundler\",",
+            "    \"lib\": [\"ES2022\"],",
+            "    \"outDir\": \"./dist\",",
+            "    \"rootDir\": \"./src\",",
+            "    \"strict\": true,",
+            "    \"noImplicitAny\": false,",
+            "    \"esModuleInterop\": true,",
+            "    \"skipLibCheck\": true,",
+            "    \"forceConsistentCasingInFileNames\": true,",
+            "    \"resolveJsonModule\": true,",
+            "    \"declaration\": true,",
+            "    \"declarationMap\": false,",
+            "    \"sourceMap\": false,",
+            "    \"types\": [\"node\"]",
+            "  },",
+            "  \"include\": [\"src/**/*.ts\"],",
+            "  \"exclude\": [\"node_modules\", \"dist\", \"src/**/*.test.ts\"]",
+            "}"
+          ]
+        }
+      ],
+      "captureTiming": "After actual complete source display, not runtime execution or new semantic read."
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 34,
+          "lines": [
+            "{",
+            "  \"compilerOptions\": {",
+            "    \"target\": \"ES2022\",",
+            "    \"module\": \"ESNext\",",
+            "    \"moduleResolution\": \"bundler\",",
+            "    \"lib\": [\"ES2022\"],",
+            "    \"outDir\": \"./dist\",",
+            "    \"rootDir\": \"./src\",",
+            "    \"strict\": true,",
+            "    \"noImplicitAny\": false,",
+            "    \"esModuleInterop\": true,",
+            "    \"skipLibCheck\": true,",
+            "    \"forceConsistentCasingInFileNames\": true,",
+            "    \"resolveJsonModule\": true,",
+            "    \"declaration\": true,",
+            "    \"declarationMap\": false,",
+            "    \"sourceMap\": false,",
+            "    \"jsx\": \"react-jsx\",",
+            "    \"types\": [\"node\"],",
+            "    \"paths\": {",
+            "      \"react/compiler-runtime\": [\"./src/react-compiler-runtime-shim.js\"]",
+            "    }",
+            "  },",
+            "  \"include\": [\"src/**/*.ts\", \"src/**/*.tsx\"],",
+            "  // Keep the dormant Arena command source for its private capability package;",
+            "  // it is not a terminal entry point and must not ship in the public TUI.",
+            "  \"exclude\": [",
+            "    \"node_modules\",",
+            "    \"dist\",",
+            "    \"src/**/*.test.ts\",",
+            "    \"src/**/*.test.tsx\",",
+            "    \"src/cli/commands/arena.ts\"",
+            "  ]",
+            "}"
+          ]
+        }
+      ],
+      "captureTiming": "After actual complete source display, not runtime execution or new semantic read."
+    }
+  ],
+  "productExecution": 0
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "path": "packages/coding/package.json",
+    "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+    "readAt": "2026-10-17T19:55:32.250642+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/scripts/build",
+        "value": "bun run clean && tsc -p tsconfig.json && bun run copy-assets"
+      },
+      {
+        "pointer": "/scripts/copy-assets",
+        "value": "node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/package.json",
+    "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+    "readAt": "2026-10-17T19:55:32.251598+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/scripts/build",
+        "value": "bun run clean && tsc -p tsconfig.json && bun run copy-assets"
+      },
+      {
+        "pointer": "/scripts/copy-assets",
+        "value": "node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json src/data/*.txt"
+      }
+    ]
+  },
+  {
+    "path": "packages/tui/package.json",
+    "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+    "readAt": "2026-10-17T19:55:32.252489+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/scripts/build",
+        "value": "bun run clean && tsc -p tsconfig.json && node ../../scripts/copy-assets.mjs dist/cli/commands/builtin/init src/cli/commands/builtin/init/templates"
+      },
+      {
+        "pointer": "/scripts/copy-assets",
+        "value": null
+      }
+    ]
+  }
+]

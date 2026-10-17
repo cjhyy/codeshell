@@ -1,0 +1,84 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [],
+  "unboundNavigationReferences": [
+    {
+      "manifest": "copy-assets/source-manifest.json",
+      "collection": "filenameOnlySourceInputs",
+      "row": "asset-filenames.json",
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "copy-assets/source-manifest.json",
+      "collection": "filenameOnlySourceInputs",
+      "row": "runtime-consumer-filenames.json",
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "copy-assets/source-manifest.json",
+      "collection": "filenameOnlySourceInputs",
+      "row": "coding-prompt-consumer-filenames.json",
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "copy-assets/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/archive/todo/review-infra-2026-07-08.md",
+        "bytes": 17047,
+        "initialSha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+        "endingSha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+        "unchanged": true,
+        "displayedLineRanges": [
+          [
+            140,
+            159
+          ]
+        ],
+        "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "copy-assets/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/archive/todo/review-master-2026-07-08.md",
+        "bytes": 17704,
+        "initialSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+        "endingSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+        "unchanged": true,
+        "displayedLineRanges": [
+          [
+            74,
+            77
+          ]
+        ],
+        "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "copy-assets/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+        "bytes": 4339,
+        "initialSha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+        "endingSha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+        "unchanged": true,
+        "displayedLineRanges": [
+          [
+            10,
+            17
+          ]
+        ],
+        "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    }
+  ],
+  "externalMetadataInputs": [],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows. Nested historical inputs without the canonical sha256 key remain original author metadata, not additional source coverage.",
+  "productRuns": 0
+}

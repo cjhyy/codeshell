@@ -1,0 +1,22 @@
+17:import { collectReleaseVersionErrors } from "../scripts/verify-release-versions";
+21:  version: string;
+78:describe("workspace package boundaries", () => {
+79:  it("keeps the workspace dependency graph acyclic", async () => {
+106:  it("keeps Core limited to the dependency-free Link contract and capabilities Core-only", async () => {
+140:  it("keeps Host runtime and declaration imports independent of other hosts and capabilities", async () => {
+173:  it("audits Host runtime and declarations after Core and before downstream hosts", async () => {
+193:  it("cleans package output before every package-local build", async () => {
+205:  it("keeps audited package export maps publishable and typed", async () => {
+213:  it("keeps public package provenance, runtime support, and local docs explicit", async () => {
+239:  it("uses one complete declaration for public release and private version packages", async () => {
+260:    // Arena is version-tracked but unpublished: hosts no longer load it and the
+278:  it("publishes public packages in workspace dependency order", async () => {
+286:  it("keeps every release version source synchronized", async () => {
+288:    expect(collectReleaseVersionErrors(root.version, repoRoot)).toEqual([]);
+291:  it("keeps the workflow on shared release helpers instead of package lists", () => {
+294:    expect(workflow).toContain('bun run scripts/verify-release-versions.ts "$TAG"');
+300:      /npm-publish:[\s\S]*?needs: \[verify-version, package-release-smoke, package\]/,
+308:  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+313:      // deliberately absent from this map even if its old npm version exists.
+326:  it("keeps product hosts on focused Coding and Arena entries", () => {
+350:  it("keeps product hosts on focused Server entries", () => {

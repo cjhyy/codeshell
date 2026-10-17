@@ -1,0 +1,25 @@
+{
+  "toolOutputTruncation": {
+    "artifact": "first-output-diagnostic.json",
+    "chunk": "f25360",
+    "exitCode": 0,
+    "note": "Initial derived locator display was capped;34 saved hits not all semantically read."
+  },
+  "metadataFirstError": {
+    "artifact": "tsconfig-parse.first.exit-observation.json",
+    "observedTraceback": "tsconfig-parse.first.observed.txt",
+    "chunk": "b4606c",
+    "exitCode": 1,
+    "note": "Strict stdlib JSON parser applied to TUI JSONC comment; not product/build failure or failed test. Initial guesses corrected in metadata-corrections.json.",
+    "rawSeparateStreamsCaptured": false
+  },
+  "configurationPinBoundary": "All three initial failed-batch memory pins were not durably saved. Current durable pins precede successful text reading; original initial-attempt SHA/times remain unknown/null, not backfilled.",
+  "absentPointerBoundary": "TUI has no separate scripts/copy-assets; the first get(...)=null query is absent, not an existing null object. Active manifest distinguishes this.",
+  "legitimateNoMatch": "Filename-only .ts query under coding/src/prompt has no files; raw exit preserved in runtime-consumer-filenames.json. No alternate product execution.",
+  "incidentalDisplayExcluded": [
+    "Old canonical ranges contain neighboring plugin/security/image/ESLint findings, not audited or certified.",
+    "section-loader helper body after22 and static catalog schema/provider comments displayed but not semantic asset-path review.",
+    "TUI init template interpolation/detection adjacent55–80 displayed but not command execution/mechanism review."
+  ],
+  "sourceExecutions": 0
+}

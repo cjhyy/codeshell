@@ -1,0 +1,424 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "branchReported": "codex/audit/build-assets-round60-20261018",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "scripts/copy-assets.mjs",
+      "bytes": 2079,
+      "lines": 60,
+      "sha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "pinAt": "2026-10-17T19:54:20.646874+00:00",
+      "coverage": "full",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product-build-script",
+      "selectedLineRanges": [
+        [
+          1,
+          60
+        ]
+      ],
+      "semanticLineCount": 60,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          60
+        ]
+      ],
+      "bodyDisplayedLineCount": 60,
+      "displayArtifact": "copy-script-display.json",
+      "scope": "Full ordinary argument/plain-file/simple-suffix-glob/directory target layout and zero-match gate. Static only; no actual copy/delete, shell behavior or cross-platform run.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/prompt/section-loader.ts",
+      "bytes": 1723,
+      "lines": 54,
+      "sha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "pinAt": "2026-10-17T19:56:24.329620+00:00",
+      "coverage": "selected",
+      "pinArtifact": "runtime-consumer-pins.json",
+      "sourceKind": "product-runtime-consumer",
+      "selectedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "semanticLineCount": 22,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          54
+        ]
+      ],
+      "bodyDisplayedLineCount": 54,
+      "displayArtifact": "runtime-consumer-display.json",
+      "scope": "Module-relative markdown asset paths and six builtin names only. Remaining helper body displayed but not a full prompt subsystem review.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/data/static-catalogs.ts",
+      "bytes": 1601,
+      "lines": 50,
+      "sha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+      "pinAt": "2026-10-17T19:56:24.330624+00:00",
+      "coverage": "selected",
+      "pinArtifact": "runtime-consumer-pins.json",
+      "sourceKind": "product-runtime-consumer",
+      "selectedLineRanges": [
+        [
+          14,
+          17
+        ],
+        [
+          37,
+          42
+        ]
+      ],
+      "semanticLineCount": 10,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "bodyDisplayedLineCount": 50,
+      "displayArtifact": "runtime-consumer-display.json",
+      "scope": "Module-relative four JSON paths only. Catalog schema/list behavior and provider/network semantics excluded.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+      "bytes": 6498,
+      "lines": 155,
+      "sha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "pinAt": "2026-10-17T19:56:24.331037+00:00",
+      "coverage": "selected",
+      "pinArtifact": "runtime-consumer-pins.json",
+      "sourceKind": "product-runtime-consumer",
+      "selectedLineRanges": [
+        [
+          19,
+          33
+        ]
+      ],
+      "semanticLineCount": 15,
+      "bodyDisplayedLineRanges": [
+        [
+          17,
+          34
+        ],
+        [
+          55,
+          80
+        ]
+      ],
+      "bodyDisplayedLineCount": 44,
+      "displayArtifact": "runtime-consumer-display.json",
+      "scope": "Templates loader and five normal filenames only. Init execution, filesystem mutation and model instruction construction outside scope.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 11585,
+      "lines": 377,
+      "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "pinAt": "2026-10-17T19:56:24.331356+00:00",
+      "coverage": "selected",
+      "pinArtifact": "runtime-consumer-pins.json",
+      "sourceKind": "product-runtime-consumer",
+      "selectedLineRanges": [
+        [
+          320,
+          322
+        ]
+      ],
+      "semanticLineCount": 3,
+      "bodyDisplayedLineRanges": [
+        [
+          318,
+          322
+        ]
+      ],
+      "bodyDisplayedLineCount": 5,
+      "displayArtifact": "runtime-consumer-display.json",
+      "scope": "Module-relative coding.md read only; other capability registration/permission code not read here.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "endingUnchanged": true
+    }
+  ],
+  "metadataFiles": [
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "lines": 60,
+      "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "pinAt": "2026-10-17T19:54:29.042160+00:00",
+      "coverage": "selected-metadata",
+      "sourceKind": "package-script-metadata",
+      "selectedJsonPointers": [
+        "/scripts/build",
+        "/scripts/copy-assets"
+      ],
+      "absentQueriedPointers": [],
+      "scope": "Only build/copy-assets command strings. TUI absent copy-assets query was originally represented by get(...)=null, not a literal null or existing JSON pointer.",
+      "evidence": "package-script-read.json"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lines": 73,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "pinAt": "2026-10-17T19:54:29.042953+00:00",
+      "coverage": "selected-metadata",
+      "sourceKind": "package-script-metadata",
+      "selectedJsonPointers": [
+        "/scripts/build"
+      ],
+      "absentQueriedPointers": [
+        "/scripts/copy-assets"
+      ],
+      "scope": "Only build/copy-assets command strings. TUI absent copy-assets query was originally represented by get(...)=null, not a literal null or existing JSON pointer.",
+      "evidence": "package-script-read.json"
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "pinAt": "2026-10-17T19:54:29.043147+00:00",
+      "coverage": "selected-metadata",
+      "sourceKind": "package-script-metadata",
+      "selectedJsonPointers": [
+        "/scripts/build",
+        "/scripts/copy-assets"
+      ],
+      "absentQueriedPointers": [],
+      "scope": "Only build/copy-assets command strings. TUI absent copy-assets query was originally represented by get(...)=null, not a literal null or existing JSON pointer.",
+      "evidence": "package-script-read.json"
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "bytes": 554,
+      "lines": 22,
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "pinAt": "2026-10-17T19:57:33.710059+00:00",
+      "coverage": "selected-metadata",
+      "initialBatchAttemptSha256": null,
+      "initialBatchAttemptPinDurablyCaptured": false,
+      "priorAttempt": "Core/coding JSON parsed in the failed batch; TUI JSONC comment at line25 caused exception before any config pins/objects were durably written. Current pin is before successful reviewer text reading, after that batch attempt.",
+      "sourceKind": "compiler-layout-metadata",
+      "selectedLineRanges": [
+        [
+          7,
+          8
+        ],
+        [
+          20,
+          21
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "scope": "src rootDir/dist outDir/include text only; no tsc/JSONC evaluator. All initial batch attempt pins were not durably captured; see diagnostics/corrections.",
+      "evidence": "tsconfig-text-read.json"
+    },
+    {
+      "path": "packages/coding/tsconfig.json",
+      "bytes": 554,
+      "lines": 22,
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "pinAt": "2026-10-17T19:57:33.710974+00:00",
+      "coverage": "selected-metadata",
+      "initialBatchAttemptSha256": null,
+      "initialBatchAttemptPinDurablyCaptured": false,
+      "priorAttempt": "Core/coding JSON parsed in the failed batch; TUI JSONC comment at line25 caused exception before any config pins/objects were durably written. Current pin is before successful reviewer text reading, after that batch attempt.",
+      "sourceKind": "compiler-layout-metadata",
+      "selectedLineRanges": [
+        [
+          7,
+          8
+        ],
+        [
+          20,
+          21
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "scope": "src rootDir/dist outDir/include text only; no tsc/JSONC evaluator. All initial batch attempt pins were not durably captured; see diagnostics/corrections.",
+      "evidence": "tsconfig-text-read.json"
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "bytes": 917,
+      "lines": 34,
+      "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "pinAt": "2026-10-17T19:57:33.711218+00:00",
+      "coverage": "selected-metadata",
+      "initialBatchAttemptSha256": null,
+      "initialBatchAttemptPinDurablyCaptured": false,
+      "priorAttempt": "Core/coding JSON parsed in the failed batch; TUI JSONC comment at line25 caused exception before any config pins/objects were durably written. Current pin is before successful reviewer text reading, after that batch attempt.",
+      "sourceKind": "compiler-layout-metadata",
+      "selectedLineRanges": [
+        [
+          7,
+          8
+        ],
+        [
+          24,
+          24
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "scope": "src rootDir/dist outDir/include text only; no tsc/JSONC evaluator. All initial batch attempt pins were not durably captured; see diagnostics/corrections.",
+      "evidence": "tsconfig-text-read.json"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:54:20.643008+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Previously read same-SHA instructions reused, no new full instruction read."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:54:20.645969+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Previously read same-SHA instructions reused, no new full instruction read."
+    }
+  ],
+  "filenameOnlySourceInputs": [
+    "asset-filenames.json",
+    "runtime-consumer-filenames.json",
+    "coding-prompt-consumer-filenames.json"
+  ],
+  "historicalMetadata": [
+    {
+      "path": "docs/archive/todo/review-infra-2026-07-08.md",
+      "bytes": 17047,
+      "initialSha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+      "endingSha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+      "unchanged": true,
+      "displayedLineRanges": [
+        [
+          140,
+          159
+        ]
+      ],
+      "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "bytes": 17704,
+      "initialSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+      "endingSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+      "unchanged": true,
+      "displayedLineRanges": [
+        [
+          74,
+          77
+        ]
+      ],
+      "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+      "bytes": 4339,
+      "initialSha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+      "endingSha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+      "unchanged": true,
+      "displayedLineRanges": [
+        [
+          10,
+          17
+        ]
+      ],
+      "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+    }
+  ],
+  "history": {
+    "input": {
+      "path": "/tmp/codeshell-audit-round153-release-audit-config/history-batch.json",
+      "bytes": 1345579,
+      "sha256": "be3ff0ec8e4a82e7e8b72b8a678bda0caeff940e42bb3bebfc2178e1b3d35b56"
+    },
+    "snapshotAt": "2026-10-17T19:54:33.727921+00:00",
+    "historyFiles": 6126,
+    "jsonValueScalarsVisited": 4322397,
+    "target": "scripts/copy-assets.mjs",
+    "count": 34,
+    "cap": 100,
+    "allHitsSaved": true,
+    "allHitsSemanticallyRead": false,
+    "excludedFormalAtOrAbove": 60,
+    "errors": [],
+    "scope": "Shared MD/recursive JSON-value path/SHA machine navigation, archives included. Root owns full inventory binding; no global no-bug/unread assertion."
+  },
+  "totals": {
+    "productFiles": 5,
+    "productSemanticLines": 110,
+    "bodyDisplayedLines": 213,
+    "fullProductFiles": 1,
+    "selectedProductFiles": 4,
+    "metadataFiles": 6,
+    "metadataPresentPackagePointers": 5,
+    "absentPackagePointerQueries": 1,
+    "compilerSelectedTextLines": 11,
+    "compilerDisplayedTextLines": 78,
+    "testDeclarationLines": 0,
+    "hashOnlyInstructionFiles": 2,
+    "newUniqueCoverageClaim": false
+  },
+  "executions": {
+    "product": 0,
+    "imports": 0,
+    "helper": 0,
+    "build": 0,
+    "copyOrDeleteOutputs": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "install": 0,
+    "release": 0,
+    "native": 0,
+    "network": 0,
+    "Git": 0
+  }
+}

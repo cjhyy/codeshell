@@ -1,0 +1,297 @@
+1: export interface PublishExportConditions {
+2:   import?: string;
+3:   types?: string;
+4: }
+5: 
+6: export interface PublishManifest {
+7:   name: string;
+8:   version: string;
+9:   private?: boolean;
+10:   publishConfig?: {
+11:     access?: string;
+12:   };
+13:   main?: string;
+14:   types?: string;
+15:   exports?: Record<string, string | PublishExportConditions>;
+16:   bin?: Record<string, string>;
+17:   files?: string[];
+18:   dependencies?: Record<string, string>;
+19:   devDependencies?: Record<string, string>;
+20:   optionalDependencies?: Record<string, string>;
+21:   peerDependencies?: Record<string, string>;
+22: }
+23: 
+24: export interface ReleasePackageDefinition {
+25:   directory: string;
+26:   name: string;
+27:   publish: boolean;
+28:   buildArgs?: readonly string[];
+29:   nonCodeSubpaths?: readonly string[];
+30:   runtimeExcludedSubpaths?: readonly string[];
+31: }
+32: 
+33: export interface PublishEntry {
+34:   importTarget: string;
+35:   runtimeImport: boolean;
+36:   specifier: string;
+37:   subpath: string;
+38:   typeImport: boolean;
+39:   typesTarget?: string;
+40: }
+41: 
+42: /**
+43:  * The single release-package declaration.
+44:  *
+45:  * Public entries are deliberately in npm publish order: every public workspace
+46:  * dependency appears before its consumer, and the root meta package is last.
+47:  * Private entries still participate in synchronized version bumps and lockfile
+48:  * verification, but are never packed or published.
+49:  */
+50: export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
+51:   {
+52:     directory: "packages/link",
+53:     name: "@cjhyy/code-shell-link",
+54:     publish: true,
+55:   },
+56:   {
+57:     directory: "packages/core",
+58:     name: "@cjhyy/code-shell-core",
+59:     publish: true,
+60:     runtimeExcludedSubpaths: ["./bin/agent-server-stdio"],
+61:   },
+62:   {
+63:     directory: "packages/host",
+64:     name: "@cjhyy/code-shell-host",
+65:     publish: true,
+66:   },
+67:   {
+68:     directory: "packages/pet",
+69:     name: "@cjhyy/code-shell-pet",
+70:     publish: true,
+71:   },
+72:   {
+73:     directory: "packages/coding",
+74:     name: "@cjhyy/code-shell-capability-coding",
+75:     publish: true,
+76:   },
+77:   {
+78:     directory: "packages/web",
+79:     name: "@cjhyy/code-shell-web",
+80:     publish: true,
+81:     nonCodeSubpaths: ["./package.json"],
+82:   },
+83:   {
+84:     directory: "packages/server",
+85:     name: "@cjhyy/code-shell-server",
+86:     publish: true,
+87:   },
+88:   {
+89:     directory: "packages/tui",
+90:     name: "@cjhyy/code-shell-tui",
+91:     publish: true,
+92:     runtimeExcludedSubpaths: ["./cli"],
+93:   },
+94:   {
+95:     directory: "packages/chat",
+96:     name: "@cjhyy/code-shell-chat",
+97:     publish: true,
+98:   },
+99:   {
+100:     directory: ".",
+101:     name: "@cjhyy/code-shell",
+102:     publish: true,
+103:     buildArgs: ["run", "scripts/build-meta.ts"],
+104:   },
+105:   {
+106:     directory: "packages/arena",
+107:     name: "@cjhyy/code-shell-arena",
+108:     publish: false,
+109:   },
+110:   {
+111:     directory: "packages/cdp",
+112:     name: "@cjhyy/code-shell-cdp",
+113:     publish: false,
+114:   },
+115:   {
+116:     directory: "packages/browser-devtools",
+117:     name: "@cjhyy/code-shell-browser-devtools",
+118:     publish: false,
+119:   },
+120:   {
+121:     directory: "packages/desktop",
+122:     name: "@cjhyy/code-shell-desktop",
+123:     publish: false,
+124:   },
+125:   {
+126:     directory: "packages/optimization-lab",
+127:     name: "@cjhyy/code-shell-capability-optimization-lab",
+128:     publish: false,
+129:   },
+130: ];
+131: 
+132: export const PUBLIC_RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = RELEASE_PACKAGES.filter(
+133:   (definition) => definition.publish,
+134: );
+135: 
+136: export const PRIVATE_VERSIONED_PACKAGES: readonly ReleasePackageDefinition[] =
+137:   RELEASE_PACKAGES.filter((definition) => !definition.publish);
+138: 
+139: // Compatibility name for the package smoke/test code introduced with the
+140: // release audit. It intentionally means every public release package now.
+141: export const AUDITED_RELEASE_PACKAGES = PUBLIC_RELEASE_PACKAGES;
+142: 
+143: export function packageManifestPath(definition: ReleasePackageDefinition): string {
+144:   return definition.directory === "." ? "package.json" : `${definition.directory}/package.json`;
+145: }
+146: 
+147: export function packageEntrySpecifier(packageName: string, subpath: string): string {
+148:   return subpath === "." ? packageName : `${packageName}/${subpath.slice(2)}`;
+149: }
+150: 
+151: export function validatePublicReleaseOrder(
+152:   manifests: ReadonlyMap<string, PublishManifest>,
+153: ): string[] {
+154:   const errors: string[] = [];
+155:   const publicNames = new Set(PUBLIC_RELEASE_PACKAGES.map((definition) => definition.name));
+156:   const privateNames = new Set(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name));
+157:   const published = new Set<string>();
+158: 
+159:   for (const definition of PUBLIC_RELEASE_PACKAGES) {
+160:     const manifest = manifests.get(definition.name);
+161:     if (!manifest) {
+162:       errors.push(`${definition.name}: manifest is missing from release-order validation`);
+163:       continue;
+164:     }
+165:     const runtimeDependencies = [
+166:       ...Object.keys(manifest.dependencies ?? {}),
+167:       ...Object.keys(manifest.optionalDependencies ?? {}),
+168:       ...Object.keys(manifest.peerDependencies ?? {}),
+169:     ];
+170:     for (const dependency of runtimeDependencies) {
+171:       if (privateNames.has(dependency)) {
+172:         errors.push(
+173:           `${definition.name}: runtime dependency ${dependency} is a private workspace and will not be published`,
+174:         );
+175:       }
+176:       if (publicNames.has(dependency) && !published.has(dependency)) {
+177:         errors.push(`${definition.name}: public dependency ${dependency} must be published first`);
+178:       }
+179:     }
+180:     published.add(definition.name);
+181:   }
+182: 
+183:   return errors;
+184: }
+185: 
+186: export function collectPublishEntries(
+187:   definition: ReleasePackageDefinition,
+188:   manifest: PublishManifest,
+189: ): PublishEntry[] {
+190:   const nonCode = new Set(definition.nonCodeSubpaths ?? []);
+191:   const runtimeExcluded = new Set(definition.runtimeExcludedSubpaths ?? []);
+192:   return Object.entries(manifest.exports ?? {}).map(([subpath, target]) => {
+193:     const importTarget = typeof target === "string" ? target : (target.import ?? "");
+194:     return {
+195:       importTarget,
+196:       runtimeImport:
+197:         importTarget.length > 0 && !nonCode.has(subpath) && !runtimeExcluded.has(subpath),
+198:       specifier: packageEntrySpecifier(manifest.name, subpath),
+199:       subpath,
+200:       typeImport: !nonCode.has(subpath),
+201:       typesTarget: typeof target === "string" ? undefined : target.types,
+202:     };
+203:   });
+204: }
+205: 
+206: export function validatePublishManifest(
+207:   definition: ReleasePackageDefinition,
+208:   manifest: PublishManifest,
+209: ): string[] {
+210:   const errors: string[] = [];
+211:   const fail = (message: string): void => {
+212:     errors.push(`${definition.name}: ${message}`);
+213:   };
+214: 
+215:   if (!definition.publish) {
+216:     fail("private/version-only package cannot be audited as a public package");
+217:   }
+218:   if (manifest.name !== definition.name) {
+219:     fail(`manifest name is ${manifest.name}, expected ${definition.name}`);
+220:   }
+221:   if (!manifest.version) {
+222:     fail("version is missing");
+223:   }
+224:   if (manifest.private === true) {
+225:     fail("public release package must not be private");
+226:   }
+227:   if (manifest.publishConfig?.access !== "public") {
+228:     fail('publishConfig.access must be "public"');
+229:   }
+230:   if (!manifest.files?.includes("dist")) {
+231:     fail('files must include "dist"');
+232:   }
+233: 
+234:   const exports = manifest.exports ?? {};
+235:   const rootExport = exports["."];
+236:   if (!rootExport) {
+237:     fail("root export is missing");
+238:   }
+239: 
+240:   const nonCode = new Set(definition.nonCodeSubpaths ?? []);
+241:   for (const [subpath, target] of Object.entries(exports)) {
+242:     if (nonCode.has(subpath)) {
+243:       if (typeof target !== "string" || target !== subpath) {
+244:         fail(`${subpath} non-code export must target itself, received ${JSON.stringify(target)}`);
+245:       }
+246:       continue;
+247:     }
+248: 
+249:     if (typeof target === "string") {
+250:       if (!/^\.\/dist\/.+\.js$/.test(target)) {
+251:         fail(`${subpath} must target a built JavaScript file, received ${target}`);
+252:       }
+253:       continue;
+254:     }
+255: 
+256:     const conditions = Object.keys(target).sort();
+257:     if (conditions.join(",") !== "import,types") {
+258:       fail(`${subpath} conditions must be exactly import and types`);
+259:     }
+260:     if (!target.import || !/^\.\/dist\/.+\.js$/.test(target.import)) {
+261:       fail(`${subpath} import target must be a built JavaScript file`);
+262:     }
+263:     if (!target.types || !/^\.\/dist\/.+\.d\.ts$/.test(target.types)) {
+264:       fail(`${subpath} types target must be a built declaration file`);
+265:     }
+266:   }
+267: 
+268:   if (rootExport && typeof rootExport !== "string") {
+269:     if (manifest.main !== rootExport.import) {
+270:       fail(`main ${manifest.main ?? "<missing>"} does not match root import ${rootExport.import}`);
+271:     }
+272:     if (manifest.types !== rootExport.types) {
+273:       fail(`types ${manifest.types ?? "<missing>"} does not match root types ${rootExport.types}`);
+274:     }
+275:   }
+276: 
+277:   for (const subpath of nonCode) {
+278:     if (!(subpath in exports)) {
+279:       fail(`non-code export ${subpath} does not match a published export`);
+280:     }
+281:   }
+282: 
+283:   const runtimeExcluded = new Set(definition.runtimeExcludedSubpaths ?? []);
+284:   for (const subpath of runtimeExcluded) {
+285:     if (!(subpath in exports)) {
+286:       fail(`runtime exclusion ${subpath} does not match a published export`);
+287:     }
+288:   }
+289: 
+290:   for (const [command, target] of Object.entries(manifest.bin ?? {})) {
+291:     if (!/^\.\/dist\/.+\.js$/.test(target)) {
+292:       fail(`bin ${command} must target a built JavaScript file, received ${target}`);
+293:     }
+294:   }
+295: 
+296:   return errors;
+297: }

@@ -1,0 +1,23 @@
+{
+  "atUTC": "2026-10-17T20:00:48.849743+00:00",
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "allReadersFrozen": true,
+  "rootSourceReviewComplete": true,
+  "sourceReadBaseline": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "decisions": [
+    "150 current root build/meta declaration chain finite negative; R24/R31 full source overlap retained.",
+    "151 copy source/caller/runtime layout finite negative; old zero-match cause remains previously source-addressed, no runtime revalidation.",
+    "152 current ordinary bump/15-package/version/lock verifier data finite negative; old A11 tag integration excluded.",
+    "153 ordinary export classification/config-to-consumer field chain finite negative; actual root/core/web metadata only, no full release/platform certification."
+  ],
+  "productRuns": 0,
+  "historicalFormalRecords": 118,
+  "priorities": {
+    "P2": 45,
+    "P3": 73
+  },
+  "goalStillActive": true,
+  "nextUnusedPrep": 154
+}

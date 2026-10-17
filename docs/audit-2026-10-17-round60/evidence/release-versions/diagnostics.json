@@ -1,0 +1,29 @@
+{
+  "productExecution": 0,
+  "gitCommands": 0,
+  "buildTestInstallReleaseExecution": 0,
+  "networkNativeExecution": 0,
+  "firstInventoryExit": 0,
+  "firstMetadataError": null,
+  "firstTruncation": {
+    "operation": "Combined static release/publish/manifest fields/lock navigation/test navigation output",
+    "toolDiagnostic": [
+      "Warning: truncated output (original token count: 10028)",
+      "Total output lines: 404",
+      "Warning: truncated output (original token count: 88784)",
+      "Total output lines: 1707"
+    ],
+    "cause": "Lock navigation pattern ^    \" also matched the packages dependency block, producing an oversized display.",
+    "firstCombinedRawCapturedToFile": false,
+    "limitation": "Original first tool display is retained in conversation only. Do not label later recapture as original raw or claim all matched lines read.",
+    "recovery": "Bounded lock 1–280 and test 239–306 read; same navigation stdout/stderr/exit later recaptured to explicit *.recaptured.* files without printing. No product rerun or expanded semantics."
+  },
+  "pinTiming": "All product/instruction before pins precede own body/navigation. Canonical metadata before pins are separate. No initial null hashes were retrofilled.",
+  "sourceReadingEnded": "2026-10-17T19:59:10.750889+00:00",
+  "mechanismLimits": [
+    "No actual Bun verifier invocation, import or error exit observed.",
+    "No package build/install/packing/publication or registry/CI-host operation.",
+    "No general release-authorization, credentials/native/signing or recovery mechanism certification.",
+    "Only current repository package declaration and ordinary supported bump forms; arbitrary invalid semver/nonexistent-package fixtures were not used."
+  ]
+}

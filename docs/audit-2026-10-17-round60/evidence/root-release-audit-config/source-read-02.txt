@@ -1,0 +1,204 @@
+scripts/package-release-smoke.ts:101–152
+101:   });
+102:   if (result.error) {
+103:     throw new Error(`[${label}] could not start ${command}: ${result.error.message}`);
+104:   }
+105:   if (result.status !== 0) {
+106:     throw new Error(`[${label}] failed with exit ${result.status}\n${commandOutput(result)}`);
+107:   }
+108:   console.log(`✓ ${label}`);
+109:   return result;
+110: }
+111: 
+112: function loadAuditedPackages(): AuditedPackageRecord[] {
+113:   const records = AUDITED_RELEASE_PACKAGES.map((definition) => {
+114:     const sourceDirectory = join(REPO_ROOT, definition.directory);
+115:     const manifest = readJson<WorkspaceManifest>(join(sourceDirectory, "package.json"));
+116:     return {
+117:       definition,
+118:       entries: collectPublishEntries(definition, manifest),
+119:       manifest,
+120:       sourceDirectory,
+121:     };
+122:   });
+123:   const errors = records.flatMap(({ definition, manifest }) =>
+124:     validatePublishManifest(definition, manifest),
+125:   );
+126:   if (errors.length > 0) {
+127:     throw new Error(
+128:       `publish manifest audit failed:\n${errors.map((error) => `- ${error}`).join("\n")}`,
+129:     );
+130:   }
+131:   return records;
+132: }
+133: 
+134: function printPackageList(records: readonly AuditedPackageRecord[]): void {
+135:   for (const record of records) {
+136:     console.log(`${packageLabel(record)}  ${record.definition.directory}`);
+137:     for (const entry of record.entries) {
+138:       const modes = !entry.typeImport
+139:         ? "packed asset"
+140:         : entry.runtimeImport
+141:           ? "types + runtime"
+142:           : "types only (side-effect entry)";
+143:       console.log(`  ${entry.subpath.padEnd(26)} ${entry.specifier}  [${modes}]`);
+144:     }
+145:   }
+146: }
+147: 
+148: function loadWorkspaceVersions(): Map<string, string> {
+149:   const versions = new Map<string, string>();
+150:   const manifestPaths = [
+151:     join(REPO_ROOT, "package.json"),
+152:     ...readdirSync(join(REPO_ROOT, "packages"), { withFileTypes: true })
+
+scripts/package-release-smoke.ts:330–356
+330:     join(REPO_ROOT, "node_modules", "@types", "node"),
+331:     join(consumerNodeModules, "@types", "node"),
+332:   );
+333: }
+334: 
+335: function typeConsumerSource(entries: readonly PublishEntry[]): string {
+336:   const typedEntries = entries.filter((entry) => entry.typeImport);
+337:   const imports = typedEntries
+338:     .map(
+339:       (entry, index) => `import type * as Entry${index} from ${JSON.stringify(entry.specifier)};`,
+340:     )
+341:     .join("\n");
+342:   const uses = typedEntries.map((_entry, index) => `typeof Entry${index}`).join(",\n  ");
+343:   return `${imports}
+344: 
+345: export type PublishedEntryNamespaces = [
+346:   ${uses}
+347: ];
+348: `;
+349: }
+350: 
+351: function runTypecheck(
+352:   packageName: string,
+353:   entries: readonly PublishEntry[],
+354:   consumerDirectory: string,
+355: ): SpawnSyncReturns<string> {
+356:   const safeName = packageName.replace(/[^a-z0-9]+/gi, "-");
+
+scripts/package-release-smoke.ts:388–442
+388:   records: readonly PackedPackageRecord[],
+389:   consumerDirectory: string,
+390: ): void {
+391:   for (const record of records) {
+392:     const typedEntries = record.entries.filter((entry) => entry.typeImport);
+393:     const label = `strict NodeNext declarations ${packageLabel(record)}`;
+394:     console.log(`→ ${label}`);
+395:     const result = runTypecheck(record.manifest.name, typedEntries, consumerDirectory);
+396:     if (result.error) {
+397:       throw new Error(`[${label}] could not start TypeScript: ${result.error.message}`);
+398:     }
+399:     if (result.status === 0) {
+400:       console.log(`✓ ${label} (${typedEntries.length} entries)`);
+401:       continue;
+402:     }
+403: 
+404:     const entryFailures = typedEntries.flatMap((entry) => {
+405:       const entryResult = runTypecheck(
+406:         `${record.manifest.name}-${entry.subpath}`,
+407:         [entry],
+408:         consumerDirectory,
+409:       );
+410:       return entryResult.status === 0
+411:         ? []
+412:         : [
+413:             `${record.manifest.name} ${entry.subpath} (${entry.specifier})\n${commandOutput(entryResult)}`,
+414:           ];
+415:     });
+416:     throw new Error(
+417:       `[${label}] failed; isolated failing entries:\n\n${entryFailures.join("\n\n")}`,
+418:     );
+419:   }
+420: }
+421: 
+422: function assertRuntimeImports(
+423:   records: readonly PackedPackageRecord[],
+424:   consumerDirectory: string,
+425: ): void {
+426:   const runtimeEntries = records.flatMap((record) =>
+427:     record.entries
+428:       .filter((entry) => entry.runtimeImport)
+429:       .map((entry) => ({
+430:         packageName: record.manifest.name,
+431:         specifier: entry.specifier,
+432:         subpath: entry.subpath,
+433:       })),
+434:   );
+435:   const runtimeScript = join(consumerDirectory, "runtime-imports.mjs");
+436:   writeFileSync(
+437:     runtimeScript,
+438:     `const entries = ${JSON.stringify(runtimeEntries, null, 2)};
+439: for (const entry of entries) {
+440:   try {
+441:     await import(entry.specifier);
+442:     console.log(\`✓ runtime \${entry.packageName} \${entry.subpath}\`);
+
+scripts/publish-release-packages.ts:386–448
+386: }
+387: 
+388: function loadPublicManifests(repoRoot: string): Map<string, PublishManifest> {
+389:   return new Map(
+390:     PUBLIC_RELEASE_PACKAGES.map((definition) => [
+391:       definition.name,
+392:       readManifest(join(repoRoot, packageManifestPath(definition))),
+393:     ]),
+394:   );
+395: }
+396: 
+397: export function publishCommands(tag: string): string[][] {
+398:   return PUBLIC_RELEASE_PACKAGES.map((definition) => [
+399:     "bun",
+400:     "publish",
+401:     "--cwd",
+402:     definition.directory,
+403:     "--registry",
+404:     NPM_REGISTRY,
+405:     "--tag",
+406:     tag,
+407:   ]);
+408: }
+409: 
+410: export async function main(
+411:   args: readonly string[] = process.argv.slice(2),
+412:   runtime?: PublishRuntime,
+413: ): Promise<void> {
+414:   const options = parsePublishArgs(args);
+415:   runtime ??= defaultRuntime(options.repoRoot);
+416:   const manifests = loadPublicManifests(options.repoRoot);
+417:   const orderErrors = validatePublicReleaseOrder(manifests);
+418:   if (orderErrors.length > 0) {
+419:     throw new Error(
+420:       `public publish order is invalid:\n${orderErrors.map((error) => `- ${error}`).join("\n")}`,
+421:     );
+422:   }
+423: 
+424:   const rootVersion = readManifest(join(options.repoRoot, "package.json")).version;
+425:   verifyReleaseVersions(rootVersion, options.repoRoot);
+426:   const commands = publishCommands(options.tag);
+427: 
+428:   if (options.mode === "list") {
+429:     for (const definition of PUBLIC_RELEASE_PACKAGES) {
+430:       runtime.log(`${definition.name}  ${definition.directory}`);
+431:     }
+432:     return;
+433:   }
+434: 
+435:   const accepted: AcceptedPackage[] = [];
+436:   for (const [index, command] of commands.entries()) {
+437:     const definition = PUBLIC_RELEASE_PACKAGES[index];
+438:     runtime.log(`${options.mode === "execute" ? "→" : "would run:"} ${command.join(" ")}`);
+439:     if (options.mode !== "execute") continue;
+440:     const result = await submitReleasePackage(
+441:       definition.name,
+442:       rootVersion,
+443:       options.tag,
+444:       command,
+445:       runtime,
+446:     );
+447:     if (result === "accepted") accepted.push({ name: definition.name, version: rootVersion });
+448:   }

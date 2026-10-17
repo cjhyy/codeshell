@@ -1,0 +1,61 @@
+{
+  "checks": [
+    {
+      "path": "scripts/build-meta.ts",
+      "beforeSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "afterSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "same": true
+    },
+    {
+      "path": "scripts/copy-assets.mjs",
+      "beforeSha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "afterSha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "same": true
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "beforeSha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "afterSha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "same": true
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "beforeSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "afterSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "same": true
+    },
+    {
+      "path": "scripts/package-release-smoke.ts",
+      "beforeSha256": "4d4504c2991695d33d8b58a1e39aa8b6361f6a5ede10d304db792b079dac07a7",
+      "afterSha256": "4d4504c2991695d33d8b58a1e39aa8b6361f6a5ede10d304db792b079dac07a7",
+      "same": true
+    },
+    {
+      "path": "scripts/publish-release-packages.ts",
+      "beforeSha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "afterSha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "same": true
+    },
+    {
+      "path": "package.json",
+      "beforeSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "afterSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "same": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "beforeSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "afterSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "same": true
+    },
+    {
+      "path": "packages/web/package.json",
+      "beforeSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "afterSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "same": true
+    }
+  ],
+  "allSame": true,
+  "atUTC": "2026-10-17T19:56:58.594014+00:00",
+  "productExecution": 0
+}

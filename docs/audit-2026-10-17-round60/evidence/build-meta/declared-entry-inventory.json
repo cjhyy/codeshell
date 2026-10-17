@@ -1,0 +1,16 @@
+{
+  "atUTC": "2026-10-17T19:57:33.540373+00:00",
+  "filenames": [
+    {
+      "path": "packages/core/src/index.ts",
+      "isFile": true,
+      "contentRead": false
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "isFile": true,
+      "contentRead": false
+    }
+  ],
+  "scope": "Only declared source entry filenames; no CLI/module import or source body read, no dist/output or runtime export completeness proof."
+}

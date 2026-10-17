@@ -1,0 +1,19 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "oldExcluded": [
+    {
+      "id": "A11",
+      "cause": "release --push may tag task-branch HEAD not merged into main",
+      "canonical": "docs/audit-2026-10-16/findings.json#/issues/10",
+      "countedAsNewRelated": false
+    }
+  ],
+  "negative": "No new ordinary-input counterexample established in the selected version-sync producer/check/caller chain. This is not release readiness or CI/native/npm correctness certification."
+}

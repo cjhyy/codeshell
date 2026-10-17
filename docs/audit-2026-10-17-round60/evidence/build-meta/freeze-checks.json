@@ -1,0 +1,103 @@
+{
+  "role": "Author metadata finalization, not new source semantic or runtime validation",
+  "checks": {
+    "files": []
+  },
+  "textLineCount": 94,
+  "selectedJsonPointerCount": 32,
+  "links": [
+    {
+      "target": "initial-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "package-before-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "config-before-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "declared-resource-inventory.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "gate-decision.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "canonical-before-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "source-manifest.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "shared-history-projection.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "targeted-history-navigation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "diagnostics.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "ending-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "classification.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "validation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "declared-entry-inventory.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "freeze-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    }
+  ],
+  "plannedSelfGenerated": [
+    "freeze-checks.json",
+    "reviewer-receipt.json"
+  ],
+  "allSourcePinsSame": true,
+  "allHistoryPinsSame": true,
+  "productExecution": 0,
+  "git": 0
+}

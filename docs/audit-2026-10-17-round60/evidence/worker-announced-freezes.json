@@ -1,0 +1,65 @@
+{
+  "checks": [
+    {
+      "path": "build-meta/report.md",
+      "bytes": 4452,
+      "sha256": "98106a0dc4dd794e4fdc94bdfa7357315cc3411e3aeec560efe231e9af2249b4"
+    },
+    {
+      "path": "build-meta/source-manifest.json",
+      "bytes": 6807,
+      "sha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685"
+    },
+    {
+      "path": "build-meta/reviewer-receipt.json",
+      "bytes": 3011,
+      "sha256": "1bf686a421b3ad6d9adfd814ca9564bd484f8742e409a29acb20722fb0a50290"
+    },
+    {
+      "path": "copy-assets/report.md",
+      "bytes": 3367,
+      "sha256": "281eeb807ae8c53f2841cbeb8f809d033b3ed13c03230deee50b4928c52a4cf0"
+    },
+    {
+      "path": "copy-assets/source-manifest.json",
+      "bytes": 14588,
+      "sha256": "49de95dd79539621fafb016f8d52a60200ad90f52a110fedc3d6f3f87dc6c808"
+    },
+    {
+      "path": "copy-assets/reviewer-receipt.json",
+      "bytes": 4763,
+      "sha256": "e8c8c89943edc508f8ecf19e078d2d274aed7a793e4795aa1abdbeb99c5606d5"
+    },
+    {
+      "path": "release-versions/report.md",
+      "bytes": 2798,
+      "sha256": "b4cf4ace3febb1c46beccc2a96bf9105e91ca8fc54f72515d9ec49965bda9313"
+    },
+    {
+      "path": "release-versions/source-manifest.json",
+      "bytes": 38576,
+      "sha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6"
+    },
+    {
+      "path": "release-versions/artifact-receipt.json",
+      "bytes": 5867,
+      "sha256": "379a1d9557c3bb854fd049e9dc15a232d6cbcbca0262ac05867c9cab0a877b93"
+    },
+    {
+      "path": "root-release-audit-config/report.md",
+      "bytes": 2598,
+      "sha256": "14a1f3337c8070c2587035dc5238f6bb38e3af770c9c8dd74bd7d157f46f7828"
+    },
+    {
+      "path": "root-release-audit-config/source-manifest.json",
+      "bytes": 8143,
+      "sha256": "ded50793541f5f47edf2b8aaff6edf545f94a9c3311881102f9437c16add4eca"
+    },
+    {
+      "path": "root-release-audit-config/artifact-receipt.json",
+      "bytes": 3344,
+      "sha256": "a883165b7db9314515d4549f6a73459f8f8a631b6fc624d30c71c2430489eb36"
+    }
+  ],
+  "expectedCount": 12
+}

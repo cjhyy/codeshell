@@ -1,0 +1,155 @@
+{
+  "frozenAt": "2026-10-17T19:59:46.065627+00:00",
+  "root": "/tmp/codeshell-audit-round151-copy-assets",
+  "selfExcluded": true,
+  "artifactCount": 28,
+  "files": [
+    {
+      "path": "asset-filenames.json",
+      "bytes": 3498,
+      "sha256": "4f010da939c7ea75a6778d2df710b7d5a03bf0d26268aeb9a8290da29d4296a1"
+    },
+    {
+      "path": "asset-path-mapping.json",
+      "bytes": 2597,
+      "sha256": "8b7cbe171eebb678ad9aad21551b7c86642668de6bbbff0a1bbae1f7666ba78f"
+    },
+    {
+      "path": "caller-filenames-and-pins.json",
+      "bytes": 1276,
+      "sha256": "b3e1ccb7150bb8fb58c4fc7df20c6b98039e0dca59e38d9bca9e20c54ec144e0"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 887,
+      "sha256": "ad062ffd1f65b8c416ff17c761aaf86a37bf7470ebcf5631b0ff589baad316c5"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1863,
+      "sha256": "1d2bf23e184ccb4119e08a398f03bd60bcd78a158478c0e12855f2829afa2f75"
+    },
+    {
+      "path": "coding-prompt-consumer-filenames.json",
+      "bytes": 208,
+      "sha256": "e224343888c6e18e7afc306d525374f54e20fcfb1aabf4e9dd759365d4039cca"
+    },
+    {
+      "path": "copy-script-display.json",
+      "bytes": 2672,
+      "sha256": "2997cc06aea96190361a9b1b2f811b04fe6f9a2322d012917baf4898f5d20b6a"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1634,
+      "sha256": "9ec2ffbeedcdc32742abe04cb68343aa021a0ecf096233825d65b032a5d3eb26"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 7718,
+      "sha256": "88434d150f47f6541e726014592705b321532506817e427e67f076367d9e1df6"
+    },
+    {
+      "path": "filename-navigation.json",
+      "bytes": 158,
+      "sha256": "6733d44fda1f93d247dba69143ca0555ec8cfa4894005266836258d98bd258b3"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 19475,
+      "sha256": "145f16cd2fd7b54b32b444762799ef7509a21c9aef273d812fcd66cf21f91e92"
+    },
+    {
+      "path": "first-output-diagnostic.json",
+      "bytes": 590,
+      "sha256": "2b5579946616f566763e749f8e96845c684f012570c1cfb4a41de18865f3f06d"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1210,
+      "sha256": "5cec30f455a7bcaaf1b871909fc492d669ddab72430fba7616fbb6a54ad5fdf6"
+    },
+    {
+      "path": "metadata-corrections.json",
+      "bytes": 1117,
+      "sha256": "c2380ff6bde5a5bf388d54415bb31782bfaf12bed849c7b28225985042576221"
+    },
+    {
+      "path": "package-script-read.json",
+      "bytes": 1723,
+      "sha256": "01ad9a737a253cf2433edf0d6af4241e7c4393cc773524fb4a818eb3be3dd28f"
+    },
+    {
+      "path": "prior-canonical-read.json",
+      "bytes": 6336,
+      "sha256": "d5869d3d660f57e4c1d11efc36016e9a236e0126bb34e78c59bd59fd671dd86d"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3367,
+      "sha256": "281eeb807ae8c53f2841cbeb8f809d033b3ed13c03230deee50b4928c52a4cf0"
+    },
+    {
+      "path": "runtime-consumer-display.json",
+      "bytes": 7640,
+      "sha256": "4e37c4704c99f4b66f0a3ac5e37cb4dc4163bb507b0d13d98382f2ac1dda0555"
+    },
+    {
+      "path": "runtime-consumer-filenames.json",
+      "bytes": 3460,
+      "sha256": "0cc0246fcd6070d429de0b21e8aa2428ddfa21feedc2997c4c7a74da10fab2cc"
+    },
+    {
+      "path": "runtime-consumer-pins.json",
+      "bytes": 1239,
+      "sha256": "16ae1631b23a307d04574901f7c521a02c6ad2a5737d7064a73c2ee7b261a0bb"
+    },
+    {
+      "path": "runtime-path-navigation.json",
+      "bytes": 3597,
+      "sha256": "42b8c3688e9facaf4c864dc654fa3f9756464355389046a26d7cba206d06e6d9"
+    },
+    {
+      "path": "shared-history-projection.json",
+      "bytes": 27953,
+      "sha256": "b4c9bef8ad9f0c67102e322bc0f2ba7d888f517e686ffaa2bfdcfd1be8c28111"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 14588,
+      "sha256": "49de95dd79539621fafb016f8d52a60200ad90f52a110fedc3d6f3f87dc6c808"
+    },
+    {
+      "path": "tsconfig-parse.first.exit-observation.json",
+      "bytes": 569,
+      "sha256": "cc35f1dafdda653edfdb78d0b6c680fe297747a3af8d1fed70622296f2c7029d"
+    },
+    {
+      "path": "tsconfig-parse.first.observed.txt",
+      "bytes": 1069,
+      "sha256": "20628287b35a93a98dc0cddc9a9ce92f777f7fa56932ace1ad6ae2437442aba4"
+    },
+    {
+      "path": "tsconfig-pins.first.json",
+      "bytes": 1027,
+      "sha256": "66502a325b53b1a524dba05da1b90b65dcc83e664444b8c6436bca4ae3cf22cc"
+    },
+    {
+      "path": "tsconfig-pins.json",
+      "bytes": 1891,
+      "sha256": "9f6ad989982d6d376affddf573d6f024ee0624e99cae221cc84c4690745e68b2"
+    },
+    {
+      "path": "tsconfig-text-read.json",
+      "bytes": 3668,
+      "sha256": "1abf01e97134ae895531918ff3fe995f1a48e7bec1d1ea78ae07abb59b86f9b9"
+    }
+  ],
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "productBuildAndTestExecutions": 0,
+  "GitCalls": 0
+}

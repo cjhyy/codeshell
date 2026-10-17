@@ -1,0 +1,329 @@
+{
+  "input": {
+    "path": "/tmp/codeshell-audit-round153-release-audit-config/history-batch.json",
+    "bytes": 1345579,
+    "sha256": "be3ff0ec8e4a82e7e8b72b8a678bda0caeff940e42bb3bebfc2178e1b3d35b56"
+  },
+  "snapshotAt": "2026-10-17T19:54:33.727921+00:00",
+  "excludedFormalAtOrAbove": 60,
+  "historyFiles": 6126,
+  "jsonValueScalarsVisited": 4322397,
+  "target": "scripts/copy-assets.mjs",
+  "queries": [
+    "scripts/copy-assets.mjs",
+    "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a"
+  ],
+  "totalHits": 34,
+  "savedHits": [
+    {
+      "document": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+      "location": 15,
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "| `copy-assets.mjs` allows zero-match globs | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `scripts/copy-assets.mjs:43` | `1ea527ad30419b72757d7f070db88709e8fcadde` | `tests/copy-assets.test.ts`: existing source dir with zero glob matches exits non-zero; positive glob copy still works | Failing regression observed, then `bun test tests/copy-assets.test.ts` passed twice before commit. |",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/archive/todo/review-infra-2026-07-08.md",
+      "location": 146,
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "- File: `scripts/copy-assets.mjs:43`",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/archive/todo/review-infra-2026-07-08.md",
+      "location": 147,
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "- File: `scripts/copy-assets.mjs:49`",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/archive/todo/review-infra-2026-07-08.md",
+      "location": 148,
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "- File: `scripts/copy-assets.mjs:54`",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/archive/todo/review-master-2026-07-08.md",
+      "location": 76,
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/2429",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "scripts/copy-assets.mjs",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "location": "/5/scripts/copy-assets",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "location": "/6/scripts/copy-assets",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json src/data/*.txt",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "location": "/13/scripts/build",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "bun run clean && tsc -p tsconfig.json && node ../../scripts/copy-assets.mjs dist/cli/commands/builtin/init src/cli/commands/builtin/init/templates",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/plugin-input/23/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/github-suffix/3/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "rseMarketplaceInput.ts:35`\n- File: `packages/core/src/plugins/parseMarketplaceInput.ts:48`\n- Problem: direct plugin installs accept `http://`, `git://`, and `file://` remotes, and marketplace add accepts `http://...git`, with no warning or policy knob. Marketplace entries may pin SHA, but direct source parsing has no immutable pin concept.\n- Impact: users can install executable plugin code over unauthenticated transports, making MITM or local path confusion part of the plugin trust surface.\n- Concrete fix: default to `https`/SSH only, require an explicit unsafe flag for `http://` and `git://`, and encourage or require full SHA pins for remote plugin installs where possible.\n\n### 11. `copy-assets.mjs` silently succeeds when a glob matches zero files\n\n- File: `scripts/copy-assets.mjs:43`\n- File: `scripts/copy-assets.mjs:49`\n- File: `scripts/copy-assets.mjs:5",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/github-suffix/4/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "7-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present in `HEAD`.\n\n## FALSE-POSITIVE / BY-DESIGN\n\n| Finding | Rea",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/source-normalization/13/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "ile but immediately `readFileSync`s it before enforcing a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "location": "/matches/0/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "rseMarketplaceInput.ts:35`\n- File: `packages/core/src/plugins/parseMarketplaceInput.ts:48`\n- Problem: direct plugin installs accept `http://`, `git://`, and `file://` remotes, and marketplace add accepts `http://...git`, with no warning or policy knob. Marketplace entries may pin SHA, but direct source parsing has no immutable pin concept.\n- Impact: users can install executable plugin code over unauthenticated transports, making MITM or local path confusion part of the plugin trust surface.\n- Concrete fix: default to `https`/SSH only, require an explicit unsafe flag for `http://` and `git://`, and encourage or require full SHA pins for remote plugin installs where possible.\n\n### 11. `copy-assets.mjs` silently succeeds when a glob matches zero files\n\n- File: `scripts/copy-assets.mjs:43`\n- File: `scripts/copy-assets.mjs:49`\n- File: `scripts/copy-assets.mjs:5",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "location": "/matches/36/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "ile but immediately `readFileSync`s it before enforcing a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "location": "/hits/plugin-input/23/context",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "e a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` ",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "location": "/contexts/glob-status-count/2/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "| Sev | Finding | Current file:line | Problem | One-line fix | Source review |\n| --- | --- | --- | --- | --- | --- |\n| 🔴 | Project settings `__proto__` smuggling | `packages/core/src/settings/manager.ts:595` | Raw parsed config is merged into normal objects, so nested `__proto__` can mutate prototypes and bypass untrusted-project stripping. | Recursively reject `__proto__`/`prototype`/`constructor`, use safe merge targets, and test untrusted project settings. | `review-core-2026-07-08.md` |\n| 🔴 | Credential values persisted as tool output | `packages/core/src/credentials/use-credential-tool.ts:194` | Approved token/link secrets are returned as plaintext JSON and then written to transcript/log/prompt history. | Return a redacted handle/lease or mark sensitive results so transcripts, logs, UI streams, and future prompts redact them. | `review-core-2026-07-08.md` |\n| 🔴 | npm publish not gated by version check | `.github/workflows/release.yml:190` | `npm-publish` has no `needs: verify-version`, and the guard checks only root `package.json`. | Make npm publish depend on version verification and check all release-participating package versions. | `review-infra-2026-07-08.md` |\n| 🔴 | Electron predist resolves deps outside lockfile | `packages/desktop/scripts/predist.ts:136` | Packaging runs a fresh `bun install --production` in a materialized package without the committed lockfile. | Materialize from the locked root dependency graph or run a frozen/offline lockfile-controlled production install. | `review-infra-2026-07-08.md` |\n| 🔴 | Plugin executable surfaces lack trust gate | `packages/core/src/plugins/pluginCommandHook.ts:108` | Installed plugin hooks run with `shell: true`, and plugin MCP stdio servers are merged/spawned at session start without a separate executable-code ",
+      "truncatedValue": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "location": "/contexts/glob-status-count/29/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "location": "/contexts/glob-status-count/30/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "7-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present in `HEAD`.\n\n## FALSE-POSITIVE / BY-DESIGN\n\n| Finding | Rea",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "location": "/contexts/glob-status-count/31/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "ile but immediately `readFileSync`s it before enforcing a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "location": "/contexts/glob-status-count/32/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "ile but immediately `readFileSync`s it before enforcing a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "location": "/contexts/glob-status-count/33/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "e a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` ",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-match-windows.json",
+      "location": "/contexts/2/windows/0",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-match-windows.json",
+      "location": "/contexts/29/windows/0",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-match-windows.json",
+      "location": "/contexts/30/windows/0",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-match-windows.json",
+      "location": "/contexts/31/windows/0",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-match-windows.json",
+      "location": "/contexts/32/windows/0",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-match-windows.json",
+      "location": "/contexts/33/windows/0",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "location": "/causeContexts/glob-wrong-count/5/text",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": "| Sev | Finding | Current file:line | Problem | One-line fix | Source review |\n| --- | --- | --- | --- | --- | --- |\n| 🔴 | Project settings `__proto__` smuggling | `packages/core/src/settings/manager.ts:595` | Raw parsed config is merged into normal objects, so nested `__proto__` can mutate prototypes and bypass untrusted-project stripping. | Recursively reject `__proto__`/`prototype`/`constructor`, use safe merge targets, and test untrusted project settings. | `review-core-2026-07-08.md` |\n| 🔴 | Credential values persisted as tool output | `packages/core/src/credentials/use-credential-tool.ts:194` | Approved token/link secrets are returned as plaintext JSON and then written to transcript/log/prompt history. | Return a redacted handle/lease or mark sensitive results so transcripts, logs, UI streams, and future prompts redact them. | `review-core-2026-07-08.md` |\n| 🔴 | npm publish not gated by version check | `.github/workflows/release.yml:190` | `npm-publish` has no `needs: verify-version`, and the guard checks only root `package.json`. | Make npm publish depend on version verification and check all release-participating package versions. | `review-infra-2026-07-08.md` |\n| 🔴 | Electron predist resolves deps outside lockfile | `packages/desktop/scripts/predist.ts:136` | Packaging runs a fresh `bun install --production` in a materialized package without the committed lockfile. | Materialize from the locked root dependency graph or run a frozen/offline lockfile-controlled production install. | `review-infra-2026-07-08.md` |\n| 🔴 | Plugin executable surfaces lack trust gate | `packages/core/src/plugins/pluginCommandHook.ts:108` | Installed plugin hooks run with `shell: true`, and plugin MCP stdio servers are merged/spawned at session start without a separate executable-code ",
+      "truncatedValue": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/remaining-cause-window-review.json",
+      "location": "/records/28/window",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/remaining-cause-window-review.json",
+      "location": "/records/29/window",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/remaining-cause-window-review.json",
+      "location": "/records/30/window",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/remaining-cause-window-review.json",
+      "location": "/records/31/window",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/remaining-cause-window-review.json",
+      "location": "/records/32/window",
+      "matched": [
+        "scripts/copy-assets.mjs"
+      ],
+      "value": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "truncatedValue": false
+    }
+  ],
+  "capPerTarget": 100,
+  "errors": [],
+  "projectedAt": "2026-10-17T19:55:08.952192+00:00",
+  "scope": "Machine MD/JSON recursive-value navigation only; no all-context semantic reading or unread guarantee."
+}
