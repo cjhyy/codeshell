@@ -8,16 +8,18 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI24, failed overall. Web, macOS and Linux pass their
-audited scopes. Windows completes original 83 operations/12 Main launches, separate
-new Review drafts three/one and installed/replaced UI 13+13, then fails the unchanged
-post-uninstaller absence gate. The new complete metadata observation finds an empty
-ordinary installation directory at that time; the cause remains unconfirmed. Cache
-cleanup and final OS restoration are not reached. See the
-[CI24 actual record](#ci24--actual-platform-results-and-empty-uninstall-directory).
-The minimal production NSIS working-directory repair is committed and its combined
-local gates pass; fresh CI25 native validation remains pending. See the
-[CI25 local preparation](#ci25--production-uninstaller-working-directory-candidate).
+The latest completed run, CI25, failed overall. Web and Linux pass their audited
+scopes. macOS observes three Pet IPC operations, then fails its startup custody
+gate after a process-metadata query timeout; Main exits normally but descendant
+settlement remains unknown and HOME is retained. Windows passes original 83/12
+and separate new Review drafts three/one, then its NSIS installer exits
+`0xC0000005` before installed UI, replacement or uninstall. The new uninstaller
+hook is not natively validated. See the
+[CI25 actual record](#ci25--actual-platform-results-and-installation-failure).
+CI24's distinct empty-directory uninstall failure and its original evidence remain
+in the [CI24 record](#ci24--actual-platform-results-and-empty-uninstall-directory).
+A separate CI26 product candidate has passed combined local gates; its runtime
+validation remains pending. See the [CI26 preparation](#ci26--goal-extension-callback-local-preparation).
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2690,3 +2692,182 @@ this candidate. CI25 has not yet executed; all four runtime scopes and the actua
 Windows install/replacement/uninstall gate remain pending. CI24 still fails the
 unchanged uninstall absence predicate. Historical unknown GC, Setup, inode drift,
 revoked CI21 custody and discovery-incident consequences remain unresolved.
+
+## CI25 — actual platform results and installation failure
+
+[Run 39052422751](https://github.com/cjhyy/codeshell/actions/runs/39052422751),
+attempt 1 / push, binds source `8e366d97c92c614f00df989006f5b8208185246f`.
+All four jobs are terminal: Web and Linux succeed in their audited scopes;
+macOS startup custody and Windows NSIS installation fail. CI14 remains the last
+fully passing matrix. These results do not repair or explain earlier failures.
+
+Web job 117453519997 passes its actual 31 behaviors: ServiceWorker 11, authentication
+four, child eight and annotations eight. Image nine/45 and pure lifecycle Node 64
+pass separately. The old-reducer negative run has two passing controls and six
+expected UI failures, with private HOME/profile retention verified by the runner.
+The six complete send/cancel payload arrays equal the final settled Host RPC rows,
+each count one. Five observed full-birth maps contain 7/20/10/10/10 processes, all
+settled to zero with normal `0/null` browser exits, empty signal-request ledgers,
+required late-ledger checks and source-bound successful HOME/profile cleanup.
+Failed private profile contents are not uploaded or independently enumerated here.
+
+Web artifact 12108455504 is 1,476,109 bytes, SHA-256
+`bf98118816a0ae24e13ecaf60277dde60c98c1370b8fe91852d6b49aebaa8ec6`.
+Its 57 canonical public files pass ZIP CRC and the exact workflow's 28 finite
+patterns. The reader checks 106 exact-source hashes plus 13 offline provenance pins
+and all 33 PNG chunk CRCs. Two actual CI PNGs at 1280px and 390px show readable CJK
+and narrow annotation content within the viewport. The first reader exits zero;
+this approves only the stated Web fixture, not native or full-matrix acceptance.
+Web summary `ci-39052422751-web-independent-20261018/ci-39052422751-web-independent-audit.json`
+has SHA-256 `3668dd8ce56aca2bb6f7e6ca807debc1a782ca0d75712da72ad2e2464888a3ef`;
+`download-and-audit-freeze.json` has SHA-256
+`b53f13534a1b69a78d73a06720e1ae1076ded2a3f566d4237b4e8dce3a50e66e`.
+
+macOS job 117453519962 fails step 27, source Main cold startup/reload/second window.
+Cycle one observes three real Pet IPC operations and two actual renderer loads.
+Actual Main 8668 exits `0/null`, but its watcher records a process-metadata query
+failure: `timeout, 1730ms`. Settlement remains `unproven`, `queryFailed: true`, with
+both remaining fields `null`; its eight full-birth rows have seven chronological
+parent edges. No signal request, Worker, denied attempt, renderer error or known
+Main error is recorded. The private HOME is retained according to the receipt and
+source gate; its physical runner contents are not independently available here.
+These observations do not approve cycle one or complete startup seven/three.
+
+The first diagnostic assertion is sequence 24 at `startup-cycle-gates`, source
+`e2e-startup-operation-cycles.mjs:63`, after Main exit/close sequences 18/19. It
+rejects `unproven` versus required `cleaned`. The per-cycle first error remains
+available even though `closeCycle` cleared the active reference before throwing its
+aggregate error. Cycles two/three, the post-exit Keychain metadata recheck, subsequent
+native operations, new Review drafts and DMG checks are not reached. The fixed
+POSIX `/bin/ps` metadata query has a 1,500ms timeout; the reported 1,730ms spans the
+whole synchronous call/catch, not isolated process CPU/runtime. The failing query's
+precise phase, scheduling/native cause and descendant state remain unknown. No
+budget, predicate or retry is changed, and no infrastructure cause is assumed.
+
+Mac artifact 12108735118 is 208,219 bytes, SHA-256
+`1e7cc5ef502fff0dafc33372243c704728ba27ee86c4c3b7ae6825a53ef79c72`.
+All 22 public files pass CRC and the 163 finite workflow patterns. Pure Bun
+417/3,502, Review Node 13 plus combined Node 72, Write 11/38, output 16/32 and branch
+15/50 pass separately; none substitutes for the failed native custody gate.
+Two uploaded startup PNGs show readable Chinese project-trust dialogs. The Root
+failed summary is `ci-39052422751-mac-independent-20261018/root-verified-failed-summary.json`,
+SHA-256 `5c64538a3ef0d3cca98f8c45065111dda4f75707b52bca8798cffa376abb0663`.
+The independent failed-aware peer `independent-web-failed-peer.json` has SHA-256
+`596f2d999866bfbf9dd561f0f45ef942deec8be61d535a142838d25a5b5d370e`;
+the subsequent Root-summary peer `independent-web-root-summary-peer.json` has
+SHA-256 `61ded79e95412b2155c616bb2570c2e4fc76ce45048a20dbcb9df4c0e30a2d92`.
+
+Linux independently passes original 83 operations/12 Main launches and separate new
+Review drafts three/one. Actual AppImage Main 9407/runtime 9404 exit normally; five
+update checks and five healthy retries make ten owned manifest GETs, with no asset
+download, Worker/model/nativeStorage action. First-instruction guards, actual
+APPIMAGE/APPDIR identity and enabled sandbox remain bound. Source/cache full
+07777 inventories are unchanged against their respective baselines; 75 authorized
+source-to-extraction mode normalizations remain explicit. Required inner HOMEs are
+removed; outer launcher scratch retention remains intentional. The auditor views
+actual narrow CJK/settings, update-error and session-fence PNGs; complete draft
+content is checked in JSON rather than inferred from the partly visible input.
+
+The packaged UI Main 8920 exits `0/null`, with 12 observed incarnations settled to
+zero and its HOME removed. Its ledger also records three owned-descendant SIGTERM
+requests, targeting 9041, 8926 and 8925. These remain separate from Main's normal
+exit: source and full-birth map cross-binding does not upload every fresh query,
+prove signal delivery, prove every descendant normal exit or constitute an OS-wide
+audit. The first two offline readers wrongly added an all-empty UI signal-ledger
+assumption and failed. Root pre-reads the narrow correction; each fixed v2 reader
+then exits zero once, preserving the failed readers/logs and the updater's unchanged
+empty-ledger predicate. Native source, budgets and runtime evidence are unchanged.
+
+Linux `ci-39052422751-linux-panel-independent-20261018/verified-summary.json`
+has SHA-256 `ced4a426bb2d67d27c08bb8cf7dbbf48e72b0f77406176afcf6e5fa837d19c23`;
+`final-evidence-freeze.json` has SHA-256
+`570809b0f6df9dab9b7ffed304983fc0fcd5937935aae5593abf53534d4f00bf`.
+Root's 58-file manifest binding `ci25-root-linux-binding-20261018.json` has SHA-256
+`0dff19ff2d1071dbda5856bc01a443976ead20967abb02a0c6078b58b64bfbf8`.
+Linux's actual Bun 417/3,499/30 is separate from macOS 417/3,502/30 and Windows
+417/3,493/30; none is added to native counts.
+
+Windows job 117453520014 fails only NSIS step 39; the final evidence upload succeeds.
+Its original 83 operations/12 Main launches and separate new Review drafts three/one
+pass the independent early audit. NSIS package construction exits `0/null` and
+payload identity checks complete. The new hook is observed as 181-byte CRLF source,
+SHA-256 `3d3088c3ffc419b6328fbe24061508c11c1659d0af74f585d2483a8c32c2c0cd`.
+
+The actual failing phase is installation: Setup PID 6068, parent 1956, full birth
+`2026-10-17T17:21:49.1857120Z`, exits `3221225477/null` (`0xC0000005`). Installed UI,
+replacement and uninstall are not reached. This is not CI24's uninstall absence
+failure; the new uninstaller macro is not thereby shown to have executed or fixed
+that prior failure. Bounded crash-event metadata records `queried: true`, status
+`unknown`, reason `no-exact-application-event`, with a 30,000ms query timeout and
+maximum eight records. It does not identify the installation failure's cause.
+Windows artifact 12107843915 has 139 public files/CRC and ZIP SHA-256
+`142611c1beb00ea69a19294fd8106756550cb96a4e125f5ee8691de3451e4784`.
+The owned NSIS root is retained; partial installation effects and OS restoration
+are not approved. The combined Windows summary
+`ci-39052422751-windows-independent-20261018/verified-failed-summary.json` has
+SHA-256 `4e43a02359f83e16ff3f3c458d559ab8498aeed986b8f267038df51ac16c4ac4`;
+`nsis-verified-failed-install-summary-v2.json` has SHA-256
+`34718f9eb1634bfadedffbb779ca6786dedfd9ab7871b1ac46330b6b9564e8e7`.
+The retained initial offline NSIS reader did not account for an established bounded
+stderr-tail projection and stopped before output; v2 validates that projection and
+compares the exact journal core. No runtime evidence, source or gate changes.
+The independent NSIS installation-failure peer passes 47 key metadata checks with
+zero audit failures, retaining the actual Setup failure. Its
+`independent-panel-nsis-install-failure-peer.json` has SHA-256
+`7cd6bb229ced114c23df61a42da576403616a21f7e03fe27be01c2b5e3844f30`.
+These metadata checks are not native operations or proof of installation success.
+
+The first offline Mac metadata adapter wrongly compared a generated startup-guard
+hash with the Git runtime-cost guard and stopped before its final output. The
+retained correction pins the actual fixture source separately and treats the
+generated hash only as a recorded receipt value. A separate optional Web image read
+used an incorrect archive basename and failed before extraction/view; it adds no
+visual approval. Both offline errors are preserved, not runtime causes or native
+retries. Strict full-success Mac readers are not run against this failed job. No
+local App, browser, test, process query, PowerShell, provider or production-source
+change is performed for these audits. Historical CI14/CI24 records and unknowns remain unchanged.
+
+Frozen terminal APIs under `codeshell-real-operation-cycles-20261016` bind this
+exact run/source and all four jobs, with two successes and two failures:
+
+- `ci-39052422751-final-run-api.json`, SHA-256
+  `a629b80a9b4807c10a048e5628f58c56bfa5b0925575e1ec6eb027ba3d7d3c64`.
+- `ci-39052422751-final-jobs-api.json`, SHA-256
+  `a2cf80b2d76e63f5c6e338028d8252690ba3fb0534fd49eb283c7bc4c53ee9d8`.
+- `ci-39052422751-final-artifacts-api.json`, SHA-256
+  `db79cf3c45c61dc1c9b125af9b4a17bbe3eb8d5fd3f7e0261cf47c3d82035c70`.
+
+## CI26 — goal-extension callback local preparation
+
+The separate candidate `dc1f70b8c773304592e826624123d12f6b0dacd9` repairs the
+source-confirmed `DESKTOP-R50-01`: a live tool process group drops the existing
+optional goal-extension callback, hiding its extension action near a limit. The
+repair passes that callback through `MessageStream` and `TurnProcessGroupCard` to
+`GoalProgressView`. It does not change goal budgets, permission policy or Core goal
+mutation. The same eleven SSR markup cases first produce nine passes/two failures
+with 23 expectations, then pass all eleven/23. The original seven cases and all
+original thirty workflow-shard source paths remain unchanged; the workflow adds
+only `MessageStream.test.tsx` to that shard, making 31 files.
+
+Author proof `codeshell-goal-extension-group-callback-proof-20261018/verified-source-summary.json`
+has SHA-256 `201a3c62ad02524d3ec6bf0a9c32f34e2a1747b50d2fd7f257b6d6a7416270bf`.
+Its independent fixed-source peer `independent-panel-fixed-source-peer.json` has
+SHA-256 `74f7ea204e336b1e0e69c407b84a13c587be188cd243d41caabc3a76fc0751e6`;
+source-only approval is separate from hosted runtime acceptance.
+
+Root freshly checks the combined candidate: 428 Bun tests/3,525 expectations across
+31 files, zero failures/skips; all 140 pure Node tests across nine files pass with
+zero failures, skips or cancellations. All fourteen workspace types and four safe
+Desktop bundles pass afresh. Three TSX files pass zero-warning ESLint and formatting;
+the workflow passes formatting/path validation, with engine-bypass and four-path
+diff checks also passing. The frozen combined local proof
+`ci26-frozen-combined-local-gates-20261018.json` has SHA-256
+`ef218d7b6a3123dccc3b227b962e8f224f3fe41a995ea4bdb861c2479d3aed2a`.
+
+These are local pure/SSR/static results, separate from the actual CI25 counts.
+No new native interaction, button click or Core goal mutation is validated; all
+CI26 runtime scopes remain pending. This product repair does not fix or explain
+CI25's macOS process-query timeout or Windows Setup exit. Their original budgets,
+gates and unknowns are retained. No local native, browser, installer, PowerShell,
+process query or provider is run for this candidate; the discovery-incident
+consequences remain unknown.
