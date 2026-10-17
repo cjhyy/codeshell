@@ -1,0 +1,69 @@
+{
+  "frozenUtc": "2026-10-17T11:56:20.498367+00:00",
+  "reviewDisposition": "supports new P3 static helper-contract defect; runtime confirmation and actual UI entry remain separate",
+  "dedupDisposition": "No same final-sigma cause found in the complete scanned inventory/56 retained contexts. This is bounded search, not historical semantic exhaustion.",
+  "proposedCause": {
+    "location": "packages/tui/src/render/searchMatches.ts:35-43",
+    "queryLocations": [
+      "packages/tui/src/render/searchHighlight.ts:33",
+      "packages/tui/src/render/render-to-screen.ts:151"
+    ],
+    "input": "Ordinary two-grapheme uppercase Greek text ΟΣ in a rendered row, with identical query ΟΣ.",
+    "reasoning": "Under Unicode default contextual final-sigma lowercasing, the whole query lowers to ος; isolated Ο and Σ cells lower to ο and σ, concatenated οσ. The same displayed/query string therefore differs before indexOf. This is a manual static language-rule walkthrough, not an executed output.",
+    "ordinaryProducer": "output.ts clusters ordinary line text into graphemes, preserves grapheme values and stores each in Screen via setCellAt. No uppercase-to-lowercase pass precedes search.",
+    "contract": "Both scanPositions and applySearchHighlight explicitly document case-insensitive rendered-screen matching; there is no ASCII-only input constraint in inspected source.",
+    "affectedConsumers": [
+      "scanPositions returns no position for this ordinary exact query, statically inferred.",
+      "applySearchHighlight finds no match and applies no inversion, statically inferred."
+    ],
+    "scope": "One shared matcher cause, not two bugs. P3 search/highlight fidelity; no content loss or persistence damage claimed."
+  },
+  "counterEvidenceConsidered": [
+    {
+      "item": "İ expansion mapping",
+      "result": "Existing per-cell UTF-16-to-cell mapping intentionally handles expansion and later columns; it does not preserve cross-cell contextual sigma lowercasing."
+    },
+    {
+      "item": "ordinary producer grouping",
+      "result": "Grapheme segmentation keeps ordinary adjacent Greek letters separate; stored character strings retain original case. No row-wide fold cancels mismatch."
+    },
+    {
+      "item": "existing tests",
+      "result": "Nine declared cases cover ASCII/İ/CJK/emoji/combining/noSelect/spacers/row-local/empty query, with no sigma/context-sensitive multi-grapheme case; not executed."
+    },
+    {
+      "item": "old findings",
+      "result": "PET-R10-02 is snippet offset after lowercase expansion in another module; TUI existing İ coverage and September scanner dedup refactor are distinct and not old sigma findings."
+    },
+    {
+      "item": "actual application query origin",
+      "result": "Only useSearchHighlight wrapper + Ink setter found by bounded whole-repository literal source locator. No current app command hook caller established, so no claim of real interactive TUI reproduction."
+    }
+  ],
+  "history": {
+    "files": 2851,
+    "markdownFiles": 1285,
+    "jsonFiles": 1566,
+    "stringLeaves": 597236,
+    "scalarLeaves": 884863,
+    "occurrenceCounts": {
+      "search-helpers": 6,
+      "contextual-casing": 21,
+      "search-case-contract": 29
+    },
+    "contextCapEach": 100,
+    "savedContextCounts": {
+      "search-helpers": 6,
+      "contextual-casing": 21,
+      "search-case-contract": 29
+    },
+    "allSavedContextsInspected": true,
+    "parseErrors": 0,
+    "excludes": [
+      "current Round30",
+      "future Round31"
+    ],
+    "archivesIncluded": true
+  },
+  "productAttempts": 0
+}

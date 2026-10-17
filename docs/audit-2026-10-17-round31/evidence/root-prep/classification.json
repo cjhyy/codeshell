@@ -1,0 +1,30 @@
+{
+  "formal": [],
+  "candidates": [
+    {
+      "id": "SEARCH-R31-C1",
+      "title": "Per-cell lowercasing loses Greek final-sigma context",
+      "confidence": "Strong static helper algorithm cause; no runtime observed",
+      "riskIfReachable": "P3 display search omission",
+      "location": "packages/tui/src/render/searchMatches.ts:38",
+      "input": {
+        "rowCells": [
+          "Ο",
+          "Σ"
+        ],
+        "query": "ΟΣ"
+      },
+      "staticDerivation": {
+        "perCellRow": "οσ",
+        "wholeQuery": "ος",
+        "helperMatches": []
+      },
+      "expectedFromDocumentedHelperContract": "Identical query text should match the two cells under the stated case-insensitive contract.",
+      "limitation": "Current App/UI caller and public package consumer not established. Entry reviewer found hook unexported/unused, default query empty. Root therefore records candidate, not a confirmed production UI finding. Independent source reviewer supports P3 helper defect; original review opinion preserved."
+    }
+  ],
+  "related": [],
+  "oldExclusions": [
+    "Existing dotted-I/code-unit mapping, row-local and spacer/gutter cases are distinct; known failed Slice/i18n/TUI-diff directions not reopened."
+  ]
+}

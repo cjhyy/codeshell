@@ -1,0 +1,11 @@
+{
+  "productExecution": false,
+  "productReruns": 0,
+  "events": [
+    {
+      "type": "Pin timing metadata correction",
+      "first": "history-source-pin.first.json",
+      "correction": "The dedicated historical-report pin was before direct full-text read but after excerpt inspection. Preserved first JSON; active semantic initial null, no source bytes or product runs changed."
+    }
+  ]
+}

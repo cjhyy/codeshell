@@ -1,0 +1,47 @@
+{
+  "originalPrepParentReportedBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "parentReportedFormalBaseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "copiedAtUTC": "2026-10-17T11:59:47.041577+00:00",
+  "files": [
+    {
+      "source": "/tmp/codeshell-audit-round31-search-entry/artifact-receipt.json",
+      "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/artifact-receipt.json",
+      "bytes": 1284,
+      "sha256": "6f8d556a0980cff14f0c65d7a7f2b9ae6075da75d441cab033fedf1645f54a18",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round31-search-entry/entry-decision.json",
+      "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/entry-decision.json",
+      "bytes": 2215,
+      "sha256": "2156b9006f9ee0f0088d0649e16aa783645928ee466b2d80e02ee401d9658a10",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round31-search-entry/reference-navigation.txt",
+      "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/reference-navigation.txt",
+      "bytes": 3473,
+      "sha256": "ade381cb4b572830f546b7bd983e1da82e92ead56bb7c0861fb2e01c2e07f237",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round31-search-entry/report.md",
+      "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/report.md",
+      "bytes": 3570,
+      "sha256": "2f188286b824e6c7f6a508389cf397d4d01493a8e8b8d24cc7a1e5dc72703c3c",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round31-search-entry/source-manifest.json",
+      "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/source-manifest.json",
+      "bytes": 10096,
+      "sha256": "05364da766fb5bf218a11d16e2bd47db16c4564a6a1e9bac62c914af40a64626",
+      "byteIdentical": true
+    }
+  ],
+  "artifactCount": 5,
+  "newSemanticSourceReads": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "note": "Five frozen entry prep artifacts copied verbatim; original parent/times/before-read/finish hashes preserved, not five new source reads."
+}

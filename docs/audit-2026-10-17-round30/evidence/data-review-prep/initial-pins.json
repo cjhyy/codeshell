@@ -1,0 +1,44 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "parentBaselineIsContextOnly": true,
+  "capturedUTC": "2026-10-17T11:46:23.030068+00:00",
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "captureTiming": "Before independent Round30 source semantic read; author prep not yet frozen; path/byte inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "captureTiming": "Before independent Round30 source semantic read; author prep not yet frozen; path/byte inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "lineCount": 193,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "captureTiming": "Before independent Round30 source semantic read; author prep not yet frozen; path/byte inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.ts",
+      "bytes": 811,
+      "lineCount": 29,
+      "sha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "captureTiming": "Before independent Round30 source semantic read; author prep not yet frozen; path/byte inventory only",
+      "coverage": "hash-only at capture"
+    }
+  ],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "gitCommands": 0,
+  "state": "waiting for author freeze before artifact/semantic review"
+}

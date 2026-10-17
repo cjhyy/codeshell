@@ -1,0 +1,11 @@
+packages/core/src/utils/format.ts:146:export function formatRelativeTime(
+packages/core/src/utils/format.ts:188:export function formatRelativeTimeAgo(
+packages/core/src/utils/format.ts:195:    return formatRelativeTime(date, { ...restOptions, now })
+packages/core/src/utils/format.ts:199:  return formatRelativeTime(date, { ...restOptions, numeric: 'always', now })
+packages/core/src/utils/format.ts:205:export function formatLogMetadata(log: {
+packages/core/src/utils/format.ts:220:    formatRelativeTimeAgo(log.modified, { style: 'short' }),
+packages/core/src/utils/format.ts:240:export function formatResetTime(
+packages/core/src/utils/format.ts:293:export function formatResetText(
+packages/core/src/utils/format.ts:299:  return `${formatResetTime(Math.floor(dt.getTime() / 1000), showTimezone, showTime)}`
+packages/desktop/src/renderer/settings/McpSection.tsx:989:            {t("settingsX.mcp.lastTested", { time: formatRelativeTime(probe.lastProbedAt) })}
+packages/desktop/src/renderer/settings/McpSection.tsx:1092:function formatRelativeTime(iso: string): string {

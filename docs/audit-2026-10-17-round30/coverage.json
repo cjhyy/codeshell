@@ -1,0 +1,23 @@
+{
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "mainHead": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 20,
+  "activeSourceChecks": 33,
+  "hashOnlyChecks": 4,
+  "receiptChecks": 54,
+  "verbatimCopies": 33,
+  "history": {
+    "files": 2851,
+    "markdown": 1285,
+    "json": 1566,
+    "stringLeaves": 597236,
+    "scalarLeaves": 884863,
+    "archivePaths": 169,
+    "parseErrors": 0
+  },
+  "productRuns": 0,
+  "goalStillActive": true
+}

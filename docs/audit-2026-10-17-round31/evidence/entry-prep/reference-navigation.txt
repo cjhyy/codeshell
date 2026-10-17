@@ -1,0 +1,30 @@
+./tests/search-highlight.test.ts:2:import { scanPositions } from "../packages/tui/src/render/render-to-screen.js";
+./tests/search-highlight.test.ts:3:import { applySearchHighlight } from "../packages/tui/src/render/searchHighlight.js";
+./tests/search-highlight.test.ts:129:    expect(scanPositions(screen, entry.query)).toEqual(entry.positions);
+./tests/search-highlight.test.ts:133:    expect(applySearchHighlight(screen, entry.query, styles)).toBe(entry.positions.length > 0);
+./tests/search-highlight.test.ts:140:    applySearchHighlight(screen, entry.query, styles);
+./packages/tui/src/render/searchMatches.ts:13:export function findRowSearchMatches(
+./packages/tui/src/render/hooks/use-search-highlight.ts:18:export function useSearchHighlight(): {
+./packages/tui/src/render/hooks/use-search-highlight.ts:48:      setQuery: (query: string) => ink.setSearchHighlight(query),
+./packages/tui/src/render/hooks/use-search-highlight.ts:49:      scanElement: (el: DOMElement) => ink.scanElementSubtree(el),
+./packages/tui/src/render/render-to-screen.ts:22:import { findRowSearchMatches } from './searchMatches.js'
+./packages/tui/src/render/render-to-screen.ts:144: *  applySearchHighlight (SpacerTail/SpacerHead/noSelect) so positions
+./packages/tui/src/render/render-to-screen.ts:150:export function scanPositions(screen: Screen, query: string): MatchPosition[] {
+./packages/tui/src/render/render-to-screen.ts:158:    const { columns, matches } = findRowSearchMatches(screen, row, lq)
+./packages/tui/src/render/render-to-screen.ts:172: *  (applySearchHighlight with null hint) does inverse for all visible
+./packages/tui/src/render/ink.tsx:31:import { applyPositionedHighlight, type MatchPosition, renderToScreen, scanPositions } from './render-to-screen.js';
+./packages/tui/src/render/ink.tsx:34:import { applySearchHighlight } from './searchHighlight.js';
+./packages/tui/src/render/ink.tsx:185:  // scheduleRender; applySearchHighlight in onRender inverts matching cells.
+./packages/tui/src/render/ink.tsx:186:  private searchHighlightQuery = '';
+./packages/tui/src/render/ink.tsx:188:  // scanElementSubtree, when the target message is mounted), stores them
+./packages/tui/src/render/ink.tsx:719:      hlActive = applySearchHighlight(frame.screen, this.searchHighlightQuery, this.stylePool);
+./packages/tui/src/render/ink.tsx:1293:  setSearchHighlight(query: string): void {
+./packages/tui/src/render/ink.tsx:1294:    if (this.searchHighlightQuery === query) return;
+./packages/tui/src/render/ink.tsx:1295:    this.searchHighlightQuery = query;
+./packages/tui/src/render/ink.tsx:1309:  scanElementSubtree(el: dom.DOMElement): MatchPosition[] {
+./packages/tui/src/render/ink.tsx:1310:    if (!this.searchHighlightQuery || !el.yogaNode) return [];
+./packages/tui/src/render/ink.tsx:1336:    const positions = scanPositions(rendered, this.searchHighlightQuery);
+./packages/tui/src/render/ink.tsx:1337:    logForDebugging(`scanElementSubtree: q='${this.searchHighlightQuery}' ` + `el=${width}x${height}@(${elLeft},${elTop}) n=${positions.length} ` + `[${positions.slice(0, 10).map(p => `${p.row}:${p.col}`).join(',')}` + `${positions.length > 10 ? ',…' : ''}]`);
+./packages/tui/src/render/searchHighlight.ts:7:import { findRowSearchMatches } from './searchMatches.js'
+./packages/tui/src/render/searchHighlight.ts:27:export function applySearchHighlight(
+./packages/tui/src/render/searchHighlight.ts:40:    const { columns, matches } = findRowSearchMatches(screen, row, lq)

@@ -1,0 +1,109 @@
+{
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "frozenUtc": "2026-10-17T11:52:38.723469+00:00",
+  "selfExcluded": true,
+  "formalArtifactCount": 8,
+  "artifacts": [
+    {
+      "path": "data-report.md",
+      "bytes": 4328,
+      "sha256": "4ed92e0ba8f6715a568be709bcafd413c94174bf0adb70e273818d12eae25a06"
+    },
+    {
+      "path": "evidence/data-copy-receipt.json",
+      "bytes": 4932,
+      "sha256": "c119b00e99453654e2e8c5cc686d7f360b61cc84d3362c68c968fe1ed537389a"
+    },
+    {
+      "path": "evidence/data-history.py",
+      "bytes": 3091,
+      "sha256": "f5b7be28d2ce091b271389ebb5e4d256c59ccbaec0ea0a6b8a58bb3c410827d3"
+    },
+    {
+      "path": "evidence/data-history.json",
+      "bytes": 693607,
+      "sha256": "c5ff4e0243673e8dea346a9a7f8b1a87457d0a6e3146cdc1616382bce082a559"
+    },
+    {
+      "path": "evidence/data-source-manifest.json",
+      "bytes": 25255,
+      "sha256": "3ce8c13b04a1c4fb20cadd50a8ac98c2e43ed71962da55072fd21ff03e54cbf0"
+    },
+    {
+      "path": "evidence/data-hash-checks.json",
+      "bytes": 5067,
+      "sha256": "4132815076c1d0d185e2e4de4ecfd08786f4a598d9193001d1fdc50abf7ca5f4"
+    },
+    {
+      "path": "evidence/data-validation.json",
+      "bytes": 1218,
+      "sha256": "e2d4221e4c1be8f117573a8c4ce62f0e1bd7fd58eb9bb5ebf2458f5b4042fd6f"
+    },
+    {
+      "path": "evidence/data-decisions.json",
+      "bytes": 9302,
+      "sha256": "cd1bd009d1eb0ecd5eb03320a683b802716b3c7909d551ac66474c8a1273be11"
+    }
+  ],
+  "copiedPrepArtifactCount": 11,
+  "copiedPrepReceipt": "evidence/data-copy-receipt.json",
+  "reportLinks": {
+    "count": 11,
+    "allPathsExist": true,
+    "checks": [
+      {
+        "target": "evidence/data-source-manifest.json",
+        "pathExists": true
+      },
+      {
+        "target": "../audit-2026-10-16/root.md",
+        "pathExists": true
+      },
+      {
+        "target": "../audit-2026-10-17-round13/git-text.md",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-decisions.json",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-copy-receipt.json",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-prep/proposal.md",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-hash-checks.json",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-history.json",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-history.py",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-validation.json",
+        "pathExists": true
+      },
+      {
+        "target": "evidence/data-author-receipt.json",
+        "pathExists": true
+      }
+    ]
+  },
+  "classification": {
+    "formalFindings": 0,
+    "candidates": 0,
+    "related": 0,
+    "existingCauseExclusions": 1
+  },
+  "newProductSemanticReadLines": 0,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

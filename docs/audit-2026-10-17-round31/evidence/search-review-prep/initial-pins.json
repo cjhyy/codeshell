@@ -1,0 +1,37 @@
+{
+  "parentReportedContext": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "prepOnly": true,
+  "formalRound31Baseline": null,
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "bytes": 1895,
+      "lines": 56,
+      "firstSemanticReadSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "captureTiming": "Before independent semantic source read; rg filename locator only",
+      "capturedUtc": "2026-10-17T11:53:22.606225+00:00"
+    },
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "bytes": 1738,
+      "lines": 52,
+      "firstSemanticReadSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "captureTiming": "Before independent semantic source read; rg filename locator only",
+      "capturedUtc": "2026-10-17T11:53:22.607333+00:00"
+    },
+    {
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "bytes": 2158,
+      "lines": 53,
+      "firstSemanticReadSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "captureTiming": "Before independent semantic source read; rg filename locator only",
+      "capturedUtc": "2026-10-17T11:53:22.607772+00:00"
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

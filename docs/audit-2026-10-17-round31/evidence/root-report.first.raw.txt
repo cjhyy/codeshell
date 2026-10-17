@@ -1,0 +1,17 @@
+# Round31 搜索大小写候选
+
+正式冻结父提交`4dad999bd43b776995b5d212dde275dab86a1ddd`。Root最终分类 **0正式问题、1候选SEARCH-R31-C1、0新关联**；原prep parent19ef与时点保留，正式化0新增产品语义阅读/0产品执行。
+
+## SEARCH-R31-C1：逐cell小写丢失希腊词尾上下文
+
+[searchMatches.ts:38](../../packages/tui/src/render/searchMatches.ts:38) 对每个cell.char单独toLowerCase再拼接；[searchHighlight](../../packages/tui/src/render/searchHighlight.ts:33)和[scanPositions](../../packages/tui/src/render/render-to-screen.ts:150)对完整query转小写。两个普通窄grapheme cell `Ο`、`Σ`，查询相同字面`ΟΣ`时，按源码/规范推演row为`οσ`，完整query为`ος`，故indexOf推演没有匹配；helper的case-insensitive合同应能匹配同字查询。**这是静态推演，不是观察到的函数返回或终端故障。**
+
+[ECMAScript lowercasing](https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.tolowercase)采用包含上下文映射的Unicode默认大小写规则；[Unicode SpecialCasing](https://www.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt)列出Final_Sigma条件映射。[引用记录](evidence/root-prep/external-sources.json)只用于解释算法，不声称安装的Bun/Node/ICU版本或实际行为已验证。
+
+独立[source review](evidence/review-search.md)支持P3静态helper缺陷，但[实际入口追踪](entry-report.md)发现hook未导出且没有App调用者、Ink query初值空、公开Instance没有setter/scan。当前非空query只在测试源码中直接供应。**Root因此保留候选，不列已确认生产UI问题。** 独立review原判断原样保存，聚合不改写它来消除判断差异。
+
+原有9case覆盖ASCII、CJK、emoji、combining、İ扩长、noSelect和row-local，未见sigma；只是[test源码](../../tests/search-highlight.test.ts)声明，0执行。旧坐标/İ扩长/重复scanner治理与本候选上下文原因不同；没有恢复Slice/i18n/TUI diff失败动态方向。
+
+[Root source manifest](evidence/root-source-manifest.json)7pins/530声明读行：full leaves108、selected screen130/render74/Ink66、test143、warn9。warn首次durable hash晚于其全文读取，initial保持null；其他6pin在声明范围读取前。完整SHA不代表通读大型screen/Ink。原11prep副本见[copyreceipt](evidence/root-prep-copy-receipt.json)，同一阅读未二次计数。
+
+[当前历史](evidence/root-dedup.json)共2921文件，1295MD+1626JSON、624924字符串/926095标量，含归档及递归JSON值，排除当前31。counts {'search-leaf': 6, 'greek-case': 0, 'case-map': 5293}，cap100；有限context不是语义穷尽。原prep2851快照排除当时mutable30，未被覆盖。[validation](evidence/root-validation.json) runs为空，0pass/expect/import/fixture/TTY/native/真实任务；没有修产品。

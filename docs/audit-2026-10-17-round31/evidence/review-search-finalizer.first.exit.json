@@ -1,0 +1,13 @@
+{
+  "recordedUtc": "2026-10-17T12:00:23.640574+00:00",
+  "kind": "metadata receipt finalizer missing standard-library import",
+  "toolChunkId": "b2760e",
+  "observedExitCode": 1,
+  "observedDiagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 24, in <module>\nNameError: name 're' is not defined. Did you mean: 'r'? Or did you forget to import 're'?\n",
+  "fullRawCombinedOutputPersisted": false,
+  "durableStateBeforeFailure": "12 exact prep copies, normalized source manifest, byte checks, validation and formal report had been written; no formal receipt had been written.",
+  "handling": "Retain this original diagnostic; complete metadata fields/receipt with stdlib re imported. Do not rerun product, source semantic read, or copy mutation.",
+  "productAttempts": 0,
+  "newFormalSemanticReadLines": 0,
+  "productFailure": false
+}

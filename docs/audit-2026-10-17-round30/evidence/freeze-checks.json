@@ -1,0 +1,57 @@
+{
+  "files": [
+    {
+      "path": "data-report.md",
+      "bytes": 4328,
+      "sha256": "4ed92e0ba8f6715a568be709bcafd413c94174bf0adb70e273818d12eae25a06"
+    },
+    {
+      "path": "evidence/data-source-manifest.json",
+      "bytes": 25255,
+      "sha256": "3ce8c13b04a1c4fb20cadd50a8ac98c2e43ed71962da55072fd21ff03e54cbf0"
+    },
+    {
+      "path": "evidence/data-author-receipt.json",
+      "bytes": 2925,
+      "sha256": "8d685d39cee97dc7d34a6d789a107d73c316b592a3d35c8d26d329545e0849a0"
+    },
+    {
+      "path": "evidence/review-root.md",
+      "bytes": 3968,
+      "sha256": "11cefc350a2a999d2e4250f11ebbfc6ea639550d48ea31648be9cc5e355eeaf9"
+    },
+    {
+      "path": "evidence/review-root-source-manifest.json",
+      "bytes": 16669,
+      "sha256": "d69f127653b455f8355da359d229dccab9a4e1893afa7cb2a46713340a3b2d38"
+    },
+    {
+      "path": "evidence/review-root-prep-copy-receipt.json",
+      "bytes": 1738,
+      "sha256": "bbbda66a3c4342b1fcd2965252fc019f78842d16976e2b7d29cf2b004afa22cf"
+    },
+    {
+      "path": "evidence/review-root-artifact-receipt.json",
+      "bytes": 1674,
+      "sha256": "0875b17bc3da4024a5c30c3edeb447de8adf2c6b3100be322c17db674e2fa4fc"
+    },
+    {
+      "path": "evidence/review-data.md",
+      "bytes": 3769,
+      "sha256": "2c90445f3377b0568fcd68efb8d0728fd84fcabe37bb31569d18ed46c2cebd9d"
+    },
+    {
+      "path": "evidence/review-data-source-manifest.json",
+      "bytes": 44512,
+      "sha256": "c593d0a0a674f55de428cf6a788e2ad6b07cd5c900d450b22f4749241418881c"
+    },
+    {
+      "path": "evidence/review-data-copy-receipt.json",
+      "bytes": 3195,
+      "sha256": "633d9a90a2a64508fb1ce727236d73b8c24eb8c14a0f81f0fbfbe592d7f11212"
+    }
+  ],
+  "checks": 10,
+  "timing": "Root freeze-message SHA verification after artifact reading; not read-start proof.",
+  "productExecution": false
+}

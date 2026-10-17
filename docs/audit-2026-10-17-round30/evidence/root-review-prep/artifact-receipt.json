@@ -1,0 +1,33 @@
+{
+  "reviewer": "aggregator_round27_resume",
+  "parentReportedPrepBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "formalBaselineContextOnly": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "name": "consumer-navigation.txt",
+      "path": "/tmp/codeshell-audit-round30-root-review/consumer-navigation.txt",
+      "bytes": 1073,
+      "sha256": "b948d85459a4abc8dc2f5ee27219fdff58d29cc42e92b8365a468eacfced0c84"
+    },
+    {
+      "name": "review.md",
+      "path": "/tmp/codeshell-audit-round30-root-review/review.md",
+      "bytes": 4544,
+      "sha256": "2b46289c77557f4a3b5de86a21e4379767e1129a638c386a6004b46c40881cda"
+    },
+    {
+      "name": "source-manifest.json",
+      "path": "/tmp/codeshell-audit-round30-root-review/source-manifest.json",
+      "bytes": 14085,
+      "sha256": "2dede9f5dcd716a25d2fe7aefca6d5a7a9e947fccf3ab743716c3994a4538994"
+    }
+  ],
+  "artifactCount": 3,
+  "selfExcluded": true,
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "authorFilesChanged": 0
+}

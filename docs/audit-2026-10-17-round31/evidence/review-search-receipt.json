@@ -1,0 +1,59 @@
+{
+  "baseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "frozenUtc": "2026-10-17T12:01:03.643568+00:00",
+  "selfExcluded": true,
+  "formalArtifactCount": 7,
+  "files": [
+    {
+      "path": "evidence/review-search.md",
+      "bytes": 4500,
+      "sha": "82dddd71d6bfb850179c4a198f2558e1bd00c2486e3be9bd5f0390c56e6ec9a4",
+      "sha256": "82dddd71d6bfb850179c4a198f2558e1bd00c2486e3be9bd5f0390c56e6ec9a4"
+    },
+    {
+      "path": "evidence/review-search-source-manifest.json",
+      "bytes": 16401,
+      "sha": "fd18d6c5d5aa234115d354afbba220a63953cf437a8ceb49c928bdd0e150a518",
+      "sha256": "fd18d6c5d5aa234115d354afbba220a63953cf437a8ceb49c928bdd0e150a518"
+    },
+    {
+      "path": "evidence/review-search-copy-receipt.json",
+      "bytes": 10055,
+      "sha": "3281594b8f0015ba656100a3bacca5fb515c719383ecaaa9c88cded4026c4f75",
+      "sha256": "3281594b8f0015ba656100a3bacca5fb515c719383ecaaa9c88cded4026c4f75"
+    },
+    {
+      "path": "evidence/review-search-byte-checks.json",
+      "bytes": 2674,
+      "sha": "710b38dc4b69653478ce57f1d29e8645155afc0c75d19b59506203fd351a0ae6",
+      "sha256": "710b38dc4b69653478ce57f1d29e8645155afc0c75d19b59506203fd351a0ae6"
+    },
+    {
+      "path": "evidence/review-search-validation.json",
+      "bytes": 2486,
+      "sha": "31b743495f0ac6b0dbb0a470c154f2901f2d5ae278e95ef9e47711a5c5497c58",
+      "sha256": "31b743495f0ac6b0dbb0a470c154f2901f2d5ae278e95ef9e47711a5c5497c58"
+    },
+    {
+      "path": "evidence/review-search-finalizer.first.exit.json",
+      "bytes": 856,
+      "sha": "d095f825d502ad5ae0e29fdded93f6a4b1f691649c316eb06b0b47c20b2ba557",
+      "sha256": "d095f825d502ad5ae0e29fdded93f6a4b1f691649c316eb06b0b47c20b2ba557"
+    },
+    {
+      "path": "evidence/review-search-history-checks.json",
+      "bytes": 6315,
+      "sha": "ad6d8493571357c33b260341f55f2858cfded230e2ba1bffa466137195040028",
+      "sha256": "ad6d8493571357c33b260341f55f2858cfded230e2ba1bffa466137195040028"
+    }
+  ],
+  "copiedPrepArtifacts": 12,
+  "copyReceipt": "evidence/review-search-copy-receipt.json",
+  "reportLinkCount": 10,
+  "rootFinalClassification": "SEARCH-R31-C1 candidate; no separate formal finding from this review",
+  "productAttempts": 0,
+  "newFormalSemanticReadLines": 0,
+  "gitCommands": 0,
+  "currentMetadataFirstFailure": "evidence/review-search-finalizer.first.exit.json",
+  "inheritedMetadataSourceReaderFailure": "evidence/search-review-prep/source-reader.first.exit.json"
+}

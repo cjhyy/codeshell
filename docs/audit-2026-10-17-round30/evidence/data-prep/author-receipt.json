@@ -1,0 +1,67 @@
+{
+  "frozenUtc": "2026-10-17T11:46:36.098427+00:00",
+  "prepParentContextBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "artifactRoot": "/tmp/codeshell-audit-round30-data-frontier",
+  "selfExcluded": true,
+  "artifactCount": 10,
+  "artifacts": [
+    {
+      "path": "consumer-additional-initial-pins.json",
+      "bytes": 2500,
+      "sha256": "9b4263e4a3fe8592f0143836bd2279d6aa306ec902ec26d9b20971e996de5bf4"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1909,
+      "sha256": "e7a584fa1b25ecc4515820e8984eb77f447dca5897a2758589861996c78f8fca"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 2392,
+      "sha256": "fe791ea0cec50c97943af5b187ccf9e500da476a1626d6b62965f424353e60b9"
+    },
+    {
+      "path": "finish-hash-checks.json",
+      "bytes": 4513,
+      "sha256": "9860105a171318e73c18c09696d09f438b78447061cd9ac566605cc1001210dd"
+    },
+    {
+      "path": "history.json",
+      "bytes": 676650,
+      "sha256": "6e2f928dfa1881d44399422812dc1740d0d6b836c728983b23724f22db6c7b75"
+    },
+    {
+      "path": "history.py",
+      "bytes": 3030,
+      "sha256": "308f2e8b10d41cee5e040e4fea4c54655cc719fd111264457d3f4b2c32ac0b0e"
+    },
+    {
+      "path": "proposal.md",
+      "bytes": 3925,
+      "sha256": "777646208e924c60beb0f5e03bc93da470be43acd41e2dc9cab51bbd6b4d7e1e"
+    },
+    {
+      "path": "selection.json",
+      "bytes": 2137,
+      "sha256": "d80b6b9f4520cec9b4f9df3071fea70045ff1f60b4a6b249a88fb87cc7c9b79f"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 15380,
+      "sha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1131,
+      "sha256": "2adaf8c18be242e8758c3b6914cc536771d19dc4a68b4277ddc1c3f6eaf5a2a4"
+    }
+  ],
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "existingCauseExclusions": 1
+  },
+  "productAttempts": 0,
+  "gitCommands": 0
+}

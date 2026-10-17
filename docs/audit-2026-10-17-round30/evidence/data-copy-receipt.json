@@ -1,0 +1,97 @@
+{
+  "copiedUtc": "2026-10-17T11:50:42.460429+00:00",
+  "formalBaselineReportedByRoot": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "preservedPrepParent": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "copyCount": 11,
+  "copies": [
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/author-receipt.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/author-receipt.json",
+      "bytes": 1980,
+      "sourceSha256": "a799f96c0407490a9c97bf3d56e2be8d9ff413b9f3afd590373ab04e8c2a88b8",
+      "copySha256": "a799f96c0407490a9c97bf3d56e2be8d9ff413b9f3afd590373ab04e8c2a88b8",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/consumer-additional-initial-pins.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-additional-initial-pins.json",
+      "bytes": 2500,
+      "sourceSha256": "9b4263e4a3fe8592f0143836bd2279d6aa306ec902ec26d9b20971e996de5bf4",
+      "copySha256": "9b4263e4a3fe8592f0143836bd2279d6aa306ec902ec26d9b20971e996de5bf4",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/consumer-initial-pins.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-initial-pins.json",
+      "bytes": 1909,
+      "sourceSha256": "e7a584fa1b25ecc4515820e8984eb77f447dca5897a2758589861996c78f8fca",
+      "copySha256": "e7a584fa1b25ecc4515820e8984eb77f447dca5897a2758589861996c78f8fca",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/decisions.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/decisions.json",
+      "bytes": 2392,
+      "sourceSha256": "fe791ea0cec50c97943af5b187ccf9e500da476a1626d6b62965f424353e60b9",
+      "copySha256": "fe791ea0cec50c97943af5b187ccf9e500da476a1626d6b62965f424353e60b9",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/finish-hash-checks.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/finish-hash-checks.json",
+      "bytes": 4513,
+      "sourceSha256": "9860105a171318e73c18c09696d09f438b78447061cd9ac566605cc1001210dd",
+      "copySha256": "9860105a171318e73c18c09696d09f438b78447061cd9ac566605cc1001210dd",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/history.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/history.json",
+      "bytes": 676650,
+      "sourceSha256": "6e2f928dfa1881d44399422812dc1740d0d6b836c728983b23724f22db6c7b75",
+      "copySha256": "6e2f928dfa1881d44399422812dc1740d0d6b836c728983b23724f22db6c7b75",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/history.py",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/history.py",
+      "bytes": 3030,
+      "sourceSha256": "308f2e8b10d41cee5e040e4fea4c54655cc719fd111264457d3f4b2c32ac0b0e",
+      "copySha256": "308f2e8b10d41cee5e040e4fea4c54655cc719fd111264457d3f4b2c32ac0b0e",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/proposal.md",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/proposal.md",
+      "bytes": 3925,
+      "sourceSha256": "777646208e924c60beb0f5e03bc93da470be43acd41e2dc9cab51bbd6b4d7e1e",
+      "copySha256": "777646208e924c60beb0f5e03bc93da470be43acd41e2dc9cab51bbd6b4d7e1e",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/selection.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/selection.json",
+      "bytes": 2137,
+      "sourceSha256": "d80b6b9f4520cec9b4f9df3071fea70045ff1f60b4a6b249a88fb87cc7c9b79f",
+      "copySha256": "d80b6b9f4520cec9b4f9df3071fea70045ff1f60b4a6b249a88fb87cc7c9b79f",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/source-manifest.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "bytes": 15380,
+      "sourceSha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71",
+      "copySha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round30-data-frontier/validation.json",
+      "copy": "docs/audit-2026-10-17-round30/evidence/data-prep/validation.json",
+      "bytes": 1131,
+      "sourceSha256": "2adaf8c18be242e8758c3b6914cc536771d19dc4a68b4277ddc1c3f6eaf5a2a4",
+      "copySha256": "2adaf8c18be242e8758c3b6914cc536771d19dc4a68b4277ddc1c3f6eaf5a2a4",
+      "byteIdentical": true
+    }
+  ],
+  "meaning": "Exact 11-file prep copy, including original self-excluded 10-artifact author receipt. Original prep fields, timestamps and historical snapshot retained without modification. No product or Git execution."
+}

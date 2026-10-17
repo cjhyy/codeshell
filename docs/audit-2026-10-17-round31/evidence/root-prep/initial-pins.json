@@ -1,0 +1,23 @@
+{
+  "parentReportedBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "bytes": 1738,
+      "lineCount": 52,
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "pinBeforeSemanticRead": true,
+      "selectionHint": "Old inventory metadata no-row, not evidence of never read."
+    },
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "bytes": 1895,
+      "lineCount": 56,
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "pinBeforeSemanticRead": true,
+      "selectionHint": "Old inventory metadata no-row, not evidence of never read."
+    }
+  ],
+  "productExecution": false,
+  "atUTC": "2026-10-17T11:52:18.490702+00:00"
+}

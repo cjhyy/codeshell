@@ -1,0 +1,10 @@
+{
+  "path": "docs/audit-2026-10-17-round14/utils.md",
+  "bytes": 6276,
+  "lineCount": 40,
+  "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+  "pinBeforeSemanticRead": false,
+  "initialSemanticReadSha256": null,
+  "pinBeforeDirectFullTextRead": true,
+  "timing": "Dedicated source pin after history excerpt was inspected, before direct full text; initial semantic SHA remains null."
+}

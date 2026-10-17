@@ -1,0 +1,35 @@
+{
+  "frozenUtc": "2026-10-17T11:56:20.498367+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "languageFixturesExecuted": 0,
+  "IntlCalls": 0,
+  "moduleImports": 0,
+  "helperInvocations": 0,
+  "terminalOrTTYActions": 0,
+  "nativeActions": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataReaderFailures": [
+    {
+      "receipt": "source-reader.first.exit.json",
+      "exitCode": 1,
+      "productFailure": false,
+      "rerun": false
+    }
+  ],
+  "metadataOperations": "Only source locators/readers and Python stdlib filesystem/hash/JSON/regex metadata. Unicode casing walkthrough is reasoning, not a computed language fixture or observed output.",
+  "oldSkippedDirections": [
+    "sliceAnsi",
+    "R7 TUI diff/i18n",
+    "other previously failed dynamic directions"
+  ],
+  "limits": [
+    "Independent reviewer did not run product/imports/React/Intl/TTY.",
+    "No real user/UI command path observed or executed. Setter and wrapper chain are static only.",
+    "Root owns any future guarded focus and final classification; no test success is imported from historical documents."
+  ]
+}

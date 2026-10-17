@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "parentContextBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "purpose": "Additional before-read pins for selected ordinary consumers and prior same-cause reports. Metadata only; no Git or product execution.",
+  "rows": [
+    {
+      "path": "packages/coding/src/capability-runtime.ts",
+      "initialFilesystemSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "bytes": 3681,
+      "lines": 112,
+      "initialReadUtc": "2026-10-17T11:45:04.968745+00:00",
+      "semanticReadAtPin": false,
+      "captureTiming": "Before direct selected source read; prior rg locators only"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "initialFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "bytes": 8173,
+      "lines": 262,
+      "initialReadUtc": "2026-10-17T11:45:04.969614+00:00",
+      "semanticReadAtPin": false,
+      "captureTiming": "Before direct selected source read; prior rg locators only"
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "initialFilesystemSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "bytes": 12984,
+      "lines": 347,
+      "initialReadUtc": "2026-10-17T11:45:04.969987+00:00",
+      "semanticReadAtPin": false,
+      "captureTiming": "Before direct selected source read; prior rg locators only"
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "initialFilesystemSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "bytes": 14642,
+      "lines": 119,
+      "initialReadUtc": "2026-10-17T11:45:04.970274+00:00",
+      "semanticReadAtPin": true,
+      "captureTiming": "After prior history scanner excerpts of this report were inspected; before direct selected source read. First durable per-report pin is late to excerpt inspection.",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/git-text.md",
+      "initialFilesystemSha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "bytes": 4460,
+      "lines": 33,
+      "initialReadUtc": "2026-10-17T11:45:04.970514+00:00",
+      "semanticReadAtPin": true,
+      "captureTiming": "After prior history scanner excerpts of this report were inspected; before direct selected source read. First durable per-report pin is late to excerpt inspection.",
+      "initialSemanticReadSha256": null
+    }
+  ]
+}
