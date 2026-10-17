@@ -62,6 +62,8 @@ interface Params {
     setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
     /** Materialize the active draft and return its real session bucket. */
     materializeActiveSessionForPanel: () => string | null;
+    /** Write a review directly to its captured bucket, avoiding global seed races. */
+    appendReviewDraft?: (bucket: string, text: string) => void;
   };
   quickChat: {
     quickChatSessions: Record<string, QuickChatSessionRef>;
@@ -125,6 +127,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     sessionIndicesRef,
     setSessionIndices,
     materializeActiveSessionForPanel,
+    appendReviewDraft,
   } = sessions;
   const {
     quickChatSessions,
@@ -781,13 +784,32 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   useEffect(
     () =>
       onComposerSeedRequest((request) => {
+        // A hidden panel can finish preparing after the user switches chats.
+        // Never append that review to another conversation's unsent draft.
+        if (request.source === "code-review") {
+          const targetBucket = activeBucketRef.current;
+          if (
+            !appendReviewDraft ||
+            resolveEngineSessionIdForBucket(targetBucket) !== request.sessionId
+          )
+            return false;
+          appendReviewDraft(targetBucket, request.text);
+          setViewMode("chat");
+          return true;
+        }
         // Keep the current conversation bucket. Unlike conversational
         // automation creation, a plugin starter prompt is an explicit draft
         // for the session the user was viewing before opening Settings.
         seedComposer(request.text);
         setViewMode("chat");
       }),
-    [seedComposer, setViewMode],
+    [
+      seedComposer,
+      setViewMode,
+      resolveEngineSessionIdForBucket,
+      activeBucketRef,
+      appendReviewDraft,
+    ],
   );
   const startConversationalAutomation = (): void => {
     // Start a FRESH draft session — never pile onto whatever task/run session

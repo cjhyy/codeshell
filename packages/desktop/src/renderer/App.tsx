@@ -1156,6 +1156,18 @@ function App() {
       sessionIndicesRef,
       setSessionIndices,
       materializeActiveSessionForPanel,
+      appendReviewDraft: (targetBucket, text) => {
+        setComposerDrafts((previous) => {
+          const current = previous[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+          return {
+            ...previous,
+            [targetBucket]: {
+              ...current,
+              text: current.text.trim() ? `${current.text}\n\n${text}` : text,
+            },
+          };
+        });
+      },
     },
     quickChat: {
       quickChatSessions,

@@ -5,6 +5,7 @@ import { ensureMiniDom, renderHook } from "../test-utils/renderHook";
 import { bucketKey, type SessionIndex } from "../transcripts";
 import type { ViewMode } from "../view";
 import { usePanelBuckets } from "./usePanelBuckets";
+import { requestComposerSeed } from "../chat/composerSeed";
 
 type Params = Parameters<typeof usePanelBuckets>[0];
 
@@ -31,6 +32,7 @@ describe("subagent conversation dock requests", () => {
   let hook: Awaited<ReturnType<typeof renderHook<ReturnType<typeof useHarness>>>> | undefined;
 
   function useHarness() {
+    const [reviewDrafts, setReviewDrafts] = useState<Record<string, string>>({});
     const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>({
       [projectId]: {
         sessions: [
@@ -64,6 +66,9 @@ describe("subagent conversation dock requests", () => {
           materializedBuckets.push(activeBucketRef.current);
           return activeBucketRef.current;
         },
+        appendReviewDraft: (targetBucket, text) => {
+          setReviewDrafts((previous) => ({ ...previous, [targetBucket]: text }));
+        },
       },
       quickChat: {
         quickChatSessions,
@@ -79,7 +84,8 @@ describe("subagent conversation dock requests", () => {
         setModelOverrides: () => {},
         defaultPermissionMode: "default",
         quickChatDefaultModelKey: null,
-        resolveEngineSessionIdForBucket: () => undefined,
+        resolveEngineSessionIdForBucket: (bucket) =>
+          bucket === firstBucket ? "engine-parent-a" : "engine-parent-b",
         dispatch: () => {},
         approvalBucketsRef: useRef(new Map()),
         setApprovalQueue: () => {},
@@ -105,6 +111,7 @@ describe("subagent conversation dock requests", () => {
       mainSessionId,
       sessionIndices,
       viewMode,
+      reviewDrafts,
       selectSession(sessionId: string) {
         activeBucketRef.current = bucketKey(projectId, sessionId);
         setSessionIndices((current) => ({
@@ -114,6 +121,38 @@ describe("subagent conversation dock requests", () => {
       },
     };
   }
+
+  test("does not acknowledge another conversation's late review draft", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      hook!.result.current.selectSession("parent-b");
+    });
+    expect(
+      requestComposerSeed({
+        source: "code-review",
+        text: "A review",
+        sessionId: "engine-parent-a",
+      }),
+    ).toBe(false);
+    expect(hook.result.current.reviewDrafts).toEqual({});
+  });
+
+  test("keeps an accepted review bound to its bucket when a chat switch is batched", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      expect(
+        requestComposerSeed({
+          source: "code-review",
+          text: "A review",
+          sessionId: "engine-parent-a",
+        }),
+      ).toBe(true);
+      hook!.result.current.selectSession("parent-b");
+    });
+    expect(hook.result.current.activeBucket).toBe(secondBucket);
+    expect(hook.result.current.reviewDrafts).toEqual({ [firstBucket]: "A review" });
+    expect(hook.result.current.composerSeed).toBe("");
+  });
 
   beforeEach(() => {
     ensureMiniDom();

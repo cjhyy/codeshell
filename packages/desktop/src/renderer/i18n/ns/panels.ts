@@ -180,6 +180,16 @@ export const panels = {
         commentThisLineTitle: "评论此行(加入输入框)",
       },
       review: {
+        aiReview: "AI 审查",
+        prepareAiReview: "准备 AI 代码审查",
+        prepareAiReviewHint: "将当前范围的改动和关注点添加到对话输入框，发送后开始审查。",
+        reviewInstructions: "审查关注点（可选）",
+        reviewInstructionsPlaceholder: "例如：重点检查权限边界、并发问题和兼容性回归",
+        addReviewDraft: "添加审查草稿",
+        preparingReview: "正在读取改动…",
+        reviewDraftReady: "已添加到对话输入框，发送后开始审查。",
+        reviewDraftTruncated:
+          "改动较大，草稿仅包含部分内容，并已注明覆盖不完整。可缩小范围后重试。",
         selectScope: "选择审查范围",
         scopeFallback: "审查范围",
         recentCommit: "最近提交",
@@ -500,6 +510,18 @@ export const panels = {
         commentThisLineTitle: "Comment on this line (add to composer)",
       },
       review: {
+        aiReview: "AI review",
+        prepareAiReview: "Prepare AI code review",
+        prepareAiReviewHint:
+          "Add changes in the current scope and your focus to the composer. Send to start the review.",
+        reviewInstructions: "Review focus (optional)",
+        reviewInstructionsPlaceholder:
+          "For example: permissions, concurrency, and compatibility regressions",
+        addReviewDraft: "Add review draft",
+        preparingReview: "Reading changes…",
+        reviewDraftReady: "Added to the composer. Send to start the review.",
+        reviewDraftTruncated:
+          "This large diff is only partially included, with incomplete coverage noted. Narrow the scope and retry.",
         selectScope: "Select review scope",
         scopeFallback: "Review scope",
         recentCommit: "Latest commit",
