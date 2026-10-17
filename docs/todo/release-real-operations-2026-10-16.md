@@ -8,14 +8,14 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI21, failed overall. Web, Linux and macOS pass their
-independently audited scopes, including the first complete new Review-draft
-three-operation/one-Main sequences. Windows completes the recorded UI actions,
-but its full custody acceptance is withdrawn after an older foreign PID is
-adopted and named in a cleanup signal request. Actual NSIS Setup then exits
-`3221225477` (`0xC0000005`); its cause and post-failure OS state are unknown.
-See the [CI21 failure record](#ci21--functional-progress-with-windows-custody-and-installer-failures).
-CI22 preparation below is local source/compiler evidence, not native recovery.
+The latest completed run, CI22, failed overall. Web and macOS pass their audited
+scopes. Linux completes 73 original operations/11 Main launches and the separate
+new Review-draft three/one, then fails the AppImage updater's post-launch identity
+evaluation before any updater operation or manifest GET. Windows fails a pure VM
+test-file initialization before package build or native operations. Neither failure
+is installer recovery; historical Windows custody withdrawal, Setup and GC causes
+remain recorded and unresolved. See the [CI22 actual record](#ci22--actual-web-and-macos-passes-linux-and-windows-failures).
+CI23 preparation below changes one test harness only; no new runtime pass is asserted.
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2258,3 +2258,103 @@ The final engine-bypass scan also reruns successfully at
 Concurrent static round42 records P3 `TRANSCRIPT-R42-01` in TUI background detail.
 Desktop/Web do not consume that translator registry transcript; this separate TUI
 issue remains for the next loop, with no repository-wide zero-defect claim.
+
+## CI22 — actual Web and macOS passes, Linux and Windows failures
+
+[Run 39042276064](https://github.com/cjhyy/codeshell/actions/runs/39042276064),
+attempt 1 / push, binds source
+`07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb` and finishes overall failure.
+Web and macOS succeed; Linux fails at actual packaged update checks and recovery,
+and Windows fails its pure draft/lineage/wrapper contract step before native work.
+These results replace no earlier source-bound failure or unknown.
+
+Web independently verifies 31 actual behaviors: ServiceWorker 11, authentication
+four, child lifecycle eight and annotation eight. Image nine/45 and lifecycle
+Node 64 remain separate. The expected old-reducer run has two passing controls
+and six expected failures, with retained profile physically checked by the runner.
+All 57 public ZIP files pass CRC; the current workflow's public allowlist and 106
+source hashes are independently checked (99 product-map paths plus seven fixture/
+helper pins). All 33 PNGs pass chunk CRC; actual logout 1280px and annotation
+390px samples have readable CJK. Five recorded birth sets contain 7/21/10/10/10
+processes, each settling to zero with normal browser `0/null` and empty signal
+ledgers. Successful Auth/SW/child inner HOMEs and the annotation profile are
+recorded removed; the negative HOME/profile stays. Private remote roots are not
+uploaded or re-enumerated locally; a late final write cannot restore removed HOME.
+
+macOS independently passes original 83 operations/12 Main launches, the separate
+new drafts three/one and DMG installed/reinstalled UI 13+13 across two detached
+mounts. Its 212 checks retain 116+55 original and 41 draft checks. Draft Main 13515
+exits `0/null`, observed custody 29→0, HOME removed; five real preparations yield
+three attempts/accepted seeds, no rejection/pending, and two readonly metadata
+records with no late rows. Its actual aggregate is 410 tests/3,480 assertions/30
+files; Review Node 13 and draft/lineage/wrapper Node 71 are separate. Ad-hoc
+packaging does not prove Developer ID, notarization, Gatekeeper or auto-install.
+
+Linux independently retains 73 completed original operations/11 normal Main
+launches, plus the separate new drafts three/one. It does not complete original
+83/12. The real AppImage reaches first JS with actual Main 9307 under runtime
+launcher 9304, owned APPIMAGE/APPDIR and sandbox enabled. A later synchronous
+identity `electronApplication.evaluate` rejects with “Resulting promise was
+garbage collected”; updater operations and manifest GETs are both zero. The cause
+is unknown, with no proof of a crash, GPU, OS, P1 or model cause. Actual Main
+raw stderr and a timestamped first-error journal are absent, so GPU/network and
+cleanup timing cannot be independently ordered. The fallback
+`mainExits` row names runtime 9304; it is not an actual Main exit tuple.
+Six recorded SIGTERM cleanup requests accompany observed custody 11→0, without
+proving normal Main exit or OS signal delivery. Updater HOME and outer launcher
+scratch remain retained. Source/cache byte identities and full `07777` inventories
+keep their exact authorized normalization deltas. Earlier pure aggregate
+410/3,477/30, Write 11/38 and Node 13+71 remain separate from native operations.
+The failed updater audit has 67 facts; earlier runtime and draft audits retain
+145 and 41 checks. Recorded chronology has no conflict at POSIX second precision;
+this does not retrospectively restore CI21 Windows custody.
+
+Windows fails at Node VM initialization with “Cannot use import statement outside
+a module.” Its actual combined TAP has 61 passing tests and one failed file; the
+ten wrapper VM cases never register. Separate NSIS pure contracts pass 46 and
+Review diagnostic contracts 13. Build/package, Write, full Bun aggregate, original
+83/12, new draft three/one, installer/registry/replacement/uninstall and native
+crash-metadata queries are skipped. Native operations and Main launches are zero;
+this is not an assertion that the CI host spawned no processes. No HOME, installed
+payload or OS-restoration acceptance is available from this skipped native run.
+
+Frozen summaries under `codeshell-real-operation-cycles-20261016` are:
+
+- Web `ci-39042276064-web-independent-20261017/ci-39042276064-web-independent-audit.json`,
+  SHA-256 `798949c12fd8edd9762d37183f11308c5d2bb26fa7bd900ae34f218d3b5726c2`.
+- Mac `ci-39042276064-mac-independent-20261017/verified-summary.json`,
+  SHA-256 `b2d4a5871231b42e6ff6092da2c663029086027e7a8f28bfc1d8dbc6234b7d69`.
+- Linux `ci-39042276064-linux-panel-independent-20261017/settings-verified-failed-summary.json`,
+  SHA-256 `24b2f79cab9e6facdbd03c8602f46f3d132efe0ca6a895935e8c6d61d1bf1e0a`.
+- Windows `ci-39042276064-windows-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `169ffd5ea3c45ae99cb569ce0594fe1167ebefbb57f777ea6c544f09333f5571`.
+
+CI14 remains the latest fully passing matrix. Historical Setup `0xC0000005`, GC,
+inode differences and local discovery-incident effects/descendants remain unknown.
+Neither current macOS/Web success nor dedicated pure tests resolves those records.
+
+## CI23 — local test-harness preparation only
+
+Commit `bd1704b988ee68cafc61cbd513ba6417f3fd7c3e` changes only
+`scripts/run-isolated-node-smoke.test.mjs`: normalize CRLF before the same six-import
+whitelist, import removal and actual wrapper-body VM compilation. The production
+wrapper, flags, guards, signal authority and original ten cases are unchanged.
+One added pure case executes actual LF and CRLF forms through identical inert
+spies, comparing explicit success, bare refusal and unknown-flag refusal. Local
+11 pass. The separate local RED adapter's zero/two failure is an adapter error,
+not valid product RED; its corrected prepared form was stopped without execution.
+Actual CI22 Windows VM failure is ground truth, but the runner's raw wrapper bytes
+were not uploaded; no independent raw-byte CRLF observation is claimed.
+Author proof `codeshell-node-smoke-crlf-proof-20261017/verified-source-summary.json`
+has SHA-256 `9df22d819c93d9b3bd3f7092e842178e595799544fb1b4f1ed3f809075c101dc`.
+
+Root's exact nine-file guarded Node gate at bd170 passes 131, zero failures/skips.
+The frozen extension proof `ci23-frozen-local-crlf-extension-proof-20261017.json`,
+SHA-256 `fddf4a519718d014bb6f4e2820e9d71a0e5b350f0f394b528f3542c29e0567bf`,
+binds the single test delta, twenty unchanged source pins and syntax/lint/format.
+This is local pure validation, not fresh Windows or installer execution. Package,
+build, lock, workflow and production sources remain byte-identical to 07; the
+source-bound CI22 local component 33/61, fourteen typechecks and four safe static
+bundles are reused, with no new full build or native claim. Linux identity GC is
+unmodified and unknown. CI23 has not been pushed or executed; native/installer
+revalidation remains pending, and no retry or weakened gate is a recovery claim.
