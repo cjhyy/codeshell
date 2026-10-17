@@ -1,0 +1,49 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round18/evidence/traceapi-normal.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round18/evidence/traceapi-normal.first.exit.json",
+      "exitCode": 0,
+      "attempt": 1,
+      "completedGuard": true,
+      "testsPassed": 8,
+      "expectations": 23,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "existingTests": 0,
+      "focusedTests": 8,
+      "rawSha256": "6505f896fe066d81697e2e9a58800b18aa918064943951f2980568b03434b3e2",
+      "rawAndExitSavedBeforeInspection": true
+    }
+  ],
+  "cleanTotals": {
+    "shards": 1,
+    "testsPassed": 8,
+    "expectations": 23,
+    "existingTests": 0,
+    "focusedTests": 8,
+    "testsFailed": 0,
+    "testsSkipped": 0
+  },
+  "failedShards": [],
+  "skippedDirections": [],
+  "metadataFailures": [],
+  "scope": "Only an owned ordinary-success leaf adapter fixture with injected in-memory requester; no existing auth/scope test file execution, server/Host/Core runtime, actual fetch, Hub or model requests.",
+  "fixtureLimitations": [
+    "Self-owned page/detail objects are partial shapes used only for identity/pass-through observations, not a real Host schema-validation claim.",
+    "The first test title says four route paths but makes four calls to two route paths; its assertions and raw are preserved verbatim."
+  ],
+  "productChanges": false,
+  "reruns": 0
+}

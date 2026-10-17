@@ -1,0 +1,21 @@
+{
+  "frozenBase": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "mainHead": "67e09d1f6dda855b0d7e888769133128b0bc54ae",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "commits": [
+    "67e09d1f6 Merge commit '65691923fa629970ac26dc04e35362a9c4ab57a8' into codex/desktop/real-operation-cycles-20261016",
+    "ef1808285 docs: record CI13 cross-platform acceptance and Write label follow-up",
+    "f4cf3b625 fix(ci): preserve TSX suffixes in workflow test paths",
+    "0fb0d7bd9 test(desktop): gate Write byte labels on all native CI platforms",
+    "656310a7c fix(desktop): show UTF-8 byte counts in Write tool cards"
+  ],
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/src/renderer/tool-cards/FileToolCard.byte-count.test.tsx",
+    "packages/desktop/src/renderer/tool-cards/FileToolCard.tsx",
+    "scripts/check-workflow-test-paths.mjs"
+  ],
+  "primaryDirtyPreserved": true,
+  "productReruns": false
+}

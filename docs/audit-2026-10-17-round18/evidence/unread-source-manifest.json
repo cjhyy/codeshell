@@ -1,0 +1,77 @@
+{
+  "baseCommit": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "sourcePinCount": 10,
+  "scopeLimit": "Whole-file hashes identify bytes; reviewed scopes distinguish actual leaf runtime from static partial inspection. No full-file/transitive coverage claim.",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Instructions read; primary file pointer."
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Instructions read in full."
+    },
+    {
+      "path": "packages/web/src/hooks/remoteAppSync.ts",
+      "frozenSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+      "currentSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Three unread helpers lines 122-160 executed; other exports not called; entire zero-import file initialized."
+    },
+    {
+      "path": "packages/web/src/hooks/remoteAppSync.test.ts",
+      "frozenSha256": "b003d734c45e81ce318767d0fd2b97c252eadf8a38b9d015eec94da90ae8ae25",
+      "currentSha256": "b003d734c45e81ce318767d0fd2b97c252eadf8a38b9d015eec94da90ae8ae25",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Inventory and static unread test segment 81-105 only; no existing test execution."
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "frozenSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "currentSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Static only: unread state/callsite rg plus selected segments 544-546,685-709,800-826,1501-1535; no hook import or execution."
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "frozenSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "currentSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Static ordinary session.list producer 513-534 only; no module import or host/native/device execution."
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "frozenSha256": "8e8b9b24ab502bb598853abcb986125271bba2b34a378ab0f3fe9a1c26df90df",
+      "currentSha256": "8e8b9b24ab502bb598853abcb986125271bba2b34a378ab0f3fe9a1c26df90df",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Historical unread discussion/design 283-287,325-329 inspected via structured dedup and rg; source intent context, not current runtime proof."
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round3.md",
+      "frozenSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+      "currentSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Historical W11 exclusion, lines 26-35; no old experiment rerun."
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round13.md",
+      "frozenSha256": "ff3b9fff437939220add9cbeb2de54fa4408423c8e59908f676249ebcdaf87ab",
+      "currentSha256": "ff3b9fff437939220add9cbeb2de54fa4408423c8e59908f676249ebcdaf87ab",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Historical R61 exclusion, lines 10-15; no old experiment rerun."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentEqualsFrozen": true,
+      "reviewedScope": "Guarded runner executed once; hash pin does not claim full source audit."
+    }
+  ]
+}

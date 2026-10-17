@@ -1,0 +1,65 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "scope": "all inventoried docs/bugs Markdown and recursively parsed JSON leaves, including archives; current batch excluded",
+  "statistics": {
+    "files": 1995,
+    "markdownFiles": 1148,
+    "jsonFiles": 847,
+    "jsonStringLeaves": 253680,
+    "jsonScalarLeaves": 353952,
+    "readOrParseErrors": []
+  },
+  "inventorySha256": "7d1a157c7287c4a67a0ef7146fb82c7eae22d81b3601c884e261a0ae54220474",
+  "patterns": {
+    "exact_remote_trace_api": "createRemoteModelTraceApi|model-trace-api(?:\\.ts)?",
+    "normal_trace_filter_encoding": "(?:model[- ]trace|trace api|model history).{0,100}(?:URLSearchParams|cursor|encode|filter|查询|编码)|(?:URLSearchParams|查询|编码).{0,100}(?:model[- ]trace|model history)",
+    "trace_page_passthrough": "(?:model[- ]trace|model history).{0,100}(?:nextCursor|passthrough|透传|分页)"
+  },
+  "matchCounts": {
+    "exact_remote_trace_api": 5,
+    "normal_trace_filter_encoding": 0,
+    "trace_page_passthrough": 0
+  },
+  "matchingFiles": {
+    "exact_remote_trace_api": [
+      "docs/audit-2026-10-16/inventory.json",
+      "docs/audit-2026-10-17-round14/evidence/root-source-manifest.json",
+      "docs/audit-2026-10-17-round14/source-manifest.json"
+    ],
+    "normal_trace_filter_encoding": [],
+    "trace_page_passthrough": []
+  },
+  "contextsPerPatternCap": 20,
+  "contexts": {
+    "exact_remote_trace_api": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "locator": "$ [\"source_inventory\"][1243]",
+        "context": "packages/desktop/src/preload/model-trace-api.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "locator": "$ [\"source_inventory\"][2415]",
+        "context": "packages/web/src/model-trace-api.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/root-source-manifest.json",
+        "locator": "$ [\"files\"][5][\"path\"]",
+        "context": "packages/desktop/src/preload/model-trace-api.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "locator": "$ [\"files\"][26][\"path\"]",
+        "context": "packages/desktop/src/preload/model-trace-api.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "locator": "$ [\"workerSourceChecks\"][37][\"path\"]",
+        "context": "packages/desktop/src/preload/model-trace-api.ts"
+      }
+    ],
+    "normal_trace_filter_encoding": [],
+    "trace_page_passthrough": []
+  },
+  "limitations": "Pattern hits are an index, not proof of exhaustive semantic deduplication; context caps do not cap counts."
+}

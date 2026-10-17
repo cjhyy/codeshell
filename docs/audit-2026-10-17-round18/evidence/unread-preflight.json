@@ -1,0 +1,11 @@
+{
+  "baseCommit": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "sourcePath": "packages/web/src/hooks/remoteAppSync.ts",
+  "sourceSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+  "frozenSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+  "currentEqualsFrozen": true,
+  "sourceHasRuntimeImports": false,
+  "fixturePath": "docs/audit-2026-10-17-round18/evidence/unread-pure.test.ts",
+  "fixtureSha256": "1b09f1c3798c3e5b4f4fd98888f8033b73b759e97c288746c3fc93916e9b9b89",
+  "scope": "Metadata only: actual source bytes and absolute import target; no dependency/resolver probing and no product import."
+}

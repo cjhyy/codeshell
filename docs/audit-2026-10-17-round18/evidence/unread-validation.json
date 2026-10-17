@@ -1,0 +1,45 @@
+{
+  "baseCommit": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "relatedCount": 0,
+  "firstExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round18/evidence/unread-pure.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "exitReceipt": "evidence/unread-pure.first.exit.json",
+      "rawLog": "evidence/unread-pure.first.raw.log",
+      "fixture": "evidence/unread-pure.test.ts",
+      "exitCode": 0,
+      "pass": 9,
+      "expect": 35,
+      "fail": 0,
+      "skip": 0,
+      "guardCompleted": true,
+      "existingTests": 0,
+      "focusedTests": 9,
+      "directLeafTests": 8,
+      "mirroredCompositionTests": 1,
+      "rawLogSha256": "6f477992665d7710d6b3144e1d3d7a09172901cd418a98619dcc81f1f488d255",
+      "fixtureSha256": "1b09f1c3798c3e5b4f4fd98888f8033b73b759e97c288746c3fc93916e9b9b89",
+      "firstOutputSavedBeforeInspection": true
+    }
+  ],
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "successfulTests": 9,
+  "expectations": 35,
+  "existingTests": 0,
+  "focusedTests": 9,
+  "productReruns": 0,
+  "metadataPreflight": "evidence/unread-preflight.json",
+  "navigationFailures": [],
+  "metadataFailures": [],
+  "scopeLimit": "Only three zero-dependency leaf helpers on owned Sets and ids. One manually mirrored callsite composition, no actual hook/React/socket/history/UI/producer/network/native/model/user data/permissions workflow. Existing mixed test file not run."
+}

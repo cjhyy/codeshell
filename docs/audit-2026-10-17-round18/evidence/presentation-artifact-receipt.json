@@ -1,0 +1,75 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "artifacts": [
+    {
+      "path": "evidence/presentation-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "evidence/presentation-dedup.json",
+      "sha256": "ffbe05430d99564f5f9cf5bca7e3d331eb4230c21431ec8adb8b464a045a59ef",
+      "bytes": 143962
+    },
+    {
+      "path": "evidence/presentation-dedup.py",
+      "sha256": "75c00a2993ba1bac38bea2d2e3deed3cdbd238253841c0d90188a5f02dc33c55",
+      "bytes": 2731
+    },
+    {
+      "path": "evidence/presentation-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "evidence/presentation-focused.test.ts",
+      "sha256": "7b29dcff5dcbec4e92d7be5b4b2756b7e85662c7504097c5e5dc9a9d391805ec",
+      "bytes": 4763
+    },
+    {
+      "path": "evidence/presentation-navigation-skip.md",
+      "sha256": "9aace7e3459c57534adb1a0d0aa809190d0db97c581cb55acff64012cf6b04e7",
+      "bytes": 1558
+    },
+    {
+      "path": "evidence/presentation-preflight.json",
+      "sha256": "a96fcd9d8132aa4714aace31710941a9ac92a512d4aab32d72c9a334040cd735",
+      "bytes": 921
+    },
+    {
+      "path": "evidence/presentation-pure.first.exit.json",
+      "sha256": "68ab8115aaf40c77e76b46545464f37ce9ce5c7bd2c4c309b1c0c5fd5099f828",
+      "bytes": 490
+    },
+    {
+      "path": "evidence/presentation-pure.first.raw.log",
+      "sha256": "7d3c3d3027ae54fc34363f7320c22c8e62710f2235127a6468db4cb7ce89c1b6",
+      "bytes": 1563
+    },
+    {
+      "path": "evidence/presentation-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "evidence/presentation-source-manifest.json",
+      "sha256": "658679d962ea547236d14bd7d748370c2ace7f413b207864d0cb274a27e7f543",
+      "bytes": 5925
+    },
+    {
+      "path": "evidence/presentation-validation.json",
+      "sha256": "b1d23c9e29960fb0b4725bac4f552ac3f0e09f056f5398c813a64b3aa98e9e04",
+      "bytes": 1793
+    },
+    {
+      "path": "presentation.md",
+      "sha256": "91f8c12fbd57bd72fcf3fa85c5082f3da728121879d80295bcdec1e2c5cad2bf",
+      "bytes": 5144
+    }
+  ],
+  "artifactCount": 13,
+  "scope": "Only presentation.md and evidence/presentation-* owned; receipt excludes itself; no Git/product/dependency mutation"
+}
