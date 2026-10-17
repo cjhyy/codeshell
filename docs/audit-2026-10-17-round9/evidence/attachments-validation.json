@@ -1,0 +1,149 @@
+{
+  "sourceBase": "248d091202869c07274adedf4fd50403105f1b1f",
+  "confirmedFindings": [
+    {
+      "id": "ATT-R9-01",
+      "priority": "P3",
+      "title": "Workspace spaces split complete generated-artifact paths into wrong attachment references",
+      "file": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+      "line": 56,
+      "evidence": "Production detector + owned temporary files; producer/UI propagation source-only"
+    }
+  ],
+  "runs": [
+    {
+      "name": "attachments-path-projection",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.test.ts"
+      ],
+      "attempt": 1,
+      "sourceBase": "248d091202869c07274adedf4fd50403105f1b1f",
+      "kind": "focused observations and controls",
+      "fixtures": [
+        {
+          "path": "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.test.ts",
+          "sha256": "ecb14ba129ab0cb37ab0072eb39c59ea93df42acc21fc9fc86638f4a0a1f3fec"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.first.log",
+      "rawLogSha256": "a88816f419d24216895fc01c7208ce6f37622e125faaa95b94c99ec252dcaaa7",
+      "exitFile": "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.first.exit.txt",
+      "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 5,
+      "expectCalls": 24,
+      "skipped": 0,
+      "failures": 0,
+      "guardedCompletionPresent": true
+    },
+    {
+      "name": "attachments-existing-baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/attachmentSession.test.ts",
+        "packages/desktop/src/renderer/tool-cards/attachments.test.ts",
+        "packages/desktop/src/renderer/chat/attachments.test.ts"
+      ],
+      "attempt": 1,
+      "sourceBase": "248d091202869c07274adedf4fd50403105f1b1f",
+      "kind": "existing targeted baseline",
+      "fixtures": [
+        {
+          "path": "packages/desktop/src/renderer/attachmentSession.test.ts",
+          "sha256": "2df41548b7bcb5ae5ae21a8ba8a557ee8e025fd4803de87ef11ca72ba9a919eb"
+        },
+        {
+          "path": "packages/desktop/src/renderer/tool-cards/attachments.test.ts",
+          "sha256": "4430bdf085f1387e38385cf91474127401c20a9cc102f440c684ffc91802eeae"
+        },
+        {
+          "path": "packages/desktop/src/renderer/chat/attachments.test.ts",
+          "sha256": "6148f89bf5f81ebdb0cb00863222c20e93ebeabaf48dc7171ff3b9147d5d54e9"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round9/evidence/attachments-existing-baseline.first.log",
+      "rawLogSha256": "0bb375d425d0fbb0d0cff3efbc6708f9c17582b200e9e7599617b51649990153",
+      "exitFile": "docs/audit-2026-10-17-round9/evidence/attachments-existing-baseline.first.exit.txt",
+      "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 40,
+      "expectCalls": 79,
+      "skipped": 0,
+      "failures": 0,
+      "guardedCompletionPresent": true
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 2,
+    "tests": 45,
+    "newFocusedTests": 5,
+    "baselineTests": 40,
+    "expectCalls": 103,
+    "failures": 0,
+    "skipped": 0,
+    "failedShards": 0,
+    "retries": 0
+  },
+  "scope": "Actual renderer detector and Core ordinary metadata functions; owned temporary files and synthetic strings only. No generator/provider, decoder, network, IPC, Electron, UI mount, native open, auth/security/custody experiment, dependency build, typecheck, lint or full suite.",
+  "firstRunPolicy": "Both combined stdout/stderr logs and exit files saved before inspection. No failure or retry occurred.",
+  "sourceManifest": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "bytes": 6246,
+      "sha256": "1f806623cd40c6be1fcb5f739db67488855c7f659b5c51b63e1ebe882113dd1b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-assemble.py",
+      "bytes": 6191,
+      "sha256": "060b24fffe4be72075bc32a4b2a288b1241e05b168c6d6f23ef39509fe608eac"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+      "bytes": 104088,
+      "sha256": "67ca4c052cf37ea6f219a9604402dcbff6c6a38cdf7d6a35b76a18981bb0a270"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.py",
+      "bytes": 4189,
+      "sha256": "197ad04df19e82c1558af5a587ef745c352b26cc025c9e0bc450c34b18b36614"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-existing-baseline.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-existing-baseline.first.log",
+      "bytes": 3886,
+      "sha256": "0bb375d425d0fbb0d0cff3efbc6708f9c17582b200e9e7599617b51649990153"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.first.log",
+      "bytes": 933,
+      "sha256": "a88816f419d24216895fc01c7208ce6f37622e125faaa95b94c99ec252dcaaa7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-path-projection.test.ts",
+      "bytes": 5683,
+      "sha256": "ecb14ba129ab0cb37ab0072eb39c59ea93df42acc21fc9fc86638f4a0a1f3fec"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+      "bytes": 7196,
+      "sha256": "936602d9050215292aa54af5bffa974b4203de0f24179c075ff8993d38fd3842"
+    }
+  ]
+}

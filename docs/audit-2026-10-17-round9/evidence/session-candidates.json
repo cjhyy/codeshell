@@ -1,0 +1,25 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "unconfirmed": [],
+  "excludedDuplicates": [
+    {
+      "title": "Transcript replay丢失is_error",
+      "reference": "docs/review-2026-07-09/pre-beta-01-core.md:13",
+      "reason": "原M1已精确记录writer/replay/wire路径，不另计；本轮只读。"
+    },
+    {
+      "title": "旧synthetic duplicate导致fork拒绝",
+      "reference": "bugs/2026-07-13-repo-audit.md:283",
+      "reason": "已有多reader持久化repair问题，当前reader有内存归一化；不另测旧方向。"
+    },
+    {
+      "title": "snip prefix工具配对与数组summary遗漏",
+      "reference": "docs/audit-2026-10-17-round4/context.md",
+      "reason": "已确证CTX1/CTX2，本轮排除。"
+    }
+  ],
+  "staticLookupNotes": [
+    "只读预检最初假定root node_modules/nanoid，组合existence命令退出1且无stdout；后续只读metadata确认依赖在packages/core/node_modules，未安装/修复/替换依赖。测试只导入source relative路径，不依赖Link dist。",
+    "静态查找过不存在的旧 llm/facade.ts、llm/model-facade.ts、engine/run-model*.ts、engine/turn-loop.truncated.test.ts、round4/context-tool-pairs.test.ts 和未匹配zsh glob；立即跳过这些地址并采用rg实际文件库存。不是产品或fixture运行失败，没有补跑。"
+  ]
+}

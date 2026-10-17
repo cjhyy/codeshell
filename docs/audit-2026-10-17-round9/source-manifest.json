@@ -1,0 +1,603 @@
+{
+  "baseline": "248d091202869c07274adedf4fd50403105f1b1f",
+  "assemblyWorkingTreeHead": "6e4b663dc0c6e538a8b754aa53874e4926134b80",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/colorizer.ts",
+      "bytes": 1045,
+      "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "bytes": 3951,
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/notes.ts",
+      "bytes": 13654,
+      "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "bytes": 5823,
+      "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/pricing.ts",
+      "bytes": 1919,
+      "sha256": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "bytes": 17975,
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "bytes": 2891,
+      "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-tracker.test.ts",
+      "bytes": 2797,
+      "sha256": "928cb20ad21e27dfdf04ca4a234716fe4846fbc99c1bcc6e418a130178a2d383",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/data/model-metadata.json",
+      "bytes": 8129,
+      "sha256": "126aebfb9e9784a826d19fdd81c3242c01909ab61084f77070c4fe78e5e1e3f0",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/data/model-metadata.ts",
+      "bytes": 4821,
+      "sha256": "34284ceaa39246c9589546860c2d6631124f80879d159e959f40a8402f70cd12",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/data/openrouter-models.json",
+      "bytes": 6888,
+      "sha256": "4ca5e70176096242775637cb32e63fafb01a651746190290d924c2873ce98c23",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/data/openrouter-models.ts",
+      "bytes": 3116,
+      "sha256": "535dcbb41dbb09bf365e1ec87b2b50f89ac3fe12e6caabf100b1927d419061d7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/cost-store.ts",
+      "bytes": 979,
+      "sha256": "5d4a1afb396d82cfd296b4b0ff58f5dc15a13b730259ab6c3088a393ced16c81",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/image-policy.ts",
+      "bytes": 11080,
+      "sha256": "2dbedfe14cecc9b2fa672bfdffd3e2fe31e9128a3b8585cfa3d2ca6077ffd5cc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.ts",
+      "bytes": 15894,
+      "sha256": "5ea44b23c9764bf2aa3177b4f5cddc74e969e8cbe551a79397cba91ed3b44cc5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+      "bytes": 4854,
+      "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "bytes": 6970,
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "bytes": 9480,
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/streaming-tool-queue.ts",
+      "bytes": 5208,
+      "sha256": "afcd8fa36bed1a46c23707ff1fe94db558babe6c1549e3953f7c28100a94b429",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "bytes": 1722,
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop-tool-cap.test.ts",
+      "bytes": 6897,
+      "sha256": "905a8b46c07eb60e33b90b288623e39b954f4e631267be4563b6e9dd95451cc4",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27572,
+      "sha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "bytes": 22737,
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/logging/logger.ts",
+      "bytes": 17090,
+      "sha256": "9b00534985c026de06feecc88783f796decb399fa5c00715166104318cb3a05d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+      "bytes": 2097,
+      "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.side-fork.test.ts",
+      "bytes": 9272,
+      "sha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109011,
+      "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript-tool-result-normalization.test.ts",
+      "bytes": 2704,
+      "sha256": "437a4b98519a7e29eea8f4845f6f52ee34414457cc17b1942978285edc46b8ac",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.range-archive.test.ts",
+      "bytes": 17643,
+      "sha256": "3b4fa3978c2fa87b25061876ae6105a5a8413647cc77c40116cbdd8aa8099049",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.subagent.test.ts",
+      "bytes": 2896,
+      "sha256": "dd516c969129974797b3b6f62a4dc737f2ad23e409374d11c11c7947f65a60b1",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/usage.test.ts",
+      "bytes": 8502,
+      "sha256": "56f833d7af2d990b9a712d441f342def79d9dc4ce2f712f81ebaa36ff3489610",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "bytes": 5944,
+      "sha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-discovery.ts",
+      "bytes": 1315,
+      "sha256": "b53b6df6505cab9b24f2447de997e1d71d3c4963b9801ddb3ee37a22450cebe6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "bytes": 20093,
+      "sha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "bytes": 39835,
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/tool-search.test.ts",
+      "bytes": 27532,
+      "sha256": "a0c178ef855c114baaf823f25fa7e09c3385056979f03087e5ff5d8369d98535",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/tool-search.ts",
+      "bytes": 9319,
+      "sha256": "df0379ef943223181dc497de3c69de5b9564995f0fe8d9196497100ac02e494b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "bytes": 74360,
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry-defaults.test.ts",
+      "bytes": 5313,
+      "sha256": "23525211ac278df635619ac4afe2803b3f7bc9288697d8f7680047095eb7fb82",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry-result-protocol.test.ts",
+      "bytes": 7762,
+      "sha256": "1571d2de90747ded93d25b1b2f8a26a045ec89b895698e139e7ed972888b492e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "bytes": 10363,
+      "sha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/run-tool-surface.test.ts",
+      "bytes": 11974,
+      "sha256": "b5896d70a69fe1e5e3761ebd0f64bd9d4ce278ecc67dd3ad1f9fd0da783eb651",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/run-tool-surface.ts",
+      "bytes": 4619,
+      "sha256": "3cdb386776c15cc56bd0c6434c476e1ce93ec65b643b87a5a8c0c55471854874",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/testing/tool-registry-harness.ts",
+      "bytes": 2715,
+      "sha256": "4073c5896e9539763adb5013009b26bf6db919d08f918cff3fa170b1f632dd55",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/validate-tool-metadata.ts",
+      "bytes": 3112,
+      "sha256": "4adbf5cb18b548a6d03d4271c957e7757b92dddfb84f9f2093acc2d95c1f9709",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/validation.ts",
+      "bytes": 29646,
+      "sha256": "638313d0fc47a4c2b1a91e59b5dbe624081943c866613295c47e4db80bff6920",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 50794,
+      "sha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/usage-history-service.ts",
+      "bytes": 1277,
+      "sha256": "eb4e8a13f62cb5b964d3b83d857d5351088d15e27a102c1f57148fb6fab1c7c4",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122444,
+      "sha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/attachmentSession.test.ts",
+      "bytes": 958,
+      "sha256": "2df41548b7bcb5ae5ae21a8ba8a557ee8e025fd4803de87ef11ca72ba9a919eb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/attachmentSession.ts",
+      "bytes": 605,
+      "sha256": "16123d0cf520e24ba4dabd60e2cd21c5df391b9c41fd462215848a231c3c06ac",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.test.ts",
+      "bytes": 7633,
+      "sha256": "6148f89bf5f81ebdb0cb00863222c20e93ebeabaf48dc7171ff3b9147d5d54e9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/mentionReferences.ts",
+      "bytes": 3274,
+      "sha256": "398ded03971e0424831aa3d3371ac50ef4551839ad58525d022d23f8c14aaedb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/translate.ts",
+      "bytes": 1546,
+      "sha256": "9f2ee42007e2777fcfd7d0b6b386db8adfcaad7a4c7b45b2a53251c4d46fa26c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx",
+      "bytes": 5016,
+      "sha256": "489d09f48b7ffcc4ae94fc37f26fb9f87925d2a8dab496c0bec0f75062cc288e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "bytes": 4953,
+      "sha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/attachments.test.ts",
+      "bytes": 7333,
+      "sha256": "4430bdf085f1387e38385cf91474127401c20a9cc102f440c684ffc91802eeae",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+      "bytes": 4847,
+      "sha256": "cca8011a0aee4b91ac245d26d7fc8703ead17f21b58c5756b0436df01c8c0ab6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "bytes": 4127,
+      "sha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/uiLanguage.ts",
+      "bytes": 427,
+      "sha256": "69fd4c8efa753c804fc7b59b522b808f57a2e80a360c8d40d4e04930301ed3a3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/shared/media-preview.ts",
+      "bytes": 1494,
+      "sha256": "0642761255832197fa44a9ab82815210779a88515cd1f272fb49e6ca96d84ef3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "tests/cost-tracker.test.ts",
+      "bytes": 2394,
+      "sha256": "5f043245cff39a69f8d7354a83069e0ccc349546fc0592eaaa33e6bea77e731d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "tests/run-manager-usage.test.ts",
+      "bytes": 23525,
+      "sha256": "c827a458ea378b104e759a738b2d2eee714b69291e720cfaff760a57cf6a7368",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ],
+  "unresolvedReferences": [],
+  "note": "Frozen Git blob SHA and current equality are distinct. Selected source inventory does not imply full-depth/full-file coverage."
+}

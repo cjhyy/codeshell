@@ -1,0 +1,32 @@
+[
+  {
+    "id": "COST-R9-01",
+    "severity": "P3",
+    "title": "独立 CostTracker.record 丢失 OpenRouter 完整模型标识，累计与持久化估价错误",
+    "file": "packages/core/src/cost-tracker.ts",
+    "line": 115,
+    "status": "confirmed",
+    "scope": "Exported standalone/unbound CostTracker API. EngineRuntime binds UsageLedger and its primary accounting route is explicitly excluded.",
+    "trigger": "new CostTracker().record(\"google/gemini-4-argon\", 1000000, 1000000), using the committed bundled snapshot unchanged.",
+    "expected": "Preserve the resolved full model identity for cost calculation so recording the same token usage agrees with estimateForTokens and bundled snapshot.",
+    "actual": "estimateForTokens(full ID)=12; record stores gemini-4-argon, subsequent getEstimatedCost/serialize/format uses DEFAULT_PRICING and reports 18 without unknown-model warning. Restore preserves the erroneous pricing key.",
+    "contractEvidence": [
+      "packages/core/src/index.ts:759 public export",
+      "packages/core/src/cost-tracker.ts:36 documented full vendor/model lookup precedence",
+      "packages/core/src/data/model-metadata.ts:103 full OpenRouter IDs price from snapshot",
+      "packages/core/src/cost-tracker.test.ts:51 standalone record/cost accumulation API baseline"
+    ],
+    "runtimeEvidence": [
+      "root-usage-contracts.test.ts",
+      "root-usage-contracts.first.log"
+    ],
+    "controls": [
+      "direct devstral-medium estimate and recorded total both 2",
+      "same full ID in an in-memory bound UsageLedger totals 12, with one request",
+      "tokens remain correct; only standalone pricing identity is lost"
+    ],
+    "limits": "Pure local bundled metadata arithmetic, not current external price validation or provider billing. No network, models, SDK request, host UI, user data, shared build or pricing update. Main ledger is correct in the exercised control.",
+    "dedup": "All historical docs/bugs .md and parsed .json searched. May 30 entry $[32] describes redundant lookup inefficiency, not lost pricing identity. No matching root cause found in bounded contexts.",
+    "suggestedFix": "Retain full pricing identity/resolved pricing separately from the canonical display/grouping name; use it in standalone totals and persisted records."
+  }
+]

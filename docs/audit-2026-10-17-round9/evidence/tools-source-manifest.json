@@ -1,0 +1,150 @@
+{
+  "frozenCommit": "248d091202869c07274adedf4fd50403105f1b1f",
+  "scope": "Selected read sources only; transitive dependency preflight is not a source review claim",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "readScope": "whole",
+      "frozenBlobSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobBytes": 17639,
+      "frozenLines": 217,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "frozenBlobBytes": 10363,
+      "frozenLines": 296,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/tool-search.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "df0379ef943223181dc497de3c69de5b9564995f0fe8d9196497100ac02e494b",
+      "frozenBlobBytes": 9319,
+      "frozenLines": 238,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/tool-search.test.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "a0c178ef855c114baaf823f25fa7e09c3385056979f03087e5ff5d8369d98535",
+      "frozenBlobBytes": 27532,
+      "frozenLines": 628,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/run-tool-surface.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "3cdb386776c15cc56bd0c6434c476e1ce93ec65b643b87a5a8c0c55471854874",
+      "frozenBlobBytes": 4619,
+      "frozenLines": 125,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/run-tool-surface.test.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "b5896d70a69fe1e5e3761ebd0f64bd9d4ce278ecc67dd3ad1f9fd0da783eb651",
+      "frozenBlobBytes": 11974,
+      "frozenLines": 258,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-discovery.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "b53b6df6505cab9b24f2447de997e1d71d3c4963b9801ddb3ee37a22450cebe6",
+      "frozenBlobBytes": 1315,
+      "frozenLines": 35,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/validate-tool-metadata.ts",
+      "readScope": "whole; no path-policy experiments",
+      "frozenBlobSha256": "4adbf5cb18b548a6d03d4271c957e7757b92dddfb84f9f2093acc2d95c1f9709",
+      "frozenBlobBytes": 3112,
+      "frozenLines": 79,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/validation.ts",
+      "readScope": "whole; strict security semantics excluded",
+      "frozenBlobSha256": "638313d0fc47a4c2b1a91e59b5dbe624081943c866613295c47e4db80bff6920",
+      "frozenBlobBytes": 29646,
+      "frozenLines": 873,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "readScope": "1-150 only",
+      "frozenBlobSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "frozenBlobBytes": 39835,
+      "frozenLines": 1233,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/testing/tool-registry-harness.ts",
+      "readScope": "whole",
+      "frozenBlobSha256": "4073c5896e9539763adb5013009b26bf6db919d08f918cff3fa170b1f632dd55",
+      "frozenBlobBytes": 2715,
+      "frozenLines": 83,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry-defaults.test.ts",
+      "readScope": "whole; read only, not executed",
+      "frozenBlobSha256": "23525211ac278df635619ac4afe2803b3f7bc9288697d8f7680047095eb7fb82",
+      "frozenBlobBytes": 5313,
+      "frozenLines": 150,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry-result-protocol.test.ts",
+      "readScope": "whole; read only, not executed",
+      "frozenBlobSha256": "1571d2de90747ded93d25b1b2f8a26a045ec89b895698e139e7ed972888b492e",
+      "frozenBlobBytes": 7762,
+      "frozenLines": 220,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "readScope": "1-115",
+      "frozenBlobSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "frozenBlobBytes": 3951,
+      "frozenLines": 97,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "readScope": "1035-1075 only",
+      "frozenBlobSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "frozenBlobBytes": 210013,
+      "frozenLines": 5072,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "readScope": "1380-1420 only; registration metadata only",
+      "frozenBlobSha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "frozenBlobBytes": 74360,
+      "frozenLines": 1923,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "readScope": "ToolRegistry export at line 138 only",
+      "frozenBlobSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "frozenBlobBytes": 27572,
+      "frozenLines": 862,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "readScope": "whole; dependency metadata",
+      "frozenBlobSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "frozenBlobBytes": 3452,
+      "frozenLines": 110,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ]
+}

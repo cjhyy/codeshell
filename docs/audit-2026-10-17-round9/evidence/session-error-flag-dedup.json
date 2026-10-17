@@ -1,0 +1,251 @@
+{
+  "pattern": "is_error|error flag|错误标志|错误标记|replay.*error|resume.*error",
+  "filesSearched": 1000,
+  "hits": [
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "pointerOrLine": "177",
+      "text": "> - 其余安全/卫生/健壮(全带回归测,见下方 fix 速查):R-1 三写入点· readCookie DoS· cookie 域围栏· 非数组 secret 登出· 记忆漏 redact· devices.json/lease 0o600· arena validatePath realpath· bg-shell sessionId 遍历守卫· parseDataUrl 契约· saveCatalogEntry 崩· resume 裸 SyntaxError· token-counter catch· 非正数值参数 footgun 族(7 处)· MCP/web-fetch 接 abort signal。"
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "pointerOrLine": "444",
+      "text": "| 🟠 健壮 | resume() 损坏 state.json 抛裸 SyntaxError(逃过只 catch SessionError 的调用方→session 打不开);state.json 唯一非原子写在 create() | resume 读包 try/catch→SessionError;create() 改 tmp+rename | d423319d |"
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "pointerOrLine": "587",
+      "text": "| **send_input 续接(用户新 merge 特性,read-only review)** | resume 解析正确(registry→on-disk→clean error)+**重 resolve tool/skill scope 防 restricted role 续接时夺回全工具集**(安全要点已处理)+role-removed 降级 bare continuation;transcript-translator switch+default 不崩、display-only;namespacePluginSkills 已namespaced 不双前缀(已测 agent.resolve-type:78)。**1 个真发现**:缺「agent 在 running」并发守卫(§2.4.5,已标注给用户,未擅改) |"
+    },
+    {
+      "path": "docs/archive/core-modules/run.md",
+      "pointerOrLine": "126",
+      "text": "- **`resume()` input must match the wait state.** A live (suspended) run rejects with a clear error if you pass `userInput` to a `waiting_approval` run (or vice versa) — falling through would re-enqueue a duplicate execution and leak the handle. Concurrent resumes (double-click approve) or resume-racing-cancel are serialized per run via `resolvingRuns`; the late arrival is rejected."
+    },
+    {
+      "path": "docs/archive/core-modules/session.md",
+      "pointerOrLine": "38",
+      "text": "  resume(sessionId: string): SessionBundle;       // throws SessionError if missing"
+    },
+    {
+      "path": "docs/archive/core-modules/session.md",
+      "pointerOrLine": "140",
+      "text": "- **`resume` throws, `exists`/`readCwd` don't.** Use `exists()` (one cheap stat) to branch between resume and create-with-explicit-id; don't catch `SessionError` to probe."
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "pointerOrLine": "131",
+      "text": "运行侧在 S4/S14：ContextLimit recovery 失败、model abort/error、outer catch 都先补当前内存 messages，见 `packages/core/src/engine/turn-loop.ts:716`、`packages/core/src/engine/turn-loop.ts:731`、`packages/core/src/engine/turn-loop.ts:735`、`packages/core/src/engine/turn-loop.ts:1210`。TurnLoop 内部版本同样先收集全数组 answered ids，再把 orphan 的 synthetic results 插到 assistant message 后面，并设置 `is_error: true`，见 `packages/core/src/engine/turn-loop.ts:1385`、`packages/core/src/engine/turn-loop.ts:1392`、`packages/core/src/engine/turn-loop.ts:1402`、`packages/core/src/engine/turn-loop.ts:1415`、`packages/core/src/engine/turn-loop.ts:1420`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "pointerOrLine": "133",
+      "text": "不变量：补丁只能把状态推向“可恢复的 error/abort/下一次模型请求”，不能伪装工具成功。`is_error: true` 是关键，否则模型会把 synthetic text 当成功输出，见 `packages/core/src/engine/patch-orphaned-tools.ts:95`、`packages/core/src/engine/turn-loop.ts:1417`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "pointerOrLine": "54",
+      "text": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1061` |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "pointerOrLine": "306",
+      "text": "- 现状：当前 TurnLoop 主链路用 `toolResultToBlock()`，会保留 `contentBlocks` 并给错误设置 `is_error`。`ToolExecutor.resultsToMessages()` 仍把 result/error 简化为纯文本，忽略 `contentBlocks` 和 `isError`。本轮 `rg \"resultsToMessages(\"` 未发现源码调用，但旧文档仍引用。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "pointerOrLine": "308",
+      "text": "- 为什么可疑：如果后续 SDK/测试/重构重新使用这个 helper，image result 会退化成文本，错误 result 也可能少掉 provider wire 层 `is_error`，破坏 I-01/I-17 的“错误不能伪装成功”语义。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "pointerOrLine": "179",
+      "text": "`ToolExecutor.resultsToMessages()` 仍把 tool result 转成纯文本 `tool_result` blocks，不保留 `contentBlocks`，也不设置 `is_error`；当前 production 主链路不调用它，而是由 TurnLoop 使用 `toolResultToBlock()`，后者保留 `contentBlocks` 并设置 `is_error`。因此这是 P3 维护债，不是现行主链路 runtime bug。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "pointerOrLine": "196",
+      "text": "- 当前主链路 `toolResultToBlock()` 明确保留 `result.contentBlocks`，并在 `result.isError || result.error` 时设置 `block.is_error = true`：`packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:181`、`packages/core/src/engine/turn-loop.ts:183`、`packages/core/src/engine/turn-loop.ts:185`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "pointerOrLine": "79",
+      "text": "- 问题：保留的 helper 把 tool result 简化为纯文本 block，丢 `contentBlocks` 和 `is_error`，而主链路已使用 `toolResultToBlock()`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "pointerOrLine": "81",
+      "text": "- 修复方向：先确认它没有外部 API 依赖；若无，删除 `ToolExecutor.resultsToMessages()` 并同步更新旧架构文档引用。若要保留 helper，则把转换逻辑委托给 `toolResultToBlock()` 或抽一个共享转换函数，确保 `contentBlocks`、`is_error` 和错误文本契约一致。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/logs/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/settings-navigation/1/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn().\", \"verify_reason\": \"Line 71 uses `this.rootUri.replace(\\\"file://\\\", \\\"\\\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/settings-navigation/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/9/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn().\", \"verify_reason\": \"Line 71 uses `this.rootUri.replace(\\\"file://\\\", \\\"\\\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/11/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/12/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or (b) re-attempt with a simpler prompt or raise an error.\", \"verify_note\": \"The issue is real but low-impact: (1) It's already logged, so not truly \\\"silent\\\"; (2) Returning empty array is graceful and consistent with error handling elsewhere (line 67); (3) The scenario is edge-case - requires model to ignore explicit instruction after maxToolRounds. However, the reviewer is correct that better observability is possible. A more explicit check after line 199 (if (!f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup-corpus.json",
+      "pointerOrLine": "/matches/13/context",
+      "text": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup-corpus.json",
+      "pointerOrLine": "/matches/17/context",
+      "text": "- 证据：`ContentBlock.is_error` 用于让 provider 设置 Anthropic `is_error:true`（`types.ts:17`）；live path 在 `toolResultToBlock()` 设置（`turn-loop.ts:177`）；但 transcript 落盘只存 `result/error/contentBlocks`，不存 `isError/is_error`（`transcript.ts:89`）；replay 时即使有 `error` 也只拼 `\"Error: ...\"`、未设 `is_error`（`transcript.ts:171`）；Anthropic provider 只在 block 有 `is_error` 时转发（`anthropic.ts:412"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/0/match",
+      "text": "- 证据：`ContentBlock.is_error` 用于让 provider 设置 Anthropic `is_error:true`（`types.ts:17`）；live path 在 `toolResultToBlock()` 设置（`turn-loop.ts:177`）；但 transcript 落盘只存 `result/error/contentBlocks`，不存 `isError/is_error`（`transcript.ts:89`）；replay 时即使有 `error` 也只拼 `\"Error: ...\"`、未设 `is_error`（`transcript.ts:171`）；Anthropic provider 只在 block 有 `is_error` 时转发（`anthropic.ts:412"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/52/match",
+      "text": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/53/match",
+      "text": "- 现状：当前 TurnLoop 主链路用 `toolResultToBlock()`，会保留 `contentBlocks` 并给错误设置 `is_error`。`ToolExecutor.resultsToMessages()` 仍把 result/error 简化为纯文本，忽略 `contentBlocks` 和 `isError`。本轮 `rg \"resultsToMessages(\"` 未发现源码调用，但旧文档仍引用。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/54/match",
+      "text": "`ToolExecutor.resultsToMessages()` 仍把 tool result 转成纯文本 `tool_result` blocks，不保留 `contentBlocks`，也不设置 `is_error`；当前 production 主链路不调用它，而是由 TurnLoop 使用 `toolResultToBlock()`，后者保留 `contentBlocks` 并设置 `is_error`。因此这是 P3 维护债，不是现行主链路 runtime bug。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/58/match",
+      "text": "- 当前主链路 `toolResultToBlock()` 明确保留 `result.contentBlocks`，并在 `result.isError || result.error` 时设置 `block.is_error = true`：`packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:181`、`packages/core/src/engine/turn-loop.ts:183`、`packages/core/src/engine/turn-loop.ts:185`。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/59/match",
+      "text": "- 问题：保留的 helper 把 tool result 简化为纯文本 block，丢 `contentBlocks` 和 `is_error`，而主链路已使用 `toolResultToBlock()`。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "pointerOrLine": "/rows/60/match",
+      "text": "ecutor.resultsToMessages()` 并同步更新旧架构文档引用。若要保留 helper，则把转换逻辑委托给 `toolResultToBlock()` 或抽一个共享转换函数，确保 `contentBlocks`、`is_error` 和错误文本契约一致。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-targeted-dedup.json",
+      "pointerOrLine": "/0/match",
+      "text": "- 证据：`ContentBlock.is_error` 用于让 provider 设置 Anthropic `is_error:true`（`types.ts:17`）；live path 在 `toolResultToBlock()` 设置（`turn-loop.ts:177`）；但 transcript 落盘只存 `result/error/contentBlocks`，不存 `isError/is_error`（`transcript.ts:89`）；replay 时即使有 `error` 也只拼 `\"Error: ...\"`、未设 `is_error`（`transcript.ts:171`）；Anthropic provider 只在 block 有 `is_error` 时转发（`anthropic.ts:412`）。"
+    },
+    {
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "pointerOrLine": "453",
+      "text": "过大等失败应返回结构化 error/抛出受控错误，使 `ToolResult.isError` 与 provider 的错误标志一致；当前"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "pointerOrLine": "13",
+      "text": "### M1 transcript replay 丢失 errored tool_result 的 wire-level 错误标志（确证）"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "pointerOrLine": "14",
+      "text": "- 证据：`ContentBlock.is_error` 用于让 provider 设置 Anthropic `is_error:true`（`types.ts:17`）；live path 在 `toolResultToBlock()` 设置（`turn-loop.ts:177`）；但 transcript 落盘只存 `result/error/contentBlocks`，不存 `isError/is_error`（`transcript.ts:89`）；replay 时即使有 `error` 也只拼 `\"Error: ...\"`、未设 `is_error`（`transcript.ts:171`）；Anthropic provider 只在 block 有 `is_error` 时转发（`anthropic.ts:412`）。"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "pointerOrLine": "16",
+      "text": "- 建议：`appendToolResult` 持久化 `isError`；`loadMessages()` 在 `error` 或标志存在时设 `block.is_error=true`；补 transcript roundtrip 回归测试。"
+    },
+    {
+      "path": "docs/review-2026-10-12/automation-round5.md",
+      "pointerOrLine": "54",
+      "text": "`resume-outcome.test.ts` 第一项让 fake transport 返回真实结构的 JSON-RPC InternalError（`-32603`，初始化失败文本），实际 Main 闭包及真实 runner/scheduler 产生 `[job_start, job_end]`，实际 notification mapper 产出 `automation.completed`。见 `resume-rejected-observed.json`。本项没有压缩时钟，也没有使用 A1 的超时条件。"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-preflight-round22.md",
+      "pointerOrLine": "91",
+      "text": "**只读重试修订（launcher bdca43…及11bc7…）：** 只把 `info()`读取包在初次调用+最多3次重试中；仅匹配精确 `Execution context was destroyed, most likely because of a navigation.`且owned进程未退出才重试，每次写harnessContextRetries。其它错误仍抛。`call(method,arg)`和native preload cancel均未重试；startRun、enable、abortDirect、resumeControl、shutdown等mutation没有被自动重放。新增firstWindow等待、stdout/stderr/startup-error/failure-snapshot只用于支架诊断，没有替换真实ready/predicate/timeout或注入Host异步gate。info读取仍只是已注册全局对象的状态观测。"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-bound-quality-round20.md",
+      "pointerOrLine": "9",
+      "text": "问题是 **native project-bound Session 的冷 Goal continuation 没有重新取得 Host workspace authority，随后隐藏了正确的安全拒绝**。不应把 Core 的 bound guard 写成缺陷，也不应把 `paused:false` 单独叫做“正在运行”。正式 Resume 的驱动语义有明确实现和正常控制：Core [server.ts:2684](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2684) 将 idle Goal 的 `paused:false` 定义为 drive request，在 2757 排队 synthetic turn。合法 cold Session 无法执行这一恢复操作，而且该次失败没有 error/暂停回滚，足以支持 P2；不是纯偏好或显示摩擦。"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-bound-quality-round20.md",
+      "pointerOrLine": "40",
+      "text": "重要表述边界：公开 RPC 返回的是 `{ok:true,updated:true,paused:false}`，**没有 `queued:true` 字段**。其含义首先是 Goal mutation 成功；不能仅因这个早 ACK 本身认定有 bug。实际缺陷还包括后续 resolved 初始化失败没有被处理：[chat-session.ts:545](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/chat-session.ts:545) 把真实 EngineResult 交给 next.resolve，而 resume 专用 resolver [405](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/chat-session.ts:405) 忽略结果并 resolve(true)。Server [2769](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2769) 只有 reject 才调用回滚/error 分支。故真正未启动的 continuation 既未暂停回来也未通知失败；App [1929](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:1929) 接受返回投影后没有异常可触发 reconcile。"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-sleep-round20.md",
+      "pointerOrLine": "34",
+      "text": "**触发与影响。** Desktop worker 已为其他会话活着，但当前暂停目标所属的合法 project-bound Session 尚未 resident（例如重启后先在别处运行，或原 Engine 已被 idle eviction）。点击恢复能抵达 Core：Goal CAS 先变 active，Core 准备 synthetic resume，但冷重建仅带 cwd/projectTrusted，没有从 Host 重建 WorkspaceContext。真实 Engine fail closed，返回 `text: \"ERROR: bound Session requires an authoritative WorkspaceContext\"`、`reason:\"model_error\"`、`turnCount:0`、全部 usage 为 0。这里的 model_error 是**workspace 初始化失败的结果枚举**，不是提供方/网络/模型错误。"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-sleep-round20.md",
+      "pointerOrLine": "36",
+      "text": "随后 enqueueGoalResumeTurn 对所有 resolved EngineResult 返回 true，协议仅 catch rejection 触发回滚；此模型前失败既没有被公开成 error，也没有将 Goal 暂停回来。用户只看到目标未暂停，任务没运行，无法从此次恢复结果得知原因。没有实际执行错项目或越权；项目 authority gate 正确拒绝了执行。"
+    },
+    {
+      "path": "docs/review-2026-10-12/http-error-preflight-round23.md",
+      "pointerOrLine": "7",
+      "text": "- Auth JSON reader有8KiB声明/实际流量限制、对象验证、10秒timer和aborted/error收束；fail移除旧reader后保留一次error监听并resume，避免把已断开的request error误当新Host崩溃候选。[reader](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:234)。handler对activeLogins使用finally减计数，未把解析失败留成活跃login。[handler](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:132)。这里只读，不声称本轮动态故障/延时测试通过。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "pointerOrLine": "128",
+      "text": "06:33第二十轮Goal/Sleep实质审查与两个独立只读审计完成：新增R78/G20-1/P2无worker Main Resume只CAS磁盘并回updated:true，不ensure/派发；第1动态为legacy/unbound，bound同码为源码。R79/G20-2/P2有worker但bound非resident，cold重建漏Host WorkspaceContext，真实Engine模型前安全返回model_error/turnCount0，resume resolver忽略resolved失败，Goal仍active且无error；不称queued:true/提供方失败或越权。正常resident bound/cold legacy恢复实际一次complete_goal、普通authorized run服务恢复、edit/pause/delete/CAS均正常。两层独立修复，未运行完整App/Electron/真实worker。root同源两基线各guarded1文件4测试72expect/Completed，新增1文件4测试，通用80/240，当前79=1P1/51P2/27P3。前三harness失败与4/68早成功版本单列，作者重复不累加，所有network/subprocess调用0，内存provider。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-preflight-round22.md",
+      "pointerOrLine": "89",
+      "text": "**只读重试修订（launcher bdca43…及11bc7…）：** 只把 `info()`读取包在初次调用+最多3次重试中；仅匹配精确 `Execution context was destroyed, most likely because of a navigation.`且owned进程未退出才重试，每次写harnessContextRetries。其它错误仍抛。`call(method,arg)`和native preload cancel均未重试；startRun、enable、abortDirect、resumeControl、shutdown等mutation没有被自动重放。新增firstWindow等待、stdout/stderr/startup-error/failure-snapshot只用于支架诊断，没有替换真实ready/predicate/timeout或注入Host异步gate。info读取仍只是已注册全局对象的状态观测。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-goal-sleep-round20/goal-bound-quality-round20.md",
+      "pointerOrLine": "9",
+      "text": "问题是 **native project-bound Session 的冷 Goal continuation 没有重新取得 Host workspace authority，随后隐藏了正确的安全拒绝**。不应把 Core 的 bound guard 写成缺陷，也不应把 `paused:false` 单独叫做“正在运行”。正式 Resume 的驱动语义有明确实现和正常控制：Core [server.ts:2684](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2684) 将 idle Goal 的 `paused:false` 定义为 drive request，在 2757 排队 synthetic turn。合法 cold Session 无法执行这一恢复操作，而且该次失败没有 error/暂停回滚，足以支持 P2；不是纯偏好或显示摩擦。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-goal-sleep-round20/goal-bound-quality-round20.md",
+      "pointerOrLine": "40",
+      "text": "重要表述边界：公开 RPC 返回的是 `{ok:true,updated:true,paused:false}`，**没有 `queued:true` 字段**。其含义首先是 Goal mutation 成功；不能仅因这个早 ACK 本身认定有 bug。实际缺陷还包括后续 resolved 初始化失败没有被处理：[chat-session.ts:545](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/chat-session.ts:545) 把真实 EngineResult 交给 next.resolve，而 resume 专用 resolver [405](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/chat-session.ts:405) 忽略结果并 resolve(true)。Server [2769](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2769) 只有 reject 才调用回滚/error 分支。故真正未启动的 continuation 既未暂停回来也未通知失败；App [1929](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:1929) 接受返回投影后没有异常可触发 reconcile。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-goal-sleep-round20/report.md",
+      "pointerOrLine": "32",
+      "text": "**触发与影响。** Desktop worker 已为其他会话活着，但当前暂停目标所属的合法 project-bound Session 尚未 resident（例如重启后先在别处运行，或原 Engine 已被 idle eviction）。点击恢复能抵达 Core：Goal CAS 先变 active，Core 准备 synthetic resume，但冷重建仅带 cwd/projectTrusted，没有从 Host 重建 WorkspaceContext。真实 Engine fail closed，返回 `text: \"ERROR: bound Session requires an authoritative WorkspaceContext\"`、`reason:\"model_error\"`、`turnCount:0`、全部 usage 为 0。这里的 model_error 是**workspace 初始化失败的结果枚举**，不是提供方/网络/模型错误。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-goal-sleep-round20/report.md",
+      "pointerOrLine": "34",
+      "text": "随后 enqueueGoalResumeTurn 对所有 resolved EngineResult 返回 true，协议仅 catch rejection 触发回滚；此模型前失败既没有被公开成 error，也没有将 Goal 暂停回来。用户只看到目标未暂停，任务没运行，无法从此次恢复结果得知原因。没有实际执行错项目或越权；项目 authority gate 正确拒绝了执行。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-preflight-round23/http-error-preflight-round23.md",
+      "pointerOrLine": "7",
+      "text": "- Auth JSON reader有8KiB声明/实际流量限制、对象验证、10秒timer和aborted/error收束；fail移除旧reader后保留一次error监听并resume，避免把已断开的request error误当新Host崩溃候选。[reader](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:234)。handler对activeLogins使用finally减计数，未把解析失败留成活跃login。[handler](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/server/src/hub/auth-http.ts:132)。这里只读，不声称本轮动态故障/延时测试通过。"
+    }
+  ]
+}

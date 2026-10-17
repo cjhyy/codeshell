@@ -1,0 +1,133 @@
+{
+  "baseline": "248d091202869c07274adedf4fd50403105f1b1f",
+  "totals": {
+    "firstBunShards": 9,
+    "completedCleanShards": 9,
+    "passedTests": 123,
+    "expectations": 431,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 0,
+    "existingBaselineTests": 106,
+    "newFocusedObservationsAndControls": 17
+  },
+  "runs": [
+    {
+      "log": "evidence/root-usage-contracts.first.log",
+      "exitFile": "evidence/root-usage-contracts.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 5,
+      "failed": 0,
+      "expectations": 25,
+      "skipped": 0,
+      "sha256": "ba6bbf4fe6580c564bb2b1a5ed8956844e9b214d01ddb239ff028549572ee50f"
+    },
+    {
+      "log": "evidence/root-usage-existing-baseline.first.log",
+      "exitFile": "evidence/root-usage-existing-baseline.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 23,
+      "failed": 0,
+      "expectations": 54,
+      "skipped": 0,
+      "sha256": "4fcf693bf67eb1092beb3ad26ebba66c7ad56a7332fa1bd6b370eb8cb2984fa8"
+    },
+    {
+      "log": "evidence/attachments-path-projection.first.log",
+      "exitFile": "evidence/attachments-path-projection.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 5,
+      "failed": 0,
+      "expectations": 24,
+      "skipped": 0,
+      "sha256": "a88816f419d24216895fc01c7208ce6f37622e125faaa95b94c99ec252dcaaa7"
+    },
+    {
+      "log": "evidence/attachments-existing-baseline.first.log",
+      "exitFile": "evidence/attachments-existing-baseline.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 40,
+      "failed": 0,
+      "expectations": 79,
+      "skipped": 0,
+      "sha256": "0bb375d425d0fbb0d0cff3efbc6708f9c17582b200e9e7599617b51649990153"
+    },
+    {
+      "log": "evidence/tools-registry-replacement.first.log",
+      "exitFile": "evidence/tools-registry-replacement.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 3,
+      "failed": 0,
+      "expectations": 18,
+      "skipped": 0,
+      "sha256": "3df57c2b699c781dba855047c8e018c00eb54a9bab0baea0e7b8ec570254daad"
+    },
+    {
+      "log": "evidence/tools-surface-baseline.first.log",
+      "exitFile": "evidence/tools-surface-baseline.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 14,
+      "failed": 0,
+      "expectations": 79,
+      "skipped": 0,
+      "sha256": "9d1deb4231c170c83e365d3a1e1c24b6566bd52af32bb9c2d5eeab565582a039"
+    },
+    {
+      "log": "evidence/session-roundtrip-controls.first.log",
+      "exitFile": "evidence/session-roundtrip-controls.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 11,
+      "skipped": 0,
+      "sha256": "667f7d1b92405803bf17b9e1eaa45dbf188458f54f52c60b92639ff05c09a578"
+    },
+    {
+      "log": "evidence/session-existing-baseline.first.log",
+      "exitFile": "evidence/session-existing-baseline.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 29,
+      "failed": 0,
+      "expectations": 123,
+      "skipped": 0,
+      "sha256": "9fc503f25e75d1950c8cc5abcc97aeb52b966859ab2b117e013be2ae963d44a5"
+    },
+    {
+      "log": "evidence/session-call-cap.first.log",
+      "exitFile": "evidence/session-call-cap.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 18,
+      "skipped": 0,
+      "sha256": "c3edc881a9f2e70553f8e502b4e427b2a5182872a726964ca426b778011555b8"
+    }
+  ],
+  "notes": [
+    "Raw first combined stdout/stderr and exit saved before inspection; no failed Bun shard or product rerun in this batch.",
+    "123 tests comprise 106 existing baseline tests and 17 focused observations/controls; shared finding logs count once.",
+    "Characterization tests assert observed wrong behavior and normal controls; passing logs do not mean product defects are fixed.",
+    "One guessed renderer source filename failed and was skipped; navigation transcription is separate from runtime evidence.",
+    "Metadata preflight/collection/citation corrections are labeled separately, add zero product executions, and do not recover skipped directions.",
+    "Attachment formatter/UI propagation and Session resume repair are static evidence; native UI/providers/opening/user data were not exercised.",
+    "Standalone cost finding excludes the bound ledger main route, verified with an in-memory correct control; no current external price or real bill claim.",
+    "No real models, paid APIs, accounts, user data, external messages, native apps/PTY, auth/permission/security/custody/watchdog experiments, shared dist/dependency rebuild or full build/typecheck/lint/test."
+  ]
+}

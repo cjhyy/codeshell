@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/tool-system/run-tool-surface.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.1349811553955078,
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "firstAttempt": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true
+}

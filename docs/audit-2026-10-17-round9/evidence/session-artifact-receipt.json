@@ -1,0 +1,91 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round9/session.md",
+      "bytes": 6375,
+      "sha256": "3c9b761ab2c81f63bb585ad92a9dae15455b105dde09d30681f70e25cdc6213e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-call-cap-dedup.json",
+      "bytes": 24052,
+      "sha256": "7381425c28dcb157d7b0ec465e401cbb2d269b2aa3ecbb947e5547c253394fc1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-call-cap.first.exit.json",
+      "bytes": 261,
+      "sha256": "06d2dc7cebffe6de92a2817ed7c9ecdffde686835c04fd4de56f84a1463e6c43"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-call-cap.first.log",
+      "bytes": 515,
+      "sha256": "c3edc881a9f2e70553f8e502b4e427b2a5182872a726964ca426b778011555b8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-call-cap.test.ts",
+      "bytes": 5339,
+      "sha256": "49904ff3e214e403747521260b974a1c6ed80b41e47ef72dfeeb6fa3af4ac2e0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-candidates.json",
+      "bytes": 1361,
+      "sha256": "c07d8217cb50454321013c208a27cc6d53f9c9adefe8138400aa9a5e356fcf6d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "bytes": 805053,
+      "sha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dependencies.json",
+      "bytes": 2475,
+      "sha256": "fc2155d5ac0ecab65dafd78b91285049b44bc4ea020c347897104273c738343e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+      "bytes": 34371,
+      "sha256": "475bfa6b686997bd5f1e399ff84e0f22438dd574fe27be59bf6f6272f67c8f0d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-existing-baseline.first.exit.json",
+      "bytes": 546,
+      "sha256": "820aedc2f17ff568d94353677d401961fe6857e187f1f74d79dbba421972f994"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-existing-baseline.first.log",
+      "bytes": 3708,
+      "sha256": "9fc503f25e75d1950c8cc5abcc97aeb52b966859ab2b117e013be2ae963d44a5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-findings.json",
+      "bytes": 2284,
+      "sha256": "281fda8b58d88d53e10fd22008548cf3683dfc69b232d677f376eb37cb77b5fd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-roundtrip-controls.first.exit.json",
+      "bytes": 281,
+      "sha256": "e2a14ac01a46a6af4e068327ed57d7a184bbcf3f9ff7021d0db913dd3d0b0966"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-roundtrip-controls.first.log",
+      "bytes": 534,
+      "sha256": "667f7d1b92405803bf17b9e1eaa45dbf188458f54f52c60b92639ff05c09a578"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-roundtrip-controls.test.ts",
+      "bytes": 4703,
+      "sha256": "b0e5dfc126700424e8d975318f94e4279f2626adb8b5f0c40acb718e740f103b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+      "bytes": 5801,
+      "sha256": "3e36236c0ddfdff19328c866b7209bcf26dad552cb87c4491ae1cdac77ed54f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-validation.json",
+      "bytes": 2560,
+      "sha256": "2f008bfdf25488fc385b399e68786a87f5c38581618d03d23477acde5ed47600"
+    }
+  ],
+  "note": "Final aggregate index assembled by root is authoritative if reports are later amended; no test execution in receipt assembly."
+}

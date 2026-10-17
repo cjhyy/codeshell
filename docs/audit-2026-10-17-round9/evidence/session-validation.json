@@ -1,0 +1,77 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "shards": [
+    {
+      "kind": "new-data-controls",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round9/evidence/session-roundtrip-controls.test.ts"
+      ],
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "expectCalls": 11,
+      "skipped": 0,
+      "completionMarker": "Completed Bun shard: 2 tests, 0 skipped; 0 failures.",
+      "rawOutput": "evidence/session-roundtrip-controls.first.log",
+      "exitReceipt": "evidence/session-roundtrip-controls.first.exit.json",
+      "firstExecutionOnly": true
+    },
+    {
+      "kind": "existing-tests",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/session/transcript.range-archive.test.ts",
+        "packages/core/src/session/transcript-tool-result-normalization.test.ts",
+        "packages/core/src/session/transcript.subagent.test.ts",
+        "packages/core/src/session/session-manager.side-fork.test.ts",
+        "packages/core/src/session/session-manager.context-transfer.test.ts"
+      ],
+      "exitCode": 0,
+      "passed": 29,
+      "failed": 0,
+      "expectCalls": 123,
+      "skipped": 0,
+      "completionMarker": "Completed Bun shard: 29 tests, 0 skipped; 0 failures.",
+      "rawOutput": "evidence/session-existing-baseline.first.log",
+      "exitReceipt": "evidence/session-existing-baseline.first.exit.json",
+      "firstExecutionOnly": true
+    },
+    {
+      "kind": "new-bug-and-control",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round9/evidence/session-call-cap.test.ts"
+      ],
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "expectCalls": 18,
+      "skipped": 0,
+      "completionMarker": "Completed Bun shard: 2 tests, 0 skipped; 0 failures.",
+      "rawOutput": "evidence/session-call-cap.first.log",
+      "exitReceipt": "evidence/session-call-cap.first.exit.json",
+      "firstExecutionOnly": true
+    }
+  ],
+  "totals": {
+    "cleanShards": 3,
+    "passed": 33,
+    "expectCalls": 152,
+    "failed": 0,
+    "skipped": 0,
+    "existingTests": 29,
+    "newFocusedTests": 4
+  },
+  "failedProductOrFixtureShards": [],
+  "scopeLimit": "No full-suite/build/typecheck/lint/real-provider/Engine/RPC/UI claim. Metadata lookup exits are documented separately and are not test successes."
+}

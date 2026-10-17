@@ -1,0 +1,62 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "bun": "/opt/homebrew/bin/bun",
+  "node": "/opt/homebrew/bin/node",
+  "paths": [
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "exists": true,
+      "symlink": false,
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/scripts/run-bun-test-shard.mjs"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "exists": true,
+      "symlink": false,
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/session/transcript.ts"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "exists": true,
+      "symlink": false,
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/session/session-manager.ts"
+    },
+    {
+      "path": "node_modules",
+      "exists": true,
+      "symlink": true,
+      "resolved": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/node_modules"
+    },
+    {
+      "path": "node_modules/nanoid",
+      "exists": false,
+      "symlink": false,
+      "resolved": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/node_modules/nanoid"
+    },
+    {
+      "path": "packages/core/node_modules/nanoid",
+      "exists": true,
+      "symlink": true,
+      "resolved": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/node_modules/.bun/nanoid@5.1.11/node_modules/nanoid"
+    },
+    {
+      "path": "packages/core/node_modules/proper-lockfile",
+      "exists": true,
+      "symlink": true,
+      "resolved": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile"
+    },
+    {
+      "path": "packages/link/dist",
+      "exists": false,
+      "symlink": false,
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/link/dist"
+    },
+    {
+      "path": "node_modules/@cjhyy/code-shell-link",
+      "exists": false,
+      "symlink": false,
+      "resolved": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/node_modules/@cjhyy/code-shell-link"
+    }
+  ],
+  "note": "Read-only metadata preflight; initial combined shell existence check exited 1 with empty stdout before test invocation. No fixture or product test ran; no dependency changes attempted."
+}

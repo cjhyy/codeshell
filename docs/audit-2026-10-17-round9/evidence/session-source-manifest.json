@@ -1,0 +1,155 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "bytes": 3452,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "sha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "bytes": 50794,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "bytes": 51303,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "bytes": 109011,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.range-archive.test.ts",
+      "sha256": "3b4fa3978c2fa87b25061876ae6105a5a8413647cc77c40116cbdd8aa8099049",
+      "bytes": 17643,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript-tool-result-normalization.test.ts",
+      "sha256": "437a4b98519a7e29eea8f4845f6f52ee34414457cc17b1942978285edc46b8ac",
+      "bytes": 2704,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.subagent.test.ts",
+      "sha256": "dd516c969129974797b3b6f62a4dc737f2ad23e409374d11c11c7947f65a60b1",
+      "bytes": 2896,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.side-fork.test.ts",
+      "sha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+      "bytes": 9272,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+      "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+      "bytes": 2097,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "bytes": 10149,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "bytes": 108774,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop-tool-cap.test.ts",
+      "sha256": "905a8b46c07eb60e33b90b288623e39b954f4e631267be4563b6e9dd95451cc4",
+      "bytes": 6897,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/streaming-tool-queue.ts",
+      "sha256": "afcd8fa36bed1a46c23707ff1fe94db558babe6c1549e3953f7c28100a94b429",
+      "bytes": 5208,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "bytes": 210013,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "bytes": 6970,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "bytes": 11804,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+      "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+      "bytes": 4854,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "bytes": 34508,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/notes.ts",
+      "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+      "bytes": 13654,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "bytes": 43905,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "bytes": 195050,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "bytes": 22737,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/logging/logger.ts",
+      "sha256": "9b00534985c026de06feecc88783f796decb399fa5c00715166104318cb3a05d",
+      "bytes": 17090,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ]
+}

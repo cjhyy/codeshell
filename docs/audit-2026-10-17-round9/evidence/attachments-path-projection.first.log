@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round9/evidence/attachments-path-projection.test.ts:
+(pass) ordinary artifact path projection > a generated-image result under a spaced workspace becomes a nonexistent relative card path [8.63ms]
+(pass) ordinary artifact path projection > a known artifact filename containing a space disappears from result scraping [0.07ms]
+(pass) ordinary artifact path projection > ordinary complete CJK paths and structured args with spaces retain the full path [0.39ms]
+(pass) ordinary core attachment metadata controls > regular file metadata uses the real byte count without injecting the file body [11.48ms]
+(pass) ordinary core attachment metadata controls > directory metadata describes ordinary children and keeps the documented noisy directories out [11.90ms]
+
+ 5 pass
+ 0 fail
+ 24 expect() calls
+Ran 5 tests across 1 file. [165.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

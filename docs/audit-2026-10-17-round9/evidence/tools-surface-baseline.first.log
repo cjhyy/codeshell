@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/tool-system/run-tool-surface.test.ts:
+(pass) RunToolSurface > restores loading order with only fresh eligible schemas, including after revocation [0.60ms]
+(pass) RunToolSurface > publishes newly selected names immediately before a following model snapshot [0.03ms]
+(pass) RunToolSurface > rejects malformed persisted loading hints and deduplicates valid names [0.54ms]
+(pass) RunToolSurface > keeps an omitted initial list eager, including late catalog additions [0.06ms]
+(pass) RunToolSurface > loads only ToolSearch for an explicitly empty initial list [0.06ms]
+(pass) RunToolSurface > copies configured initial names and loads them only when eligible [0.11ms]
+(pass) RunToolSurface > retains the eager fallback when ToolSearch appears late [0.08ms]
+(pass) RunToolSurface > falls back to eager loading when ToolSearch is revoked and keeps that selection on restore [0.05ms]
+(pass) RunToolSurface > does not remember unavailable selections when that tool appears later [0.08ms]
+(pass) RunToolSurface > selects exact eligible names once and appends schemas in selection order [0.06ms]
+(pass) RunToolSurface > shrinks revoked eligibility and restores selected history with rewritten definitions [0.12ms]
+(pass) RunToolSurface > freezes independent catalog and provider copies without losing nested schema data [0.35ms]
+(pass) RunToolSurface > restores the latest authorized schema without changing any previous snapshots [0.11ms]
+(pass) RunToolSurface > keeps selection and snapshots independent between runs sharing a catalog [0.05ms]
+
+ 14 pass
+ 0 fail
+ 79 expect() calls
+Ran 14 tests across 1 file. [50.00ms]
+Completed Bun shard: 14 tests, 0 skipped; 0 failures.

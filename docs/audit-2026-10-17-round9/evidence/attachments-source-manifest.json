@@ -1,0 +1,218 @@
+{
+  "sourceBase": "248d091202869c07274adedf4fd50403105f1b1f",
+  "method": "SHA-256 of raw git show sourceBase:path bytes; current equality checked separately. Inspection scope does not claim execution coverage.",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 17639,
+      "lines": 217,
+      "frozenSourceSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 15894,
+      "lines": 522,
+      "frozenSourceSha256": "5ea44b23c9764bf2aa3177b4f5cddc74e969e8cbe551a79397cba91ed3b44cc5",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 9480,
+      "lines": 243,
+      "frozenSourceSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 7206,
+      "lines": 190,
+      "frozenSourceSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/image-policy.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 11080,
+      "lines": 294,
+      "frozenSourceSha256": "2dbedfe14cecc9b2fa672bfdffd3e2fe31e9128a3b8585cfa3d2ca6077ffd5cc",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "readScope": "selected",
+      "readRanges": [
+        [
+          455,
+          500
+        ]
+      ],
+      "bytes": 20093,
+      "lines": 500,
+      "frozenSourceSha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/attachmentSession.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 605,
+      "lines": 15,
+      "frozenSourceSha256": "16123d0cf520e24ba4dabd60e2cd21c5df391b9c41fd462215848a231c3c06ac",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/attachmentSession.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 958,
+      "lines": 29,
+      "frozenSourceSha256": "2df41548b7bcb5ae5ae21a8ba8a557ee8e025fd4803de87ef11ca72ba9a919eb",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 13388,
+      "lines": 391,
+      "frozenSourceSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 7633,
+      "lines": 205,
+      "frozenSourceSha256": "6148f89bf5f81ebdb0cb00863222c20e93ebeabaf48dc7171ff3b9147d5d54e9",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/mentionReferences.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 3274,
+      "lines": 103,
+      "frozenSourceSha256": "398ded03971e0424831aa3d3371ac50ef4551839ad58525d022d23f8c14aaedb",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4847,
+      "lines": 124,
+      "frozenSourceSha256": "cca8011a0aee4b91ac245d26d7fc8703ead17f21b58c5756b0436df01c8c0ab6",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/attachments.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 7333,
+      "lines": 180,
+      "frozenSourceSha256": "4430bdf085f1387e38385cf91474127401c20a9cc102f440c684ffc91802eeae",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4953,
+      "lines": 128,
+      "frozenSourceSha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 5016,
+      "lines": 157,
+      "frozenSourceSha256": "489d09f48b7ffcc4ae94fc37f26fb9f87925d2a8dab496c0bec0f75062cc288e",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4127,
+      "lines": 149,
+      "frozenSourceSha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/shared/media-preview.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 1494,
+      "lines": 42,
+      "frozenSourceSha256": "0642761255832197fa44a9ab82815210779a88515cd1f272fb49e6ca96d84ef3",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/uiLanguage.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 427,
+      "lines": 13,
+      "frozenSourceSha256": "69fd4c8efa753c804fc7b59b522b808f57a2e80a360c8d40d4e04930301ed3a3",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/translate.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 1546,
+      "lines": 41,
+      "frozenSourceSha256": "9f2ee42007e2777fcfd7d0b6b386db8adfcaad7a4c7b45b2a53251c4d46fa26c",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "readScope": "selected",
+      "readRanges": [
+        [
+          425,
+          485
+        ],
+        [
+          570,
+          650
+        ]
+      ],
+      "bytes": 122444,
+      "lines": 2912,
+      "frozenSourceSha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "readScope": "selected",
+      "readRanges": [
+        [
+          250,
+          410
+        ],
+        [
+          1115,
+          1235
+        ]
+      ],
+      "bytes": 106169,
+      "lines": 2622,
+      "frozenSourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ]
+}

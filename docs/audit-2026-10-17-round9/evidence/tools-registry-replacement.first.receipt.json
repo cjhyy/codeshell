@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round9/evidence/tools-registry-replacement.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.5474891662597656,
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "firstAttempt": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true
+}

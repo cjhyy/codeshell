@@ -1,0 +1,151 @@
+{
+  "pattern": "maxToolCallsPerTurn|droppedToolCalls|tool.call.cap|per.turn.cap|cap.*orphan|truncated.*transcript|transcript.*truncat",
+  "filesSearched": 1000,
+  "hits": [
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "pointerOrLine": "156",
+      "text": "- 工具调用超过 `maxToolCallsPerTurn` 时,只执行前 N 个,并明确告诉模型哪些没跑,避免模型假设全部成功。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "pointerOrLine": "263",
+      "text": "- maxTurns / maxToolCallsPerTurn 等配置"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "pointerOrLine": "474",
+      "text": "1. 限制数量到 `maxToolCallsPerTurn`。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "pointerOrLine": "481",
+      "text": "风险：超过 `maxToolCallsPerTurn` 的 tool calls 会被 slice 掉。因为被 slice 掉的 tool_use 没进入 assistant message，所以 provider API invariant 不会坏；但模型的部分意图被静默忽略，用户/模型都未明确收到“有工具调用被丢弃”的提醒。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "pointerOrLine": "73",
+      "text": "| S9 | tool_use 物化 | 模型返回工具调用。 | 截断到 `maxToolCallsPerTurn`，构造 assistant tool_use blocks，补发未流式发过的 `tool_use_start`，写 transcript。 | `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:993`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1005`、`packages/core/src/engine/turn-loop.ts:1010`、`packages/core/src/engine/turn-loop.ts:1012` |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "pointerOrLine": "38",
+      "text": "| 1 | TurnLoop 物化工具调用 | 截断到 `maxToolCallsPerTurn`，构造 assistant `tool_use` block，补发未流式出现的 `tool_use_start`，写 transcript。 | 进入 `StreamingToolQueue`。 | 超出 cap 的调用不执行，后续给模型追加 reminder。 | `packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1006`、`packages/core/src/engine/turn-loop.ts:1010` |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointerOrLine": "36",
+      "text": "- TurnLoop 的 abort、max-output continuation、截断 tool call 重试、tool call cap、unexpected throw 不 reject、steer backfill 都有专门测试：如 `turn-loop-abort.test.ts`、`turn-loop-continuation.test.ts`、`turn-loop-tool-cap.test.ts`、`turn-loop-error-safety.test.ts`。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "pointerOrLine": "/selected_markdown_hits/1/hits/0/text",
+      "text": "| S9 | tool_use 物化 | 模型返回工具调用。 | 截断到 `maxToolCallsPerTurn`，构造 assistant tool_use blocks，补发未流式发过的 `tool_use_start`，写 transcript。 | `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:993`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1005`、`packages/core/src/engine/turn-loop.ts:1010`、`packages/core/src/engine/turn-loop.ts:1012` |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "pointerOrLine": "/selected_markdown_hits/2/hits/0/text",
+      "text": "| 1 | TurnLoop 物化工具调用 | 截断到 `maxToolCallsPerTurn`，构造 assistant `tool_use` block，补发未流式出现的 `tool_use_start`，写 transcript。 | 进入 `StreamingToolQueue`。 | 超出 cap 的调用不执行，后续给模型追加 reminder。 | `packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1006`、`packages/core/src/engine/turn-loop.ts:1010` |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/logs/1/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/logs/2/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use ba"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/logs/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/settings-navigation/0/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/settings-navigation/1/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn("
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/settings-navigation/2/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use ba"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/settings-navigation/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/8/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/9/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn("
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/10/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use ba"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/11/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointerOrLine": "/hits/sidebar-projection/12/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or (b) re-attempt with a simpler prompt or raise an error.\", \"verify_note\": \"The issue is real but low-impact: (1) It's already logged, so not truly \\\"silent\\\"; (2) Retur"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+      "pointerOrLine": "/hits/141/excerpt",
+      "text": "Renderer：`PetWorkTree.tsx` 的 session 条目加一个展开 chevron（用 `@/components/ui` 现有 Collapsible/Button；先看该文件现有折叠交互模式，保持一致）。展开时调 `window.codeshell.petGetLatestResult(agentSessionId)`，渲染 `text`（`whitespace-pre-wrap break-words text-sm text-muted-foreground`，容器 `max-h-48 overflow-y-auto`），`truncated` 时尾部加 \"…（已截断，打开会话查看全文）\"。外部 CLI 行（`item.external` 存在）不显示展开箭头（外部 transcript 承诺不复制，保持不变）。加载失败显示 \"无法读取最新结果\"。"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "pointerOrLine": "35",
+      "text": "**成立，且不是只有日志样本的一次性断言。** `headless-server.ts:1062–1067` 对尚未落盘的新会话取 baseline=0，`:1134` 交给 HubRunReplay。journal 分支 `:1460–1478` 已读到 complete legacy base，仍把同一 transcript 传给 `runReplay.snapshot`。`hub/run-replay.ts:192` 在 RAM log 未 truncated 时按旧 baseline 截断，故首个 worker 后来创建的 session_meta anchor 被裁掉。`finish` 的 `:137–145` 最后一个请求结束后释放 RAM log，所以结束后重开是合理恢复路径。"
+    },
+    {
+      "path": "docs/review-2026-10-12/search-quality-round12.md",
+      "pointerOrLine": "36",
+      "text": "生产 `disclosure/search.ts:19,85–95` 先丢弃超过 500 的目录候选，再把 truncated 初始化 false，只在时间/命中数等后续条件更新；`disclosure/catalog.ts:47–54` 按 transcript mtime 排序后 slice，输出没有 overflow/cursor。全部 500 个被扫描完成时，search 已经无法知道原来还有候选。实际同一字段也在跳过超大 transcript 时置 true（`:110–112`），故其含义不只是“超过20个匹配行”。"
+    },
+    {
+      "path": "docs/review-2026-10-12/search-routing-round11.md",
+      "pointerOrLine": "42",
+      "text": "- **Primary location:** `packages/pet/src/disclosure/search.ts:85–89`, where capped candidates are accepted and `truncated` starts false. Cap definition **:19**. The catalog sorts by transcript mtime and slices at `packages/pet/src/disclosure/catalog.ts:47–54`."
+    },
+    {
+      "path": "docs/review-2026-10-12/search-routing-round11.md",
+      "pointerOrLine": "45",
+      "text": "- **Stable reproduction:** create 500 valid recent ordinary work sessions with unique transcript mtimes `1700000000+i` seconds, plus one valid older session whose transcript has a distinctive query and mtime `1600000000`. Actual listWorkSessionsOnDisk(limit:501) returns 501 and places older-target at exact index 500; explicit assertions exclude directory iteration/timestamp tie uncertainty. The real search with the **production 5000ms budget** scans exactly 500 newer transcripts, returns no matches and **truncated:false**, despite that known older match. The target also exists in the rendered session index, so inability to map a disk-only result is not the explanation."
+    },
+    {
+      "path": "docs/review-2026-10-12/search-routing-round11.md",
+      "pointerOrLine": "47",
+      "text": "- **What truncated already means:** it is not merely “more than 20 matching rows.” The worker sets it on elapsed **time budget** or match cap (`search.ts:94–95`) and on skipped **oversized transcript candidates** (:110–112). Its UI wording is generic incomplete results. The missing candidate-cutoff signal is therefore inconsistent with existing time/coverage semantics, not a request for unbounded scanning or a new feature."
+    },
+    {
+      "path": "docs/review-2026-10-12/search-routing-round11.md",
+      "pointerOrLine": "48",
+      "text": "- **Counterexamples/recovery:** same old transcript is found normally in a two-session catalog, with truncated:false. The test's deterministic expired-deadline control (`budgetMs:-1`, test-only) returns truncated:true and the actual modal displays the existing incomplete-results message. Updating only the older target's mtime moves it into the selected candidate band, and the same unmodified query/content is then found. That filesystem control demonstrates the candidate cutoff cause; it is **not** recommended that users edit transcript files to recover. Practical current workaround is title search or manual opening of known older history; content retry alone cannot find an excluded old candidate."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+      "pointerOrLine": "47",
+      "text": "The recorded ordinary prose and assistant answer survive the legacy replay. After that first read, a real `SessionOutputJournal` was created for the same Session using the exact legacy transcript cutover, with matching real snapshot cursors. Reselecting through the actual hook then restored clean user prose plus `historical-shot.png`, 68-byte size, MIME, path and clientMessageId, without wrapper text. This is a natural first-publication control; no published journal was unlinked, truncated or unpinned."
+    }
+  ]
+}

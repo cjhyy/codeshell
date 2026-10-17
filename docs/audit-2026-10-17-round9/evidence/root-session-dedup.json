@@ -1,0 +1,210 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "scope": "All historical Markdown and parsed JSON under docs/bugs including archives, current round excluded; complements selected session corpus.",
+  "pattern": "ModelFacade.{0,90}(?:cap|上限|fork)|(?:cap|上限|fork).{0,90}ModelFacade|maxToolCallsPerTurn|tool.cap|pending tool results|provider history inserts|B-3",
+  "scanned": {
+    "markdownFiles": 1019,
+    "jsonFiles": 471,
+    "jsonStringLeaves": 109734
+  },
+  "parseErrors": [],
+  "matchCount": 39,
+  "hits": [
+    {
+      "file": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "$",
+      "context": "progress(met)` (`packages/core/src/engine/turn-loop.ts:923`, `packages/core/src/engine/turn-loop.ts:943`).\n\n**g. Tool-execution path.** The loop caps calls to `maxToolCallsPerTurn`, emits/records `tool_use` blocks, and drains `StreamingToolQueue` (`packages/core/src/engine/turn-loop.ts:959`, `packages/core/src/engine/streaming-tool-queue.ts:62`). Each `ToolResult` becomes a `tool_result` content block via `toolResultToBlock()` (`packages/core/src/engine/turn-loop.ts:168`). D"
+    },
+    {
+      "file": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "$",
+      "context": "用摘要事件,非阻塞。 |\n| `stop-reason.ts` | 供应商 stop reason 归一化。 |\n\n### 2.3 为什么把 TurnLoop 从 Engine 拆出来\n\nEngine 管装配,TurnLoop 管“这轮怎么继续”。拆开之后:\n\n- Engine 不需要知道每个 stop reason、tool cap、context recovery 的细节。\n- TurnLoop 可以专注状态机不变量,例如 tool_use 和 tool_result 配对、max turns、goal stop blocks、abort。\n- 单测更容易聚焦: `turn-loop-*` 测试只看循环行为,不需要完整 host。\n\n### 2.4 关键设计点\n\n- `run()` 不应该 reject。外层注释明确说如果 TurnLoop 抛出,Engine 的 state 保存和 session_end hook 会丢,导致 session 卡在 active。当前代码把外层错误转成 terminal reason"
+    },
+    {
+      "file": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "$",
+      "context": "- context 管理发生在模型调用前,工具结果追加后也会发 usage update,让 UI 的 context bar 不滞后。\n- 如果模型因 max output tokens 截断了 tool call,TurnLoop 不执行半截参数,而是注入 reminder 让模型下一轮重试。\n- 工具调用超过 `maxToolCallsPerTurn` 时,只执行前 N 个,并明确告诉模型哪些没跑,避免模型假设全部成功。\n- goal 模式用 `on_stop` hook 阻止结束,并用 stop-block 上限防止无限循环。\n\n### 2.5 好处\n\n- 状态转移清楚,便于对照日志排查。\n- 对模型异常输出有恢复策略,不会把半截工具参数当真。\n- 用户取消更可靠,尤其是 sub-agent 或多工具批量场景。\n- goal 模式和普通聊天共用循环,但通过 hook 和 budget 隔离。\n\n### 2.6 Beta 前注意点\n\n- `StreamingToolQueue` 名字容易误解。当前 TurnLoop 是在完整 model "
+    },
+    {
+      "file": "docs/archive/core-complete-review.md",
+      "location": "$",
+      "context": "ine 最后构造 `TurnLoop`，传入：\n\n- model facade\n- messages\n- tool definitions\n- ToolExecutor\n- ContextManager\n- hooks\n- transcript\n- token/cost/session 状态\n- maxTurns / maxToolCallsPerTurn 等配置\n\n然后调用：\n\n```ts\nconst result = await turnLoop.run(messages);\n```\n\nTurnLoop 返回后，Engine 负责收尾：\n\n- 缓存 session messages。\n- 写 session recorder/log。\n- 执行 `on_session_end`。\n- fire-and-forget memory extraction / dream consolidation。\n- fire-and-forget session title 生成。\n- 保存 session state 为 terminal 状态。\n- 执"
+    },
+    {
+      "file": "docs/archive/core-complete-review.md",
+      "location": "$",
+      "context": "断，会最多做 3 次 continuation。\n\n风险：tool-call 参数截断是很常见的 provider 问题，这里虽然有恢复，但如果模型连续输出坏 JSON，仍可能循环消耗 turns。\n\n### 5.5 tool call 处理\n\n当 response 包含 tool calls：\n\n1. 限制数量到 `maxToolCallsPerTurn`。\n2. 把 assistant text + tool_use blocks 加入 messages。\n3. 用 `StreamingToolQueue` 执行 tool calls。\n4. 每个 tool result 写 transcript 并发 stream event。\n5. 把 tool results 合成 user message，加入 messages。\n6. 下一轮让模型看到 tool result。\n\n风险：超过 `maxToolCallsPerTurn` 的 tool calls 会被 slice 掉。因为被 slice 掉的 tool_use 没进入 assist"
+    },
+    {
+      "file": "docs/archive/core-complete-review.md",
+      "location": "$",
+      "context": "eamingToolQueue` 执行 tool calls。\n4. 每个 tool result 写 transcript 并发 stream event。\n5. 把 tool results 合成 user message，加入 messages。\n6. 下一轮让模型看到 tool result。\n\n风险：超过 `maxToolCallsPerTurn` 的 tool calls 会被 slice 掉。因为被 slice 掉的 tool_use 没进入 assistant message，所以 provider API invariant 不会坏；但模型的部分意图被静默忽略，用户/模型都未明确收到“有工具调用被丢弃”的提醒。\n\n### 5.6 stop hook / goal mode\n\n无 tool calls 时，TurnLoop 不一定马上结束。它会运行 `on_stop` hook：\n\n- 普通 hook 可追加 context 或要求继续。\n- `goal-stop-hook.ts` 可根据 goal mode 判断是否继续。\n\n"
+    },
+    {
+      "file": "docs/archive/core-modules/engine.md",
+      "location": "$",
+      "context": "gent spawn. (~143KB, the bulk of the module.) |\n| `turn-loop.ts` | `TurnLoop` — the internal LLM↔tool state machine. Goal budget tracking, stop-block counting, tool-cap enforcement, ctx-bar emission. Driven by `Engine.run()`. |\n| `query.ts` | `query()` async generator — a thin public wrapper over `TurnLoop` that yields `StreamEvent`s via `for await`. |\n| `model-facade.ts` | `ModelFacade` — wraps an `LLMClientBase` with transcript recording, usage/cost accounting, "
+    },
+    {
+      "file": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "$",
+      "context": "re/src/engine/turn-loop.ts:909`、`packages/core/src/engine/turn-loop.ts:944`、`packages/core/src/engine/turn-loop.ts:977` |\n| S9 | tool_use 物化 | 模型返回工具调用。 | 截断到 `maxToolCallsPerTurn`，构造 assistant tool_use blocks，补发未流式发过的 `tool_use_start`，写 transcript。 | `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:993`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1005`、`packa"
+    },
+    {
+      "file": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "$",
+      "context": ".ts:741`、`packages/core/src/engine/turn-loop.ts:747`、`packages/core/src/context/manager.ts:160`。  \n   破坏表现：后续 compaction 只靠 char/4 估算，ctx bar 和自动压缩时机漂移。\n\n10. 被 tool cap 丢弃的工具调用必须显式告知模型。  \n    维护代码：只执行前 N 个，记录 dropped，并追加 system-reminder，见 `packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:991`、`packages/core/src/engine/turn-loop.ts:1065`、`packages/core/src/engine/turn-loop.ts:1079`。  \n    破坏表现：模型误以为所有 tool calls 都运行过，基于不存在的结果继续推理。\n\n"
+    },
+    {
+      "file": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "location": "$",
+      "context": "ranscript + StreamEvent.tool_result]\n  R0 --> S\n```\n\n### 1.2 顺序关卡表\n\n| # | 关卡 | 做什么 | 通过走向 | 拒绝/异常走向 | 代码锚点 |\n|---|---|---|---|---|\n| 1 | TurnLoop 物化工具调用 | 截断到 `maxToolCallsPerTurn`，构造 assistant `tool_use` block，补发未流式出现的 `tool_use_start`，写 transcript。 | 进入 `StreamingToolQueue`。 | 超出 cap 的调用不执行，后续给模型追加 reminder。 | `packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1006`、`packages/core/src/engine/turn-l"
+    },
+    {
+      "file": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "$",
+      "context": "tinuation、截断 tool call 重试、tool call cap、unexpected throw 不 reject、steer backfill 都有专门测试：如 `turn-loop-abort.test.ts`、`turn-loop-continuation.test.ts`、`turn-loop-tool-cap.test.ts`、`turn-loop-error-safety.test.ts`。\n- Protocol server 的 `requireExisting`、askUser session 隔离/timeout、cancel approvals、background shell wakeup、reload settings、workspace bridge 有测试覆盖，说明 protocol 并非整体缺测。\n- Tool-system 的 path policy 覆盖较强：string/array path arg、outside workspace approval、sensitive"
+    },
+    {
+      "file": "docs/archive/todo/arch-plans-and-verification-2026-07-08.md",
+      "location": "$",
+      "context": "result` adjacency.\n- This should match the Codex-style model: user steering is not only a turn-top concern; it can be inserted between tool-call steps once the pending tool results have been appended.\n\nChange plan:\n\n1. Add a single boundary primitive inside `TurnLoop`.\n   - Example: `await this.beforeModelRequest(messages, { source, allowSteer, reason })`.\n   - It should perform abort checks, optional context management if needed, and steer consumption in one place.\n   - It s"
+    },
+    {
+      "file": "docs/archive/todo/plan-overall-small-features.md",
+      "location": "$",
+      "context": "zer 延后 |\n| 5 | compact 进行中 UI + ring 修正 | B-1 + B-2 | S-M | `App.tsx`/`ChatView.tsx`/`compactFeedback.ts` | 同 `compactActiveSession()`，一次做完 |\n| 6 | 压缩完成横幅 UI | B-3 | S | `ContextBoundaryView.tsx`/`compactFeedback.ts`/`i18n` | 纯展示，解耦 |\n| 7 | 后台面板「来源 session」徽标 | C-1 | S~S+ | `background-work.ts`/`BackgroundShellPanel.tsx`/preload | core+preload+renderer 贯通 |\n| 8 | automation/mobile 乐观气泡 clientMessageId | C-2 | S | `App.tsx`/main automation-host/index.ts/preloa"
+    },
+    {
+      "file": "docs/archive/todo/plan-overall-small-features.md",
+      "location": "$",
+      "context": "ack.ts` 便于单测。no-op（`after >= before`）不降 ring，只 toast。\n- 新 i18n：`chat.composer.placeholderCompacting`、`chat.composer.compacting`、`chat.compact.inProgress`。\n\n### B-3 压缩完成横幅 UI\n- `ContextBoundaryView.tsx` 改正式居中系统事件条：左右细分隔线 + `Archive` 图标 chip + 标题「上下文已压缩」+ 结构化 `前 → 后 · 省 N% · 策略`。\n- 修 `compactFeedback.ts` / i18n 文案标点空格（中文全角、英文用 `·`/正式 dash）。复用组件即覆盖 MessageStream 与 TurnProcessGroupCard 两处。\n\n### C-1 后台面板「来源 session」徽标\n- core UI entry 加 `sourceSession {sessionId, s"
+    },
+    {
+      "file": "docs/archive/todo/plan-overall-small-features.md",
+      "location": "$",
+      "context": "okens()`，若 core 语义变更需同步删 baseline。\n- **中（跨 session 暴露）**：C-1 all-scope 会展示其他会话任务描述——本机 desktop 面板可接受，但默认只展示 live/retained，不展示完整 transcript。\n- **低**：A-1/A-3/B-1/B-3/C-2/C-3/C-4，多为独立文件或纯 UI。\n\n---\n\n## 5. 交付建议\n\n- 每个 feature（或同文件聚合批）由**独立新 codex session** 实现，实现完自跑该项验证命令（分组文档已列 `bun test ...`）。\n- 提交前跑受影响测试确认无回归（符合仓库 pre-commit 规约）。\n- 建议 commit 粒度：C-5 单独一提交（数据安全、便于审计）；A-1/A-3/A-2 各一提交；B-1+B-2 一提交、B-3 一提交；C-1/C-2 各一提交；C-3+C-4 一提交。\n- 实现全部落地后，再由**独立新 codex session 做统一 "
+    },
+    {
+      "file": "docs/archive/todo/plan-overall-small-features.md",
+      "location": "$",
+      "context": "新 codex session** 实现，实现完自跑该项验证命令（分组文档已列 `bun test ...`）。\n- 提交前跑受影响测试确认无回归（符合仓库 pre-commit 规约）。\n- 建议 commit 粒度：C-5 单独一提交（数据安全、便于审计）；A-1/A-3/A-2 各一提交；B-1+B-2 一提交、B-3 一提交；C-1/C-2 各一提交；C-3+C-4 一提交。\n- 实现全部落地后，再由**独立新 codex session 做统一 review**（对照本方案 + 分组文档核实每项改动、测试与风险护栏是否到位）。\n\n## 建议 conventional commit 前缀\n- C-5：`fix(desktop): guard stale worktree cleanup against dirty/unmerged deletion`\n- A-1：`test(core): cover TodoWrite resume snapshot restore`\n- A-3：`feat(core):"
+    },
+    {
+      "file": "docs/archive/todo/plan-overall-small-features.md",
+      "location": "$",
+      "context": " skill base`\n- A-2：`feat(core): annotate prompt-token estimate source/confidence`\n- B-1+B-2：`feat(desktop): compact in-flight UI + fix context ring baseline`\n- B-3：`style(desktop): redesign context-compacted boundary banner`\n- C-1：`feat(desktop): show source-session badge in background work panel`\n- C-2：`fix(desktop): stable clientMessageId for automation/mobile announce bubbles`\n- C-3+C-4：`feat(desktop): real HEAD branch label + grouped worktree switcher`\n"
+    },
+    {
+      "file": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "location": "$",
+      "context": "s | 🟢 | Publish job now needs version verification; test covers all listed package jsons. |\n| `538008cf` fix(core): prune old mcp image spills | 🟢 | Per server/tool cap is implemented after write; test covers pruning older files. |\n| `d523f298` fix(tui): handle delete key at cursor | 🟢 | Separates Backspace and Delete semantics; test exercises cursor delete. |\n| `90fb6c0f` fix(desktop): restrict markdown reads to listed paths | 🟢 | Allowlist model is stronger than"
+    },
+    {
+      "file": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "location": "$.selected_markdown_hits[1].hits[0].text",
+      "context": "| S9 | tool_use 物化 | 模型返回工具调用。 | 截断到 `maxToolCallsPerTurn`，构造 assistant tool_use blocks，补发未流式发过的 `tool_use_start`，写 transcript。 | `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:993`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1005`、`packa"
+    },
+    {
+      "file": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "location": "$.selected_markdown_hits[2].hits[0].text",
+      "context": "| 1 | TurnLoop 物化工具调用 | 截断到 `maxToolCallsPerTurn`，构造 assistant `tool_use` block，补发未流式出现的 `tool_use_start`，写 transcript。 | 进入 `StreamingToolQueue`。 | 超出 cap 的调用不执行，后续给模型追加 reminder。 | `packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1006`、`packages/core/src/engine/turn-l"
+    },
+    {
+      "file": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+      "location": "$.matches[66].excerpt",
+      "context": "| 6 | 压缩完成横幅 UI | B-3 | S | `ContextBoundaryView.tsx`/`compactFeedback.ts`/`i18n` | 纯展示，解耦 |"
+    },
+    {
+      "file": "docs/audit-2026-10-17-round7/providers.md",
+      "location": "$",
+      "context": " manual thinking 对最后 assistant turn 的 thinking 开头要求。两个官方页面都首次读取成功，没有真实模型调用。\n\n[独立首次 fixture](evidence/providers-thinking-roundtrip.test.ts) 使用内存 JSON SDK 适配器、实际 ModelFacade、Transcript 和次请求 body capture，thinking-on 分支的丢块断言已执行；但最后一个完整 tool_result 形状断言漏计自动 `cache_control:{type:\"ephemeral\"}`，因此 **整个 shard 失败**：1 pass / 1 fail / 13 expectations，没有 `Completed Bun shard`。thinking-off 控制通过不使这个失败 gate 变绿。按本次审查规则保留 [首次 raw log](evidence/providers-thinking-roundtrip.first.log) 和 [exit 1](evidence/provid"
+    },
+    {
+      "file": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "$",
+      "context": "pBlocks` 上限:计数 +1、注入催继续的提示、继续循环;否则正常收尾(或到上限以 `exhausted` 收尾)。**普通无 goal 的交互对话,这个 goal 处理器是 no-op。**\n\n**f. 工具执行路径**:`streamingQueue.drain()` 并发安全的工具并发跑、不安全的串行跑;`maxToolCallsPerTurn` 拦溢出;每个工具走 `pre_tool_use` hook(权限+前置)→ `ToolExecutor.executeSingle` → `post_tool_use` hook → 结果转块 → 推回消息数组 → 继续。工具执行这一段的安全机制见 [03 · 工具系统](03-tool-system.md)。\n\n## 5. 上下文管理:从免费无损到昂贵有损的分级压缩\n\n消息数组逼近窗口时,`ContextManager` 用逐级加重的手段压缩。\n\n![上下文分级压缩](assets/context-compaction.svg)\n\n- **Tier 0 — 持久化 + 常驻去废**:单个"
+    },
+    {
+      "file": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "$",
+      "context": "`Agent` 工具靠它派生子 agent（解析好 cwd / preset / 权限作用域）。\n- 把 `TurnLoopDeps { model, toolExecutor, contextManager, hooks, transcript, … }` 和 `TurnLoopConfig { maxTurns, maxToolCallsPerTurn, onStream, signal, goal, maxStopBlocks }` 装配好，交给 `TurnLoop`。\n\n### 阶段 4 — 循环本身（`TurnLoop.run`）\n\n这是第四、五、六节的内容，下面展开。\n\n### 阶段 5 — 终止\n\n发 `on_session_end` hook，刷 transcript 落盘，存 state（终止原因、回合数、用量），返回 `EngineResult { text, reason, sessionId, turnCount, usage }`。\n\n---\n\n## 四、为什么恢复时一定要修补孤儿 tool_use\n\n把 `patch"
+    },
+    {
+      "file": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "$",
+      "context": "al 的交互对话，这个内置 goal 处理器是 no-op**——`on_stop` 照样 fire，但没有 goal 时没人返回 `continueSession`，循环就正常停。\n\n### f. 工具执行路径\n\n`streamingQueue.drain()` 把并发安全的工具并发跑、不安全的串行跑（见第九节）。`maxToolCallsPerTurn` 拦溢出。每个工具走一条固定流水线：\n\n```\npre_tool_use hook（权限 + 前置）\n  → ToolExecutor.executeSingle\n  → post_tool_use hook\n  → toolResultToBlock（结果转块）\n  → 把 tool_result 推回消息数组\n  → 继续\n```\n\n工具执行这一段的安全机制（权限分类、path policy、sandbox、hooks 只能收紧）是第 3 篇的主题，本篇只需记住一点：**结果一执行完立刻推回消息数组，紧邻它的 tool_use**——这是后面所有不变量赖以成立的基础。\n\n### comp"
+    },
+    {
+      "file": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "location": "$",
+      "context": "/src/tool-system/builtin/view-image.ts:140-144`、\n`packages/core/src/llm/providers/openai.ts:230-244`、\n`packages/core/src/engine/engine.ts:1048-1050`。\n\n在 Engine/ModelFacade 解析一次 capability，把解析后的 `supportsVision` 或规范化 providerKind 放入\nToolContext，并让工具与 provider 共用；不要各自写不同 fallback。新增缺 providerKind 的 OpenRouter\nvision model 回归测试，断言工具 gate 与 provider buildMessages 结论相同。\n\n#### 5. [Codex 对齐] 真正实现 per-call `detail`，或删除 no-op 参数\n\n**锚点：** `packages/core/src/tool-system/builtin/view-ima"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[1].args[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[2].result.projectId",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[7].args[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[8].args[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[9].args[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[10].args[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.calls[11].result.projectId",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.observations[1].workspace.projectId",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.observations[2].project.id",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.observations[2].defaultCall.args[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "location": "$.observations[4].workspace.projectId",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/review-2026-10-12/validation/round27-independent-quality-receipts.json",
+      "location": "$.runs[2].candidateWrongTuple[0]",
+      "context": "123f19bd-df3a-47eb-9aab-3a9750e33991"
+    },
+    {
+      "file": "docs/todo/agent-reliability-and-context-optimization.md",
+      "location": "$",
+      "context": "       |\n| Tool Hook/权限/执行     | `packages/core/src/tool-system/executor.ts`                        |\n| 重复调用行为            | `packages/core/src/engine/turn-loop-tool-cap.test.ts`              |\n| Browser Tools           | `packages/core/src/tool-system/builtin/browser-tools.ts`           |\n| Todo stale nag          | `packages/core/src/tool-system/task-guard.ts`                      |\n\n## 十六、外部对标结论\n\nClaude Code 的初始提示词也可能较大，但其可接受的前提是：稳定前缀缓存、工具延迟加载和有预算的 Skill 索引。初始负载"
+    }
+  ],
+  "assessment": "Related B-3 cap/live behavior reviewed separately; no earlier record of same persisted ModelFacade subset/fork guard defect found in these bounded contexts. Keyword matching is not semantic exhaustive proof."
+}
