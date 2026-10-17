@@ -1778,7 +1778,8 @@ stages, and the full AppImage mode/cache/sandbox/ten-GET runtime checks do not r
 
 Windows fails earlier in the original Review's `harness-main-identity` phase:
 `electronApplication.evaluate: Resulting promise was garbage collected.`
-The first-error record precedes cleanup with the child still observed alive.
+The first-error record occurs before cleanup and before any observed
+ChildProcess exit.
 Later authorized cleanup signal requests, Main exit `1/null` and observed
 birth-custody settlement 32→0 are recorded separately. The HOME removal flag is
 false; no Review failure PNG or returned Main identity is invented. Service/GPU
