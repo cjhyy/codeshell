@@ -1,0 +1,107 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/profile/store.test.ts:
+(pass) workspace profile store > save then read round-trips and paths derive from CODE_SHELL_HOME [8.86ms]
+(pass) workspace profile store > read returns undefined for a missing profile [0.72ms]
+(pass) workspace profile store > read throws a wrapped error for invalid JSON content [5.46ms]
+(pass) workspace profile store > rejects an oversized profile before parsing it [3.99ms]
+(pass) workspace profile store > read rejects names failing the name regex without touching disk [0.68ms]
+(pass) workspace profile store > list returns valid profiles sorted by name and skips broken ones [21.84ms]
+(pass) workspace profile store > list returns [] when the library directory does not exist [2.61ms]
+(pass) workspace profile store > overwrites atomically without leaving temporary files [10.99ms]
+(pass) workspace profile store > rejects a symlinked profiles root before listing its target [5.76ms]
+(pass) workspace profile store > does not follow a symlinked profile directory [5.72ms]
+(pass) workspace profile store > does not follow a symlinked profile file [6.40ms]
+(pass) workspace profile store > isolates symlink entries while listing valid profiles [8.19ms]
+
+packages/core/src/profile/activation.test.ts:
+(pass) workspace profile activation transaction > expands declared capabilities into an 'on' override snapshot [6.16ms]
+(pass) workspace profile activation transaction > activate writes the whole profile subtree into project settings [27.12ms]
+(pass) workspace profile activation transaction > activation always uses CodeShell's digital-human runtime base [13.73ms]
+(pass) workspace profile activation transaction > switching replaces the subtree wholesale (old capabilities gone) [18.02ms]
+(pass) workspace profile activation transaction > deactivate removes the subtree and never touches user capabilityOverrides [19.26ms]
+(pass) workspace profile activation transaction > activating an unknown profile throws and leaves settings untouched [4.77ms]
+(pass) exclusiveCapabilities > default (union) never turns anything off [4.45ms]
+(pass) exclusiveCapabilities > exclusive turns off installed capabilities it does not declare [4.70ms]
+(pass) exclusiveCapabilities > exclusive without an installed list falls back to union [5.15ms]
+(pass) exclusiveCapabilities > exclusive only touches buckets the profile could claim [4.98ms]
+
+packages/core/src/profile/types.test.ts:
+(pass) WorkspaceProfile schema > source policy preserves omitted versus deny-all and rejects duplicate sources/scopes or allow [0.61ms]
+(pass) WorkspaceProfile schema > accepts a minimal valid profile and fills defaults
+(pass) WorkspaceProfile schema > accepts the full shape
+(pass) WorkspaceProfile schema > rejects illegal names (path traversal / uppercase / empty) [0.24ms]
+(pass) WorkspaceProfile schema > rejects missing basePreset [0.04ms]
+(pass) WorkspaceProfile schema > accepts values at the documented persistence limits [0.30ms]
+(pass) WorkspaceProfile schema > rejects oversized strings, capability lists, entries, and duplicates [0.33ms]
+(pass) WorkspaceProfile requires > omitting requires keeps the pre-existing shape (backward compatible) [0.01ms]
+(pass) WorkspaceProfile requires > parses a skill requirement and defaults scope/fullDepth [0.07ms]
+(pass) WorkspaceProfile requires > rejects a user/global skill scope [0.12ms]
+(pass) WorkspaceProfile requires > rejects repo values that could inject CLI flags or traverse paths [0.13ms]
+(pass) WorkspaceProfile requires > rejects a non-github skill source [0.10ms]
+(pass) WorkspaceProfile requires > rejects flag and wildcard selectors only for installable Skill names [0.10ms]
+(pass) WorkspaceProfile requires > parses tool requirements and rejects non-numeric versions [0.28ms]
+(pass) WorkspaceProfile requires > rejects an empty bin and too many requirement entries [0.09ms]
+
+packages/core/src/profile/switch-plan.test.ts:
+(pass) Profile switch configuration plan > reuses activation semantics and direct overrides beat both profiles
+(pass) Profile switch configuration plan > deactivation falls back to baseline plus direct settings and only removes the Profile memory mount
+(pass) Profile switch configuration plan > missing declarations are distinct from existing capability configuration differences
+
+packages/core/src/profile/requirements.test.ts:
+(pass) buildSkillInstallArgs > installs everything with --all when no skill subset is named [0.03ms]
+(pass) buildSkillInstallArgs > names an explicit subset and still skips prompts
+(pass) buildSkillInstallArgs > passes --full-depth only when requested [0.09ms]
+(pass) buildSkillInstallArgs > puts the repo in an argv slot, never interpolated into a shell string
+(pass) buildSkillInstallArgs > keeps literal names separate without excluding object prototype names
+(pass) buildSkillInstallArgs > rejects special selectors before they can change installer scope [0.14ms]
+(pass) tool version comparison > extracts the first version from real --version output [0.10ms]
+(pass) tool version comparison > returns undefined when no version is present
+(pass) tool version comparison > compares numerically, not lexicographically [0.05ms]
+(pass) summarizeSkillConflicts > flags an incoming skill that an earlier-precedence root already owns [0.05ms]
+(pass) summarizeSkillConflicts > reports nothing when names do not overlap
+(pass) summarizeSkillConflicts > treats a plugin-namespaced skill as non-conflicting
+(pass) planProfileRequirements > returns an empty plan for a profile with no requires (backward compatible) [0.10ms]
+(pass) planProfileRequirements > skips a requirement whose named skills are all present [0.02ms]
+(pass) planProfileRequirements > plans an install when any named skill is missing
+(pass) planProfileRequirements > always plans an install for an unscoped (--all) requirement
+(pass) planProfileRequirements > reports a missing tool and a too-old tool, with the hint
+(pass) planProfileRequirements > accepts a tool that meets the minimum version
+(pass) planProfileRequirements > reports an unconfirmed minimum version for legacy probe output "development build"
+(pass) planProfileRequirements > reports an unconfirmed minimum version for legacy probe output ""
+(pass) planProfileRequirements > reports an unconfirmed minimum version for legacy probe output "   "
+(pass) planProfileRequirements > keeps an unversioned legacy probe compatible when no minimum is declared
+(pass) planProfileRequirements > rejects an invalid public planner minimum "latest" before probing
+(pass) planProfileRequirements > rejects an invalid public planner minimum "22.x" before probing
+(pass) planProfileRequirements > rejects an invalid public planner minimum "v22" before probing
+(pass) planProfileRequirements > rejects an invalid public planner minimum ">=22" before probing
+(pass) planProfileRequirements > rejects an invalid public planner minimum "" before probing
+(pass) planProfileRequirements > rejects an invalid public planner minimum "22.1.0.1" before probing
+(pass) planProfileRequirements > preserves the structured probe classification {"status":"not-found"}
+(pass) planProfileRequirements > preserves the structured probe classification {"status":"failed"}
+(pass) planProfileRequirements > preserves the structured probe classification {"status":"ok","output":""}
+(pass) planProfileRequirements > accepts a successful empty probe when only command availability is required [0.39ms]
+(pass) planProfileRequirements > validates other public requirements with the existing schema before probing [0.02ms]
+(pass) planProfileRequirements > surfaces shadowing conflicts for the skills it is about to install [0.05ms]
+
+packages/core/src/profile/resolve.test.ts:
+(pass) resolveActiveWorkspaceProfile > resolves the workspace default from project settings [11.79ms]
+(pass) resolveActiveWorkspaceProfile > returns undefined when nothing is active [3.37ms]
+(pass) resolveActiveWorkspaceProfile > sessionProfile (future per-session binding) wins over workspace default [12.42ms]
+(pass) resolveActiveWorkspaceProfile > active name pointing at a deleted library entry degrades to undefined [9.63ms]
+(pass) resolveActiveWorkspaceProfile > workspaceProfilePresetFor returns the snapshot preset [9.13ms]
+
+packages/core/src/engine/run-setup.test.ts:
+(pass) resolveRunProfileState > throws when a session-pinned workspace profile is unavailable [4.40ms]
+(pass) resolveRunProfileState > returns undefined overrides when the session has no pinned profile [9.59ms]
+(pass) resolveRunProfileState > resolves the portable profile memory root once for the run [9.20ms]
+(pass) buildPromptComposerConfig > maps portable profile instruction and memory directory [0.90ms]
+(pass) buildPromptComposerConfig > leaves profile fields undefined without a workspace profile [0.70ms]
+(pass) buildPromptComposerConfig > does not mount profile memory when portableMemory is false [0.62ms]
+(pass) buildPromptComposerConfig > passes explicit composer inputs through and resolves source settings lazily [1.21ms]
+
+ 86 pass
+ 0 fail
+ 207 expect() calls
+Ran 86 tests across 7 files. [405.00ms]
+Completed Bun shard: 86 tests, 0 skipped; 0 failures.

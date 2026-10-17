@@ -1,0 +1,41 @@
+{
+  "accessedDate": "2026-10-17",
+  "confirmedPrimaryContract": {
+    "url": "https://developers.line.biz/en/reference/messaging-api/#action-object-label-spec",
+    "officialMarkdownUrl": "https://developers.line.biz/en/reference/messaging-api/index.html.md",
+    "readerState": "HTML reference index has collapsed section content; followed its official View as Markdown link and read action-label/URI sections. No HTTP failure for LINE.",
+    "contract": {
+      "templateMessageNonImageCarouselActionLabelCharactersMaximum": 20,
+      "uriActionUriCharactersMaximum": 1000
+    },
+    "sourceLocation": "Official Markdown line23057-23108 action label table; line23173-23201 URI action including uri maximum.",
+    "summary": "Buttons template is a template other than image carousel. URI label uses the shared action-label specifications. URI action URLs are limited to 1000 characters."
+  },
+  "otherReadOnlyPrimarySources": [
+    {
+      "url": "https://docs.slack.dev/messaging/formatting-message-text/",
+      "state": "opened successfully; link syntax differs from general Markdown. No confirmed new Slack finding or fixture this round."
+    },
+    {
+      "url": "https://open-dingtalk.github.io/developerpedia/docs/learn/bot/appbot/reply/",
+      "state": "opened successfully; documents SessionWebhook reply route and expiration but does not supply exact current response-error contract."
+    },
+    {
+      "url": "https://open.dingtalk.com/document/orgapp/custom-bot-to-send-group-chat-messages",
+      "state": "opened with 0 readable content lines; insufficient error-contract evidence; no fixture or confirmed finding."
+    },
+    {
+      "url": "https://open.dingtalk.com/document/robots/custom-robot-access/",
+      "state": "official developerpedia link opened with 0 readable content lines; insufficient error-contract evidence."
+    },
+    {
+      "url": "https://whatsapp.github.io/WhatsApp-Nodejs-SDK/api-reference/types/InteractiveObject/",
+      "state": "official hosted SDK primary search result is for older interactive types, not current cta_url exact route; insufficient to confirm old WhatsApp candidate."
+    }
+  ],
+  "skippedPrimarySourceFailure": {
+    "url": "https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/interactive-cta-url-messages",
+    "state": "First open returned Internal Error; skipped without retry, browser/CLI fallback, or platform fixture.",
+    "effect": "WhatsApp 1024-character CTA/caption candidate remains unconfirmed; third-party mirrors not accepted as contract evidence."
+  }
+}
