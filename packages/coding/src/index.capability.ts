@@ -14,7 +14,7 @@ import { lspTool, lspToolDef } from "./tools/lsp.js";
 import { notebookEditTool, notebookEditToolDef } from "./tools/notebook-edit.js";
 import { applyPatchTool, applyPatchToolDef } from "./tools/apply-patch/index.js";
 import { parsePatch } from "./tools/apply-patch/parser.js";
-import { patchBackupTargets } from "./tools/apply-patch/backup-targets.js";
+import { patchBackupTargets, patchDiffTargets } from "./tools/apply-patch/backup-targets.js";
 import {
   enterWorktreeTool,
   enterWorktreeToolDef,
@@ -321,11 +321,26 @@ const CODING_PROMPT_SECTIONS = {
   coding: readFileSync(new URL("./prompt/coding.md", import.meta.url), "utf-8"),
 } as const;
 
+function notebookMutationTargets(args: Record<string, unknown>, cwd: string): readonly string[] {
+  return typeof args.file_path === "string" &&
+    args.file_path.length > 0 &&
+    (args.action === "insert" || args.action === "replace" || args.action === "delete")
+    ? [resolve(cwd, args.file_path)]
+    : [];
+}
+
 const CODING_FILE_HISTORY = [
   {
     toolName: "ApplyPatch",
     resolveTargets: (args: Record<string, unknown>, cwd: string) =>
       typeof args.patch === "string" ? patchBackupTargets(args.patch, cwd) : [],
+    resolveDiffTargets: (args: Record<string, unknown>, cwd: string) =>
+      typeof args.patch === "string" ? patchDiffTargets(args.patch, cwd) : [],
+  },
+  {
+    toolName: "NotebookEdit",
+    resolveTargets: notebookMutationTargets,
+    resolveDiffTargets: notebookMutationTargets,
   },
 ] as const;
 

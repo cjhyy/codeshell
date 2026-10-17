@@ -218,6 +218,8 @@ export type TranscriptEventType =
   // parent transcript so desktop replay rebuilds the same per-user-turn file
   // summary as the live background_agent_completed stream event.
   | "external_file_changes"
+  // Execution-owned cumulative file changes; display evidence, never model context.
+  | "turn_diff"
   | "turn_boundary"
   // Durable response receipt for a host-supplied clientMessageId. It is never
   // added to model context; duplicate submits replay the original EngineResult
@@ -656,6 +658,30 @@ export type PromptTokenConfidence = "high" | "medium" | "low";
  */
 export type TurnCompletionKind = "background_wait" | "goal_control_stop" | "limit_stop";
 
+/** Actual file states captured by execution, relative to the logical turn's first mutation. */
+export interface TurnDiffFile {
+  /** Absolute normalized execution path, independent of the client's current cwd. */
+  path: string;
+  status: "added" | "modified" | "deleted";
+  diff: string;
+  added: number;
+  removed: number;
+}
+
+export interface TurnDiffSnapshot {
+  /** Transcript id of the non-injected user input that owns these changes. */
+  turnId: string;
+  cwd: string;
+  /** Actual file capture time; delivery/replay of saved evidence does not advance it. */
+  capturedAt?: number;
+  files: TurnDiffFile[];
+  /** Includes reversals and omitted files: clients must not resurrect tool previews. */
+  trackedPaths: string[];
+  toolCallIds: string[];
+  complete: boolean;
+  omissions: { path: string; reason: string }[];
+}
+
 export type StreamEvent = {
   /** Source wall-clock time (Unix milliseconds), retained across durable replay. */
   timestamp?: number;
@@ -692,6 +718,7 @@ type UserMessageDisplayPayload = {
 };
 
 type StreamEventPayload =
+  | ({ type: "turn_diff"; agentId?: string } & TurnDiffSnapshot)
   // Emitted once per run() as soon as the Engine has resolved the session
   // id (resume vs. create). Lets the client know the authoritative sid
   // *before* run() resolves, which matters for mid-turn `/sid` lookups.

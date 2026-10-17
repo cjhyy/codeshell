@@ -92,6 +92,15 @@ describe("aggregateFileChanges", () => {
     ]);
   });
 
+  test("NotebookEdit read does not create a file-change preview", () => {
+    expect(
+      aggregateFileChangeSummary([
+        user(),
+        tool("NotebookEdit", { file_path: "analysis.ipynb", action: "read" }),
+      ]),
+    ).toBeNull();
+  });
+
   test("counts NotebookEdit like Edit (new_source / old_source)", () => {
     const msgs: Message[] = [
       user(),

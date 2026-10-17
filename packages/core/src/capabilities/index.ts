@@ -74,4 +74,6 @@ export interface SessionWorkspaceCapability {
 export interface CapabilityFileHistoryContribution {
   toolName: string;
   resolveTargets(args: Record<string, unknown>, cwd: string): readonly string[];
+  /** All mutation targets, including new files and both sides of a move. */
+  resolveDiffTargets?(args: Record<string, unknown>, cwd: string): readonly string[];
 }

@@ -2830,21 +2830,31 @@ export class Engine {
     // it (see foldRunUsage). Snapshot now, before any turn boundary fires.
     const usageBaseline: TokenUsage = { ...session.state.tokenUsage };
 
-    const fileHistoryHook: ReturnType<typeof registerFileHistoryHook> = isEphemeralSessionState(
-      session.state,
-    )
-      ? { dispose() {} }
-      : registerFileHistoryHook({
-          hooks: this.hooks,
-          sessionDir: join(
-            this.config.sessionStorageDir ?? sessionsRoot(),
-            session.state.sessionId,
-          ),
-          cwd,
-          getTurnSeq: () => session.state.turnSeq,
-          contributions: this.composition.engine.fileHistory.map((c) => c.value),
-        });
+    // A logical user turn can span injected continuation runs. Keep its original
+    // file baseline in execution, rather than composing tool payloads in clients.
+    const diffTurn = session.transcript
+      .getEvents("message")
+      .reverse()
+      .find((event) => event.data.role === "user" && event.data.injected !== true);
+    const fileHistoryHook = registerFileHistoryHook({
+      hooks: this.hooks,
+      sessionDir: join(this.config.sessionStorageDir ?? sessionsRoot(), session.state.sessionId),
+      cwd,
+      getTurnSeq: () => session.state.turnSeq,
+      contributions: this.composition.engine.fileHistory.map((c) => c.value),
+      ephemeral: isEphemeralSessionState(session.state),
+      observeCompletion: (observer) => toolExecutor.observeCompletion(observer),
+      turnDiff: {
+        turnId: diffTurn?.id ?? sourceRunId ?? sid,
+        onUpdate: async (snapshot) => {
+          const event = { type: "turn_diff" as const, ...snapshot, runId: sourceRunId };
+          session.transcript.append("turn_diff", { ...event });
+          await options?.onStream?.(event);
+        },
+      },
+    });
     this.activeRunScope!.own(fileHistoryHook);
+    await fileHistoryHook.publishInitial();
 
     // Hook: agent start
     await this.emitHook(

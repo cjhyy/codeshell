@@ -356,6 +356,7 @@ const FORK_EVENT_POLICY = {
   session_meta: "skip",
   subagent: "copy",
   external_file_changes: "copy",
+  turn_diff: "copy",
   turn_boundary: "copy",
   // Idempotency receipts belong to the source session and never contribute to
   // model context. Copying them could replay a source response in the child.
@@ -2530,6 +2531,15 @@ export function buildForkTranscript(
     id: nanoid(12),
   }));
   Transcript.remapContextForkReferences(sourceEvents, copied);
+  const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
+  for (const event of copied) {
+    if (event.type !== "turn_diff") continue;
+    for (const key of ["turnId", "runId"] as const) {
+      const original = event.data[key];
+      if (typeof original === "string" && copiedIds.has(original))
+        event.data[key] = copiedIds.get(original)!;
+    }
+  }
   return [meta, ...copied];
 }
 

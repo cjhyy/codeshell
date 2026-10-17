@@ -135,6 +135,8 @@ export const messagesNs = {
       // files-changed summary card
       files: {
         editedCount: "已编辑 {count} 个文件",
+        incompleteDiff: "本轮 diff 不完整，以下文件未能生成完整净变化：",
+        lateChangesDiff: "以下文件存在快照后或时间未确认的子任务修改，暂时展示操作预览：",
         review: "审核",
         reviewAria: "审核改动",
         reviewTitle: "审核(在面板中查看 diff)",
@@ -326,6 +328,9 @@ export const messagesNs = {
       },
       files: {
         editedCount: "Edited {count} files",
+        incompleteDiff: "This turn’s diff is incomplete. A complete net diff is unavailable for:",
+        lateChangesDiff:
+          "Changes from a child task are newer than this snapshot or have unknown timing. Operation previews are shown for:",
         review: "Review",
         reviewAria: "Review changes",
         reviewTitle: "Review (view diff in panel)",
