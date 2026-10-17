@@ -422,3 +422,79 @@ test("real default clock yields finite role sample and failure age without a nat
   assert.ok(failure.sampleAgeMs >= 0);
   assert.equal(observer.receipt.observerFault, false);
 });
+
+test("failure retains its last existing sample after cleaning rolls past the eight-sample cap", () => {
+  const rows = Array.from({ length: 40 }, (_, index) => ({
+    pid: index + 100,
+    ppid: 42,
+    birth: birth(index + 2),
+  }));
+  const roles = [
+    { ...rows[0], role: "setup-path-match" },
+    { ...rows[1], role: "owned-temp-old-uninstaller-candidate" },
+  ];
+  const f = roleFixture(rows, roles);
+  f.setEnvelope({ processes: identities(rows), roles, truncated: true });
+  observed(f.observer, f.observer.snapshot(), "watching");
+  const original = f.observer.receipt.samples.at(-1);
+  const expected = {
+    querySequence: 1,
+    samplePhase: "watching",
+    sampledElapsedMs: 2,
+    rows: rows.slice(0, 32).map((row, index) => ({
+      ...row,
+      role:
+        index === 0
+          ? "setup-path-match"
+          : index === 1
+            ? "owned-temp-old-uninstaller-candidate"
+            : "unknown",
+    })),
+    rolesTruncated: true,
+  };
+  assert.deepEqual(original, expected);
+  f.advance(13);
+  f.observer.markFailure();
+  const firstFailure = f.observer.receipt.failureObservation;
+  assert.equal(f.calls.length, 1, "Failure capture must not issue a query");
+  // A saved failure sample must own its primitive rows, not alias the rolling receipt.
+  original.rows[0].pid = 999;
+  original.rows[0].role = "unknown";
+  for (let i = 0; i < 9; i++) {
+    f.setEnvelope({ processes: identities([rootProcess]), roles: [], truncated: false });
+    observed(f.observer, f.observer.snapshot(), "cleaning");
+  }
+  f.advance(5);
+  f.observer.markFailure();
+  const result = f.observer.receipt;
+  assert.equal(f.calls.length, 10, "Only the ten explicit fake snapshots may query");
+  assert.equal(result.sampleCount, 10);
+  assert.equal(result.samples.length, 8);
+  assert.equal(result.samplesTruncated, true);
+  assert.ok(result.samples.every((sample) => sample.samplePhase === "cleaning"));
+  assert.ok(result.samples.every((sample) => sample.querySequence > 1));
+  assert.strictEqual(result.failureObservation, firstFailure, "The first mark must win");
+  assert.equal(firstFailure.sampleQuerySequence, 1);
+  assert.equal(firstFailure.samplePhase, "watching");
+  assert.equal(firstFailure.sampleAgeMs, 13);
+  assert.match(firstFailure.boundary, /not an atomic deadline snapshot/);
+  assert.deepEqual(firstFailure.sample, expected);
+  assert.deepEqual(Object.keys(firstFailure).sort(), [
+    "boundary",
+    "sample",
+    "sampleAgeMs",
+    "samplePhase",
+    "sampleQuerySequence",
+  ]);
+  assert.equal(result.observerFault, false);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) < 64 * 1024);
+  assert.doesNotMatch(JSON.stringify(result), /D:|Setup\.exe|Uninstall\.exe/);
+
+  const noSample = roleFixture();
+  noSample.observer.markFailure();
+  assert.equal(noSample.calls.length, 0);
+  assert.equal(noSample.observer.receipt.failureObservation.sample, null);
+  assert.equal(noSample.observer.receipt.failureObservation.sampleQuerySequence, null);
+  assert.equal(noSample.observer.receipt.failureObservation.samplePhase, "unknown");
+  assert.equal(noSample.observer.receipt.failureObservation.sampleAgeMs, null);
+});
