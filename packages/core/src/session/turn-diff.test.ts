@@ -15,7 +15,7 @@ import { TURN_DIFF_LIMITS, TurnDiffTracker } from "./turn-diff.js";
 
 const directories: string[] = [];
 function fixture() {
-  const cwd = realpathSync(mkdtempSync(join(tmpdir(), "turn-diff-")));
+  const cwd = realpathSync.native(mkdtempSync(join(tmpdir(), "turn-diff-")));
   directories.push(cwd);
   const path = join(cwd, "a.ts");
   const tracker = new TurnDiffTracker({ cwd, turnId: "turn-1" });
@@ -266,9 +266,9 @@ describe("TurnDiffTracker", () => {
     }
   });
 
-  it("quotes path labels containing spaces, quotes, tabs and Unicode", () => {
+  it("quotes platform-valid path labels with spaces, Unicode and POSIX quotes and tabs", () => {
     const { cwd, tracker } = fixture();
-    const path = join(cwd, '中 文\t"a.ts');
+    const path = join(cwd, process.platform === "win32" ? "中 文 a.ts" : '中 文\t"a.ts');
     const result = update(tracker, path, "create", "new\n");
     expect(result.files[0].path).toBe(path);
     expect(result.files[0].diff).toContain(

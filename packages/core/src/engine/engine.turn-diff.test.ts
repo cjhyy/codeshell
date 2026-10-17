@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LLMClientBase } from "../llm/client-base.js";
@@ -37,7 +44,7 @@ describe("Engine authoritative logical-turn diff", () => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
   function setup() {
-    const root = mkdtempSync(join(tmpdir(), "engine-turn-diff-"));
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), "engine-turn-diff-")));
     roots.push(root);
     const model = root;
     const createEngine = () =>
@@ -175,7 +182,7 @@ describe("Engine authoritative logical-turn diff", () => {
     expect(recovered.turnId).toBe(turnId);
     expect(recovered.complete).toBe(false);
     expect(recovered.files).toEqual([]);
-    expect(recovered.omissions.some((item) => item.path.endsWith("/a.txt"))).toBe(true);
+    expect(recovered.omissions.some((item) => item.path === file)).toBe(true);
   });
 
   test("ephemeral execution still publishes evidence without persisting files", async () => {
