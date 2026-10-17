@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
+import { parseUnifiedDiff } from "./diff/parseUnifiedDiff";
 import {
   INITIAL_STATE,
   applyStreamEvent,
@@ -1773,4 +1774,155 @@ test("subagent fallback revokes only its unexecuted nested tool card", () => {
   expect(s.messages).toHaveLength(1);
   expect(s.messages[0]).toMatchObject({ kind: "agent", toolCalls: [], toolCount: 0 });
   expect(s.agentMessageIndex.child).toBe(0);
+});
+
+describe("applyStreamEvent — interleaved file writers", () => {
+  test("retains a later child Write when the agent card precedes the parent tool", () => {
+    let state = appendUserMessage(INITIAL_STATE, "update shared file", 1);
+    let clock = 10;
+    const events: StreamEvent[] = [
+      startAgent("writer-child"),
+      ev("tool_use_start", {
+        toolCall: {
+          id: "parent-write",
+          toolName: "Write",
+          args: { file_path: "shared.ts", content: "parent" },
+        },
+      } as any),
+      ev("tool_result", {
+        result: { id: "parent-write", toolName: "Write", result: "ok" },
+      } as any),
+      ev("tool_use_start", {
+        agentId: "writer-child",
+        toolCall: {
+          id: "child-write",
+          toolName: "Write",
+          args: { file_path: "shared.ts", content: "child" },
+        },
+      } as any),
+      ev("tool_result", {
+        agentId: "writer-child",
+        result: { id: "child-write", toolName: "Write", result: "ok" },
+      } as any),
+      turnComplete,
+    ];
+    for (const event of events) state = applyStreamEvent(state, event, () => clock++);
+
+    const childIndex = state.messages.findIndex((message) => message.kind === "agent");
+    const parentIndex = state.messages.findIndex(
+      (message) => message.kind === "tool" && message.id === "parent-write",
+    );
+    expect(childIndex).toBeLessThan(parentIndex);
+    expect(findAgent(state, "writer-child").toolCalls[0]?.status).toBe("succeeded");
+    const card = state.messages.find((message) => message.kind === "files_changed");
+    expect(card?.kind).toBe("files_changed");
+    if (card?.kind !== "files_changed") throw new Error("missing changed-files card");
+    expect(card.files).toHaveLength(1);
+    expect(card.files[0]?.count).toBe(2);
+    const snapshot = card.sessionDiffs?.map((file) => file.diff).join("\n") ?? "";
+    expect(snapshot).toContain("+child");
+    expect(snapshot).toContain("+parent");
+  });
+
+  const writeEvents = (id: string, content: string, agentId?: string): StreamEvent[] => [
+    ev("tool_use_start", {
+      agentId,
+      toolCall: { id, toolName: "Write", args: { file_path: "shared.ts", content } },
+    } as any),
+    ev("tool_result", { agentId, result: { id, toolName: "Write", result: "ok" } } as any),
+  ];
+
+  function summaryFor(events: StreamEvent[], now: () => number | undefined = () => undefined) {
+    let state = appendUserMessage(INITIAL_STATE, "update shared file", 1);
+    for (const event of [...events, turnComplete]) state = applyStreamEvent(state, event, now);
+    const card = state.messages.find((message) => message.kind === "files_changed");
+    if (card?.kind !== "files_changed") throw new Error("missing changed-files card");
+    return card;
+  }
+
+  test("retains both writers with reversed events and equal or missing timestamps", () => {
+    for (const childFirst of [false, true]) {
+      for (const stamp of [100, undefined]) {
+        const parent = writeEvents("parent-write", "parent");
+        const child = writeEvents("child-write", "child", "writer-child");
+        const card = summaryFor(
+          [
+            startAgent("writer-child"),
+            ...(childFirst ? [...child, ...parent] : [...parent, ...child]),
+          ],
+          () => stamp,
+        );
+        expect(card.files).toEqual([{ path: "shared.ts", added: 2, removed: 0, count: 2 }]);
+        expect(card.sessionDiffs).toHaveLength(1);
+        const files = parseUnifiedDiff(card.sessionDiffs![0]!.diff);
+        expect(files).toHaveLength(1);
+        expect(files[0]?.hunks).toHaveLength(2);
+        expect(files[0]?.hunks.flatMap((hunk) => hunk.lines.map((line) => line.text))).toEqual([
+          "child",
+          "parent",
+        ]);
+      }
+    }
+  });
+
+  test("keeps both agents' successful writes instead of treating card order as execution order", () => {
+    const card = summaryFor([
+      startAgent("agent-a"),
+      startAgent("agent-b"),
+      ...writeEvents("b-write", "earlier-b", "agent-b"),
+      ...writeEvents("a-write", "later-a", "agent-a"),
+    ]);
+    expect(card.sessionDiffs).toHaveLength(1);
+    const diff = card.sessionDiffs![0]!.diff;
+    expect(diff).toContain("+earlier-b");
+    expect(diff).toContain("+later-a");
+    expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(2);
+  });
+
+  test("does not cancel opposite edits from different writers without an established total order", () => {
+    const edit = (
+      id: string,
+      oldText: string,
+      newText: string,
+      agentId?: string,
+    ): StreamEvent[] => [
+      ev("tool_use_start", {
+        agentId,
+        toolCall: {
+          id,
+          toolName: "Edit",
+          args: { file_path: "shared.ts", old_string: oldText, new_string: newText },
+        },
+      } as any),
+      ev("tool_result", { agentId, result: { id, toolName: "Edit", result: "ok" } } as any),
+    ];
+    const card = summaryFor([
+      startAgent("writer-child"),
+      ...edit("parent-edit", "a", "b"),
+      ...edit("child-edit", "b", "a", "writer-child"),
+    ]);
+    expect(card.files).toEqual([{ path: "shared.ts", added: 2, removed: 2, count: 2 }]);
+    const diff = card.sessionDiffs![0]!.diff;
+    for (const line of ["-a", "+b", "-b", "+a"]) expect(diff).toContain(line);
+    expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(2);
+  });
+
+  test("still composes one agent's sequential writes and ignores an unsuccessful other writer", () => {
+    const card = summaryFor([
+      startAgent("writer-child"),
+      ...writeEvents("child-first", "intermediate", "writer-child"),
+      ...writeEvents("parent-failed", "failed-parent").map((event) =>
+        event.type === "tool_result"
+          ? ({ ...event, result: { ...event.result, error: "write failed" } } as StreamEvent)
+          : event,
+      ),
+      ...writeEvents("child-second", "final", "writer-child"),
+    ]);
+    expect(card.files).toEqual([{ path: "shared.ts", added: 1, removed: 0, count: 2 }]);
+    const diff = card.sessionDiffs![0]!.diff;
+    expect(diff).toContain("+final");
+    expect(diff).not.toContain("intermediate");
+    expect(diff).not.toContain("failed-parent");
+    expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(1);
+  });
 });
