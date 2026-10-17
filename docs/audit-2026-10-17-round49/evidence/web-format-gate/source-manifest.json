@@ -1,0 +1,179 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "contextVerification": "Parent report only; reviewer Git0",
+  "files": [],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "lines": 140,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.840507+00:00",
+      "semanticRead": false,
+      "coverage": "hash-only pre-body historical-full gate",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "purpose": "Current bytes only hashed/count lines; canonical same-SHA full evidence excluded further product body review."
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "bytes": 1458,
+      "lines": 41,
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.841044+00:00",
+      "semanticRead": false,
+      "coverage": "hash-only pre-body historical-full gate",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "purpose": "Current bytes only hashed/count lines; canonical same-SHA full evidence excluded further product body review."
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.839253+00:00",
+      "semanticRead": false,
+      "coverage": "full instruction text",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "semanticLineCount": 217
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.840011+00:00",
+      "semanticRead": false,
+      "coverage": "full instruction text",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "semanticLineCount": 5
+    }
+  ],
+  "gateDecisions": [
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "disposition": "excluded-before-product-body",
+      "priorFull": {
+        "historyPath": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/10",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import."
+      },
+      "newProductSemanticLines": 0
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "disposition": "fallback-excluded-before-product-body",
+      "priorFull": {
+        "historyPath": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+        "pointer": "/files/1",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            41
+          ]
+        ]
+      },
+      "corroboratingRoot": {
+        "historyPath": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "pointer": "/files/12"
+      },
+      "newProductSemanticLines": 0
+    }
+  ],
+  "historicalMetadataObjects": [
+    {
+      "historyPath": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "pointer": "/files/10",
+      "role": "same-SHA primary full exclusion",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "bytes": 6963,
+        "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d"
+      },
+      "currentDocumentSha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "matchesBeforeReadInventoryPin": true
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "pointer": "/files/1",
+      "role": "same-SHA fallback canonical full exclusion",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+        "bytes": 4134,
+        "sha256": "27902497dc9dcf82db3500c77d63e84b371c9161ef7af9ed028de4b100915a41"
+      },
+      "currentDocumentSha256": "27902497dc9dcf82db3500c77d63e84b371c9161ef7af9ed028de4b100915a41",
+      "matchesBeforeReadInventoryPin": true
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/12",
+      "role": "same-SHA fallback corroborating Root full",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "bytes": 12586,
+        "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae"
+      },
+      "currentDocumentSha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae",
+      "matchesBeforeReadInventoryPin": true
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/5",
+      "role": "old-SHA whole-file control, does not bind current by itself",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "bytes": 5677,
+        "sha256": "a58f1b00f628f3304ad3cfca03b95bc287d061b15b9402a3ef9f8d8181abb07a"
+      },
+      "currentDocumentSha256": "a58f1b00f628f3304ad3cfca03b95bc287d061b15b9402a3ef9f8d8181abb07a",
+      "matchesBeforeReadInventoryPin": true
+    }
+  ],
+  "counts": {
+    "productSemanticRows": 0,
+    "productSemanticLines": 0,
+    "productDisplayedLines": 0,
+    "testDeclarationLines": 0,
+    "productHashOnlyRows": 2,
+    "instructionFullLines": 222,
+    "explicitMetadataRowsMachineExtracted": 900,
+    "compactDirectManifestRowsActuallyRead": 10,
+    "canonicalOriginalMetadataObjectsActuallyRead": 4,
+    "savedLocatorContextWindowsActuallyRead": 0
+  },
+  "scope": "No new consumer/body review after both allowed targets met same-SHA canonical full gate. Old runtime failures not reopened; historical full does not mean all behaviors verified or tests passed."
+}

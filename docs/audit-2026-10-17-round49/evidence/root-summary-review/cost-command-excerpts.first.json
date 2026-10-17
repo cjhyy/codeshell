@@ -1,0 +1,31 @@
+{
+  "atUTC": "2026-10-17T16:22:54.052495+00:00",
+  "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+  "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+  "displayedRanges": [
+    [
+      90,
+      131
+    ],
+    [
+      620,
+      628
+    ]
+  ],
+  "excerpts": [
+    {
+      "range": [
+        90,
+        131
+      ],
+      "text": "  90     name: \"/cost\",\n  91     description: \"Show token usage and cost (/cost stats for summary, /cost detail for breakdown)\",\n  92     usage: \"/cost [stats|detail]\",\n  93     execute: (arg, ctx) => {\n  94       if (costTracker.getUsageSummary()) {\n  95         ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));\n  96         return;\n  97       }\n  98       if (costTracker.getRequestCount() === 0) {\n  99         ctx.addStatus(\"No API requests yet.\");\n 100         return;\n 101       }\n 102       const t = costTracker.getTotalTokens();\n 103       const cost = costTracker.getEstimatedCost();\n 104       const requests = costTracker.getRequestCount();\n 105 \n 106       if (arg === \"stats\" || arg === \"summary\") {\n 107         ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));\n 108       } else if (arg === \"detail\" || arg === \"usage\") {\n 109         const avgTokensPerReq = Math.round(t.total / requests);\n 110         const avgCostPerReq = (cost / requests).toFixed(4);\n 111         const fmt = (n: number) => n.toLocaleString();\n 112         ctx.addStatus(\n 113           [\n 114             \"API Usage:\",\n 115             `  Requests:         ${requests}`,\n 116             `  Total tokens:     ${fmt(t.total)}`,\n 117             `    Prompt:         ${fmt(t.prompt)}`,\n 118             `    Completion:     ${fmt(t.completion)}`,\n 119             `  Estimated cost:   ${cost.toFixed(4)}`,\n 120             `  Avg tokens/req:   ${fmt(avgTokensPerReq)}`,\n 121             `  Avg cost/req:     ${avgCostPerReq}`,\n 122             `  Model:            ${ctx.model}`,\n 123           ].join(\"\\n\"),\n 124         );\n 125       } else {\n 126         ctx.addStatus(\n 127           `Tokens: ${t.total} (in: ${t.prompt}, out: ${t.completion}) | ` +\n 128             `Cost: ${cost.toFixed(4)} | Requests: ${requests}`,\n 129         );\n 130         ctx.addStatus(\"Use /cost stats or /cost detail for more info.\");\n 131       }"
+    },
+    {
+      "range": [
+        620,
+        628
+      ],
+      "text": " 620     name: \"/status\",\n 621     description:\n 622       \"Show system status; /status env for environment info, /status doctor for diagnostics\",\n 623     usage: \"/status [env|doctor]\",\n 624     execute: async (arg, ctx) => {\n 625       if (arg === \"env\" || arg === \"environment\") {\n 626         ctx.addStatus(\n 627           [\n 628             `Runtime:  ${process.version}`,"
+    }
+  ]
+}

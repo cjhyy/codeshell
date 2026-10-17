@@ -1,0 +1,11 @@
+{
+  "scope": "Read accounting and original diagnostics; no product errors/reruns.",
+  "oldFullHook": "useSessionUsage has prior sameSHA fullR7; this is a specific new question verification, not a new frontend coverage claim.",
+  "adjacentDisplayedNotSemantic": [
+    "cost-tracker41–80 and171–185 pricing algorithms shown while locating bind; not executed or used to certify prices.",
+    "main and repl API-key/permission/setup/seed/lifetime/source fields displayed but outside the relevant semantic ranges; no real config or secret read.",
+    "runtime61–62 release callbacks adjacent only, not lifecycle mechanism certification."
+  ],
+  "filenameNavigationDiagnostic": "root-filename-navigation-diagnostic.json preserves one missing guessed renderer/hooks subtree; corrected by filenames from actual parent, no whole subtree claim.",
+  "productRuns": 0
+}

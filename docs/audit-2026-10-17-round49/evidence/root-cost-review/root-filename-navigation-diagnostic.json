@@ -1,0 +1,10 @@
+{
+  "toolChunk": "565358",
+  "previousCommand": "rg --files packages/server/src/hub packages/desktop/src/renderer/hooks packages/tui/src/ui/hooks | rg (...)",
+  "pipelineExitCode": 0,
+  "upstreamRGExitNotCaptured": true,
+  "stderr": "rg: packages/desktop/src/renderer/hooks: No such file or directory (os error 2)",
+  "limitation": "Partial filename results; no whole subtree inventory/read claim. Corrected by filename listing from known renderer parent, no product command failure or restart.",
+  "sourceBodiesFromMissingPath": 0,
+  "productRuns": 0
+}

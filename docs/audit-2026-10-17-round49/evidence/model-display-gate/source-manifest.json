@@ -1,0 +1,215 @@
+{
+  "capturedUTC": "2026-10-17T16:19:06.283156+00:00",
+  "rootReportedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684; agent Git0",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only; no new semantic/source body reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedSourceLineCount": 0,
+      "kind": "instruction-carried-hash",
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:16:25.577565+00:00",
+      "pinTiming": "current hash of previously read instruction; no new semantic coverage",
+      "oldFullGateReferences": [],
+      "endingSame": true,
+      "prepPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lineCount": 217,
+        "pinUTC": "2026-10-17T16:16:25.577565+00:00",
+        "timing": "current hash of previously read instruction; no new semantic coverage"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only; no new semantic/source body reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedSourceLineCount": 0,
+      "kind": "instruction-carried-hash",
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:16:25.579502+00:00",
+      "pinTiming": "current hash of previously read instruction; no new semantic coverage",
+      "oldFullGateReferences": [],
+      "endingSame": true,
+      "prepPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lineCount": 5,
+        "pinUTC": "2026-10-17T16:16:25.579502+00:00",
+        "timing": "current hash of previously read instruction; no new semantic coverage"
+      }
+    },
+    {
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "bytes": 1001,
+      "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "lineCount": 24,
+      "coverage": "hash-only; no new semantic/source body reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedSourceLineCount": 0,
+      "kind": "same-SHA-old-full-exclusion-byte-pin",
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:16:25.580594+00:00",
+      "pinTiming": "before73 any source body/navigation display",
+      "oldFullGateReferences": [
+        {
+          "index": 19,
+          "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+          "jsonPointer": "/sources/12",
+          "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+          "rowKeys": [
+            "path",
+            "sha256",
+            "bytes",
+            "currentWorkingTreeMatchesFrozenBlob",
+            "readScope"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/ui/components/model-display.ts",
+            "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+            "bytes": 1001,
+            "readScope": "full"
+          }
+        },
+        {
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+          "jsonPointer": "/files/3",
+          "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+          "rowKeys": [
+            "path",
+            "frozenSha256",
+            "frozenGitBlob",
+            "currentEqualsFrozen",
+            "lines",
+            "scope"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/ui/components/model-display.ts",
+            "frozenSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+            "lines": 24,
+            "scope": "fully read and actual pure helpers executed"
+          }
+        }
+      ],
+      "endingSame": true,
+      "prepPinRow": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "lineCount": 24,
+        "pinUTC": "2026-10-17T16:16:25.580594+00:00",
+        "timing": "before73 any source body/navigation display"
+      }
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "bytes": 1051,
+      "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "lineCount": 24,
+      "coverage": "hash-only; no new semantic/source body reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedSourceLineCount": 0,
+      "kind": "same-SHA-old-full-exclusion-byte-pin",
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:16:25.581309+00:00",
+      "pinTiming": "before73 any source body/navigation display",
+      "oldFullGateReferences": [
+        {
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+          "jsonPointer": "/files/2",
+          "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+          "rowKeys": [
+            "path",
+            "sha256",
+            "bytes",
+            "frozenBlobVerified",
+            "currentMatchesFrozen",
+            "coverage"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/cli/parse-int-option.ts",
+            "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "bytes": 1051,
+            "coverage": "full read, actual helper tests"
+          }
+        },
+        {
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+          "jsonPointer": "/sources/0",
+          "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+          "rowKeys": [
+            "path",
+            "readScope",
+            "selectedLineRanges",
+            "lineCount",
+            "frozenSha256",
+            "currentSha256",
+            "matchesFrozen"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/cli/parse-int-option.ts",
+            "readScope": "full source",
+            "selectedLineRanges": [
+              [
+                1,
+                24
+              ]
+            ],
+            "lineCount": 24,
+            "frozenSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+          }
+        }
+      ],
+      "endingSame": true,
+      "prepPinRow": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "lineCount": 24,
+        "pinUTC": "2026-10-17T16:16:25.581309+00:00",
+        "timing": "before73 any source body/navigation display"
+      }
+    }
+  ],
+  "semanticProductLines": 0,
+  "testDeclarationLines": 0,
+  "displayedProductSourceLines": 0,
+  "newFullRows": 0,
+  "newSelectedRows": 0,
+  "hashOnlyRows": 4,
+  "oldSameSHAFullExcludedPaths": 2,
+  "scope": "Body-before-gate exclusion only. Historical full claims are not new semantic coverage or current runtime evidence. Both permitted topics excluded; no third fallback.",
+  "runs": {
+    "product": 0,
+    "helper": 0,
+    "fixture": 0,
+    "tests": 0,
+    "react": 0,
+    "terminal": 0,
+    "native": 0,
+    "model": 0,
+    "network": 0,
+    "git": 0
+  }
+}

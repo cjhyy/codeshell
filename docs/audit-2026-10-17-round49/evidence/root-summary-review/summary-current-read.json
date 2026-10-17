@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:18:29.690733+00:00",
+  "path": "packages/core/src/cost-ledger/summary.ts",
+  "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+  "displayedRanges": [
+    [
+      1,
+      81
+    ]
+  ],
+  "fullCurrentReadScope": "Ordinary in-memory usage ledger summary mapping only; import type, no ledger/provider/store/helper execution."
+}

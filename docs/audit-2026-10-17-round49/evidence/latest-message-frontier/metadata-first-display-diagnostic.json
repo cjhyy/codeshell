@@ -1,0 +1,12 @@
+{
+  "utc": "2026-10-17T16:30:07.843032+00:00",
+  "toolChunkId": "098f43",
+  "observedExitCode": 0,
+  "requestedMaxOutputTokens": 4500,
+  "observedOriginalTokenCount": 5061,
+  "observedWarning": "Warning: truncated output (original token count: 5061)",
+  "observedElision": "…561 tokens truncated…",
+  "effect": "12 compact coverage rows were fully visible; only long locator inventory print was truncated, not a semantic context read. No claim all80 windows/locator entries were read; saved contexts unchanged.",
+  "repair": "Selected7 bounded contexts below, not rescan or source/test retry.",
+  "fullUntruncatedStdoutFileClaim": false
+}

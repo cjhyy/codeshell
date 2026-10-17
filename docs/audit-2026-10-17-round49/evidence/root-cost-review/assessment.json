@@ -1,0 +1,34 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "files": [],
+  "hypothesisDisposition": "Remote TUI /cost local-empty singleton hypothesis withdrawn for observed ordinary CLI path; not promoted.",
+  "decisiveCounterevidence": [
+    "Both ordinary CLI interactive entries call replCommand; base-url explicitly means LLM API URL, not remote Engine host.",
+    "repl215 sessionCostTracker is the imported global costTracker,223 same object to runtime. Runtime54–60 binds that tracker to usageLedger.",
+    "repl258 creates in-process transport pair,281 client uses its clientTransport and323–331 launches UI with that client.",
+    "CostTracker95–96 getUsageSummary uses bound ledger; /cost94–96 takes this branch, so the assumed empty unbound singleton premise is false."
+  ],
+  "limits": [
+    "No proof of supported remote TUI production mode; no arbitrary public providedClient/SDK or hand-crafted DTO made into a consumer.",
+    "Other embedding hosts/remote APIs/connection/auth/lifetime/provider/accounting mechanisms not certified.",
+    "Scope runtime cost versus per-session cost can differ intentionally; no global-correctness claim.",
+    "Old COST-R9-01 concerns unbound standalone model identity/estimation, not this rejected UI hypothesis."
+  ],
+  "historyMachineCounts": {
+    "0-path": 694,
+    "0-sha": 102,
+    "1-path": 207,
+    "1-sha": 9,
+    "2-path": 183,
+    "2-sha": 11,
+    "3-path": 21,
+    "3-sha": 11,
+    "remote-cost": 0,
+    "old-cost": 48
+  },
+  "historyQueryCaps": 60,
+  "historyContextsActualRead": "Canonical old COST-R9-01 one original object only; broad source rows/path/SHA caps not all read; exact remote-cost0 is machine absence, not semantic history exhaustion.",
+  "productRuns": 0
+}

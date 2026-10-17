@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:30:17.267566+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "lines": 349,
+      "beforeRootCurrentNavigationAndBody": true
+    }
+  ]
+}

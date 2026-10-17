@@ -1,0 +1,64 @@
+{
+  "rows": [
+    {
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "pointer": "/files/4",
+      "historyBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+        "bytes": 13259,
+        "sha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95"
+      },
+      "readUTC": "2026-10-17T16:34:27.637821+00:00",
+      "currentDocumentSha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95",
+      "matchesInventoryPin": true,
+      "object": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "bytes": 6078,
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173,
+        "coverage": "hash-only; no new semantic source reading",
+        "kind": "unread-adjacent-hook",
+        "selectedLineRanges": [],
+        "selectedLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLines": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "initialSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "initialPinUTC": "2026-10-17T15:35:41.783323+00:00",
+        "initialPinTiming": "before any navigation/body; no body subsequently read",
+        "endingSameSha256": true,
+        "prepPinRow": {
+          "path": "packages/web/app/useLatestMessages.ts",
+          "bytes": 6078,
+          "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+          "lineCount": 173,
+          "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+          "beforeSemanticOrNavigationRead": true
+        }
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "pointer": "/hashOnlyChecks/0",
+      "historyBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+        "bytes": 6886,
+        "sha256": "10e6c37fa6952033018bf6d4e9eb971aa2e1a239ef19442a2c3c0fbb58887677"
+      },
+      "readUTC": "2026-10-17T16:34:27.639059+00:00",
+      "currentDocumentSha256": "10e6c37fa6952033018bf6d4e9eb971aa2e1a239ef19442a2c3c0fbb58887677",
+      "matchesInventoryPin": true,
+      "object": {
+        "manifest": "web-message-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    }
+  ],
+  "interpretation": "Explicit hash-only prior current-SHA records, not full-read evidence. Earlier R2 selected wiring context does not establish whole hook full read."
+}

@@ -1,0 +1,1074 @@
+{
+  "baseline": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "mainHead": "9a2d118502fe184dc0271360f97c8fdbe06deb01",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "currentBytes": 4696,
+      "currentSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "mainBytes": 4696,
+      "mainSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "currentBytes": 6078,
+      "currentSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "mainBytes": 6078,
+      "mainSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/colorizer.ts",
+      "bytes": 1045,
+      "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "currentBytes": 1045,
+      "currentSha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "mainBytes": 1045,
+      "mainSha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "bytes": 8530,
+      "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "currentBytes": 8530,
+      "currentSha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "mainBytes": 8530,
+      "mainSha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "bytes": 12385,
+      "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "currentBytes": 12385,
+      "currentSha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "mainBytes": 12385,
+      "mainSha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "bytes": 3951,
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "currentBytes": 3951,
+      "currentSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "mainBytes": 3951,
+      "mainSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "bytes": 9117,
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "currentBytes": 9117,
+      "currentSha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "mainBytes": 9117,
+      "mainSha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "currentBytes": 3033,
+      "currentSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "mainBytes": 3033,
+      "mainSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "bytes": 18125,
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "currentBytes": 18125,
+      "currentSha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "mainBytes": 18125,
+      "mainSha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "bytes": 17975,
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "currentBytes": 17975,
+      "currentSha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "mainBytes": 17975,
+      "mainSha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "bytes": 2891,
+      "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "currentBytes": 2891,
+      "currentSha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "mainBytes": 2891,
+      "mainSha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "currentBytes": 2251,
+      "currentSha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "mainBytes": 2251,
+      "mainSha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "currentBytes": 13259,
+      "currentSha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "mainBytes": 13259,
+      "mainSha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "currentBytes": 210666,
+      "currentSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "mainBytes": 210666,
+      "mainSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "currentBytes": 6215,
+      "currentSha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "mainBytes": 6215,
+      "mainSha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/session-title.ts",
+      "bytes": 1798,
+      "sha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "currentBytes": 1798,
+      "currentSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "mainBytes": 1798,
+      "mainSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "bytes": 10423,
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "currentBytes": 10423,
+      "currentSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "mainBytes": 10423,
+      "mainSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session-manager.ts",
+      "bytes": 29543,
+      "sha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "currentBytes": 29543,
+      "currentSha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "mainBytes": 29543,
+      "mainSha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "bytes": 1622,
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "currentBytes": 1622,
+      "currentSha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "mainBytes": 1622,
+      "mainSha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/cron-list.definition.ts",
+      "bytes": 294,
+      "sha256": "5cb4f5a55d6af3b297ade685343d1e94664f23f64e9c3d64ab3fc9c775c99407",
+      "currentBytes": 294,
+      "currentSha256": "5cb4f5a55d6af3b297ade685343d1e94664f23f64e9c3d64ab3fc9c775c99407",
+      "mainBytes": 294,
+      "mainSha256": "5cb4f5a55d6af3b297ade685343d1e94664f23f64e9c3d64ab3fc9c775c99407",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/trace-history-service.ts",
+      "bytes": 528,
+      "sha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "currentBytes": 528,
+      "currentSha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "mainBytes": 528,
+      "mainSha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "bytes": 36755,
+      "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "currentBytes": 36755,
+      "currentSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "mainBytes": 36755,
+      "mainSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "bytes": 1458,
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "currentBytes": 1458,
+      "currentSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "mainBytes": 1458,
+      "mainSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "bytes": 9402,
+      "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "currentBytes": 9402,
+      "currentSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "mainBytes": 9402,
+      "mainSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/server/src/model-trace-http.ts",
+      "bytes": 5245,
+      "sha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "currentBytes": 5245,
+      "currentSha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "mainBytes": 5245,
+      "mainSha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "currentBytes": 29601,
+      "currentSha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "mainBytes": 29601,
+      "mainSha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "currentBytes": 13991,
+      "currentSha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "mainBytes": 13991,
+      "mainSha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentBytes": 11626,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainBytes": 11626,
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "bytes": 1051,
+      "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "currentBytes": 1051,
+      "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "mainBytes": 1051,
+      "mainSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentBytes": 90976,
+      "currentSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "mainBytes": 90976,
+      "mainSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "bytes": 1001,
+      "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "currentBytes": 1001,
+      "currentSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "mainBytes": 1001,
+      "mainSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "bytes": 3330,
+      "sha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "currentBytes": 3330,
+      "currentSha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "mainBytes": 3330,
+      "mainSha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "currentBytes": 2357,
+      "currentSha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "mainBytes": 2357,
+      "mainSha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "currentBytes": 4514,
+      "currentSha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "mainBytes": 4514,
+      "mainSha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "currentBytes": 53688,
+      "currentSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "mainBytes": 53688,
+      "mainSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/app/useHubController.tsx",
+      "bytes": 32206,
+      "sha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "currentBytes": 32206,
+      "currentSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "mainBytes": 32206,
+      "mainSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "bytes": 2110,
+      "sha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "currentBytes": 2110,
+      "currentSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "mainBytes": 2110,
+      "mainSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "currentBytes": 6078,
+      "currentSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "mainBytes": 6078,
+      "mainSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/app/workbench-types.ts",
+      "bytes": 2491,
+      "sha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "currentBytes": 2491,
+      "currentSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "mainBytes": 2491,
+      "mainSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "currentBytes": 5447,
+      "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "mainBytes": 5447,
+      "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "currentBytes": 28526,
+      "currentSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "mainBytes": 28526,
+      "mainSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/web/src/model-trace-api.ts",
+      "bytes": 2466,
+      "sha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "currentBytes": 2466,
+      "currentSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "mainBytes": 2466,
+      "mainSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "coverage": "selected-test-declaration-text",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/server/src/model-trace-history.ts",
+      "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/server/src/model-trace-http.ts",
+      "sha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/src/model-trace-api.ts",
+      "sha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/trace-history-service.ts",
+      "sha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/composition/types.ts",
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/composition/compiler.ts",
+      "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/ui/index.tsx",
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "sha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "coverage": "full-test-declaration-text",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/workbench-types.ts",
+      "sha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/useHubController.tsx",
+      "sha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  ],
+  "hashOnlyChecks": [
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "instructionReads",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full current instruction read",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "instructionHashOnly",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/core/src/engine/session-title.ts",
+      "sha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/core/src/sources/context-summary.ts",
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "collection": "instructionFiles",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full instruction text",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "collection": "instructionFiles",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full instruction text",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "coverage": "hash-only pre-body historical-full gate",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "coverage": "hash-only pre-body historical-full gate",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "model-display-gate/source-manifest.json",
+      "collection": "files",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only; no new semantic/source body reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "model-display-gate/source-manifest.json",
+      "collection": "files",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only; no new semantic/source body reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "model-display-gate/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "coverage": "hash-only; no new semantic/source body reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "model-display-gate/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "coverage": "hash-only; no new semantic/source body reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "instructionsCarryForward",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "instructionsCarryForward",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/server/src/model-trace-history.ts",
+      "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "coverage": "hash-only-selection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/core/src/context/image-history-window.ts",
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "coverage": "hash-only-selection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-summary-review/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/core/src/tool-system/builtin/cron-list.definition.ts",
+      "sha256": "5cb4f5a55d6af3b297ade685343d1e94664f23f64e9c3d64ab3fc9c775c99407",
+      "coverage": "hash-only-selection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only; no current source semantic reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only; no current source semantic reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/colorizer.ts",
+      "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "coverage": "hash-only; no current source semantic reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "instructionsHashOnly",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "instructionsHashOnly",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "complete-gate-review/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "coverage": "hash-only independent gate receipt",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "complete-gate-review/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "coverage": "hash-only independent gate receipt",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "session-usage-gate/source-manifest.json",
+      "collection": "instructionHashOnly",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "session-usage-gate/source-manifest.json",
+      "collection": "instructionHashOnly",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "session-usage-gate/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "sha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "session-usage-gate/source-manifest.json",
+      "collection": "hashOnlyProducts",
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "instructionsCarryForward",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-cost-review/source-manifest.json",
+      "collection": "instructionsCarryForward",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "instructionHashOnly",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "instructionHashOnly",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-from-collection",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  ],
+  "incidentalChecks": [
+    {
+      "manifest": "preset-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/preset/index.ts",
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "coverage": "navigation-only; no semantic body",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "cost-review/source-manifest.json",
+      "collection": "navigationOnlyFiles",
+      "path": "packages/core/src/protocol/chat-session-manager.ts",
+      "sha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "coverage": "navigation-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+}

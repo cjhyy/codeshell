@@ -1,0 +1,27 @@
+{
+  "capturedUTC": "2026-10-17T16:30:34.060532+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "lines": 159,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "lines": 122,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session-manager.ts",
+      "bytes": 29543,
+      "lines": 740,
+      "sha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "beforeBodyAndLineNavigation": true
+    }
+  ],
+  "priorNavigation": "6227a7 filenames only; test index filename navigated but no body"
+}

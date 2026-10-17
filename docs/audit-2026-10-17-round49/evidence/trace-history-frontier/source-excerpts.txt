@@ -1,0 +1,235 @@
+packages/server/src/model-trace-history.ts [14,36]
+14: export type ModelTraceDetail = { record: ModelTraceRecord; events: ModelTraceEvent[] };
+15: export type ModelTraceReader = Pick<
+16:   ModelTraceStore,
+17:   "list" | "sessions" | "get" | "events" | "getConfig" | "setConfig"
+18: >;
+19: 
+20: const QUERY_FIELDS = new Set([
+21:   "limit",
+22:   "cursor",
+23:   "search",
+24:   "traceId",
+25:   "sessionId",
+26:   "withoutSession",
+27:   "model",
+28:   "provider",
+29:   "purpose",
+30:   "callType",
+31:   "source",
+32:   "status",
+33:   "since",
+34:   "until",
+35: ]);
+36: const CONFIG_FIELDS = new Set(["enabled", "captureContent", "includeEphemeral", "retentionDays"]);
+
+packages/server/src/model-trace-history.ts [47,91]
+47: function record(value: unknown, label: string): Record<string, unknown> {
+48:   if (!value || typeof value !== "object" || Array.isArray(value))
+49:     throw new ModelTraceRequestError(400, `Invalid model trace ${label}`);
+50:   return value as Record<string, unknown>;
+51: }
+52: 
+53: /** Never forward renderer/browser-owned filesystem paths or unknown scan options. */
+54: export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {
+55:   if (input === undefined) return {};
+56:   const query = record(input, "query");
+57:   const result: Record<string, unknown> = {};
+58:   for (const [key, value] of Object.entries(query)) {
+59:     if (!QUERY_FIELDS.has(key))
+60:       throw new ModelTraceRequestError(400, `Unknown model trace query field: ${key}`);
+61:     if (value === undefined) continue;
+62:     if (key === "callType") {
+63:       if (!isModelTraceCallType(value))
+64:         throw new ModelTraceRequestError(400, "Invalid model trace callType");
+65:     } else if (key === "withoutSession") {
+66:       if (typeof value !== "boolean")
+67:         throw new ModelTraceRequestError(400, "Invalid model trace withoutSession");
+68:     } else if (key === "limit") {
+69:       if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 200)
+70:         throw new ModelTraceRequestError(400, "Model trace limit must be between 1 and 200");
+71:     } else if (key === "since" || key === "until") {
+72:       if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+73:         throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);
+74:     } else {
+75:       const max = key === "search" || key === "cursor" ? 2048 : 512;
+76:       if (typeof value !== "string" || value.length > max || value.includes("\0"))
+77:         throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);
+78:       if (key === "status" && !["running", "completed", "failed", "cancelled"].includes(value))
+79:         throw new ModelTraceRequestError(400, "Invalid model trace status");
+80:     }
+81:     result[key] = value;
+82:   }
+83:   if (
+84:     typeof result.since === "number" &&
+85:     typeof result.until === "number" &&
+86:     result.since > result.until
+87:   )
+88:     throw new ModelTraceRequestError(400, "Model trace time range is reversed");
+89:   return result as ModelTraceListQuery;
+90: }
+91: 
+
+packages/server/src/model-trace-history.ts [202,230]
+202:   return {
+203:     list(query?: unknown): ModelTracePage {
+204:       const validated = validateModelTraceQuery(query);
+205:       return store.list({
+206:         ...validated,
+207:         ...(scopes
+208:           ? { workspaceScopes: scopes }
+209:           : workspacePath === undefined
+210:             ? {}
+211:             : { workspacePath }),
+212:       });
+213:     },
+214:     sessions(query?: unknown): ModelTraceSessionPage {
+215:       const validated = validateModelTraceQuery(query);
+216:       try {
+217:         return store.sessions({
+218:           ...validated,
+219:           ...(scopes
+220:             ? { workspaceScopes: scopes }
+221:             : workspacePath === undefined
+222:               ? {}
+223:               : { workspacePath }),
+224:         });
+225:       } catch (error) {
+226:         if (error instanceof Error && error.message === "Invalid model trace session cursor")
+227:           throw new ModelTraceRequestError(400, error.message);
+228:         throw error;
+229:       }
+230:     },
+
+packages/server/src/model-trace-http.ts [20,39]
+20: function queryFromUrl(url: URL) {
+21:   const query: Record<string, unknown> = {};
+22:   for (const key of new Set(url.searchParams.keys())) {
+23:     if (key === "workspace") continue; // Resolved and authorized by the outer Host route.
+24:     const values = url.searchParams.getAll(key);
+25:     if (values.length !== 1)
+26:       throw new ModelTraceRequestError(400, "Duplicate model trace query field");
+27:     const value = values[0]!;
+28:     if (key === "withoutSession") {
+29:       if (value !== "true" && value !== "false")
+30:         throw new ModelTraceRequestError(400, "Invalid model trace withoutSession");
+31:       query[key] = value === "true";
+32:     } else if (["limit", "since", "until"].includes(key)) {
+33:       if (!value.trim()) throw new ModelTraceRequestError(400, "Invalid numeric model trace query");
+34:       query[key] = Number(value);
+35:     } else query[key] = value;
+36:   }
+37:   return query;
+38: }
+39: 
+
+packages/server/src/model-trace-http.ts [73,74]
+73:         if (url.pathname === ROOT) result = history.list(queryFromUrl(url));
+74:         else if (url.pathname === `${ROOT}/sessions`) result = history.sessions(queryFromUrl(url));
+
+packages/web/src/model-trace-api.ts [25,54]
+25: type RemoteModelTraceQuery = Omit<ModelTraceListQuery, "workspacePath" | "workspaceScopes">;
+26: 
+27: export interface RemoteModelTraceApi {
+28:   list(query?: RemoteModelTraceQuery): Promise<ModelTracePage>;
+29:   sessions(query?: RemoteModelTraceQuery): Promise<ModelTraceSessionPage>;
+30:   get(id: string): Promise<{ record: ModelTraceRecord; events: ModelTraceEvent[] } | null>;
+31:   getConfig(): Promise<ModelTraceConfig>;
+32: }
+33: 
+34: /** Supply the client's existing authenticated, workspace-bound JSON requester. */
+35: export function createRemoteModelTraceApi(options: {
+36:   request: (path: string, init?: RequestInit) => Promise<unknown>;
+37: }): RemoteModelTraceApi {
+38:   const querySuffix = (query: RemoteModelTraceQuery) => {
+39:     const params = new URLSearchParams();
+40:     for (const [key, value] of Object.entries(query)) {
+41:       if (["workspacePath", "workspaceScopes", "storageDir"].includes(key))
+42:         throw new Error("Model history scope belongs to the Host");
+43:       if (value !== undefined) params.set(key, String(value));
+44:     }
+45:     return params.size ? `?${params}` : "";
+46:   };
+47:   return {
+48:     async list(query = {}) {
+49:       return (await options.request(`/api/v1/model-traces${querySuffix(query)}`)) as ModelTracePage;
+50:     },
+51:     async sessions(query = {}) {
+52:       return (await options.request(
+53:         `/api/v1/model-traces/sessions${querySuffix(query)}`,
+54:       )) as ModelTraceSessionPage;
+
+packages/desktop/src/renderer/activity/ModelTracesView.tsx [245,262]
+245:     listPending.current = true;
+246:     setListLoading(true);
+247:     setListError(null);
+248:     void Promise.resolve()
+249:       .then(() =>
+250:         window.codeshell.modelTraces.sessions({
+251:           ...query,
+252:           limit: 50,
+253:           ...(cursor ? { cursor } : {}),
+254:         }),
+255:       )
+256:       .then((page) => {
+257:         if (!mounted.current || version !== listVersion.current) return;
+258:         setList(page);
+259:         if (!selectedRequestRef.current) {
+260:           const first = selectedSessionRef.current
+261:             ? (page.items.find((item) => item.key === selectedSessionRef.current?.key) ??
+262:               (filters.callType ? page.items[0] : undefined))
+
+packages/desktop/src/renderer/activity/ModelTracesView.tsx [290,307]
+290:       return;
+291:     }
+292:     callsPending.current = true;
+293:     setCallsLoading(true);
+294:     setCallsError(null);
+295:     setCalls((current) =>
+296:       current.scopeKey === callScopeKey ? current : { scopeKey: callScopeKey, items: [] },
+297:     );
+298:     void Promise.resolve()
+299:       .then(() => window.codeshell.modelTraces.list({ ...selectedCallQuery!, limit: 100 }))
+300:       .then((page) => {
+301:         if (!mounted.current || version !== callsVersion.current) return;
+302:         setCalls({
+303:           scopeKey: callScopeKey,
+304:           items: mergeTraceCalls([], page.items),
+305:           nextCursor: page.nextCursor,
+306:         });
+307:         if (!selectedRequestRef.current && page.items[0]) {
+
+packages/desktop/src/renderer/activity/ModelTracesView.tsx [368,385]
+368:     setCallsLoading(true);
+369:     setCallsError(null);
+370:     const version = callsVersion.current;
+371:     try {
+372:       const page = await window.codeshell.modelTraces.list({
+373:         ...selectedCallQuery!,
+374:         limit: 100,
+375:         cursor: calls.nextCursor,
+376:       });
+377:       if (mounted.current && version === callsVersion.current)
+378:         setCalls((current) => ({
+379:           scopeKey: callScopeKey,
+380:           items: mergeTraceCalls(current.items, page.items),
+381:           nextCursor: page.nextCursor,
+382:         }));
+383:     } catch (error) {
+384:       if (mounted.current && version === callsVersion.current) setCallsError(errorText(error));
+385:     } finally {
+
+packages/desktop/src/main/trace-history-service.ts [1,13]
+1: import { join } from "node:path";
+2: import { sessionsRoot } from "@cjhyy/code-shell-core";
+3: import { createModelTraceHistory, type ModelTraceReader } from "@cjhyy/code-shell-server/storage";
+4: 
+5: /** The native application can inspect its own complete Host model history. */
+6: export function createTraceHistoryService(
+7:   options: { storageDir?: string; store?: ModelTraceReader } = {},
+8: ) {
+9:   return createModelTraceHistory({
+10:     storageDir: options.storageDir ?? join(sessionsRoot(), ".model-traces"),
+11:     store: options.store,
+12:   });
+13: }

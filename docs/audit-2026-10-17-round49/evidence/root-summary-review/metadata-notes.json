@@ -1,0 +1,29 @@
+{
+  "scope": "Navigation/read accounting only, not product failures.",
+  "peerMessageCorrection": {
+    "initialStatement": "Root74 read all14path/5SHA trace-history contexts",
+    "correctedImmediately": "Those were machine counts; Root74 read58 compact exact-path metadata projections. Peer75 later performed its own19 windows; do not attribute those semantic reads to Root74."
+  },
+  "firstConsumerExcerptLabel": "display-consumer-excerpts.first.json uses a broad /cost-and-TUI scope; its core-commands676–702 excerpt is actually /status. Subsequent command-name navigation and620–628 confirmed; separate90–131 cost-command capture then proves actual /cost -> formatSummary path. Original snapshot unchanged.",
+  "adjacentDisplayedButNotSemantic": [
+    "core-commands645–675 diagnostics resolves API key and mentions subprocess calls; no key/helper/subprocess executed or certified",
+    "ledger.test106–112 filesystem/corruption declarations displayed only; not executed",
+    "store88–98 identity/ancestors validator displayed but outside semantic ranges"
+  ],
+  "firstFilenameNavigation": {
+    "toolChunk": "a6da9e",
+    "fileNamesOnly": true,
+    "rows": 8,
+    "separateRawStdoutNotCaptured": true
+  },
+  "oldInventoryNavigation": {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "matchingRows": 267,
+    "actualPrintedRows": 30,
+    "oldUnknownNotUnreadProof": true,
+    "currentSourceHashNotImplied": true
+  },
+  "metadataErrors": 0,
+  "productFailures": 0,
+  "productReruns": 0
+}

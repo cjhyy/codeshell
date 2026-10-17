@@ -1,0 +1,32 @@
+{
+  "role": "Directed static counterevidence, known hypothesis, not blind;Root80mutable package not read",
+  "hypothesisWithdrawn": true,
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "oldCauseExclusions": [
+    "COST-R9-01 standalone unbound complete-model-id estimation"
+  ],
+  "productHelpersImportsFixturesTestsReactNetworkAuthNativeGitExecuted": 0,
+  "actualClientQueriesOrConnectionsStarted": 0,
+  "realConfigsSessionsAccountsRead": 0,
+  "transportIdentityPermissionsLedgerLocksPersistMechanismsExercisedOrCertified": false,
+  "productWrites": 0,
+  "semanticFiles": 7,
+  "selected": 7,
+  "full": 0,
+  "semanticProductLines": 220,
+  "semanticTestLines": 0,
+  "navigationOnlyFiles": 1,
+  "displayedLineUnionSumIncludingNav": 570,
+  "testDeclarationsRead": 0,
+  "testExecutions": 0,
+  "sourceInstructionPins": 10,
+  "allSourceInstructionSame": true,
+  "oldCauseMetadataSame": true,
+  "historyDatedCount": 4492,
+  "historyDrift": 0,
+  "metadataFailuresOrTruncations": [],
+  "noBorrowedOldRuntimeResult": true,
+  "limits": "Observed source wiring only; no blanket /cost correctness, remote SDK impossibility, pricing or async/session stale result validation."
+}

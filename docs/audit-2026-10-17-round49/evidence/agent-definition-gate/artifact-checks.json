@@ -1,0 +1,72 @@
+{
+  "createdUTC": "2026-10-17T16:23:42.894821+00:00",
+  "files": [],
+  "role": "Coverage metadata gate only; no new product source read",
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "old-reviewmode-objects.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "coverage-gate-detail.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "gate-decisions.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "old-scope-selected.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "metadata-notes.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "inside": true
+    }
+  ],
+  "allLinksValid": true,
+  "activeCanonicalReviewModeObjects": 2,
+  "twoSameSHACompletePrimaryModules": true,
+  "contradictoryLimitedRows": false,
+  "reportLine53DistinguishesCompleteVsSelected": true,
+  "firstZeroRowsArtifactPreserved": true,
+  "firstWideDisplayTruncationPreservedByToolReference": true,
+  "oldClassifierOrInventoryModified": false,
+  "universalReviewModeRuleIntroduced": false,
+  "productOrGitExecution": 0
+}

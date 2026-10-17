@@ -1,0 +1,17 @@
+{
+  "lastRootReportedContextOnly": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684 from prior tasks; no independent Git/current-HEAD certification",
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeProductBodyUTC": "2026-10-17T16:29:39.319426+00:00",
+      "semanticRead": false
+    }
+  ],
+  "sourceInstructionsReuse": "Current CODESHELL+AGENTS read in prep72; hashes rechecked later75. This task does not re-count those instruction reads.",
+  "blockedInputs": [
+    "Mutable prep80/81 not inspected. Frozen75/78 not modified."
+  ]
+}

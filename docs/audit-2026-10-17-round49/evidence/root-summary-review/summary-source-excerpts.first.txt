@@ -1,0 +1,81 @@
+   1 import type { UsageReceipt, UsageSummary, UsageTotals } from "./types.js";
+   2 
+   3 function totals(): UsageTotals {
+   4   return {
+   5     requests: 0,
+   6     promptTokens: 0,
+   7     completionTokens: 0,
+   8     totalTokens: 0,
+   9     cacheReadTokens: 0,
+  10     cacheCreationTokens: 0,
+  11     knownEstimatedCostUsd: 0,
+  12     unknownCostRequests: 0,
+  13     unknownUsageRequests: 0,
+  14   };
+  15 }
+  16 
+  17 function add(target: UsageTotals, receipt: UsageReceipt): void {
+  18   target.requests++;
+  19   if (receipt.transmission === "not-sent")
+  20     target.notSentRequests = (target.notSentRequests ?? 0) + 1;
+  21   const usage = receipt.usage;
+  22   if (usage) {
+  23     target.promptTokens += usage.promptTokens;
+  24     target.completionTokens += usage.completionTokens;
+  25     target.totalTokens += usage.totalTokens;
+  26     target.cacheReadTokens += usage.cacheReadTokens ?? 0;
+  27     target.cacheCreationTokens += usage.cacheCreationTokens ?? 0;
+  28   } else target.unknownUsageRequests++;
+  29   if (receipt.estimatedCostUsd === null) target.unknownCostRequests++;
+  30   else target.knownEstimatedCostUsd += receipt.estimatedCostUsd;
+  31 }
+  32 
+  33 export function summarizeReceipts(
+  34   receipts: readonly UsageReceipt[],
+  35   metadata: Omit<UsageSummary, keyof UsageTotals | "byModel" | "bySession" | "byPurpose">,
+  36 ): UsageSummary {
+  37   const result: UsageSummary = {
+  38     ...totals(),
+  39     ...metadata,
+  40     byModel: [],
+  41     bySession: [],
+  42     byPurpose: [],
+  43   };
+  44   const models = new Map<string, UsageSummary["byModel"][number]>();
+  45   const sessions = new Map<string, UsageSummary["bySession"][number]>();
+  46   const purposes = new Map<string, UsageSummary["byPurpose"][number]>();
+  47   for (const receipt of receipts) {
+  48     add(result, receipt);
+  49     const key = JSON.stringify([receipt.provider, receipt.providerKind, receipt.model]);
+  50     const model = models.get(key) ?? {
+  51       ...totals(),
+  52       provider: receipt.provider,
+  53       providerKind: receipt.providerKind,
+  54       model: receipt.model,
+  55     };
+  56     const session = sessions.get(receipt.accountingSessionId) ?? {
+  57       ...totals(),
+  58       sessionId: receipt.sessionId,
+  59       accountingSessionId: receipt.accountingSessionId,
+  60     };
+  61     const purpose = purposes.get(receipt.purpose) ?? { ...totals(), purpose: receipt.purpose };
+  62     for (const group of [model, session, purpose]) add(group, receipt);
+  63     models.set(key, model);
+  64     sessions.set(receipt.accountingSessionId, session);
+  65     purposes.set(receipt.purpose, purpose);
+  66   }
+  67   result.byModel = [...models.values()];
+  68   result.bySession = [...sessions.values()];
+  69   result.byPurpose = [...purposes.values()];
+  70   return result;
+  71 }
+  72 
+  73 export function formatUsageCost(
+  74   summary: Pick<UsageSummary, "knownEstimatedCostUsd" | "unknownCostRequests" | "partial">,
+  75 ): string {
+  76   const known = `~$${summary.knownEstimatedCostUsd.toFixed(6)}`;
+  77   const cost = summary.unknownCostRequests
+  78     ? `${known} + ${summary.unknownCostRequests} unknown`
+  79     : known;
+  80   return summary.partial ? `${cost} (partial)` : cost;
+  81 }

@@ -1,0 +1,9 @@
+packages/tui/src/cli/commands/builtin/core-commands.ts:6:import { costTracker, formatUsageCost } from "@cjhyy/code-shell-core";
+packages/tui/src/cli/commands/builtin/core-commands.ts:695:            lines.push(`Cost:        ${summary ? formatUsageCost(summary) : "unknown"}`);
+packages/tui/src/ui/App.tsx:30:import { formatUsageCost } from "@cjhyy/code-shell-core";
+packages/tui/src/ui/App.tsx:361:  const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;
+packages/core/src/cost-tracker.ts:8:import { formatUsageCost } from "./cost-ledger/summary.js";
+packages/core/src/cost-tracker.ts:145:    if (this.ledger) return this.ledger.summary().knownEstimatedCostUsd;
+packages/core/src/cost-tracker.ts:214:        `    Estimated cost: ${formatUsageCost(s)}`,
+packages/core/src/cost-tracker.ts:217:            `      ${m.provider}/${m.model}: ${m.requests} requests, ${formatUsageCost({ ...m, partial: s.partial })}`,
+packages/core/src/cost-tracker.ts:305:        `tokens: ${formatNumber(summary.totalTokens)} | cost: ${formatUsageCost(summary)}`,

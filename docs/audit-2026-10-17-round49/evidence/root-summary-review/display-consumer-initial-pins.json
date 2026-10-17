@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T16:20:09.423942+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "lines": 391,
+      "beforeRootCurrentNavigationAndBody": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "lines": 817,
+      "beforeRootCurrentNavigationAndBody": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lines": 2318,
+      "beforeRootCurrentNavigationAndBody": true
+    }
+  ]
+}

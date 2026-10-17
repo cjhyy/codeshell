@@ -1,0 +1,115 @@
+{
+  "capturedUTC": "2026-10-17T16:19:06.283513+00:00",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "oldSameSHAFullGateExclusions": 2,
+  "exclusions": [
+    {
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "evidence": [
+        {
+          "index": 19,
+          "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+          "jsonPointer": "/sources/12",
+          "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+          "rowKeys": [
+            "path",
+            "sha256",
+            "bytes",
+            "currentWorkingTreeMatchesFrozenBlob",
+            "readScope"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/ui/components/model-display.ts",
+            "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+            "bytes": 1001,
+            "readScope": "full"
+          }
+        },
+        {
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+          "jsonPointer": "/files/3",
+          "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+          "rowKeys": [
+            "path",
+            "frozenSha256",
+            "frozenGitBlob",
+            "currentEqualsFrozen",
+            "lines",
+            "scope"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/ui/components/model-display.ts",
+            "frozenSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+            "lines": 24,
+            "scope": "fully read and actual pure helpers executed"
+          }
+        }
+      ],
+      "decision": "Excluded before current source body; not a new negative semantic review of behavior."
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "evidence": [
+        {
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+          "jsonPointer": "/files/2",
+          "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+          "rowKeys": [
+            "path",
+            "sha256",
+            "bytes",
+            "frozenBlobVerified",
+            "currentMatchesFrozen",
+            "coverage"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/cli/parse-int-option.ts",
+            "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "bytes": 1051,
+            "coverage": "full read, actual helper tests"
+          }
+        },
+        {
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+          "jsonPointer": "/sources/0",
+          "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+          "rowKeys": [
+            "path",
+            "readScope",
+            "selectedLineRanges",
+            "lineCount",
+            "frozenSha256",
+            "currentSha256",
+            "matchesFrozen"
+          ],
+          "metadata": {
+            "path": "packages/tui/src/cli/parse-int-option.ts",
+            "readScope": "full source",
+            "selectedLineRanges": [
+              [
+                1,
+                24
+              ]
+            ],
+            "lineCount": 24,
+            "frozenSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+          }
+        }
+      ],
+      "decision": "Excluded before current source body; not a new negative semantic review of behavior."
+    }
+  ],
+  "productBodyRead": 0,
+  "testDeclarationRead": 0,
+  "actualProducerConsumerRead": 0,
+  "newTopicSelected": false,
+  "historicalMetadataObjectsRead": 21,
+  "historyContextReadScope": "Coverage/scope/review/inspectionScope/readScope and identity of21 rows only. No entire MD/JSON corpus or all retained context semantic claim.",
+  "oldExecutions": "Historical full-read-and-helper-test wording only; no old pass adopted or test/CLI/native failure reopened."
+}

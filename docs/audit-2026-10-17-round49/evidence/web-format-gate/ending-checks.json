@@ -1,0 +1,36 @@
+{
+  "checkedUTC": "2026-10-17T16:18:54.158711+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "bytes": 1458,
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "unchanged": true
+    }
+  ],
+  "allFourUnchanged": true,
+  "originalHistoryMembers": 4492,
+  "currentFilteredMembers": 4492,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "scope": "Exact original snapshot incl48/exclude49+, metadata byte/hash only; no new source semantic reads or backfill."
+}

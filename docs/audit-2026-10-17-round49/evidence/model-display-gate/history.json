@@ -1,0 +1,68 @@
+{
+  "capturedUTC": "2026-10-17T16:16:54.908542+00:00",
+  "scope": "Fresh all docs/bugs MD text and recursive JSON scalar values; keys not searched as values. Include frozen48, exclude audit rounds>=49, archives retained. Not semantic exhaustion.",
+  "method": {
+    "literalCasefoldedTerms": {
+      "target_path": [
+        "packages/tui/src/ui/components/model-display.ts"
+      ],
+      "target_sha": [
+        "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb"
+      ],
+      "target_name": [
+        "model-display"
+      ],
+      "fallback_path": [
+        "packages/tui/src/cli/parse-int-option.ts"
+      ],
+      "fallback_sha": [
+        "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+      ],
+      "fallback_name": [
+        "parse-int-option"
+      ],
+      "ordinary_contract": [
+        "model display",
+        "模型显示",
+        "parseintoption"
+      ]
+    },
+    "capPerGroup": 120,
+    "sameObjectRows": "Every JSON object with immediate source path and matching SHA inspected independently of hit caps. Narrow ancestor/nested scope claims still need manual review."
+  },
+  "inventory": {
+    "discovered": 4492,
+    "included": 4492,
+    "excluded": 0,
+    "md": 1442,
+    "json": 3050,
+    "bytes": 220606193,
+    "jsonStringValues": 1953735,
+    "jsonScalarValues": 2921270,
+    "archiveSubstring": 175,
+    "archiveExactDirectory": 169,
+    "parseErrors": [],
+    "includesFrozen48": true
+  },
+  "totals": {
+    "target_path": 31,
+    "target_sha": 15,
+    "target_name": 54,
+    "fallback_path": 40,
+    "fallback_sha": 26,
+    "fallback_name": 88,
+    "ordinary_contract": 2
+  },
+  "retained": {
+    "target_path": 31,
+    "target_sha": 15,
+    "target_name": 54,
+    "fallback_path": 40,
+    "fallback_sha": 26,
+    "fallback_name": 88,
+    "ordinary_contract": 2
+  },
+  "samePathShaRows": 21,
+  "productRuns": 0,
+  "gitCommands": 0
+}

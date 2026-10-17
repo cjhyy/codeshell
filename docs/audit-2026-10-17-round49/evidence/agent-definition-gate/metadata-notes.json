@@ -1,0 +1,22 @@
+{
+  "observations": [
+    {
+      "toolChunk": "714f9d",
+      "exitCode": 0,
+      "kind": "wide metadata display truncation",
+      "note": "Combined MD path windows exceeded output budget; not claimed fully read. Narrow canonical reviewMode objects/report opening separately inspected.",
+      "originalTokenCount": 10211,
+      "requestedMaxOutputTokens": 4500,
+      "preservedFirstResult": "Original tool result714f9d remains in transcript; raw history-contexts and initial count0 scope artifact remain unchanged. No claim an untruncated full-output file exists."
+    },
+    {
+      "toolChunk": "016305",
+      "exitCode": 0,
+      "kind": "initial scope-field reader limitation",
+      "firstArtifact": "old-scope-selected.json count0 remains unchanged",
+      "note": "Initial whitelist covered scope/coverage/review/readScope/inspectionScope but omitted reviewMode. Zero printed rows was not evidence of no old reading. Canonical follow-up c27104 found2complete rows; active gate usesold-reviewmode-objects.json."
+    }
+  ],
+  "productFailuresOrRetries": 0,
+  "productBodyReadAtDiagnostic": false
+}

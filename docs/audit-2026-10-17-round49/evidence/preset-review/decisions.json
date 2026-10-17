@@ -1,0 +1,23 @@
+{
+  "capturedUTC": "2026-10-17T16:26:30.477840+00:00",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "result": "bounded ordinary directed re-check negative, not an unread frontier",
+  "oldFullStatus": "R9 possible prior-to-EOF range unresolved; no certified full exclusion or no-full assertion",
+  "oldFullExclusions": 0,
+  "newFirstFullClaims": 0,
+  "ordinaryCounterevidence": [
+    "Compiler keyed presets make explicit names/defaults resolve to real contributed values; core shadow replacement and conflicting defaults are explicit ordinary producer rules.",
+    "Resolved tagged catalog arrays feed helper filters without inventing or normalizing names; injected tools rule is documented for owners without resolved presets.",
+    "Prompt sections map declared keys to values, and real Engine consumes the helpers at construction and selected settings update.",
+    "Existing default-preset tests state ordinary fallback and rejection intent only; no execution used."
+  ],
+  "boundaries": [
+    "registerAlwaysTools/LifetimeScope/instruction-boundary and all authority/availability/permission/activation/identity/native/credentials mechanisms not reviewed for correctness.",
+    "Colorizer fallback unused body0; permanent ANSI/sliceAnsi failures and known causes not reopened.",
+    "Old R9 tool Registry candidate/source statement is history only, not current proof or new related finding."
+  ],
+  "metadataAdaptationCorrections": 1,
+  "productAttempts": 0
+}

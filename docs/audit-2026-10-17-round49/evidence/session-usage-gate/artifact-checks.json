@@ -1,0 +1,64 @@
+{
+  "files": [],
+  "role": "Read-before-body original metadata gate",
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "coverage-gate-detail.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history-method.py",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "old-scope-selected.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "inside": true
+    }
+  ],
+  "allLinksValid": true,
+  "primarySameSHAFullGate": 1,
+  "coListedTestFullMetadataSupportingOnly": 1,
+  "productSemanticFiles": 0,
+  "allSourceInstructionAndCanonicalPinsSame": true,
+  "historyDrift": 0,
+  "metadataErrorsOrTruncations": 0,
+  "productOrGitExecution": 0
+}

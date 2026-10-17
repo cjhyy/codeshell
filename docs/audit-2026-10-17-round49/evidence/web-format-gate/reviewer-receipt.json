@@ -1,0 +1,68 @@
+{
+  "frozenUTC": "2026-10-17T16:18:55.581240+00:00",
+  "directory": "/tmp/codeshell-audit-round72-web-format",
+  "selfExcluded": "reviewer-receipt.json",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0,
+    "sameShaFullPreBodyExclusions": 2
+  },
+  "files": [
+    {
+      "path": "canonical-coverage-objects.json",
+      "bytes": 4567,
+      "sha256": "662586d06c9df5d69334284505138e8e6bbc1e60c4c4d022fb0fef12a285a763"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 310608,
+      "sha256": "7dffd296908c973f4333fce8a6f88dad53b07df93085a8406cd815b11b85edfe"
+    },
+    {
+      "path": "coverage-gate-selected.json",
+      "bytes": 4788,
+      "sha256": "4111fa8260dac65830c03f8f12a9e75b257d275d6a40d6451be57c313b59d9e5"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1102,
+      "sha256": "305d72009dff40551c2d86599fca4e71e9bf72dd74116ed388ed1e791df062bd"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 145195,
+      "sha256": "62a4c5ca8c7b0bbf0a0b919005e3dc1ba5ddce528d4c3adc466ebd22fd9f0868"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3836,
+      "sha256": "c69c798f300812a57141e5ab2ce425ff3c73e902c31f2ccbadd651064a87b8c0"
+    },
+    {
+      "path": "history.json",
+      "bytes": 898449,
+      "sha256": "5dc80f0318dc1793298a3862801449106b1c10f9a63a26108b1908fc10024d2a"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1238,
+      "sha256": "5a1c77be16a8bec596496f905e08ac720ebb271e975e521bede0dedbad445f38"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2863,
+      "sha256": "ec4e7be456d8b575ee3e89aa2d736e071ea86aed96a0a0d7a451e9b2550e8e50"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 6675,
+      "sha256": "478902b33f2f1eaeed5cc56292db7962f7e8a0c9b2d54e4fa5681e11c8e74214"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 741,
+      "sha256": "dacd0988c9e67b2826d439b166b951e13d603b442c4a0f0df2da00877d8e3d19"
+    }
+  ]
+}

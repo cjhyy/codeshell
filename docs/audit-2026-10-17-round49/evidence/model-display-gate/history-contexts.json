@@ -1,0 +1,2483 @@
+{
+  "capturedUTC": "2026-10-17T16:16:54.916539+00:00",
+  "hits": {
+    "target_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2296",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/25/matches/0/text",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/31/matches/0/text",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/32/matches/0/text",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+        "jsonPointer": "/files/3/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "9891e60aba9bace92a327e5655053596826328d740cfc2a934377160ad6179e5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "jsonPointer": "/files/63/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/61/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/990/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3916/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15723/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15723/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15724/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15724/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15725/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15725/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15726/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15726/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15727/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15727/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4239/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4239/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/fullPaths/256",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4240/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/dated49/fullPaths/260",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/current51/fullPaths/256",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/old49-current/full/256",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-inspectionScope/full/266",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen43-44/full/269",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen45/full/272",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+        "jsonPointer": "/sources/12/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+        "jsonPointer": "/files/74/path",
+        "line": 1,
+        "needle": "packages/tui/src/ui/components/model-display.ts",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f"
+      }
+    ],
+    "target_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+        "jsonPointer": "/files/3/frozenSha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "9891e60aba9bace92a327e5655053596826328d740cfc2a934377160ad6179e5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "jsonPointer": "/files/63/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/61/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/990/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/990/claims/0/sourceSha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/990/claims/1/sourceSha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3916/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15723/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15726/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15727/sourceHashFields/frozenSha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4239/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4239/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4240/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+        "jsonPointer": "/sources/12/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+        "jsonPointer": "/files/74/sha256",
+        "line": 1,
+        "needle": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "context": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f"
+      }
+    ],
+    "target_name": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2296",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/patterns/model-display",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display|modelTags|fmtTokens",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/6/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/7/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/8/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/9/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/10/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/11/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/12/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/13/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/25/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/25/matches/0/text",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/30/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/31/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/31/matches/0/text",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/32/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/32/matches/0/text",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/33/topic",
+        "line": 1,
+        "needle": "model-display",
+        "context": "model-display",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "jsonPointer": "/hits/33/matches/0/text",
+        "line": 1,
+        "needle": "model-display",
+        "context": "完整阅读了 DiffLine、DiffView、StructuredDiff、CodeBlock、ToolCall、MessageRow、ChatStore、slice-anchor、ui/truncate、render/wrap-text、render/measure-text、app-helpers、model-display、AgentBlock、AgentDock、useSessionUsage、useCostSummary，以及本次运行的五份既有测试。VirtualMessageList 阅读至 240 行，useVirtualScroll、render/stringWidth 和 render/index 的输出有截断，只按选择性阅读记录；没有把截断输出记成完整阅读。MessageContent 本轮只读既有测试，已确认的 fenced-table / escaped-pipe 问题不重复计数。",
+        "documentSha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+        "jsonPointer": "/files/3/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "9891e60aba9bace92a327e5655053596826328d740cfc2a934377160ad6179e5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/review-history.md",
+        "jsonPointer": null,
+        "line": 15,
+        "needle": "model-display",
+        "context": "1456` remove 没有刷新此 ref；`TuiControlSurface.tsx:364–370` 保持同一 CommandInput 类型和位置，isRunning 仅改变 placeholder。`App.tsx:2223–2227` 的 bottomContent 中也没有随运行状态变化的 key。该链均为源码支持，没有运行 React/Ink 或真实 Esc；报告已明确仅限保留组件的普通路径，覆盖层重挂载另当别论。\n\n## 隔离与首跑\n\nfixture 静态 import 的 model-display 只有纯函数，没有先导入 input-history。`mock.module(\"node:os\", ...)` 在第一个带 query 的真实 history 动态 import 之前安装，只有 named homedir() 替换为 owned mkdtemp 下的 mockedHome，其余 os 导出来自 originalOs。没有赋值或重新利用 HOME/home/CODEX_HOME；每个 fixture 子目录独立，真实 fs 与 nextTick 保留，清理前 drain tick。仅普通字符串输入，没有执行既有敏感命令 fixture 或真实 TUI。\n\n已读取 raw 与 exit：7 pass、31 expect、0 fail、0 skip，包含完整 Completed Bun shard；两个正式项和候选的 console 观察与 fixture/report 相符。没有新增或重跑测试。13 个 source 的 frozen Git blob id、SHA-256、当前字节均逐项复核一致；artifact receipt 使用 `files` 字段，11 个列出文件的 bytes/SHA-256 全部匹配，包括 raw、exit 与 fixture。raw/exit 的落盘先后由 author 的首次运行记录说明，本次不重新运行去“验证”捕获顺序。\n\n## 候选、去重与范围\n\nHIST-R13-C1 的函数序列确实有首次 raw 支持：pending 归",
+        "documentSha256": "b2a6a8d798748b100ea4786589300a6876059521c2c2a7adee48cd530fed0ec4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/review-history.md",
+        "jsonPointer": null,
+        "line": 23,
+        "needle": "model-display",
+        "context": "dingHistoryEntries 入口，维持 candidate 正确。没有崩溃、永久数据丢失或跨启动撤销结论。\n\ndedup collector 的范围包括全 docs/bugs MD/parsed JSON 与 archive/_archive，排除 round13；清单为 1075 MD + 641 JSON、240534 叶子、0 JSON 解析错误。核对 topic/file 命中中的旧 inline-login、Windows mode、focus/navigation 归属及 model-display 重复 helper 条目，与两个正式项根因不同；文字检索仍不是语义穷举。报告明确既有测试未执行、UI 为 static、模型能力 tag 属启发式、落盘旧 interrupted input 仅观察未另计缺陷，边界准确。\n",
+        "documentSha256": "b2a6a8d798748b100ea4786589300a6876059521c2c2a7adee48cd530fed0ec4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/history.md",
+        "jsonPointer": null,
+        "line": 1,
+        "needle": "model-display",
+        "context": "# Round13：TUI 输入历史与 model-display 普通 helper\n\n冻结源码为 `7927a7c8b80b4aec710dee1f6d831ad1982bb466`。本组新增 **2 项 P3**，另保留 **1 个候选**。1 次 guarded 首跑完成，**7 pass、31 expect、0 fail、0 skipped**；7 项都是新增 characterization/对照，没有执行既有测试。测试断言当前错误行为与恢复对照，不代表修复。\n\n## HIST-R13-01 / P3：Up 首先返回旧 session 输入，刚提交的新输入被排后\n\n同项目先有 previous session 的 `previous session input`，current session 再提交 `current session input`。真实 `createHistoryNavigator().up()` 第一次返回旧输入，第二次才返回本次新输入。同一模块的 `getTimestampedHistory()` 正确把本次新输入列为最新，真实临时 JSONL 也保留正确追加顺序。\n\n合同来自 `packages/tui/src/ui/input-history.ts:125–127` 的 **most recent last**、current session priority，以及 `:310` 的 **Move up (older)**。根因是 `:162` 先拼 currentSessionEntries、后拼 ot",
+        "documentSha256": "56a3c94f4d463ad12cd9bd0f1f9307dcb0d66279a84a5c78c5936497165230c2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/history.md",
+        "jsonPointer": null,
+        "line": 29,
+        "needle": "model-display",
+        "context": "pending 为空时直接 return，未执行 `:179` 的 `_flushScheduled = false`，而 `:183` 的 scheduleFlush 之后持续提前返回。\n\n暂不列正式缺陷：本轮未证明实际 TUI Esc 能在提交后的 nextTick 之前进入 remove；`clearPendingHistoryEntries` 也未找到正常调用点。没有改写调度器，没有模拟进程崩溃，不声称永久数据丢失。正常退出的显式 flush 仍可恢复。\n\n## 其他观察与排除\n\n- `model-display.ts` 的文档示例 128000→128K、1000000→1M、undefined→? 与普通值控制通过；modelTags 明确按名字推断，输出属启发式标签，本轮没有更强 provider 能力合同，不登记 substring 误判。\n- 已落盘 interrupted input 在当前临时 JSONL 仍保留，这一磁盘观察由同一首次夹具保留。没有再加载或跨进程运行，也没有证明跨启动撤销的持久性合同，不据此单列跨启动缺陷，不扩大 HIST-R13-02。\n- 既有 `input-history.test.ts` 已完整阅读副作用，包含敏感命令方向，本轮不执行，不恢复历史安全审查方向。未运行 App/index 中静态读到的 catalog refresh、client.cancel、provider handler 等。\n- `app-helpers.tsx` 源码阅读未发现可在本组合同下独立登记的新问题；其较宽 renderer/command 运行依赖未导入。\n\n## 隔离、首次证据与去重\n\n[夹具](evidence/history-characterization.test.ts) 首次 guarded 调用先将 combined stdout/stderr 原样写入 [raw log](evidence/history-characterization.first.log)，再写 [exit receipt](evidence/history-character",
+        "documentSha256": "56a3c94f4d463ad12cd9bd0f1f9307dcb0d66279a84a5c78c5936497165230c2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/history.md",
+        "jsonPointer": null,
+        "line": 40,
+        "needle": "model-display",
+        "context": "-dedup.py) 对全部 docs/bugs 递归 `.md`/`.json`、包括 archive/_archive、排除当前 round13，处理 **1716 文件（1075 MD、641 JSON、240534 scalar leaves）**，JSON 解析错误 0，64 个 topic/file hit 条目。[匹配结果](evidence/history-dedup.json) 中旧历史问题是 inline-login 持久化、Windows mode、focus 泄漏等，旧 model-display 是重复 helper 抽取；与本组三个根因不同。全范围扫描不等于已验证所有历史问题仍存在。\n\n一个前批 metadata-script 路径定位失败已原样标注在 [navigation note](evidence/history-navigation-note.md)：只跳过不存在的旧脚本，没有重试该读取；新 collector 属独立元数据收集，不是失败产品方向的替代验证。\n\n[正式项数据](evidence/history-findings.json)、[候选](evidence/history-candidates.json)、[验证汇总](evidence/history-validation.json)、[冻结 Git blob 与 SHA-256 pins](evidence/history-source-manifest.json) 可供根整合。source pins 区分完整/选择性阅读和 actual/static；不把静态引用推断称为完整 UI 运行，不把本组 narrow pass 称为 build/typecheck/full suite 通过。\n",
+        "documentSha256": "56a3c94f4d463ad12cd9bd0f1f9307dcb0d66279a84a5c78c5936497165230c2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "jsonPointer": "/files/63/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/61/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "jsonPointer": "/hits/retention_context/55/context",
+        "line": 1,
+        "needle": "model-display",
+        "context": "rt 的 model-display 只有纯函数，没有先导入 input-history。`mock.module(\"node:os\", ...)` 在第一个带 query 的真实 history 动态 import 之前安装，只有 named homedir() 替换为 owned mkdtemp 下的 mockedHome，其余 os 导出来自 originalOs。没有赋值或重新利用 HOME/home/CODEX_HOME；每个 fixture 子目录独立，真实 fs 与 nextTick 保留，清理前 drain tick。仅普通字符串输入，没有执行既有敏感命令 fixture 或真实 TUI。\n\n已读取 raw 与 exit：7 pass、31 expect、0 fail、0 skip，包含完整 Completed Bun shard；两个正式项和候选的 console 观察与 fixture/report 相符。没有新增或重跑测试。13 个 source 的 frozen Git blob id、SHA-256、当前字节均逐项复核一致；artifact receipt 使用 `files` 字段，11 个列出文件的 bytes/SHA-256 全部匹配，包括 raw、exit 与 fixture。raw/exit 的落盘先后由 author 的首次运行记录说明，本次不重新运行去“验证”捕获顺序。\n\n## 候选、去重与范围\n\nHIST-R13-C1 的函数序列确实有首次 ra",
+        "documentSha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "jsonPointer": "/hits/retention_context/61/context",
+        "line": 5,
+        "needle": "model-display",
+        "context": "-dedup.py) 对全部 docs/bugs 递归 `.md`/`.json`、包括 archive/_archive、排除当前 round13，处理 **1716 文件（1075 MD、641 JSON、240534 scalar leaves）**，JSON 解析错误 0，64 个 topic/file hit 条目。[匹配结果](evidence/history-dedup.json) 中旧历史问题是 inline-login 持久化、Windows mode、focus 泄漏等，旧 model-display 是重复 helper 抽",
+        "documentSha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/990/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3916/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15723/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15723/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15724/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15724/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15725/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15725/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15726/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15726/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15727/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15727/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4239/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4239/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/fullPaths/256",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4240/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/dated49/fullPaths/260",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/current51/fullPaths/256",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/old49-current/full/256",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-inspectionScope/full/266",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen43-44/full/269",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen45/full/272",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+        "jsonPointer": "/sources/12/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+        "jsonPointer": "/files/74/path",
+        "line": 1,
+        "needle": "model-display",
+        "context": "packages/tui/src/ui/components/model-display.ts",
+        "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/tui.md",
+        "jsonPointer": null,
+        "line": 27,
+        "needle": "model-display",
+        "context": "ock 边框宽度问题和 render-border ANSI 截断问题不是本候选的同一根因；未找到 DiffLine CJK 补位旧确认项。本方向按首跑失败规则跳过。\n\n## 阅读与去重边界\n\n完整阅读了 DiffLine、DiffView、StructuredDiff、CodeBlock、ToolCall、MessageRow、ChatStore、slice-anchor、ui/truncate、render/wrap-text、render/measure-text、app-helpers、model-display、AgentBlock、AgentDock、useSessionUsage、useCostSummary，以及本次运行的五份既有测试。VirtualMessageList 阅读至 240 行，useVirtualScroll、render/stringWidth 和 render/index 的输出有截断，只按选择性阅读记录；没有把截断输出记成完整阅读。MessageContent 本轮只读既有测试，已确认的 fenced-table / escaped-pipe 问题不重复计数。\n\n去重扫描语法解析了 398 份 JSON、按行扫描 993 份 Markdown，JSON 解析失败 0；范围为仓库 docs / reviews / archive / _archive 路径，含历史嵌套目录。扫描只支持查重，不等于逐份历史报告全文审查。函数名/路径匹配收据见 [tui-dedup-scan.json](evidence/tui-dedup-scan.json)，Diff 语义补充检索见 [tui-dedup-diff-semantic.json](evidence/tui-dedup-diff-semantic.json)。后者扫描时包含前者这一份新收据，已在命中中原样标明，未把自命中当历史问题。\n\n已知已修项（MessageContent 的宽度缓存、VirtualMessageList 的 scroll-away 通知、tool_result 的 compact 透传、sto",
+        "documentSha256": "fa13450f37f50c6d6f1aff1c2389657805e67de0878a33d00e40162daa94fba1"
+      }
+    ],
+    "fallback_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2143",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/cli.md",
+        "jsonPointer": null,
+        "line": 7,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "# Round 15 — CLI integer/context options and static session config\n\nFrozen baseline: `ae777b3fce6fc9986e69ceb62802f3bb3f6aa478`. Result: **0 new confirmed bugs, 0 formal candidates**. Product code unchanged.\n\n## Executed first baseline\n\nRead `packages/tui/src/cli/parse-int-option.ts` and `commands/max-context-tokens.ts` plus their existing tests in full. The first guarded command was:\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts packages/tui/src/cli/commands/max-context-tokens.test.ts\n```\n\n[First raw combined output](evidence/root-cli-existing.first.log) and [exit receipt](evidence/root-cli-existing.first.exit.json) were saved before inspection: **9 pass, 12 expectations, 0 fail/skip**, guard completed. Eight tests invoke actual pure helpers; one test reads the owned REPL source and asserts resolver wiring. The latter is a source integration assertion, not an",
+        "documentSha256": "8cf1b6e7397b6b2d7ad8ddbd4ff9a1fb827676bf2a401fdff8126a99498f67ea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-dedup.json",
+        "jsonPointer": "/hits/cli_integer/10/context",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "46e8652375da805039f83686cb94439fc4b06a682d659734a68cdbe70d91c6f1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/2/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "93b6fdb0002b9872ba925b9f4f40eff056e0a7714ca38ef8bdd4d5fb809702dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/files/60/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/55/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/0/text",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/1/text",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "Read `packages/tui/src/cli/parse-int-option.ts` and `commands/max-context-tokens.ts` plus their existing tests in full. The first guarded command was:",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/7/text",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/8/text",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/12/text",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/13/text",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+        "jsonPointer": "/sources/0/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/positiveint.md",
+        "jsonPointer": null,
+        "line": 5,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "# 第20批 — TUI 正整数选项 leaf\n\n冻结源码：`d40dd06987a2e0c20c377e243cf5c4e4b549c9ec`。本方向 **0 新正式问题、0 新候选、0 新关联**，产品代码未修改。\n\n实际执行 [parse-int-option.ts](../../packages/tui/src/cli/parse-int-option.ts#L1) 与其真实 Commander 依赖；没有依赖路径猜测或 mock。完整读取这个 24 行 leaf、29 行原测试，静态 selected 读取 [main.ts](../../packages/tui/src/cli/main.ts#L54) 的选项定义/action（1–155 行），以及 [runs.ts](../../packages/tui/src/cli/commands/runs.ts#L101) 的 import 引用、90–120/265–290 行。后两个模块没有导入或执行。\n\n## 首跑证据\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts\n```\n\n[首次原始合并日志](evidence/positiveint-first.raw.log) 与 [exit 收据](evidence/positiveint-first.exit.json) 在检查前保存，exit 0，guard 完成：**13 pass、36 expect、0 fail/skip**。其中原有 5 测试/6 断言，新 [focused](evidence/positiveint-focu",
+        "documentSha256": "29a35815330e33109fa6124ca9aff7e417e3afc9baaa8b2ac4f940e8e1040295"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/files/34/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/0/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/924/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3749/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14998/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14998/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14999/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14999/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15000/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15000/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15002/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15002/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15003/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15003/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4072/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4072/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/fullPaths/233",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4073/path",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/dated49/fullPaths/237",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/current51/fullPaths/233",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/old49-current/full/233",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-inspectionScope/full/243",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen43-44/full/246",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen45/full/249",
+        "line": 1,
+        "needle": "packages/tui/src/cli/parse-int-option.ts",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      }
+    ],
+    "fallback_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/2/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "93b6fdb0002b9872ba925b9f4f40eff056e0a7714ca38ef8bdd4d5fb809702dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/files/60/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/files/60/currentSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/files/60/mainSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/55/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+        "jsonPointer": "/sources/0/frozenSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+        "jsonPointer": "/sources/0/currentSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/files/34/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/files/34/currentSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/files/34/mainSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/0/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/924/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/924/claims/0/sourceSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/924/claims/1/sourceSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/924/claims/2/sourceSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3749/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14998/sourceHashFields/frozenSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14998/sourceHashFields/currentSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/sourceHashFields/currentSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/sourceHashFields/mainSha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15002/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15003/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4072/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4072/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4073/sha256",
+        "line": 1,
+        "needle": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "context": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      }
+    ],
+    "fallback_name": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2143",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/cli.md",
+        "jsonPointer": null,
+        "line": 7,
+        "needle": "parse-int-option",
+        "context": "LI integer/context options and static session config\n\nFrozen baseline: `ae777b3fce6fc9986e69ceb62802f3bb3f6aa478`. Result: **0 new confirmed bugs, 0 formal candidates**. Product code unchanged.\n\n## Executed first baseline\n\nRead `packages/tui/src/cli/parse-int-option.ts` and `commands/max-context-tokens.ts` plus their existing tests in full. The first guarded command was:\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts packages/tui/src/cli/commands/max-context-tokens.test.ts\n```\n\n[First raw combined output](evidence/root-cli-existing.first.log) and [exit receipt](evidence/root-cli-existing.first.exit.json) were saved before inspection: **9 pass, 12 expectations, 0 fail/skip**, guard completed. Eight tests invoke actual pure helpers; one test reads the owned REPL source and asserts resolver wiring. The latter is a source integration assertion, not",
+        "documentSha256": "8cf1b6e7397b6b2d7ad8ddbd4ff9a1fb827676bf2a401fdff8126a99498f67ea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/cli.md",
+        "jsonPointer": null,
+        "line": 10,
+        "needle": "parse-int-option",
+        "context": " first baseline\n\nRead `packages/tui/src/cli/parse-int-option.ts` and `commands/max-context-tokens.ts` plus their existing tests in full. The first guarded command was:\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts packages/tui/src/cli/commands/max-context-tokens.test.ts\n```\n\n[First raw combined output](evidence/root-cli-existing.first.log) and [exit receipt](evidence/root-cli-existing.first.exit.json) were saved before inspection: **9 pass, 12 expectations, 0 fail/skip**, guard completed. Eight tests invoke actual pure helpers; one test reads the owned REPL source and asserts resolver wiring. The latter is a source integration assertion, not an executed REPL or model session.\n\nCases cover positive decimal integer conversion, leading zeros, invalid/nonnumeric/zero/negative/trailing-garbage rejection, model-over-settings context limits and the d",
+        "documentSha256": "8cf1b6e7397b6b2d7ad8ddbd4ff9a1fb827676bf2a401fdff8126a99498f67ea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-cli-existing.first.exit.json",
+        "jsonPointer": "/command/4",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "80a0b0d04183bf082e50c5c84b8aae62590b3a0be6ea41517c4659ffb59d7a7f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-dedup.json",
+        "jsonPointer": "/patterns/cli_integer",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "parsePositiveInt|positiveIntOption|parse-int-option|maxTurns.{0,80}(?:NaN|parseInt|integer)",
+        "documentSha256": "46e8652375da805039f83686cb94439fc4b06a682d659734a68cdbe70d91c6f1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-dedup.json",
+        "jsonPointer": "/hits/cli_integer/10/context",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "46e8652375da805039f83686cb94439fc4b06a682d659734a68cdbe70d91c6f1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/2/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "93b6fdb0002b9872ba925b9f4f40eff056e0a7714ca38ef8bdd4d5fb809702dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/3/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "93b6fdb0002b9872ba925b9f4f40eff056e0a7714ca38ef8bdd4d5fb809702dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/files/59/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/files/60/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/55/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/56/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "7a4476d17e9caf28be4c138cfc857f739a6b3b2a35e7a6f9483922d988903b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/validation.json",
+        "jsonPointer": "/runs/0/command/4",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "04f4f7fbe8f425027cf774380e2c0b43bf8f9da8c1758800439b13461d1dea5d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/patterns/leaf and exports",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "parse-int-option|parsePositiveInt|positiveIntOption",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/0/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/1/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "Read `packages/tui/src/cli/parse-int-option.ts` and `commands/max-context-tokens.ts` plus their existing tests in full. The first guarded command was:",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/2/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts packages/tui/src/cli/commands/max-context-tokens.test.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/5/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/6/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "parsePositiveInt|positiveIntOption|parse-int-option|maxTurns.{0,80}(?:NaN|parseInt|integer)",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/7/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/8/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/9/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/11/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/12/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/13/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/14/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/contexts/leaf and exports/15/text",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-first.exit.json",
+        "jsonPointer": "/command/4",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "27045c97a24f60d8b3c1413661fc4bf5f6098633c98a8aad25eae148510d6bf3"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+        "jsonPointer": "/sources/0/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+        "jsonPointer": "/sources/1/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+        "jsonPointer": "/runtimeScope",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "Actual parse-int-option.ts leaf, real Commander dependency via first Bun run; no CLI/program.parse, consumer, native, model or network execution.",
+        "documentSha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-validation.json",
+        "jsonPointer": "/guardedRuns/0/command/4",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8efc61aab29774f6b6f889b03e965c081f8a2333024c4d31c73f4dd50ec2e420"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/positiveint.md",
+        "jsonPointer": null,
+        "line": 5,
+        "needle": "parse-int-option",
+        "context": "# 第20批 — TUI 正整数选项 leaf\n\n冻结源码：`d40dd06987a2e0c20c377e243cf5c4e4b549c9ec`。本方向 **0 新正式问题、0 新候选、0 新关联**，产品代码未修改。\n\n实际执行 [parse-int-option.ts](../../packages/tui/src/cli/parse-int-option.ts#L1) 与其真实 Commander 依赖；没有依赖路径猜测或 mock。完整读取这个 24 行 leaf、29 行原测试，静态 selected 读取 [main.ts](../../packages/tui/src/cli/main.ts#L54) 的选项定义/action（1–155 行），以及 [runs.ts](../../packages/tui/src/cli/commands/runs.ts#L101) 的 import 引用、90–120/265–290 行。后两个模块没有导入或执行。\n\n## 首跑证据\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts\n```\n\n[首次原始合并日志](evidence/positiveint-first.raw.log) 与 [exit 收据](evidence/positiveint-first.exit.json) 在检查前保存，exit 0，guard 完成：**13 pass、36 expect、0 fail/skip**。其",
+        "documentSha256": "29a35815330e33109fa6124ca9aff7e417e3afc9baaa8b2ac4f940e8e1040295"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/positiveint.md",
+        "jsonPointer": null,
+        "line": 5,
+        "needle": "parse-int-option",
+        "context": "# 第20批 — TUI 正整数选项 leaf\n\n冻结源码：`d40dd06987a2e0c20c377e243cf5c4e4b549c9ec`。本方向 **0 新正式问题、0 新候选、0 新关联**，产品代码未修改。\n\n实际执行 [parse-int-option.ts](../../packages/tui/src/cli/parse-int-option.ts#L1) 与其真实 Commander 依赖；没有依赖路径猜测或 mock。完整读取这个 24 行 leaf、29 行原测试，静态 selected 读取 [main.ts](../../packages/tui/src/cli/main.ts#L54) 的选项定义/action（1–155 行），以及 [runs.ts](../../packages/tui/src/cli/commands/runs.ts#L101) 的 import 引用、90–120/265–290 行。后两个模块没有导入或执行。\n\n## 首跑证据\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts\n```\n\n[首次原始合并日志](evidence/positiveint-first.raw.log) 与 [exit 收据](evidence/positiveint-first.exit.json) 在检查前保存，exit 0，guard 完成：**13 pass、36 expect、0 fail/skip**。其中原有 5 测试/6 断言，新 [focused](evidence/positiveint-f",
+        "documentSha256": "29a35815330e33109fa6124ca9aff7e417e3afc9baaa8b2ac4f940e8e1040295"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/positiveint.md",
+        "jsonPointer": null,
+        "line": 10,
+        "needle": "parse-int-option",
+        "context": "kages/tui/src/cli/main.ts#L54) 的选项定义/action（1–155 行），以及 [runs.ts](../../packages/tui/src/cli/commands/runs.ts#L101) 的 import 引用、90–120/265–290 行。后两个模块没有导入或执行。\n\n## 首跑证据\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/parse-int-option.test.ts docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts\n```\n\n[首次原始合并日志](evidence/positiveint-first.raw.log) 与 [exit 收据](evidence/positiveint-first.exit.json) 在检查前保存，exit 0，guard 完成：**13 pass、36 expect、0 fail/skip**。其中原有 5 测试/6 断言，新 [focused](evidence/positiveint-focused.test.ts) 8 测试/30 断言。只有一次产品测试尝试，没有重跑。\n\n新增控制覆盖 trim 空白、十进制前导零、全零/空值/空白、正号/小数/指数/十六进制/二进制/分隔符拒绝、非 ASCII 数字形状拒绝、真实错误类名称和保留原始值转义/label，以及 `positiveIntOption` 两个闭包的独立 label。最后一例只让实际 leaf 返回 `Number.MAX_SAFE_INTEGER` 和 `2147483648`，未调用计时器、分配对应大小的列表、执行等待或增加模型轮次。该结果不验证下游上限策略。\n\n## 普通调用链和历史去重\n\n`main.ts:71,101,131` 将实际 wrapper 用于 `--max-turns`、`--background-wait-ms`、se",
+        "documentSha256": "29a35815330e33109fa6124ca9aff7e417e3afc9baaa8b2ac4f940e8e1040295"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/files/33/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/files/34/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/0/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/1/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/validation.json",
+        "jsonPointer": "/runs/1/command/4",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "5825e6e07413dc180d4200a30700cbe1ca1d1579d0fcd7f2cc580f86b8f5c367"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/923/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/924/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3748/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3749/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14992/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14992/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14993/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14993/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14994/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14994/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14995/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14995/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14996/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14996/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14997/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14997/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14998/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14998/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14999/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/14999/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15000/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15000/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15001/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15002/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15002/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15003/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15003/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4071/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4072/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4071/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4072/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/fullPaths/233",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/selectedNoFullPaths/135",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4072/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4073/path",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/dated49/fullPaths/237",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/dated49/selectedNoFullPaths/139",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/current51/fullPaths/233",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "jsonPointer": "/current51/selectedNoFullPaths/135",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/old49-current/full/233",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/old49-current/selected/135",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-inspectionScope/full/243",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-inspectionScope/selected/135",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen43-44/full/246",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen43-44/selected/146",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen45/full/249",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "jsonPointer": "/stageFullSelectedSets/plus-frozen45/selected/154",
+        "line": 1,
+        "needle": "parse-int-option",
+        "context": "packages/tui/src/cli/parse-int-option.test.ts",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+      }
+    ],
+    "ordinary_contract": [
+      {
+        "path": "docs/audit-2026-10-17-round6/README.md",
+        "jsonPointer": null,
+        "line": 11,
+        "needle": "模型显示",
+        "context": "- | --- |\n| Task/Todo 快照、guard 元数据与展示消费者 | [tasks.md](tasks.md) | 0 确认；3 干净分片、13 tests / 280 expect，含 2 项既有 TUI 测试 |\n| Skill/Agent 普通元数据解析与发现 | [skills-agents.md](skills-agents.md) | 0 确认；分隔符与 CRLF 两个静态候选因首次 fixture 依赖失败而 SKIP |\n| Desktop 日志、设置搜索、列表/模型显示 | [desktop-display.md](desktop-display.md) | 0 确认；两个既有组件分片 12 / 71；纯投影 fixture import 失败单列 |\n| 包边界、临时构建与发布元数据 | [root-package.md](root-package.md) | 0 确认；既有基线 17 / 123；watch 入口差异仅静态候选 |\n\n共 **8 次首次分片尝试**：**6 个干净分片，42 pass / 474 expect / 0 fail / 0 skip**。42 项由 31 项现有基线和 11 项新增 Task 合同测试组成。参数循环的样本不额外计为测试。另 **2 个 fixture 导入失败分片**，原始日志与 exit 完整保留，未修复、未重试、未换方法。Skill 失败分片内另有 13 pass / 26 expect，不并入干净结果。SKIP 是审查方向处置，不能冒充 Bun 的 test skip。\n\n机器索引：[确认发现](findings.json)、[静态候选](candidates.json)、[验证计数](validation.json)、[冻结源码清单](source-manifest.json)、[最终证据哈希](evidence-index.json)。去重、排除项和实际证据边界保留在各分报告中。三份交叉复核只读文档/源码/日志，没有新增产品测试。\n\n本批使用纯转换、fake client、MiniDOM",
+        "documentSha256": "7773513a1417209fb5d0f6917a67f05054887918c67e04031c11b0f9576a3fc5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/desktop-display.md",
+        "jsonPointer": null,
+        "line": 19,
+        "needle": "模型显示",
+        "context": "0 上限；静态 `sidebarSessionVisibility.ts:18–32` 对两个必要 id 进行保留，再按原列表过滤；`:39–43` 复制后排序。自有 500 行 immutable 输入矩阵原计划核验正常分页。 | **SKIP（fixture）**：首次 import 解析失败，0 项产品测试执行；静态代码提供反证方向但不宣称动态通过。未渲染 Sidebar、没有项目/工作区/native 查询，未确认用户可达缺陷或影响，不分配 severity。 |\n| DD6-04：同名模型显示项合并/选择身份丢失 | 正常两个 provider 的模型有相同 label，并含 custom model id；预期 key 仍是 instance id，显示分组不删除对象。`textConnections.ts:177–181` 保留 key 与 label，`modelPickerPresentation.ts:3–10` 仅按 provider 分组。自有矩阵原计划验证这一合同。 | **SKIP（与 DD6-03 同一 fixture）**：未在失败后拆分、修复 import 或改用既有测试重跑。没有把注释中的旧 models[] 术语、同名 label 或刻意 stale catalog 当缺陷；不主张模型误用/费用，不分配 severity。 |\n\n`catalogEditor.ts`、`connFormat.ts`、`SettingsMenu.tsx` 仅用于普通显示/导航合同的补充静态阅读，没有新增独立问题或动态覆盖。32 个源码文件的整文件哈希及实际阅读范围见 [desktop-source-manifest.json](evidence/desktop-source-manifest.json)；哈希覆盖整个文件不代表逐行审核所有代码。\n\n## 旧记录去重\n\n完整检索冻结 HEAD 已跟踪的全部 `docs/audit-*`、`docs/review*` 和 `docs/archive` 的 `.md/.json/.txt` 记录，**885 文件 /",
+        "documentSha256": "7684687f8c359544e6c2b688a06a39ff1b94026704e4ff6329114acbab0ad98b"
+      }
+    ]
+  },
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+      "jsonPointer": "/files/3",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "frozenSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "frozenGitBlob": "48abed8500bb6fb059d0f7974c4a756c50c51fcd",
+        "currentEqualsFrozen": true,
+        "lines": 24,
+        "scope": "fully read and actual pure helpers executed"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonPointer": "/files/63",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/61",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "manifest": "history-source-manifest.json",
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/2",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "bytes": 1051,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "coverage": "full read, actual helper tests"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+      "jsonPointer": "/files/60",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "mainSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/55",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+      "jsonPointer": "/sources/0",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "readScope": "full source",
+        "selectedLineRanges": [
+          [
+            1,
+            24
+          ]
+        ],
+        "lineCount": 24,
+        "frozenSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "matchesFrozen": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/files/34",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "mainSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/0",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "manifest": "positiveint-source-manifest.json",
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/924",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "lines": 24,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "status": "current-sha-explicit-full-claim",
+        "currentFullClaimVariants": 1,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 3,
+        "claims": [
+          {
+            "sourceSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "full read, actual helper tests",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][2]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+                "jsonLocation": "$[\"files\"][60]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][55]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][34]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][0]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-full",
+            "rawCoverageLabel": "full source",
+            "selectedLineRanges": [
+              [
+                1,
+                24
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][0]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/990",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "lines": 24,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "status": "current-sha-explicit-full-claim",
+        "currentFullClaimVariants": 1,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+                "jsonLocation": "$[\"files\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"files\"][63]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][61]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+                "jsonLocation": "$[\"files\"][74]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-full",
+            "rawCoverageLabel": "full",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][12]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3749",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "lines": 24,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3916",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "lines": 24,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/4072",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "lines": 24,
+        "status": "current-sha-explicit-full-object",
+        "currentExplicitFullClaimIds": [
+          "C014999"
+        ],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C014999",
+          "C015000",
+          "C015001",
+          "C015002",
+          "C015003",
+          "C015004"
+        ],
+        "claimKindCounts": {
+          "explicit-full": 1,
+          "incidental-path-or-pin-object": 4,
+          "scope-unknown": 1
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/4239",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "lines": 24,
+        "status": "current-sha-explicit-full-object",
+        "currentExplicitFullClaimIds": [
+          "C015724"
+        ],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C015724",
+          "C015725",
+          "C015726",
+          "C015727",
+          "C015728"
+        ],
+        "claimKindCounts": {
+          "explicit-full": 1,
+          "incidental-path-or-pin-object": 3,
+          "scope-unknown": 1
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/4072",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "lines": 24
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/4239",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "lines": 24
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/4073",
+      "sourcePath": "packages/tui/src/cli/parse-int-option.ts",
+      "row": {
+        "path": "packages/tui/src/cli/parse-int-option.ts",
+        "bytes": 1051,
+        "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+        "lines": 24,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "carryable-explicit-full"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/4240",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "lines": 24,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "carryable-explicit-full"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "jsonPointer": "/sources/12",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "bytes": 1001,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "readScope": "full"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "jsonPointer": "/files/74",
+      "sourcePath": "packages/tui/src/ui/components/model-display.ts",
+      "row": {
+        "path": "packages/tui/src/ui/components/model-display.ts",
+        "bytes": 1001,
+        "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "notSemanticExhaustion": true
+}

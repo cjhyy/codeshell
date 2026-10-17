@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:21:34.665540+00:00",
+  "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+  "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+  "displayedRanges": [
+    [
+      645,
+      675
+    ]
+  ],
+  "text": " 645           }\n 646           checks.push(`Model:    ${config.model ?? ctx.model}`);\n 647           checks.push(`CWD:      ${config.cwd ?? ctx.cwd}`);\n 648           try {\n 649             const toolsResult = await ctx.client.query(\"tools\", ctx.sessionId);\n 650             checks.push(`Tools:    ${((toolsResult.data as any[]) ?? []).length} registered`);\n 651           } catch {\n 652             checks.push(`Tools:    unknown`);\n 653           }\n 654           checks.push(`Session:  ${ctx.sessionId ?? \"none\"}`);\n 655           try {\n 656             execSync(\"gh --version\", { encoding: \"utf-8\", timeout: 5000 });\n 657             checks.push(`gh CLI:   available`);\n 658           } catch {\n 659             checks.push(`gh CLI:   not found`);\n 660           }\n 661           const apiKey = resolveApiKey();\n 662           checks.push(`API key:  ${apiKey ? \"configured\" : \"NOT SET\"}`);\n 663           ctx.addStatus(\"Diagnostics:\\n  \" + checks.join(\"\\n  \"));\n 664         } catch (err) {\n 665           ctx.addStatus(`Diagnostics error: ${(err as Error).message}`);\n 666         }\n 667       } else {\n 668         try {\n 669           const configResult = await ctx.client.query(\"config\", ctx.sessionId);\n 670           const config = configResult.data as any;\n 671           const toolsResult = await ctx.client.query(\"tools\", ctx.sessionId);\n 672           const tools = (toolsResult.data as any[]) ?? [];\n 673           const lines = [\n 674             `Model:       ${ctx.model}`,\n 675             `Effort:      ${ctx.effort}`,"
+}

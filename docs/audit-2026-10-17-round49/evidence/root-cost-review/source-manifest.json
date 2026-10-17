@@ -1,0 +1,212 @@
+{
+  "baseline": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lines": 265,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          79,
+          83
+        ],
+        [
+          120,
+          124
+        ],
+        [
+          177,
+          188
+        ],
+        [
+          192,
+          198
+        ],
+        [
+          232,
+          235
+        ]
+      ],
+      "semanticLines": 36,
+      "displayedLines": 246,
+      "initialCurrentVerificationSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "firstEverSemanticReadPin": null,
+      "pinArtifact": "selection-initial-pins.json",
+      "scope": "Known remote-/cost hypothesis targeted normal CLI/client/tracker assignments only; not new unread/full coverage or auth/identity/transport/provider/store/lifetime verification."
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "lines": 349,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          214,
+          225
+        ],
+        [
+          227,
+          235
+        ],
+        [
+          257,
+          258
+        ],
+        [
+          268,
+          272
+        ],
+        [
+          280,
+          281
+        ],
+        [
+          323,
+          331
+        ]
+      ],
+      "semanticLines": 47,
+      "displayedLines": 130,
+      "initialCurrentVerificationSha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "firstEverSemanticReadPin": null,
+      "pinArtifact": "repl-initial-pin.json",
+      "scope": "Known remote-/cost hypothesis targeted normal CLI/client/tracker assignments only; not new unread/full coverage or auth/identity/transport/provider/store/lifetime verification."
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "lines": 159,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          49,
+          60
+        ]
+      ],
+      "semanticLines": 12,
+      "displayedLines": 14,
+      "initialCurrentVerificationSha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "firstEverSemanticReadPin": null,
+      "pinArtifact": "runtime-initial-pin.json",
+      "scope": "Known remote-/cost hypothesis targeted normal CLI/client/tracker assignments only; not new unread/full coverage or auth/identity/transport/provider/store/lifetime verification."
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "lines": 391,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          90,
+          97
+        ],
+        [
+          159,
+          161
+        ],
+        [
+          371,
+          371
+        ]
+      ],
+      "semanticLines": 12,
+      "displayedLines": 108,
+      "initialCurrentVerificationSha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "firstEverSemanticReadPin": null,
+      "pinArtifact": "selection-initial-pins.json",
+      "scope": "Known remote-/cost hypothesis targeted normal CLI/client/tracker assignments only; not new unread/full coverage or auth/identity/transport/provider/store/lifetime verification."
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "lines": 66,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          23,
+          44
+        ]
+      ],
+      "semanticLines": 22,
+      "displayedLines": 44,
+      "initialCurrentVerificationSha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "firstEverSemanticReadPin": null,
+      "pinArtifact": "selection-initial-pins.json",
+      "scope": "Known remote-/cost hypothesis targeted normal CLI/client/tracker assignments only; not new unread/full coverage or auth/identity/transport/provider/store/lifetime verification."
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "lines": 817,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          90,
+          104
+        ]
+      ],
+      "semanticLines": 15,
+      "displayedLines": 17,
+      "initialCurrentVerificationSha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "firstEverSemanticReadPin": null,
+      "pinArtifact": "selection-initial-pins.json",
+      "scope": "Known remote-/cost hypothesis targeted normal CLI/client/tracker assignments only; not new unread/full coverage or auth/identity/transport/provider/store/lifetime verification."
+    }
+  ],
+  "instructionsCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Known instruction full read carried forward; no invented start timing."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Known instruction full read carried forward; no invented start timing."
+    }
+  ],
+  "counts": {
+    "selectedProductFiles": 6,
+    "fullProductFiles": 0,
+    "semanticProductLines": 144,
+    "displayedProductLines": 559,
+    "testDeclarationLines": 0,
+    "productRuns": 0
+  },
+  "scope": "Explicit known-hypothesis reread, not blind or first-ever/unread frontier."
+}

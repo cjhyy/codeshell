@@ -1,0 +1,1616 @@
+{
+  "hookPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2300",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/993/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3921/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15738/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15738/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/259",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4245/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/263",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/259",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/259",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/269",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/272",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/275",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "pointer": "/sources/15/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "pointer": "/files/77/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    }
+  ],
+  "hookSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/993/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/993/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/993/claims/1/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3921/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4244/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4244/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4245/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "pointer": "/sources/15/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "pointer": "/files/77/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "completeScalar": true
+    }
+  ],
+  "hookFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2300",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/993/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3921/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15738/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15738/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/259",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4245/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/263",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/259",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/259",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/269",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/272",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/275",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "pointer": "/sources/15/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "pointer": "/files/77/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    }
+  ],
+  "testPath": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/992/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3920/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4243/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4243/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/258",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/262",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/258",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/258",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/268",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/271",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/274",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "pointer": "/sources/20/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "pointer": "/files/76/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    }
+  ],
+  "testSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/992/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/992/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/992/claims/1/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3920/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4243/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4243/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4244/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "pointer": "/sources/20/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "pointer": "/files/76/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "completeScalar": true
+    }
+  ],
+  "testFilename": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/992/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3920/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4243/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4243/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/258",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/262",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/258",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/258",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/268",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/271",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/274",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "pointer": "/sources/20/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "pointer": "/files/76/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5995,
+      "context": "e / on_session_end 会跑不到，session 会停留在 active，见 `packages/core/src/engine/turn-loop.ts:548`。loop-top abort 是为了避免已取消的子 agent 继续跑 context compaction、模型调用和工具批次，见 `packages/core/src/engine/turn-loop.ts:566`。工具批次 cap 从 10 提到 25，是因为现代模型常一次并行读十几个文件；多余调用会被提醒而不是静默丢弃，见 `packages/core/src/engine/engine.ts:2135`、`packages/core/src/engine/turn-loop.ts:1065`。\n\n### 1.4 ModelFacade、上下文与用量持久化\n\n**What**\n\n`ModelFacade` 是 LLM client 与 transcript / stream / usage 之间的适配层，见 `packages/core/src/engine/model-facade.ts:1`。`session-usage.ts` 管 session 累计 token/cache 计数，`token-budget.ts` 管单轮输出预算，ContextManager 由 Engine 组装并交给 TurnLoop。\n\n**How**\n\n`ModelFacade.call()` 记录脱敏后的 LLM request，streaming 时把模型 chunk 转成 `text_delta`、`tool_use_start`、`tool_use_args_delta`，再记录响应、usage 和 transcript，见 `packages/core/src/engine/model-facade.ts:55`、`packages/core/src/engine/model-facade.ts:73`、`packages/core/src/engine/model-facade.ts:230`。TurnLoop 在每次模型响应后把真实 usage 回灌 ContextManager，作为后续 compaction 的实际锚点，见 `packages/core/src/engine/turn-loop.ts:741`、`packages/core/src/engine/turn-loop.ts:747`。Engine 在 turn boundary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 provider、流式事件、日志、transcript、usage”收束在一个边界，不让 TurnLoop 直接知道各 prov",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6788,
+      "context": "del-facade.ts:55`、`packages/core/src/engine/model-facade.ts:73`、`packages/core/src/engine/model-facade.ts:230`。TurnLoop 在每次模型响应后把真实 usage 回灌 ContextManager，作为后续 compaction 的实际锚点，见 `packages/core/src/engine/turn-loop.ts:741`、`packages/core/src/engine/turn-loop.ts:747`。Engine 在 turn boundary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 provider、流式事件、日志、transcript、usage”收束在一个边界，不让 TurnLoop 直接知道各 provider 细节；这一点由文件头和 `recordResponse()` 的 transcript 集成体现，见 `packages/core/src/engine/model-facade.ts:1`、`packages/core/src/engine/model-facade.ts:230`。usage 用 baseline + current 是为了 turn-boundary heartbeat 多次触发时保持幂等，避免把同一 run 的 running total 重复累计，见 `packages/core/src/engine/session-usage.ts:101`。ContextManager 使用真实 usage 锚点，是为了避免纯 char/4 估算导致 compaction 决策失真，见 `packages/core/src/engine/turn-loop.ts:747`。\n\n### 1.5 运行中控制与恢复：steer、streaming queue、orphan patch、headless 背景续跑\n\n**What**\n\n这一组是运行中控制和“踩坑修复”模块：`steer-queue.ts` 管不打断注入，`streaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。\n\n**How**\n\nEngine 用 `steerQueueBySid` 保存 per-session in-memory steer 队列，只有当前 active TurnLoop 且 sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7180,
+      "context": "/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 provider、流式事件、日志、transcript、usage”收束在一个边界，不让 TurnLoop 直接知道各 provider 细节；这一点由文件头和 `recordResponse()` 的 transcript 集成体现，见 `packages/core/src/engine/model-facade.ts:1`、`packages/core/src/engine/model-facade.ts:230`。usage 用 baseline + current 是为了 turn-boundary heartbeat 多次触发时保持幂等，避免把同一 run 的 running total 重复累计，见 `packages/core/src/engine/session-usage.ts:101`。ContextManager 使用真实 usage 锚点，是为了避免纯 char/4 估算导致 compaction 决策失真，见 `packages/core/src/engine/turn-loop.ts:747`。\n\n### 1.5 运行中控制与恢复：steer、streaming queue、orphan patch、headless 背景续跑\n\n**What**\n\n这一组是运行中控制和“踩坑修复”模块：`steer-queue.ts` 管不打断注入，`streaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。\n\n**How**\n\nEngine 用 `steerQueueBySid` 保存 per-session in-memory steer 队列，只有当前 active TurnLoop 且 sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-loop.ts:581`。\n\n`StreamingToolQueue` 对 `isConcurrencySafe` 工具立即开始执行，对 unsafe 工具在 drain 时串行执行，并把 rejected promise 统一转成 error ToolResult，见 `packages/core/src/engi",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 26194,
+      "context": "一个 active turn，创建 AbortController，把 task/cwd/goal/injected/clientMessageId 转发到 `engine.run()`，完成后再跑下一条，见 `packages/core/src/protocol/chat-session.ts:35`、`packages/core/src/protocol/chat-session.ts:88`、`packages/core/src/protocol/chat-session.ts:203`。`cancel()` abort 当前 controller、清空队列，并把用户取消的 active run resolve 成 clean `aborted_streaming`，见 `packages/core/src/protocol/chat-session.ts:110`、`packages/core/src/protocol/chat-session.ts:223`。model switch 忙时先记录 `pendingModel`，在 run boundary 应用并 reset session usage，见 `packages/core/src/protocol/chat-session.ts:168`、`packages/core/src/protocol/chat-session.ts:240`。\n\n`ChatSessionManager.getOrCreate()` 打开 session path approvals，复用已有 session 时会在下一 turn 前重新应用 per-send permissionMode；新 session 通过 factory 创建 Engine，超过 maxSessions 抛 Overloaded，见 `packages/core/src/protocol/chat-session-manager.ts:53`。close 会 cancel session、清 path/credential approvals、unregister MCP owner，见 `packages/core/src/protocol/chat-session-manager.ts:98`。`closeAllAsync()` 额外 kill 全部 background shell 并清理 background-agent output files，见 `packages/core/src/protocol/chat-session-manager.ts:118`。\n\n**Why**\n\nFIFO 队列是为了 fast second send 不被静默拒绝，而是等待第一 turn 完成，见 `packages/core/src/protocol/chat-session.ts:35`。忙时延迟 model switch 是为了不在 running LLM client 下替换模型，注释直接指向 session-isolation 研究发现的问题，见 `packages/core/src/protocol/chat-session.ts:57`。Manager 复用 session 时重新应用 permissionMode，是为了修复已恢复 sess",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 29974,
+      "context": "ESHELL 仍把 `core -> tool-system -> engine` 循环列为后续拆分债务，见 `packages/core/src/tool-system/context.ts:24`、`CODESHELL.md:69`。\n- Arena 仍纠缠在 core/protocol/settings/index 多处，本文件只作为背景记录，不展开 B1 finding，见 `CODESHELL.md:70`。\n- StreamEvent 是 engine/TurnLoop/ModelFacade/tool-system 共同产出的 UI 流契约，protocol 只负责 envelope 与跨进程传输；具体 union 在 `packages/core/src/types.ts:429`，protocol envelope 在 `packages/core/src/protocol/types.ts:313`。\n\n## 5. 自查\n\n- engine 已覆盖：EngineConfig/EngineRuntime/Engine.run、TurnLoop、ModelFacade/session usage、steer/streaming queue/orphan patch/headless 背景续跑、goal/token/image policy。\n- tool-system 已覆盖：ToolRegistry/builtin/preset、ToolExecutor/ToolContext/ToolRuntimeHost、permission/path-policy/plan/hooks/investigation guard、MCP、sandbox/host bridge。\n- protocol 已覆盖：types/methods/StreamEvent、AgentServer、AgentClient、ChatSession/Manager、transport/factories/helpers/redact。\n- 每个子模块都包含 What / How / Why，并带 `file:line` 锚点。\n- 本文未写 `packages/**` 源码，未运行 build，未涉及 A2/B1。\n- 未标注“推测”：本次写入的 Why 均来自源码注释、CODESHELL 约束或直接代码结构；没有把无依据推断写成事实。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2300",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/95/context",
+      "kind": "json-value-scalar",
+      "offset": 231,
+      "context": "ktree；`cwd` 仍是主根目录，续跑优先采用 `workspace.root`。\n- transcript 是追加式事件日志，不等同于 LLM 消息；`Transcript.toMessages()` 才把 `message/tool_result/summary` 投影为模型历史，其他 UI/审计事件不进入上下文。\n- Renderer 另有 `bucket = <repoKey>::<uiSessionId>` 作为 UI 路由键；`SessionSummary.engineSessionId` 才是 core sessionId。localStorage transcript 只是最多 500 条的显示投影，不能作为 fork 的权威源。\n- 当前 quick-chat 在面板挂载时生成 `qchat-*` 与独立 `__quick_chat__::*` bucket；第一次发送直接调用 `agent/run`，Engine",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "pointer": "/hits/34/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 37,
+      "context": "| 输入证据 | full recent context、rolling summary、tool success/error/dropped、previous gaps、budget/round、stale final |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "pointer": "/hits/timezone/4/context",
+      "kind": "json-value-scalar",
+      "offset": 383,
+      "context": "x.tsx`（新，通用可搜索下拉）\n- `packages/desktop/src/renderer/automation/timezones.ts`（新，时区列表 + 偏移 helper）\n- `packages/desktop/src/renderer/automation/relativeTime.ts`（新，fmtRelative）\n- `packages/desktop/src/renderer/automation/AutomationView.tsx` — B/C/D/E/F 详情页改造\n- `packages/desktop/src/renderer/i18n/ns/automation.ts` — E/F 文案（zh+en）\n- `packages/desktop/src/preload/types.d.ts` — `AutomationSummary` 加 `resumeSessionId`\n\n---\n\n## Task 1: worker",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "pointer": "/hits/timezone/5/context",
+      "kind": "json-value-scalar",
+      "offset": 364,
+      "context": " `packages/desktop/src/renderer/automation/timezones.ts`（新，时区列表 + 偏移 helper）\n- `packages/desktop/src/renderer/automation/relativeTime.ts`（新，fmtRelative）\n- `packages/desktop/src/renderer/automation/AutomationView.tsx` — B/C/D/E/F 详情页改造\n- `packages/desktop/src/renderer/i18n/ns/automation.ts` — E/F 文案（zh+en）\n- `packages/desktop/src/preload/types.d.ts` — `AutomationSummary` 加 `resumeSessionId`\n\n---\n\n## Task 1: worker cron 工具发 `agen",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "pointer": "/hits/timezone/45/context",
+      "kind": "json-value-scalar",
+      "offset": 65,
+      "context": "ort 已在对应任务显式说明。\n\n**类型一致：** `resumeSessionId: string | null`（main summary/preload）与 core `CronJob.resumeSessionId?: string`（`?? null` 归一）一致；`fmtRelative(ms, t, now?)` 签名测试与实现一致；`Combobox` props（options/value/onChange）测试与实现一致；`ComboboxOption{value,label,hint?}` 一致。\n\n**已知实现时需现场确认（非占位，是集成点）：**\n- `props.onOpenSession` / `sessionLinks` 项的精确形状——Task 9 用现有历史列表点击 handler 对齐（同文件既有代码）。\n- i18n 插值花括号风格（`{{n}}` vs `{n}`）——对齐同 ns 既有 `everyHou",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+      "pointer": "/hits/33/matches/0/text",
+      "kind": "json-value-scalar",
+      "offset": 188,
+      "context": "完整阅读了 DiffLine、DiffView、StructuredDiff、CodeBlock、ToolCall、MessageRow、ChatStore、slice-anchor、ui/truncate、render/wrap-text、render/measure-text、app-helpers、model-display、AgentBlock、AgentDock、useSessionUsage、useCostSummary，以及本次运行的五份既有测试。VirtualMessageList 阅读至 240 行，useVirtualScroll、render/stringWidth 和 render/index 的输出有截断，只按选择性阅读记录；没有把截断输出记成完整阅读。MessageContent 本轮只读既有测试，已确认的 fenced-table / escaped-pipe 问题不重复计数。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "pointer": "/hits/identity_fallback/2/snippet",
+      "kind": "json-value-scalar",
+      "offset": 199,
+      "context": "试本轮没有执行，也不能冒充新 summary unbound 变体的动态证据。\n\n另一个已有测试 `FilesPanel.workspace.test.tsx:334–360` 覆盖 project fallback 的 secondary selector/readProjectDir。该测试 engineSessionId 与 sessionMainRootId 都 undefined；新 summary 的 engineSessionId 存在而 rootId 缺失，因真实 `&&` 条件仍进入相同 fallback，但这个变化只是本稿静态推导，未执行测试。\n\n## 补齐与范围边界\n\n本路径没有发现 lazy durable backfill；Files 的普通 multi-root 可用是 UI project API fallback，并不反驳 Review 只信 state binding 的单根候选。首条普通 send 的正常 Core backfill `packages/core/src/engi",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+      "pointer": "/hits/addressed_old_sources/8/context",
+      "kind": "json-value-scalar",
+      "offset": 254,
+      "context": "具目录检索与统计数据开展独立查重和验证，确认 **3 项 P3**，另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/root-final-qc.json",
+      "pointer": "/metadataCorrections/1",
+      "kind": "json-value-scalar",
+      "offset": 84,
+      "context": "Utils failed run/failedFirstTotals expectations now null because raw has no printed summary; testBodiesExecuted0 is separately labeled. Generator and18artifact receipt refreshed; fixture/raw/exit bytes unchanged.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+      "pointer": "/hits/linebreak_phonetic/75/text",
+      "kind": "json-value-scalar",
+      "offset": 72,
+      "context": "- engine 已覆盖：EngineConfig/EngineRuntime/Engine.run、TurnLoop、ModelFacade/session usage、steer/streaming queue/orphan patch/headless 背景续跑、goal/token/image policy。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+      "pointer": "/hits/linebreak_phonetic/171/text",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/direct_sources/88/context",
+      "kind": "json-value-scalar",
+      "offset": 254,
+      "context": "reamEvent 的产地**，关注工具调用如何 dispatch、事件如何 emit）\n- `types.ts`（EngineConfig 等类型落点）、`runtime.ts`、`model-facade.ts`、`model-connections-pool.ts`\n- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/identity_cache/21/context",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "r image | **Duplicate, excluded, no test.** Already explicit in `docs/refactor/_archive/view-image-vs-codex-review.md:22,240–267`. |\n| Sync cached-summary replay may cover newly removed messages using stale text | Source concern only; no dynamic validation or separate finding. |\n| Aggregate budget may remain exceeded when many individually short outputs cannot shrink | Source concern only; normal reachable batch/cap contract not established, no test or finding. |\n| A failed newer browser snapshot supersedes an earlier s",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/identity_cache/176/context",
+      "kind": "json-value-scalar",
+      "offset": 249,
+      "context": "模型/endpoint 只重置 baseline，不产生伪告警。\n4. hash 计算确定、无 secret、低开销；不把 system prompt、tool schema、API key、header、base URL 明文写入日志或 state.json。\n5. 完成所有 cache-key 相关动态项的粘性分类：哪些必须热生效、哪些天然 run-sticky、哪些未来若引入必须 session-lock。\n6. 保持现有 cache breakpoint 数量、StreamEvent、session usage 持久化格式和阈值不变。\n\n## 3. 详细修改方案\n\n### 3.1 新增 `packages/core/src/engine/prompt-cache-diagnostics.ts`\n\n#### 数据结构\n\n```ts\nexport interface PromptPrefixFingerprint {\n  version: 1;\n  c",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/0/context",
+      "kind": "json-value-scalar",
+      "offset": 346,
+      "context": "r，作为后续 compaction 的实际锚点，见 `packages/core/src/engine/turn-loop.ts:741`、`packages/core/src/engine/turn-loop.ts:747`。Engine 在 turn boundary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 provider、流式事件、日志、transcript、usage”收束在一个边界，不让 TurnL",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/1/context",
+      "kind": "json-value-scalar",
+      "offset": 214,
+      "context": "dary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 provider、流式事件、日志、transcript、usage”收束在一个边界，不让 TurnLoop 直接知道各 provider 细节；这一点由文件头和 `recordResponse()` 的 transcript 集成体现，见 `packages/core/src/engine/model-facade.ts:1`、`packages/core/sr",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/6/context",
+      "kind": "json-value-scalar",
+      "offset": 336,
+      "context": "paction 的实际锚点，见 `packages/core/src/engine/turn-loop.ts:741`、`packages/core/src/engine/turn-loop.ts:747`。Engine 在 turn boundary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/7/context",
+      "kind": "json-value-scalar",
+      "offset": 214,
+      "context": "dary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/8/context",
+      "kind": "json-value-scalar",
+      "offset": 204,
+      "context": "ldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。\n\n**Why**\n\n模型调用封装成 facade 的理由是把“调用 provider、流式事件、日志、transcript、usage”收束在一个边界，不让 TurnLoop 直接知道各 provider 细节；这一点由文件头和 `recordResponse()` 的 transcript 集成体现，见 `packages/co",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/11/context",
+      "kind": "json-value-scalar",
+      "offset": 346,
+      "context": "r，作为后续 compaction 的实际锚点，见 `packages/core/src/engine/turn-loop.ts:741`、`packages/core/src/engine/turn-loop.ts:747`。Engine 在 turn boundary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+      "pointer": "/hits/prior_usage/12/context",
+      "kind": "json-value-scalar",
+      "offset": 214,
+      "context": "dary 用 `foldRunUsage(baseline, current)` 写回 session state，并发 session-cumulative `usage_update`，见 `packages/core/src/engine/engine.ts:2146`。`foldRunUsage` 明确用 baseline + current，而不是累加写回值，见 `packages/core/src/engine/session-usage.ts:92`。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/10/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 112,
+      "context": "`ModelFacade` 是 LLM client 与 transcript / stream / usage 之间的适配层，见 `packages/core/src/engine/model-facade.ts:1`。`session-usage.ts` 管 session 累计 token/cache 计数，`token-budget.ts` 管单轮输出预算，ContextManager 由 Engine 组装并交给 TurnLoop。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/38/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/74/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 161,
+      "context": "odel-facade.ts`、`model-connections-pool.ts`\n- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/101/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 83,
+      "context": "transcript / stream / usage 之间的适配层，见 `packages/core/src/engine/model-facade.ts:1`。`session-usage.ts` 管 session 累计 token/cache 计数，`token-budget.ts` 管单轮输出预算，ContextManager 由 Engine 组装并交给 TurnLoop。\n\n**How**\n\n`ModelFacade.call()` 记录脱敏后的 LLM request，streaming 时把模型 chunk 转成 `text_delta`、`tool_use_start`、`tool_use_args_delta`，再记录响应、usage 和 transcript，见 `packages/core/src/engine/model-facade.ts:55`、`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/116/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/149/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 112,
+      "context": "`ModelFacade` 是 LLM client 与 transcript / stream / usage 之间的适配层，见 `packages/core/src/engine/model-facade.ts:1`。`session-usage.ts` 管 session 累计 token/cache 计数，`token-budget.ts` 管单轮输出预算，ContextManager 由 Engine 组装并交给 TurnLoop。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/exact/156/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 13,
+      "context": "- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+      "pointer": "/selected/10/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 112,
+      "context": "`ModelFacade` 是 LLM client 与 transcript / stream / usage 之间的适配层，见 `packages/core/src/engine/model-facade.ts:1`。`session-usage.ts` 管 session 累计 token/cache 计数，`token-budget.ts` 管单轮输出预算，ContextManager 由 Engine 组装并交给 TurnLoop。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+      "pointer": "/selected/21/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 13,
+      "context": "- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+      "pointer": "/hits/all_429/7/context",
+      "kind": "json-value-scalar",
+      "offset": 311,
+      "context": "g，见 `CODESHELL.md:70`。\n- StreamEvent 是 engine/TurnLoop/ModelFacade/tool-system 共同产出的 UI 流契约，protocol 只负责 envelope 与跨进程传输；具体 union 在 `packages/core/src/types.ts:429`，protocol envelope 在 `packages/core/src/protocol/types.ts:313`。\n\n## 5. 自查\n\n- engine 已覆盖：EngineConfig/EngineRuntime/Engine.run、TurnLoop、ModelFacade/session usage、steer/streaming queue/orphan patch/headless 背景续跑、goal/token/image policy。\n- tool-system 已覆盖：ToolRegistry/builtin/preset、ToolExecutor/ToolContext/ToolRuntimeHost、permission/path-policy/plan/hooks/investigation guard、MCP、sandbox/host bridge",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+      "pointer": "/matches/draft-session/61/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 422,
+      "context": "achmentSession` when the bucket has no session ID (`renderer/App.tsx:669–672`). That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before any send.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+      "pointer": "/matches/draft-session/113/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 422,
+      "context": "achmentSession` when the bucket has no session ID (`renderer/App.tsx:669–672`). That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before any send.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/992/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/993/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3920/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3921/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+      "pointer": "/hits/ordinary-projection/35/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 231,
+      "context": "ktree；`cwd` 仍是主根目录，续跑优先采用 `workspace.root`。\n- transcript 是追加式事件日志，不等同于 LLM 消息；`Transcript.toMessages()` 才把 `message/tool_result/summary` 投影为模型历史，其他 UI/审计事件不进入上下文。\n- Renderer 另有 `bucket = <repoKey>::<uiSessionId>` 作为 UI 路由键；`SessionSummary.engineSessionId` 才是 core sessionId。localStorage transcript 只是最多 500 条的显示投影，不能作为 fork 的权威源。\n- 当前 quick-chat 在面板挂载时生成 `qchat-*` 与独立 `__quick_chat__::*` bucket；第一次发送直接调用 `agent/run`，Engine",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "pointer": "/hits/ordinary-projection/35/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 231,
+      "context": "ktree；`cwd` 仍是主根目录，续跑优先采用 `workspace.root`。\n- transcript 是追加式事件日志，不等同于 LLM 消息；`Transcript.toMessages()` 才把 `message/tool_result/summary` 投影为模型历史，其他 UI/审计事件不进入上下文。\n- Renderer 另有 `bucket = <repoKey>::<uiSessionId>` 作为 UI 路由键；`SessionSummary.engineSessionId` 才是 core sessionId。localStorage transcript 只是最多 500 条的显示投影，不能作为 fork 的权威源。\n- 当前 quick-chat 在面板挂载时生成 `qchat-*` 与独立 `__quick_chat__::*` bucket；第一次发送直接调用 `agent/run`，Engine",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-dedup.json",
+      "pointer": "/hits/runtime-cancel/3/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 96,
+      "context": "c/renderer/app/useRunController.ts:930`、`:942`、`:946`、`:955`、`:968`、`:985` | 按当前可见bucket定位会话，优先取summary.engineSessionId，调用`window.codeshell.cancel(engineSessionId)`。不是随全局最后运行会话乱取消。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-dedup.json",
+      "pointer": "/hits/runtime-cancel/10/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 58,
+      "context": "3. `resolveEngineSessionIdForBucket` nevertheless returns summary.engineSessionId or the UI session ID (`renderer/app/useRunController.ts:1000–1017`). It has no pendingFirstRun suppression. The external-runtime branch also returns the stable UI ID (`:1010`); provider thread IDs are excluded by design, not a separate blank escape path.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-dedup.json",
+      "pointer": "/hits/runtime-cancel/11/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 96,
+      "context": "c/renderer/app/useRunController.ts:930`、`:942`、`:946`、`:955`、`:968`、`:985` | 按当前可见bucket定位会话，优先取summary.engineSessionId，调用`window.codeshell.cancel(engineSessionId)`。不是随全局最后运行会话乱取消。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/context.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 8391,
+      "context": "and decisions. Neither confirmed issue matches a previously recorded root cause. Old July reports describe an already-addressed missing async cleanup pass, which is different from a prefix split or nested summary text omission.\n\n| Candidate / direction | Disposition |\n| --- | --- |\n| Image numbering drifts after compaction and reload returns an earlier image | **Duplicate, excluded, no test.** Already explicit in `docs/refactor/_archive/view-image-vs-codex-review.md:22,240–267`. |\n| Sync cached-summary replay may cover newly removed messages using stale text | Source concern only; no dynamic validation or separate finding. |\n| Aggregate budget may remain exceeded when many individually short outputs cannot shrink | Source concern only; normal reachable batch/cap contract not established, no test or finding. |\n| A failed newer browser snapshot supersedes an earlier successful observation | Source concern only; current-page/target semantics and impact not established, no test or finding. |\n| Heuristic/anchor estimates and fixed vision token accounting | Reviewed as best-effort estimates, not reported as exact-token contract violations. |\n\nFirst-run logs were created once, contain combined unmodified stdout/stderr, and were not overwritten. There were no fixture/dependency/platform failures, retries or alternate techniques in this slice. [Final receipt](evidence/context-receipt.json) contains counts and hashes.\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-history.json",
+      "pointer": "/hits/tombstone-transcript/31/context",
+      "kind": "json-value-scalar",
+      "offset": 649,
+      "context": "ermination tombstone；subagent 不注册 Goal hook；attach/extend 只作用于本次 loop。\n\n### 5.6 turn-loop-factory / run-loop-driver\n\n复用全部 `turn-loop-*.test.ts`，重点是 abort、context-limit、steer、sensitive result、usage/cache、max turns、goal lifecycle。\n\n新增：fake ports 逐一断言调用；heartbeat 的 usage fold 幂等；pending compaction 只消费一次；headless 只等待 subagent、不等待 shell/video；registry notify 与 queue enqueue race；abort 后仍 drain 已入队通知；所有 disposer 在抛错路径执行一次。\n\n### 5.7 run-finalizer / auxiliary-pipeline\n\n复用：`engine.prompt-cache.test.ts`、`session-usage.test.ts`、`engine.session-title.test.ts`、`engine.force-compact.test.ts`、memo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-transcript-review/history-selected-contexts.json",
+      "pointer": "/contexts/26/context",
+      "kind": "json-value-scalar",
+      "offset": 649,
+      "context": "ermination tombstone；subagent 不注册 Goal hook；attach/extend 只作用于本次 loop。\n\n### 5.6 turn-loop-factory / run-loop-driver\n\n复用全部 `turn-loop-*.test.ts`，重点是 abort、context-limit、steer、sensitive result、usage/cache、max turns、goal lifecycle。\n\n新增：fake ports 逐一断言调用；heartbeat 的 usage fold 幂等；pending compaction 只消费一次；headless 只等待 subagent、不等待 shell/video；registry notify 与 queue enqueue race；abort 后仍 drain 已入队通知；所有 disposer 在抛错路径执行一次。\n\n### 5.7 run-finalizer / auxiliary-pipeline\n\n复用：`engine.prompt-cache.test.ts`、`session-usage.test.ts`、`engine.session-title.test.ts`、`engine.force-compact.test.ts`、memo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-transcript-review/history.json",
+      "pointer": "/hits/tombstone-transcript/26/context",
+      "kind": "json-value-scalar",
+      "offset": 649,
+      "context": "ermination tombstone；subagent 不注册 Goal hook；attach/extend 只作用于本次 loop。\n\n### 5.6 turn-loop-factory / run-loop-driver\n\n复用全部 `turn-loop-*.test.ts`，重点是 abort、context-limit、steer、sensitive result、usage/cache、max turns、goal lifecycle。\n\n新增：fake ports 逐一断言调用；heartbeat 的 usage fold 幂等；pending compaction 只消费一次；headless 只等待 subagent、不等待 shell/video；registry notify 与 queue enqueue race；abort 后仍 drain 已入队通知；所有 disposer 在抛错路径执行一次。\n\n### 5.7 run-finalizer / auxiliary-pipeline\n\n复用：`engine.prompt-cache.test.ts`、`session-usage.test.ts`、`engine.session-title.test.ts`、`engine.force-compact.test.ts`、memo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 9214,
+      "context": ".json) | 空引号命令参数消失并使后续位置左移 |\n| P3 | [PLUGIN-R8-02](../audit-2026-10-17-round8/findings.json) | ARGUMENTS前缀抢先匹配完整命名placeholder |\n| P3 | [PLUGIN-R8-03](../audit-2026-10-17-round8/findings.json) | 已接受Windows marketplace路径派生非法name |\n| P3 | [WEB-R8-01](../audit-2026-10-17-round8/findings.json) | 根项目不能匹配后代cwd |\n| P3 | [WEB-R8-02](../audit-2026-10-17-round8/findings.json) | image/jpg alias提前返回跳过客户端每图大小检查 |\n| P3 | [ATT-R9-01](../audit-2026-10-17-round9/findings.json) | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| P3 | [COST-R9-01](../audit-2026-10-17-round9/findings.json) | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| P3 | [SESSION-R9-01](../audit-2026-10-17-round9/findings.json) | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| P3 | [DIAG-R10-01](../audit-2026-10-17-round10/findings.json) | DOM bounded traversal eagerly enumerates complete child collections before queue cap |\n| P3 | [PET-R10-01](../audit-2026-10-17-round10/findings.json) | 并发搜索超过默认结果上限后静默丢行 |\n| P3 | [PET-R10-02](../audit-2026-10-17-round10/findings.json) | Unicode 小写扩长后 snippet 不含命中词 |\n| P3 | [CHAT-R11-01](../audit-2026-10-17-round11/findings.json) | 通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store |\n| P3 | [DESKTOP-R12-01](../audit-2026-10-17-round12/findings.json) | 工具卡摘要截断拆开 Unicode 代理对 |\n| P3 | [PATCH-R12-01](../audit-2026-10-17-round12/findings.json) | 首个 Update chunk 省略可选 @@ 时丢失显式空白 context |\n| P3 | [TUI-R12-01](../audit-2026-10-17-round12",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/catalog-review/checks.json",
+      "pointer": "/canonicalMetadataDocuments/8/idsInOriginalOrder/1",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/50/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/113/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 171,
+      "context": "ime.ts`、`model-facade.ts`、`model-connections-pool.ts`\n- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/134/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/144/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 161,
+      "context": "odel-facade.ts`、`model-connections-pool.ts`\n- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/155/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/266/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+      "pointer": "/hits/draft_switch/152/context",
+      "kind": "json-value-scalar",
+      "offset": 422,
+      "context": "achmentSession` when the bucket has no session ID (`renderer/App.tsx:669–672`). That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before a",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/root-history.json",
+      "pointer": "/hits/active-ref-draft/0/context",
+      "kind": "json-value-scalar",
+      "offset": 342,
+      "context": "That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before any send.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/root-history.json",
+      "pointer": "/hits/active-ref-draft/2/context",
+      "kind": "json-value-scalar",
+      "offset": 342,
+      "context": "That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before any send.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/root-history.json",
+      "pointer": "/hits/active-ref-draft/3/context",
+      "kind": "json-value-scalar",
+      "offset": 342,
+      "context": "That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before any send.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/root-history.json",
+      "pointer": "/hits/active-ref-draft/7/context",
+      "kind": "json-value-scalar",
+      "offset": 342,
+      "context": "That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrides, and updates activeBucketRef/sessionIndices (`:651–666`). It does not invoke an agent run in this branch. `transcripts.createSession` writes only a renderer/catalog summary with pendingFirstRun=true and no engineSessionId (`renderer/transcripts.ts:863–887`). Persistence schedules an actual catalog patch (`renderer/sessionPersistence.ts:270–275,334–342`); Main's catalog apply only mutates catalog rows (`main/session-catalog-store.ts:121–165`), not Core state.json. Thus a fresh UI ID can legitimately have no Core disk session before any send.\n3. `resolveEngineSessionIdForBucket` neve",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+      "pointer": "/findings/86/id",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15735/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15736/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15737/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15738/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15738/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15739/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4243/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4243/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/258",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/259",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4244/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4245/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/262",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/263",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/258",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/259",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/258",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/259",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/268",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/269",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/271",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/272",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/274",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/275",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/ALL-ISSUES.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12098,
+      "context": "/codeshell/docs/audit-2026-10-17-round8/findings.json) | P3 | 已接受Windows marketplace路径派生非法name |\n| [WEB-R8-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json) | P3 | 根项目不能匹配后代cwd ‡ |\n| [WEB-R8-02](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json) | P3 | image/jpg alias提前返回跳过客户端每图大小检查 |\n| [ATT-R9-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| [COST-R9-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| [SESSION-R9-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| [DIAG-R10-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round10/findings.json) | P3 | DOM 限额遍历在队列截断前先枚举全部子节点 |\n| [PET-R10-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round10/findings.json) | P3 | 并发搜索超过默认结果上限后静默丢行 |\n| [PET-R10-02](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round10/findings.json) | P3 | Unicode 小写扩长后 snippet 不含命中词 |\n| [CHAT-R11-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round11/findings.json) | P3 | 通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store |\n| [TUI-R12-01](/Users/admin/Document",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/decisions.json",
+      "pointer": "/oldExclusions/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01 standalone CostTracker full model identifier loss is a historical recorded issue; its bound-ledger comparison and old execution counts are not this run.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+      "pointer": "/contexts/0/needle",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "cost-r9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+      "pointer": "/contexts/0/context",
+      "kind": "json-value-scalar",
+      "offset": 220,
+      "context": "另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake executor 能复现组合，但没有“省略 executor 必须清理旧实现”的明确替换契约，当前所读生产调用又显式传 executor，所以不计为确认。附件 Windows 兼容、目录深度与 truncated 标志也仅作静态观察。\n\n**首次验证：9 个 clean guarded shards，123 pass、431 expect、0 fail、0 skipped；106 项既有 baseli",
+      "completeScalar": true
+    }
+  ]
+}

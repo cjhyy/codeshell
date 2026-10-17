@@ -1,0 +1,25 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "productImports": 0,
+  "productHelperOrFunctionCalls": 0,
+  "testsOrFixturesRun": 0,
+  "reactClockModelNativeNetwork": 0,
+  "realModelTraceFilesRead": 0,
+  "gitCalls": 0,
+  "repoScriptsRun": 0,
+  "metadataOnly": "rg inventory/navigation and inline standard-library byte/hash/JSON/text I/O; own history-method.py audit metadata scanner only.",
+  "metadataFirstFailure": {
+    "observedExitCode": 1,
+    "raw": "metadata-first-error.txt",
+    "notes": "metadata-first-error.json",
+    "corrected": "Timestamp datetime class reference corrected before any producer selected body display; one metadata reattempt, no product/test retry."
+  },
+  "otherObservedCompletedExits": 0,
+  "outputTruncations": 0,
+  "sourceReadScope": "source-manifest.json",
+  "ending": "ending-checks.json"
+}

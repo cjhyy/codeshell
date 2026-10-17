@@ -1,0 +1,11 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "sameSHAOriginalFullPrimaryGateExclusions": 1,
+  "supportingSameSHAOldFullTestRecord": 1,
+  "testRecordNotSecondFrontier": true,
+  "sourceBodyRead": false,
+  "newCoverage": null,
+  "gate": "R7 evidence/tui-source-manifest.json /sources/15 readScope full. No selected/negative boundary attached; same unique path/hash and bytes. Stop before body."
+}

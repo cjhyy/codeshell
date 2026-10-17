@@ -1,0 +1,22 @@
+{
+  "role": "Directed counterevidence review;knownhypothesis not blind;Root80mutable package not read",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "remoteEmptySingletonHypothesis": "withdrawn: actual inspected production CLI entry constructs local in-process pair and shares global costTracker bound by EngineRuntime; no supported actual remote UI producer established",
+  "normalProducerCounterevidence": [
+    "main120–124 and177–187 both routeinteractive to replCommand",
+    "repl215 globalcostTracker alias→223EngineRuntime option→runtime54–60 sameinstancebindLedger",
+    "repl258 inprocesspair→268server/281client→323UI; uiindex70–71 sameclient toApp",
+    "App355–361 summaryformatter route and /cost94 bound-summary first branch coexist in this local configured mode"
+  ],
+  "modeSearchBoundary": "packages+scripts startInkRepl references: oneproduction repl call, UI definition, index test filename andCorecleanupcomment594. Public client option or arbitrary SDK construction is not accepted as a real remote CLI mode.",
+  "notProvedOrAudited": [
+    "No exhaustive out-of-repo SDK/host mode claim.",
+    "No claim all /cost aggregation/session scope, args/detail formatting, accounting failure/retry/pricing or stale async result behavior correct.",
+    "No transport/auth/store-lock/persist/native implementation audit or execution."
+  ],
+  "oldCOST_R9_01": "Excluded old unbound standalone complete-model-id estimation root cause. No new related ID or borrowed runtime logs.",
+  "productChanges": false,
+  "productExecution": 0
+}

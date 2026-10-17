@@ -1,0 +1,96 @@
+{
+  "atUTC": "2026-10-17T16:19:14.637004+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "displayedRanges": [
+        [
+          20,
+          92
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            20,
+            92
+          ],
+          "text": "  20 export interface UsageReceipt extends UsageIdentity {\n  21   version: 1;\n  22   requestId: string;\n  23   namespace: string;\n  24   runtimeId: string;\n  25   sessionId: string;\n  26   accountingSessionId: string;\n  27   runId?: string;\n  28   ancestors: string[];\n  29   ancestorAccountingIds: string[];\n  30   purpose: UsagePurpose;\n  31   source: \"provider\" | string;\n  32   startedAt: number;\n  33   settledAt?: number;\n  34   outcome: \"pending\" | \"completed\" | \"failed\";\n  35   /** A preflight rejection proves no handoff to fetch; legacy receipts leave this absent. */\n  36   transmission?: \"not-sent\";\n  37   usage: TokenUsage | null;\n  38   estimatedCostUsd: number | null;\n  39   pricing: {\n  40     source: \"model-metadata\" | \"openrouter-snapshot\";\n  41     input: number;\n  42     output: number;\n  43     cacheRead: number;\n  44     cacheWrite: number;\n  45     cachePricesEstimated: true;\n  46   } | null;\n  47 }\n  48 \n  49 export interface UsageTotals {\n  50   notSentRequests?: number;\n  51   requests: number;\n  52   promptTokens: number;\n  53   completionTokens: number;\n  54   totalTokens: number;\n  55   cacheReadTokens: number;\n  56   cacheCreationTokens: number;\n  57   knownEstimatedCostUsd: number;\n  58   unknownCostRequests: number;\n  59   unknownUsageRequests: number;\n  60 }\n  61 \n  62 export interface UsageSummary extends UsageTotals {\n  63   version: 1;\n  64   scope: \"runtime\" | \"session\" | \"store\";\n  65   sessionId?: string;\n  66   includesChildren: boolean;\n  67   partial: boolean;\n  68   persistenceErrors: number;\n  69   invalidReceipts: number;\n  70   scannedReceipts: number;\n  71   nextCursor?: string;\n  72   byModel: Array<UsageTotals & UsageIdentity>;\n  73   bySession: Array<UsageTotals & { sessionId: string; accountingSessionId: string }>;\n  74   byPurpose: Array<UsageTotals & { purpose: UsagePurpose }>;\n  75 }\n  76 \n  77 export interface UsageQuery {\n  78   runId?: string;\n  79   scope?: \"runtime\" | \"session\" | \"store\";\n  80   sessionId?: string;\n  81   includeChildren?: boolean;\n  82   since?: number;\n  83   until?: number;\n  84   limit?: number;\n  85   cursor?: string;\n  86 }\n  87 \n  88 export interface ExternalBilledUsage extends UsageIdentity {\n  89   source: string;\n  90   requestId: string;\n  91   usage?: TokenUsage;\n  92 }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "displayedRanges": [
+        [
+          88,
+          116
+        ],
+        [
+          245,
+          272
+        ],
+        [
+          352,
+          366
+        ],
+        [
+          424,
+          447
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            88,
+            116
+          ],
+          "text": "  88     textId(r.model) &&\n  89     (r.providerKind === undefined || textId(r.providerKind)) &&\n  90     (r.runId === undefined || textId(r.runId)) &&\n  91     textId(r.source) &&\n  92     PURPOSES.has(r.purpose) &&\n  93     Array.isArray(r.ancestors) &&\n  94     r.ancestors.length <= 64 &&\n  95     r.ancestors.every(textId) &&\n  96     Array.isArray(r.ancestorAccountingIds) &&\n  97     r.ancestorAccountingIds.length <= 64 &&\n  98     r.ancestorAccountingIds.every((id) => typeof id === \"string\" && /^[a-f0-9-]{36}$/.test(id)) &&\n  99     Number.isFinite(r.startedAt) &&\n 100     r.startedAt >= 0 &&\n 101     (r.settledAt === undefined || (Number.isFinite(r.settledAt) && r.settledAt >= r.startedAt)) &&\n 102     [\"pending\", \"completed\", \"failed\"].includes(r.outcome) &&\n 103     (r.transmission === undefined || r.transmission === \"not-sent\") &&\n 104     (r.usage === null || normalizeUsage(r.usage) !== null) &&\n 105     (r.estimatedCostUsd === null ||\n 106       (typeof r.estimatedCostUsd === \"number\" &&\n 107         Number.isFinite(r.estimatedCostUsd) &&\n 108         r.estimatedCostUsd >= 0)) &&\n 109     (r.estimatedCostUsd === null || r.usage !== null) &&\n 110     (r.transmission !== \"not-sent\" ||\n 111       (r.outcome === \"failed\" &&\n 112         r.estimatedCostUsd === 0 &&\n 113         r.usage?.totalTokens === 0 &&\n 114         r.usage.promptTokens === 0 &&\n 115         r.usage.completionTokens === 0))\n 116   );"
+        },
+        {
+          "range": [
+            245,
+            272
+          ],
+          "text": " 245     return receipt;\n 246   }\n 247 \n 248   settle(receipt: UsageReceipt, value: TokenUsage | null): void {\n 249     if (receipt.transmission === \"not-sent\") return;\n 250     const usage = normalizeUsage(value);\n 251     if (usage) {\n 252       receipt.usage = usage;\n 253       Object.assign(receipt, estimateReceipt(receipt, usage));\n 254     }\n 255     receipt.settledAt = this.now();\n 256     this.persist(receipt);\n 257   }\n 258 \n 259   finish(receipt: UsageReceipt, outcome: \"completed\" | \"failed\"): void {\n 260     receipt.outcome = outcome;\n 261     receipt.settledAt = this.now();\n 262     this.persist(receipt);\n 263   }\n 264 \n 265   markNotSent(receipt: UsageReceipt): void {\n 266     receipt.transmission = \"not-sent\";\n 267     receipt.outcome = \"failed\";\n 268     receipt.usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };\n 269     receipt.estimatedCostUsd = 0;\n 270     receipt.settledAt = this.now();\n 271     this.persist(receipt);\n 272   }"
+        },
+        {
+          "range": [
+            352,
+            366
+          ],
+          "text": " 352   summary(query: UsageQuery = {}, sessionScope = \"default\"): UsageSummary {\n 353     if (\n 354       !query ||\n 355       typeof query !== \"object\" ||\n 356       Array.isArray(query) ||\n 357       (query.scope !== undefined && ![\"runtime\", \"session\", \"store\"].includes(query.scope)) ||\n 358       (query.sessionId !== undefined && !textId(query.sessionId)) ||\n 359       (query.includeChildren !== undefined && typeof query.includeChildren !== \"boolean\") ||\n 360       (query.limit !== undefined && !Number.isSafeInteger(query.limit))\n 361     )\n 362       throw new Error(\"Invalid usage query\");\n 363     sessionScopeId(sessionScope);\n 364     const scope = query.scope ?? \"runtime\";\n 365     if (scope === \"session\" && !textId(query.sessionId))\n 366       throw new Error(\"Usage Session is required\");"
+        },
+        {
+          "range": [
+            424,
+            447
+          ],
+          "text": " 424       )\n 425         continue;\n 426       if (query.runId !== undefined && receipt.runId !== query.runId) continue;\n 427       if (receipt.startedAt < (query.since ?? 0) || receipt.startedAt > (query.until ?? Infinity))\n 428         continue;\n 429       receipts.push(receipt);\n 430     }\n 431     return summarizeReceipts(receipts, {\n 432       version: 1,\n 433       scope,\n 434       ...(query.sessionId ? { sessionId: query.sessionId } : {}),\n 435       includesChildren: query.includeChildren === true,\n 436       partial:\n 437         partial ||\n 438         this.persistenceErrors > 0 ||\n 439         this.invalidReceipts > 0 ||\n 440         (scope === \"session\" &&\n 441           this.historicalGaps.has(JSON.stringify([sessionScope, query.sessionId]))),\n 442       persistenceErrors: this.persistenceErrors,\n 443       invalidReceipts: this.invalidReceipts,\n 444       scannedReceipts: selected.length,\n 445       ...(partial ? { nextCursor: selected.at(-1) } : {}),\n 446     });\n 447   }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "displayedRanges": [
+        [
+          94,
+          112
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            94,
+            112
+          ],
+          "text": "  94 test(\"unknown pricing, missing usage, pending and corrupt records never become free requests\", () => {\n  95   const storageDir = directory();\n  96   const ledger = new UsageLedger({ storageDir });\n  97   const owner = ledger.owner(\"source\");\n  98   const unpriced = ledger.begin(owner, { provider: \"custom\", model: \"gpt-4o\" });\n  99   ledger.settle(unpriced, usage);\n 100   ledger.finish(unpriced, \"completed\");\n 101   ledger.begin(owner, identity);\n 102   const summary = ledger.summary();\n 103   expect(summary.unknownCostRequests).toBe(2);\n 104   expect(summary.unknownUsageRequests).toBe(1);\n 105   expect(summary.knownEstimatedCostUsd).toBe(0);\n 106   const folder = join(storageDir, readdirSync(storageDir)[0]!);\n 107   writeFileSync(join(folder, `${\"a\".repeat(64)}.json`), \"broken\");\n 108   const restarted = new UsageLedger({ storageDir });\n 109   expect(restarted.summary({ scope: \"store\" }).partial).toBe(true);\n 110   expect(restarted.summary({ scope: \"store\" }).unknownUsageRequests).toBe(1);\n 111   expect(restarted.summary({ scope: \"store\", limit: 1 }).nextCursor).toBeDefined();\n 112 });"
+        }
+      ]
+    }
+  ],
+  "scope": "Ordinary summary DTO/validReceipt data/not-sent price/query-to-summary metadata and existing test declarations only; no store/ledger/fs/lock/identity/pricing method executed or certified."
+}

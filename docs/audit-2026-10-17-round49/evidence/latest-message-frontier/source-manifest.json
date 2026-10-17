@@ -1,0 +1,675 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedInitialOwnedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "rootReportedLateContext": "Primary main advanced9a2d118…; owned stilldc2b3d4… and source not switched. Parent only, Git0. Ending checked owned bytes only, no primary pin/backfill.",
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeDisplayUTC": "2026-10-17T16:30:31.480915+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          46
+        ],
+        [
+          48,
+          65
+        ],
+        [
+          71,
+          79
+        ],
+        [
+          126,
+          150
+        ],
+        [
+          172,
+          173
+        ]
+      ],
+      "semanticLineCount": 97,
+      "bodyDisplayedLineCount": 173,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "displayedUnionIncludingNavigationLineCount": 173,
+      "purpose": "Ordinary visibleOutput/outputChanged, DTO fields, previous/unread map/set and scope/reset notices only. Whole173 displayed, only selected data semantics. Scroll positions, layout effects scheduling, resize observer, focus/DOM/client/connection mechanisms not certified.",
+      "endingBytes": 6078,
+      "endingSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "dedicatedSelectedReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.252428+00:00",
+      "displayedLineRanges": [
+        [
+          142,
+          166
+        ],
+        [
+          783,
+          826
+        ],
+        [
+          863,
+          894
+        ],
+        [
+          72,
+          84
+        ],
+        [
+          827,
+          849
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:33:22.595804+00:00",
+      "additionalSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          74,
+          78
+        ],
+        [
+          157,
+          164
+        ],
+        [
+          783,
+          788
+        ],
+        [
+          806,
+          813
+        ],
+        [
+          818,
+          841
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          868,
+          871
+        ],
+        [
+          876,
+          881
+        ],
+        [
+          890,
+          892
+        ]
+      ],
+      "semanticLineCount": 65,
+      "bodyDisplayedLineCount": 137,
+      "navigationLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          78,
+          78
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          159,
+          159
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          175,
+          175
+        ],
+        [
+          346,
+          346
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          372,
+          372
+        ],
+        [
+          622,
+          622
+        ],
+        [
+          767,
+          767
+        ],
+        [
+          768,
+          768
+        ],
+        [
+          770,
+          770
+        ],
+        [
+          771,
+          771
+        ],
+        [
+          783,
+          783
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          869,
+          869
+        ],
+        [
+          870,
+          870
+        ],
+        [
+          873,
+          873
+        ],
+        [
+          877,
+          877
+        ],
+        [
+          879,
+          879
+        ],
+        [
+          890,
+          890
+        ],
+        [
+          891,
+          891
+        ]
+      ],
+      "navigationLineCount": 28,
+      "displayedUnionIncludingNavigationLineCount": 151,
+      "purpose": "Actual hook items/scope/loading/active DTO, matching hidden empty-done assistant, normal text/status fields and unread count labels. Attachment/open-file callbacks, DOM/focus/accessibility timing, approvals mechanism and auth are excluded.",
+      "endingBytes": 53688,
+      "endingSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "dedicatedSelectedReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lines": 800,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.254686+00:00",
+      "displayedLineRanges": [
+        [
+          37,
+          67
+        ],
+        [
+          184,
+          205
+        ],
+        [
+          211,
+          235
+        ],
+        [
+          276,
+          301
+        ],
+        [
+          381,
+          408
+        ],
+        [
+          560,
+          607
+        ],
+        [
+          608,
+          612
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:32:55.391994+00:00",
+      "additionalSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          37,
+          67
+        ],
+        [
+          189,
+          205
+        ],
+        [
+          211,
+          235
+        ],
+        [
+          278,
+          294
+        ],
+        [
+          381,
+          389
+        ],
+        [
+          392,
+          408
+        ],
+        [
+          564,
+          585
+        ],
+        [
+          588,
+          612
+        ]
+      ],
+      "semanticLineCount": 163,
+      "bodyDisplayedLineCount": 185,
+      "navigationLineRanges": [
+        [
+          37,
+          37
+        ],
+        [
+          38,
+          38
+        ],
+        [
+          45,
+          45
+        ],
+        [
+          46,
+          46
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          67,
+          67
+        ],
+        [
+          194,
+          194
+        ],
+        [
+          228,
+          228
+        ],
+        [
+          258,
+          258
+        ],
+        [
+          284,
+          284
+        ],
+        [
+          373,
+          373
+        ],
+        [
+          381,
+          381
+        ],
+        [
+          422,
+          422
+        ],
+        [
+          438,
+          438
+        ],
+        [
+          571,
+          571
+        ],
+        [
+          592,
+          592
+        ],
+        [
+          760,
+          760
+        ]
+      ],
+      "navigationLineCount": 20,
+      "displayedUnionIncludingNavigationLineCount": 190,
+      "purpose": "ChatItem DTO and selected ordinary immutable assistant/tool/subagent updates. AgentId merely opaque correlation field; not task identity/authority policy. Other event families, connection/replay guarantees and complete reducer semantics not reviewed.",
+      "endingBytes": 28526,
+      "endingSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": null,
+      "dedicatedSelectedReadSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialTextObservation": "Initial type/update rg navigation snippets preceded dedicated pin; initial read-time SHA null conservatively. Subsequent selected blocks read only after dedicated pin."
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "bytes": 2110,
+      "lines": 50,
+      "sha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.255635+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:31:41.308343+00:00",
+      "additionalSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "coverage": "full-test-declaration-text",
+      "selectedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "semanticLineCount": 50,
+      "bodyDisplayedLineCount": 50,
+      "navigationLineRanges": [
+        [
+          12,
+          12
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          43,
+          43
+        ]
+      ],
+      "navigationLineCount": 4,
+      "displayedUnionIncludingNavigationLineCount": 50,
+      "purpose": "Full50 existing declaration text only; outputChanged, structuredClone and expect were not executed. No React or fixture run/pass.",
+      "endingBytes": 2110,
+      "endingSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "dedicatedSelectedReadSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049"
+    },
+    {
+      "path": "packages/web/app/workbench-types.ts",
+      "bytes": 2491,
+      "lines": 69,
+      "sha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:32:31.486123+00:00",
+      "displayedLineRanges": [
+        [
+          18,
+          24
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:32:55.390152+00:00",
+      "additionalSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          22
+        ]
+      ],
+      "semanticLineCount": 3,
+      "bodyDisplayedLineCount": 7,
+      "navigationLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          21,
+          21
+        ]
+      ],
+      "navigationLineCount": 2,
+      "displayedUnionIncludingNavigationLineCount": 8,
+      "purpose": "Only activeId/chat/sessions declared data contract. AuthSession at displayed19 and connection/auth mechanisms excluded.",
+      "endingBytes": 2491,
+      "endingSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "dedicatedSelectedReadSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933"
+    },
+    {
+      "path": "packages/web/app/useHubController.tsx",
+      "bytes": 32206,
+      "lines": 870,
+      "sha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:32:31.488745+00:00",
+      "displayedLineRanges": [
+        [
+          62,
+          62
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          580,
+          609
+        ],
+        [
+          811,
+          811
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:32:55.390915+00:00",
+      "additionalSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          62,
+          62
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          584,
+          584
+        ],
+        [
+          586,
+          586
+        ],
+        [
+          605,
+          605
+        ],
+        [
+          607,
+          607
+        ],
+        [
+          811,
+          811
+        ]
+      ],
+      "semanticLineCount": 7,
+      "bodyDisplayedLineCount": 33,
+      "navigationLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          62,
+          62
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          154,
+          154
+        ],
+        [
+          344,
+          344
+        ],
+        [
+          437,
+          437
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          517,
+          517
+        ],
+        [
+          544,
+          544
+        ],
+        [
+          586,
+          586
+        ],
+        [
+          607,
+          607
+        ],
+        [
+          647,
+          647
+        ],
+        [
+          687,
+          687
+        ],
+        [
+          698,
+          698
+        ],
+        [
+          803,
+          803
+        ],
+        [
+          811,
+          811
+        ]
+      ],
+      "navigationLineCount": 16,
+      "displayedUnionIncludingNavigationLineCount": 44,
+      "purpose": "Only chat state, reduceStream assignment, exposed chat and selected session selection/new-session state setters. Transcript loading, stream cursors/recovery, draft methods, identifier generation, transport/auth and costs not reviewed.",
+      "endingBytes": 32206,
+      "endingSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "dedicatedSelectedReadSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808"
+    }
+  ],
+  "counts": {
+    "selectedProductRows": 5,
+    "fullProductModuleRows": 0,
+    "fullTestDeclarationTextRows": 1,
+    "productSemanticLines": 335,
+    "testDeclarationLines": 50,
+    "allSemanticLines": 385,
+    "bodyDisplayedLines": 585,
+    "displayedUnionIncludingNavigationLines": 616,
+    "uniqueAcrossAllAudits": false
+  },
+  "historyGate": {
+    "freshMembers": 4492,
+    "includeFrozenThrough": 48,
+    "excludeNumericRoundAtLeast": 49,
+    "pathOrBasenameHits": 80,
+    "shaHits": 15,
+    "cap": 100,
+    "retainedPathOrBasename": 80,
+    "retainedSha": 15,
+    "explicitCompactObjectRowsRead": 12,
+    "selectedContextWindowsActuallyRead": 7,
+    "canonicalObjectsActuallyRead": 2,
+    "sameShaFullEstablished": false,
+    "notNeverReadAssertion": true
+  },
+  "oldCauseBoundary": "Selected old UI-02 POSIX cwd/project-case route contexts and old47 hook hash-only kept as metadata. No old bug re-reported or failed runtime reopened; no new cause asserted for finite0.",
+  "scope": "Ordinary UI data projection only. No DOM/React scheduling or connection/room-auth, identity/permission/native mechanism correctness certification. Mutable80/81 not read. Frozen75/78 not changed."
+}

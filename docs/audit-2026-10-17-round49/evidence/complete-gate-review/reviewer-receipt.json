@@ -1,0 +1,28 @@
+{
+  "frozenUTC": "2026-10-17T16:27:13.944290+00:00",
+  "directory": "/tmp/codeshell-audit-round78-complete-gate-review",
+  "selfExcluded": "reviewer-receipt.json",
+  "role": "independent metadata gate review only",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 25800,
+      "sha256": "32e8ccf80d1a49428187450b623272cf4e57d49ea0e0bf34d69e382fd0f778dc"
+    },
+    {
+      "path": "metadata-first-output.txt",
+      "bytes": 1034,
+      "sha256": "fc4ec2605e90d89f203f10cc9b02e364d5f784130069c8796cd022f82dc4a190"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2540,
+      "sha256": "09df82e1768361244bfd237fd0d514add3f16cf761980fd0fe70bae9ce4f4f67"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 2688,
+      "sha256": "224e235a7876b5e16240834d9c560b8d726ef7bb5be5e7d21a66deddd9fc1a3a"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "capturedUTC": "2026-10-17T16:28:31.818508+00:00",
+  "actualFilenameInventory": [
+    "packages/tui/src/cli/commands/builtin/core-commands.test.ts",
+    "packages/tui/src/cli/commands/builtin/core-commands.ts",
+    "packages/tui/src/cli/main-options.test.ts",
+    "packages/tui/src/cli/main.ts",
+    "packages/tui/src/render/components/App.tsx",
+    "packages/tui/src/render/components/AppContext.ts",
+    "packages/tui/src/ui/App.agent-todos.test.tsx",
+    "packages/tui/src/ui/App.external-turn.test.tsx",
+    "packages/tui/src/ui/App.notifications.test.ts",
+    "packages/tui/src/ui/App.render-entry.test.tsx",
+    "packages/tui/src/ui/App.slash-command.test.ts",
+    "packages/tui/src/ui/App.stream-routing.test.ts",
+    "packages/tui/src/ui/App.tsx"
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBody": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBody": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "beforeBody": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "lines": 817,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "beforeBody": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "lines": 2318,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "beforeBody": true
+    }
+  ],
+  "role": "Targeted counterevidence review of Root hypothesis, not blind or new unread frontier",
+  "rootContextOnly": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684 last supplied;ownGit0",
+  "instructionStatus": "CODESHELL217 current read71;unchanged hash carried, repeatpins only"
+}

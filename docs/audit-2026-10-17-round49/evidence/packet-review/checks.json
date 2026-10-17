@@ -1,0 +1,2411 @@
+{
+  "createdUTC": "2026-10-17T16:33:59.717070+00:00",
+  "role": "Frozen-packet byte/range metadata cross-check. Reviewer authored73/76; no new independent source semantics or current product SHA certification.",
+  "allowedInputDirectories": [
+    "/tmp/codeshell-audit-round71-session-title",
+    "/tmp/codeshell-audit-round72-web-format",
+    "/tmp/codeshell-audit-round73-model-display",
+    "/tmp/codeshell-audit-round74-core-summary",
+    "/tmp/codeshell-audit-round75-trace-history",
+    "/tmp/codeshell-audit-round76-resolve-preset",
+    "/tmp/codeshell-audit-round77-agent-definitions",
+    "/tmp/codeshell-audit-round78-complete-gate-review",
+    "/tmp/codeshell-audit-round79-session-usage"
+  ],
+  "files": [],
+  "packetChecks": [
+    {
+      "packet": "71",
+      "directory": "/tmp/codeshell-audit-round71-session-title",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 3864,
+        "sha256": "3fdcb5cc44e6ae8fd4c778d091deb623e10d2763ca09bf055261a7f65e97b437"
+      },
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "bytes": 1404,
+          "sha256": "40a930cea0d259884c029735028012378a2d7639ca4fecd6f30d88d67ce97040",
+          "declaredBytes": 1404,
+          "declaredSha256": "40a930cea0d259884c029735028012378a2d7639ca4fecd6f30d88d67ce97040",
+          "matches": true
+        },
+        {
+          "path": "classification.json",
+          "bytes": 431,
+          "sha256": "bbcff8f96121d8e89e08442cd6402b0b7cdaf35d9bd9f696ca8999b2dbea8370",
+          "declaredBytes": 431,
+          "declaredSha256": "bbcff8f96121d8e89e08442cd6402b0b7cdaf35d9bd9f696ca8999b2dbea8370",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-detail.json",
+          "bytes": 2991,
+          "sha256": "b31d5e75fbde5b3ace6bad7678ae6ba595d1e32046bd09a6b3a334cf6038c1bd",
+          "declaredBytes": 2991,
+          "declaredSha256": "b31d5e75fbde5b3ace6bad7678ae6ba595d1e32046bd09a6b3a334cf6038c1bd",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 62075,
+          "sha256": "8e395cb8d40440bf3e3d5204b7e84543d77466a3f3e40775f724abd2db7b4b86",
+          "declaredBytes": 62075,
+          "declaredSha256": "8e395cb8d40440bf3e3d5204b7e84543d77466a3f3e40775f724abd2db7b4b86",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1592,
+          "sha256": "6aa0ef4217abb0eef39fed7590054799eea94b545f76c9ab4215cfb00af7992a",
+          "declaredBytes": 1592,
+          "declaredSha256": "6aa0ef4217abb0eef39fed7590054799eea94b545f76c9ab4215cfb00af7992a",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 288500,
+          "sha256": "3fea8b39395a6dd538123850446f667e4131725c038da3acc2b4ef0edf17cc83",
+          "declaredBytes": 288500,
+          "declaredSha256": "3fea8b39395a6dd538123850446f667e4131725c038da3acc2b4ef0edf17cc83",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3894,
+          "sha256": "64e59eb01d8767354cb2daf34b7c0046dc6b9d030877869f0fed1e7fe632013a",
+          "declaredBytes": 3894,
+          "declaredSha256": "64e59eb01d8767354cb2daf34b7c0046dc6b9d030877869f0fed1e7fe632013a",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 994400,
+          "sha256": "b323fa96190a441970e6d0e3f84281e341bd8c822a7a700fc642428792f26395",
+          "declaredBytes": 994400,
+          "declaredSha256": "b323fa96190a441970e6d0e3f84281e341bd8c822a7a700fc642428792f26395",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1075,
+          "sha256": "93735a961dde1ef18f5f000b5ece34f5c17fb52c6250ccdeea1ff5451724fcb9",
+          "declaredBytes": 1075,
+          "declaredSha256": "93735a961dde1ef18f5f000b5ece34f5c17fb52c6250ccdeea1ff5451724fcb9",
+          "matches": true
+        },
+        {
+          "path": "old-scope-selected.json",
+          "bytes": 1780,
+          "sha256": "db5dbaff47ff800aa4bfc6015a0c9e79d1d2ecfeb54ab03c8d7a10f444f09081",
+          "declaredBytes": 1780,
+          "declaredSha256": "db5dbaff47ff800aa4bfc6015a0c9e79d1d2ecfeb54ab03c8d7a10f444f09081",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 3532,
+          "sha256": "906d1458c912dd5146a436ec672d7759ca1b8d4983494c077f79899e259e1b82",
+          "declaredBytes": 3532,
+          "declaredSha256": "906d1458c912dd5146a436ec672d7759ca1b8d4983494c077f79899e259e1b82",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 2409,
+          "sha256": "4ef3aa35e0ff7cb67736a2230582a41c23d48be4d4e72809fffa4027c52ae14d",
+          "declaredBytes": 2409,
+          "declaredSha256": "4ef3aa35e0ff7cb67736a2230582a41c23d48be4d4e72809fffa4027c52ae14d",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 838,
+          "sha256": "6b942ca31eba7ba08da3671922d2881e6ee290a4007c5bd6e2c599aac6d6670b",
+          "declaredBytes": 838,
+          "declaredSha256": "6b942ca31eba7ba08da3671922d2881e6ee290a4007c5bd6e2c599aac6d6670b",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 13,
+      "directoryCountIncludingReceipt": 14,
+      "sourceManifestSnapshot": {
+        "bytes": 2409,
+        "sha256": "4ef3aa35e0ff7cb67736a2230582a41c23d48be4d4e72809fffa4027c52ae14d"
+      },
+      "reportSnapshot": {
+        "bytes": 3532,
+        "sha256": "906d1458c912dd5146a436ec672d7759ca1b8d4983494c077f79899e259e1b82"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/core/src/engine/session-title.ts",
+          "capturedSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/core/src/sources/context-summary.ts",
+          "capturedSha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionReads",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayCount": 217,
+          "classification": "instruction-text",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionHashOnly",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 0,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 0,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 0,
+        "instructionDisplaySeparately": 217
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "manifest.productExecution": 0,
+        "manifest.gitOperations": 0,
+        "receipt.productHelpersFixturesTestsModelsIdentityPermissionsLocksNativeNetworkGitExecutions": 0,
+        "receipt.productWrites": 0
+      },
+      "reportLinks": [
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-detail.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-method.py",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "old-scope-selected.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "classification.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "72",
+      "directory": "/tmp/codeshell-audit-round72-web-format",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 1995,
+        "sha256": "cacf0986ee5b2b5900d4613cd4117f6da74ad75f06363d84a202556b590766ec"
+      },
+      "artifactChecks": [
+        {
+          "path": "canonical-coverage-objects.json",
+          "bytes": 4567,
+          "sha256": "662586d06c9df5d69334284505138e8e6bbc1e60c4c4d022fb0fef12a285a763",
+          "declaredBytes": 4567,
+          "declaredSha256": "662586d06c9df5d69334284505138e8e6bbc1e60c4c4d022fb0fef12a285a763",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 310608,
+          "sha256": "7dffd296908c973f4333fce8a6f88dad53b07df93085a8406cd815b11b85edfe",
+          "declaredBytes": 310608,
+          "declaredSha256": "7dffd296908c973f4333fce8a6f88dad53b07df93085a8406cd815b11b85edfe",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-selected.json",
+          "bytes": 4788,
+          "sha256": "4111fa8260dac65830c03f8f12a9e75b257d275d6a40d6451be57c313b59d9e5",
+          "declaredBytes": 4788,
+          "declaredSha256": "4111fa8260dac65830c03f8f12a9e75b257d275d6a40d6451be57c313b59d9e5",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1102,
+          "sha256": "305d72009dff40551c2d86599fca4e71e9bf72dd74116ed388ed1e791df062bd",
+          "declaredBytes": 1102,
+          "declaredSha256": "305d72009dff40551c2d86599fca4e71e9bf72dd74116ed388ed1e791df062bd",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 145195,
+          "sha256": "62a4c5ca8c7b0bbf0a0b919005e3dc1ba5ddce528d4c3adc466ebd22fd9f0868",
+          "declaredBytes": 145195,
+          "declaredSha256": "62a4c5ca8c7b0bbf0a0b919005e3dc1ba5ddce528d4c3adc466ebd22fd9f0868",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3836,
+          "sha256": "c69c798f300812a57141e5ab2ce425ff3c73e902c31f2ccbadd651064a87b8c0",
+          "declaredBytes": 3836,
+          "declaredSha256": "c69c798f300812a57141e5ab2ce425ff3c73e902c31f2ccbadd651064a87b8c0",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 898449,
+          "sha256": "5dc80f0318dc1793298a3862801449106b1c10f9a63a26108b1908fc10024d2a",
+          "declaredBytes": 898449,
+          "declaredSha256": "5dc80f0318dc1793298a3862801449106b1c10f9a63a26108b1908fc10024d2a",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1238,
+          "sha256": "5a1c77be16a8bec596496f905e08ac720ebb271e975e521bede0dedbad445f38",
+          "declaredBytes": 1238,
+          "declaredSha256": "5a1c77be16a8bec596496f905e08ac720ebb271e975e521bede0dedbad445f38",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 2863,
+          "sha256": "ec4e7be456d8b575ee3e89aa2d736e071ea86aed96a0a0d7a451e9b2550e8e50",
+          "declaredBytes": 2863,
+          "declaredSha256": "ec4e7be456d8b575ee3e89aa2d736e071ea86aed96a0a0d7a451e9b2550e8e50",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 6675,
+          "sha256": "478902b33f2f1eaeed5cc56292db7962f7e8a0c9b2d54e4fa5681e11c8e74214",
+          "declaredBytes": 6675,
+          "declaredSha256": "478902b33f2f1eaeed5cc56292db7962f7e8a0c9b2d54e4fa5681e11c8e74214",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 741,
+          "sha256": "dacd0988c9e67b2826d439b166b951e13d603b442c4a0f0df2da00877d8e3d19",
+          "declaredBytes": 741,
+          "declaredSha256": "dacd0988c9e67b2826d439b166b951e13d603b442c4a0f0df2da00877d8e3d19",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 11,
+      "directoryCountIncludingReceipt": 12,
+      "sourceManifestSnapshot": {
+        "bytes": 6675,
+        "sha256": "478902b33f2f1eaeed5cc56292db7962f7e8a0c9b2d54e4fa5681e11c8e74214"
+      },
+      "reportSnapshot": {
+        "bytes": 2863,
+        "sha256": "ec4e7be456d8b575ee3e89aa2d736e071ea86aed96a0a0d7a451e9b2550e8e50"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "hashOnlyFiles",
+          "path": "packages/web/src/lib/format.ts",
+          "capturedSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyFiles",
+          "path": "packages/server/src/mobile-remote/mobile-history.ts",
+          "capturedSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionFiles",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 217,
+          "displayCount": 217,
+          "classification": "instruction-text",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionFiles",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 5,
+          "displayCount": 5,
+          "classification": "instruction-text",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 0,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 0,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 0,
+        "instructionDisplaySeparately": 222
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "classificationDocument.testsOrFixturesRun": 0,
+        "classificationDocument.gitCalls": 0,
+        "classificationDocument.repoScriptsRun": 0
+      },
+      "reportLinks": [
+        {
+          "target": "canonical-coverage-objects.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-method.py",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-selected.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-contexts.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "73",
+      "directory": "/tmp/codeshell-audit-round73-model-display",
+      "receiptSnapshot": {
+        "path": "artifact-receipt.json",
+        "bytes": 2685,
+        "sha256": "b211cb30f58bbf618c47a8dd4814d7f84073ebe6db953988d6841fa7e9148e4c"
+      },
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "bytes": 762,
+          "sha256": "a2d30e1f0f4c1710e570480cf6816090ead25fa157b7f3a5f5864d172daf7971",
+          "declaredBytes": 762,
+          "declaredSha256": "a2d30e1f0f4c1710e570480cf6816090ead25fa157b7f3a5f5864d172daf7971",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 13664,
+          "sha256": "6ac0f29714a550c54d8eb125cc7640e69eba03666ad42ab3a79286c82d9782ff",
+          "declaredBytes": 13664,
+          "declaredSha256": "6ac0f29714a550c54d8eb125cc7640e69eba03666ad42ab3a79286c82d9782ff",
+          "matches": true
+        },
+        {
+          "path": "decisions.json",
+          "bytes": 4090,
+          "sha256": "531b2fc7c5579c45215045d152cd4f6e20c344c74e97c34e833e2e848fbeabf5",
+          "declaredBytes": 4090,
+          "declaredSha256": "531b2fc7c5579c45215045d152cd4f6e20c344c74e97c34e833e2e848fbeabf5",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1572,
+          "sha256": "d6492a8dc3efd95116b7e27c380f3a8cf1fd109c398f3a1c5b97986b946d92f6",
+          "declaredBytes": 1572,
+          "declaredSha256": "d6492a8dc3efd95116b7e27c380f3a8cf1fd109c398f3a1c5b97986b946d92f6",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 135850,
+          "sha256": "66cb4841a123d27f4d2398a8461505baae1720dffceef01067ba69c55bd09c43",
+          "declaredBytes": 135850,
+          "declaredSha256": "66cb4841a123d27f4d2398a8461505baae1720dffceef01067ba69c55bd09c43",
+          "matches": true
+        },
+        {
+          "path": "history-initial-pins.json",
+          "bytes": 993515,
+          "sha256": "5dda64103f1b3d9a520c957bed1f12cc8c1741acc7ad0f2467f09007226ddf45",
+          "declaredBytes": 993515,
+          "declaredSha256": "5dda64103f1b3d9a520c957bed1f12cc8c1741acc7ad0f2467f09007226ddf45",
+          "matches": true
+        },
+        {
+          "path": "history-inventory.raw.txt",
+          "bytes": 294988,
+          "sha256": "a7def30453ba4d44d3ca301cd91afbbbbd7a916eaa4bf354d9cb6ea236ddde6f",
+          "declaredBytes": 294988,
+          "declaredSha256": "a7def30453ba4d44d3ca301cd91afbbbbd7a916eaa4bf354d9cb6ea236ddde6f",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 4552,
+          "sha256": "2b5cd14b7f6984497a90681302f210dd6e242ec34ce46965011195f66a99eff5",
+          "declaredBytes": 4552,
+          "declaredSha256": "2b5cd14b7f6984497a90681302f210dd6e242ec34ce46965011195f66a99eff5",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 1902,
+          "sha256": "2f08800b46dcb1da9a6c3c39e86cda39f3200bb96456e29599fe3fd5fb6470d9",
+          "declaredBytes": 1902,
+          "declaredSha256": "2f08800b46dcb1da9a6c3c39e86cda39f3200bb96456e29599fe3fd5fb6470d9",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1406,
+          "sha256": "ed1d09aa89d0601f77790a3a2c2fa87d8b1850c36652697c3a34b0365aeba06f",
+          "declaredBytes": 1406,
+          "declaredSha256": "ed1d09aa89d0601f77790a3a2c2fa87d8b1850c36652697c3a34b0365aeba06f",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 3639,
+          "sha256": "6974cd6e9fc3a0323efde467e4fc00ec61cd00d01b603f99d79f01ab66cc52ed",
+          "declaredBytes": 3639,
+          "declaredSha256": "6974cd6e9fc3a0323efde467e4fc00ec61cd00d01b603f99d79f01ab66cc52ed",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 7841,
+          "sha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+          "declaredBytes": 7841,
+          "declaredSha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 497,
+          "sha256": "d1ef6599d912f95cfa4f3c7ad119c39f4233156e7bcfb8298a68dca6e42d585e",
+          "declaredBytes": 497,
+          "declaredSha256": "d1ef6599d912f95cfa4f3c7ad119c39f4233156e7bcfb8298a68dca6e42d585e",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 13,
+      "directoryCountIncludingReceipt": 14,
+      "sourceManifestSnapshot": {
+        "bytes": 7841,
+        "sha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2"
+      },
+      "reportSnapshot": {
+        "bytes": 3639,
+        "sha256": "6974cd6e9fc3a0323efde467e4fc00ec61cd00d01b603f99d79f01ab66cc52ed"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "main",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/tui/src/ui/components/model-display.ts",
+          "capturedSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/tui/src/cli/parse-int-option.ts",
+          "capturedSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 0,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 0,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 0,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "manifest.runs.product": 0,
+        "manifest.runs.helper": 0,
+        "manifest.runs.fixture": 0,
+        "manifest.runs.tests": 0,
+        "manifest.runs.react": 0,
+        "manifest.runs.terminal": 0,
+        "manifest.runs.native": 0,
+        "manifest.runs.model": 0,
+        "manifest.runs.network": 0,
+        "manifest.runs.git": 0,
+        "receipt.productExecutions": 0
+      },
+      "reportLinks": [
+        {
+          "target": "decisions.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-objects.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "74",
+      "directory": "/tmp/codeshell-audit-round74-core-summary",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 4498,
+        "sha256": "c84eb606aa8e84d5550ec6902c447f652025e9f639c5d0c533667741bd527823"
+      },
+      "artifactChecks": [
+        {
+          "path": "command-header-excerpts.first.json",
+          "bytes": 1864,
+          "sha256": "51d8a88d6241bbf52c6fd5d7305d77702e368905320ac3ea112c0f70170c1b4c",
+          "declaredBytes": 1864,
+          "declaredSha256": "51d8a88d6241bbf52c6fd5d7305d77702e368905320ac3ea112c0f70170c1b4c",
+          "matches": true
+        },
+        {
+          "path": "command-name-navigation-first-exit.json",
+          "bytes": 78,
+          "sha256": "51e7659aa7b37b5925e08b38a43504a118274e3be8267e4326b1d8f3c67d7229",
+          "declaredBytes": 78,
+          "declaredSha256": "51e7659aa7b37b5925e08b38a43504a118274e3be8267e4326b1d8f3c67d7229",
+          "matches": true
+        },
+        {
+          "path": "command-name-navigation.first.txt",
+          "bytes": 402,
+          "sha256": "200dddc723101b3d8b1b717b1e24855528e6d1e49732e5d6b33384e5ca9c24db",
+          "declaredBytes": 402,
+          "declaredSha256": "200dddc723101b3d8b1b717b1e24855528e6d1e49732e5d6b33384e5ca9c24db",
+          "matches": true
+        },
+        {
+          "path": "consumer-excerpts.first.json",
+          "bytes": 9756,
+          "sha256": "6d6f36960563a052c75824a70d23e32270e32ed373d0688f275b0e1da2c30d0c",
+          "declaredBytes": 9756,
+          "declaredSha256": "6d6f36960563a052c75824a70d23e32270e32ed373d0688f275b0e1da2c30d0c",
+          "matches": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 803,
+          "sha256": "d548cb4f9794ef6926cc10d34229cde8ac1d8c856b352d7764fb631addc93276",
+          "declaredBytes": 803,
+          "declaredSha256": "d548cb4f9794ef6926cc10d34229cde8ac1d8c856b352d7764fb631addc93276",
+          "matches": true
+        },
+        {
+          "path": "consumer-navigation-first-exit.json",
+          "bytes": 79,
+          "sha256": "d79d6a857964e680d3e5d48ac49088f34af74fa3322bb9f33f9c6393d3b424ef",
+          "declaredBytes": 79,
+          "declaredSha256": "d79d6a857964e680d3e5d48ac49088f34af74fa3322bb9f33f9c6393d3b424ef",
+          "matches": true
+        },
+        {
+          "path": "consumer-navigation.first.txt",
+          "bytes": 7293,
+          "sha256": "be9e298be0c9a75545d88053a53c9abdb121e25ba96fef73b402d8c5ede9dd90",
+          "declaredBytes": 7293,
+          "declaredSha256": "be9e298be0c9a75545d88053a53c9abdb121e25ba96fef73b402d8c5ede9dd90",
+          "matches": true
+        },
+        {
+          "path": "cost-command-excerpts.first.json",
+          "bytes": 2867,
+          "sha256": "0946119ffbeeeb35910abc6e159d54b6826ed1ad86cd50f3df59d82596e687a4",
+          "declaredBytes": 2867,
+          "declaredSha256": "0946119ffbeeeb35910abc6e159d54b6826ed1ad86cd50f3df59d82596e687a4",
+          "matches": true
+        },
+        {
+          "path": "coverage-rows.json",
+          "bytes": 57572,
+          "sha256": "c276f7fe58607a5908973e36fba25ff77e1e23800c0e1c809ae4eee23552c6fb",
+          "declaredBytes": 57572,
+          "declaredSha256": "c276f7fe58607a5908973e36fba25ff77e1e23800c0e1c809ae4eee23552c6fb",
+          "matches": true
+        },
+        {
+          "path": "display-consumer-excerpts.first.json",
+          "bytes": 4845,
+          "sha256": "65ca9153455e6ecb8a5067ee329bb3c536d164fdc444dee094d434841b3f6ae3",
+          "declaredBytes": 4845,
+          "declaredSha256": "65ca9153455e6ecb8a5067ee329bb3c536d164fdc444dee094d434841b3f6ae3",
+          "matches": true
+        },
+        {
+          "path": "display-consumer-initial-pins.json",
+          "bytes": 800,
+          "sha256": "a1921b4f0f423c17b79e35607f46f07157afafc0c840b793eeb9493b4d0edcdb",
+          "declaredBytes": 800,
+          "declaredSha256": "a1921b4f0f423c17b79e35607f46f07157afafc0c840b793eeb9493b4d0edcdb",
+          "matches": true
+        },
+        {
+          "path": "display-navigation-first-exit.json",
+          "bytes": 79,
+          "sha256": "6dd5dedf06ba094f176c8995e0cf111a87f3b37b300571b2581779eb5653793a",
+          "declaredBytes": 79,
+          "declaredSha256": "6dd5dedf06ba094f176c8995e0cf111a87f3b37b300571b2581779eb5653793a",
+          "matches": true
+        },
+        {
+          "path": "display-navigation.first.txt",
+          "bytes": 1062,
+          "sha256": "aedf72a912b9930453510ff29365d29849bb332dd7630df1a97bb617647fe11e",
+          "declaredBytes": 1062,
+          "declaredSha256": "aedf72a912b9930453510ff29365d29849bb332dd7630df1a97bb617647fe11e",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 290,
+          "sha256": "ae2a1c4aef46854aa302b02e416accbd4cb80b9433fe3b1f11a9d4801f5c4875",
+          "declaredBytes": 290,
+          "declaredSha256": "ae2a1c4aef46854aa302b02e416accbd4cb80b9433fe3b1f11a9d4801f5c4875",
+          "matches": true
+        },
+        {
+          "path": "history-first-exit.json",
+          "bytes": 52,
+          "sha256": "813a5e2abb6257963eebb395c3b411d704b09caff666de100309b736a40519ed",
+          "declaredBytes": 52,
+          "declaredSha256": "813a5e2abb6257963eebb395c3b411d704b09caff666de100309b736a40519ed",
+          "matches": true
+        },
+        {
+          "path": "history-first.txt",
+          "bytes": 289,
+          "sha256": "7f96fcdec58fcd19623ec65907a3e67218f03fce6d4f7d36e50c16f9f4a996ee",
+          "declaredBytes": 289,
+          "declaredSha256": "7f96fcdec58fcd19623ec65907a3e67218f03fce6d4f7d36e50c16f9f4a996ee",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 1022216,
+          "sha256": "e735288c7b19232b8587dff2c49f644a81ab5c301e9d92e768c577d8d5fe2cd3",
+          "declaredBytes": 1022216,
+          "declaredSha256": "e735288c7b19232b8587dff2c49f644a81ab5c301e9d92e768c577d8d5fe2cd3",
+          "matches": true
+        },
+        {
+          "path": "metadata-notes.json",
+          "bytes": 1555,
+          "sha256": "67414d0cb21485b8fe293acd79cc24e9329a73391804277019ee1d2fd9d814c7",
+          "declaredBytes": 1555,
+          "declaredSha256": "67414d0cb21485b8fe293acd79cc24e9329a73391804277019ee1d2fd9d814c7",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 2544,
+          "sha256": "2bace0bec08ed6902cd45ee12c4abff88928dd558ce94f7e8cd86f63ca37ffc7",
+          "declaredBytes": 2544,
+          "declaredSha256": "2bace0bec08ed6902cd45ee12c4abff88928dd558ce94f7e8cd86f63ca37ffc7",
+          "matches": true
+        },
+        {
+          "path": "review-checks.json",
+          "bytes": 2318,
+          "sha256": "37fd892b319cf7c540ce0af40d7e411992a54215d0e676d382dd5987b6101c2b",
+          "declaredBytes": 2318,
+          "declaredSha256": "37fd892b319cf7c540ce0af40d7e411992a54215d0e676d382dd5987b6101c2b",
+          "matches": true
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 2985,
+          "sha256": "e832ef69a3caecfe40543f26fa4e4e4bec8d5ab80b6e175eb42a0b72f5eb6e1e",
+          "declaredBytes": 2985,
+          "declaredSha256": "e832ef69a3caecfe40543f26fa4e4e4bec8d5ab80b6e175eb42a0b72f5eb6e1e",
+          "matches": true
+        },
+        {
+          "path": "selection-decisions.json",
+          "bytes": 1417,
+          "sha256": "28da806516c212eb5fc887c21679272402d023efc94b0cef7312fb63d5375870",
+          "declaredBytes": 1417,
+          "declaredSha256": "28da806516c212eb5fc887c21679272402d023efc94b0cef7312fb63d5375870",
+          "matches": true
+        },
+        {
+          "path": "selection-initial-pins.json",
+          "bytes": 1478,
+          "sha256": "6f99fb60f8b35fdfc94b064c817757e3d9d559e5a74c6d81e632e6d411dcf880",
+          "declaredBytes": 1478,
+          "declaredSha256": "6f99fb60f8b35fdfc94b064c817757e3d9d559e5a74c6d81e632e6d411dcf880",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 8690,
+          "sha256": "4cf0957b27ba4364cf150137f127fc32ed7033bc2ce4d6d8b8f2beefc78224e4",
+          "declaredBytes": 8690,
+          "declaredSha256": "4cf0957b27ba4364cf150137f127fc32ed7033bc2ce4d6d8b8f2beefc78224e4",
+          "matches": true
+        },
+        {
+          "path": "summary-current-read.json",
+          "bytes": 381,
+          "sha256": "d061da57b45d2a71c5b7a87e15356677ef4d9063256a238c08f4f3ff2686a058",
+          "declaredBytes": 381,
+          "declaredSha256": "d061da57b45d2a71c5b7a87e15356677ef4d9063256a238c08f4f3ff2686a058",
+          "matches": true
+        },
+        {
+          "path": "summary-focused-history.json",
+          "bytes": 34123,
+          "sha256": "a0b376a659d632858402c9d2c671b7ef8e8f2064fce95226e543025ca74ccf05",
+          "declaredBytes": 34123,
+          "declaredSha256": "a0b376a659d632858402c9d2c671b7ef8e8f2064fce95226e543025ca74ccf05",
+          "matches": true
+        },
+        {
+          "path": "summary-source-excerpts.first.txt",
+          "bytes": 3296,
+          "sha256": "45f11a4658236aa1bee5c3403742a6a966901bdbd1234d35239bc62fabf4f687",
+          "declaredBytes": 3296,
+          "declaredSha256": "45f11a4658236aa1bee5c3403742a6a966901bdbd1234d35239bc62fabf4f687",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 27,
+      "directoryCountIncludingReceipt": 28,
+      "sourceManifestSnapshot": {
+        "bytes": 8690,
+        "sha256": "4cf0957b27ba4364cf150137f127fc32ed7033bc2ce4d6d8b8f2beefc78224e4"
+      },
+      "reportSnapshot": {
+        "bytes": 2544,
+        "sha256": "2bace0bec08ed6902cd45ee12c4abff88928dd558ce94f7e8cd86f63ca37ffc7"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "main",
+          "path": "packages/core/src/cost-ledger/summary.ts",
+          "capturedSha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+          "selectedCount": 81,
+          "displayCount": 81,
+          "classification": "product-full",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/cost-ledger/types.ts",
+          "capturedSha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+          "selectedCount": 67,
+          "displayCount": 73,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/cost-ledger/store.ts",
+          "capturedSha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+          "selectedCount": 65,
+          "displayCount": 96,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/cost-ledger/ledger.test.ts",
+          "capturedSha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+          "selectedCount": 12,
+          "displayCount": 19,
+          "classification": "test-declaration",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/tui/src/ui/App.tsx",
+          "capturedSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+          "selectedCount": 7,
+          "displayCount": 15,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+          "capturedSha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+          "selectedCount": 20,
+          "displayCount": 109,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/cost-tracker.ts",
+          "capturedSha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+          "selectedCount": 23,
+          "displayCount": 37,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyFiles",
+          "path": "packages/server/src/model-trace-history.ts",
+          "capturedSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyFiles",
+          "path": "packages/core/src/context/image-history-window.ts",
+          "capturedSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyFiles",
+          "path": "packages/core/src/tool-system/builtin/cron-list.definition.ts",
+          "capturedSha256": "5cb4f5a55d6af3b297ade685343d1e94664f23f64e9c3d64ab3fc9c775c99407",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionsCarryForward",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionsCarryForward",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 263,
+        "testDeclarationSemantic": 12,
+        "displayProductAndTest": 430,
+        "fullProductFiles": 1,
+        "selectedProductFiles": 5,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [
+        "packages/core/src/cost-ledger/types.ts",
+        "packages/core/src/cost-ledger/store.ts",
+        "packages/core/src/cost-ledger/ledger.test.ts",
+        "packages/tui/src/ui/App.tsx",
+        "packages/tui/src/cli/commands/builtin/core-commands.ts",
+        "packages/core/src/cost-tracker.ts"
+      ],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "receipt.productRuns": 0,
+        "classificationDocument.productRuns": 0
+      },
+      "reportLinks": [
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "selection-decisions.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-notes.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "75",
+      "directory": "/tmp/codeshell-audit-round75-trace-history",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 2415,
+        "sha256": "fc613e6185d841db1f59d9dee914e3f357da156f2daf9b6abd210efc317b6020"
+      },
+      "artifactChecks": [
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 2777,
+          "sha256": "a87cbd8973f43b7bc4b346fd34e3d8aded2ab38b1824e54efce649f331803a63",
+          "declaredBytes": 2777,
+          "declaredSha256": "a87cbd8973f43b7bc4b346fd34e3d8aded2ab38b1824e54efce649f331803a63",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 669,
+          "sha256": "028c20e4015f04a5894f3fe4f378dfc3af172e926b1b9d4b1cdcf514421489ec",
+          "declaredBytes": 669,
+          "declaredSha256": "028c20e4015f04a5894f3fe4f378dfc3af172e926b1b9d4b1cdcf514421489ec",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 6118,
+          "sha256": "b7148f09573f171ca64f359f77aa08dd73c0696d1b9a10c395e959304ebf5cce",
+          "declaredBytes": 6118,
+          "declaredSha256": "b7148f09573f171ca64f359f77aa08dd73c0696d1b9a10c395e959304ebf5cce",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3817,
+          "sha256": "ebaef55ae7a361999f15b0192b460d838c74918f4dd529d57458c228b51d8966",
+          "declaredBytes": 3817,
+          "declaredSha256": "ebaef55ae7a361999f15b0192b460d838c74918f4dd529d57458c228b51d8966",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 898274,
+          "sha256": "3d14f36121787bf7b5386baf31dd88c2738221d7f7b76715c8a7e89fcbba209e",
+          "declaredBytes": 898274,
+          "declaredSha256": "3d14f36121787bf7b5386baf31dd88c2738221d7f7b76715c8a7e89fcbba209e",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 637,
+          "sha256": "a8c5cca7a20c079169179484574b600d13159089657a558004380f7f2c55a1e6",
+          "declaredBytes": 637,
+          "declaredSha256": "a8c5cca7a20c079169179484574b600d13159089657a558004380f7f2c55a1e6",
+          "matches": true
+        },
+        {
+          "path": "metadata-first-error.json",
+          "bytes": 604,
+          "sha256": "5ced0f7df46e6c9c69f753be4f0c17872adf8e1c9c06e38b0b1ac34e9d3c7e0b",
+          "declaredBytes": 604,
+          "declaredSha256": "5ced0f7df46e6c9c69f753be4f0c17872adf8e1c9c06e38b0b1ac34e9d3c7e0b",
+          "matches": true
+        },
+        {
+          "path": "metadata-first-error.txt",
+          "bytes": 149,
+          "sha256": "e7c338afbc67e8322dea2f581b3608e3eb585778d869adc36966b4ac6a7c3bdd",
+          "declaredBytes": 149,
+          "declaredSha256": "e7c338afbc67e8322dea2f581b3608e3eb585778d869adc36966b4ac6a7c3bdd",
+          "matches": true
+        },
+        {
+          "path": "parent-context-notes.json",
+          "bytes": 463,
+          "sha256": "f7dea8293d43206c76edddcbf74252cebfe84540b83143dc0eb8e05f13d4f70c",
+          "declaredBytes": 463,
+          "declaredSha256": "f7dea8293d43206c76edddcbf74252cebfe84540b83143dc0eb8e05f13d4f70c",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 3777,
+          "sha256": "d60969718045e0df9bc310b206d44ee7651c75ba49343ab156120e18b88e85d2",
+          "declaredBytes": 3777,
+          "declaredSha256": "d60969718045e0df9bc310b206d44ee7651c75ba49343ab156120e18b88e85d2",
+          "matches": true
+        },
+        {
+          "path": "source-display-pins.json",
+          "bytes": 2589,
+          "sha256": "32ccec4d97829cf40cd4eb3d1950f76b1d2533ebdb3252b77b7382610fe268a9",
+          "declaredBytes": 2589,
+          "declaredSha256": "32ccec4d97829cf40cd4eb3d1950f76b1d2533ebdb3252b77b7382610fe268a9",
+          "matches": true
+        },
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 10026,
+          "sha256": "768b3e80df1f4b918a210e0487d17caee55f6a9dbf353fee5d90a94e6a06b061",
+          "declaredBytes": 10026,
+          "declaredSha256": "768b3e80df1f4b918a210e0487d17caee55f6a9dbf353fee5d90a94e6a06b061",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 8939,
+          "sha256": "5c69dc71f41e34690d648e1705734d9562bbd09099b23a34cc1ede8cd65a008a",
+          "declaredBytes": 8939,
+          "declaredSha256": "5c69dc71f41e34690d648e1705734d9562bbd09099b23a34cc1ede8cd65a008a",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 868,
+          "sha256": "7d587aa1dc8501d39f3d7c4436952bc5c97e7df79ab14e524f2c291ad9ac4162",
+          "declaredBytes": 868,
+          "declaredSha256": "7d587aa1dc8501d39f3d7c4436952bc5c97e7df79ab14e524f2c291ad9ac4162",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 14,
+      "directoryCountIncludingReceipt": 15,
+      "sourceManifestSnapshot": {
+        "bytes": 8939,
+        "sha256": "5c69dc71f41e34690d648e1705734d9562bbd09099b23a34cc1ede8cd65a008a"
+      },
+      "reportSnapshot": {
+        "bytes": 3777,
+        "sha256": "d60969718045e0df9bc310b206d44ee7651c75ba49343ab156120e18b88e85d2"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "main",
+          "path": "packages/server/src/model-trace-history.ts",
+          "capturedSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "selectedCount": 78,
+          "displayCount": 97,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/server/src/model-trace-http.ts",
+          "capturedSha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+          "selectedCount": 20,
+          "displayCount": 22,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/web/src/model-trace-api.ts",
+          "capturedSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+          "selectedCount": 23,
+          "displayCount": 30,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+          "capturedSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+          "selectedCount": 28,
+          "displayCount": 54,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/desktop/src/main/trace-history-service.ts",
+          "capturedSha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+          "selectedCount": 7,
+          "displayCount": 13,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 156,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 216,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 5,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "classificationDocument.productImports": 0,
+        "classificationDocument.productHelperOrFunctionCalls": 0,
+        "classificationDocument.testsOrFixturesRun": 0,
+        "classificationDocument.realModelTraceFilesRead": 0,
+        "classificationDocument.gitCalls": 0,
+        "classificationDocument.repoScriptsRun": 0
+      },
+      "reportLinks": [
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-contexts.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-rows.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "parent-context-notes.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-display-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-excerpts.txt",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-first-error.txt",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-first-error.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "76",
+      "directory": "/tmp/codeshell-audit-round76-resolve-preset",
+      "receiptSnapshot": {
+        "path": "artifact-receipt.json",
+        "bytes": 4648,
+        "sha256": "c92c165fdb10317804c46abed33385ac635424ee1c72b19eb77a586db41c6204"
+      },
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "bytes": 1143,
+          "sha256": "ac80508d5998daf01eefe246a1faa20a50c2ef8fdba2839eba99968b59829e48",
+          "declaredBytes": 1143,
+          "declaredSha256": "ac80508d5998daf01eefe246a1faa20a50c2ef8fdba2839eba99968b59829e48",
+          "matches": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 1627,
+          "sha256": "d17f9e7a2306c8d1d992c55a63fcde58b525a75f7c406f7bafd19a033cea6085",
+          "declaredBytes": 1627,
+          "declaredSha256": "d17f9e7a2306c8d1d992c55a63fcde58b525a75f7c406f7bafd19a033cea6085",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 12448,
+          "sha256": "f988cbd9bdba2995d5f65d28e89bf20446bf3ae895bfcead46fab1290407902a",
+          "declaredBytes": 12448,
+          "declaredSha256": "f988cbd9bdba2995d5f65d28e89bf20446bf3ae895bfcead46fab1290407902a",
+          "matches": true
+        },
+        {
+          "path": "decisions.json",
+          "bytes": 1471,
+          "sha256": "610cebae746eb709061f5460cb78d227b789a6df269f36b5259ed594039fb07a",
+          "declaredBytes": 1471,
+          "declaredSha256": "610cebae746eb709061f5460cb78d227b789a6df269f36b5259ed594039fb07a",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 3137,
+          "sha256": "716f4343b3553d470febb10b68cbfc9093020722254644125a347a8dae262fbe",
+          "declaredBytes": 3137,
+          "declaredSha256": "716f4343b3553d470febb10b68cbfc9093020722254644125a347a8dae262fbe",
+          "matches": true
+        },
+        {
+          "path": "final-metadata-method.py",
+          "bytes": 9235,
+          "sha256": "57e287ac118a7af177d29ef8188a2eb517e88fc7210670d5fbec3fb2bfe9cd55",
+          "declaredBytes": 9235,
+          "declaredSha256": "57e287ac118a7af177d29ef8188a2eb517e88fc7210670d5fbec3fb2bfe9cd55",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.first.json",
+          "bytes": 145933,
+          "sha256": "3b85d160a8e2e51dd3b25ab4d9d8787719fc59b7843c398e85be30628f9fa595",
+          "declaredBytes": 145933,
+          "declaredSha256": "3b85d160a8e2e51dd3b25ab4d9d8787719fc59b7843c398e85be30628f9fa595",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 195299,
+          "sha256": "e3e840a594397251eefe6ba96117a4a53d7da8c55fbb750758feef95168af029",
+          "declaredBytes": 195299,
+          "declaredSha256": "e3e840a594397251eefe6ba96117a4a53d7da8c55fbb750758feef95168af029",
+          "matches": true
+        },
+        {
+          "path": "history-initial-pins.first.json",
+          "bytes": 993515,
+          "sha256": "43c1678c8b78060fa0d70965b1b6ddb2019d5fcb328faac603d51c8c527aac78",
+          "declaredBytes": 993515,
+          "declaredSha256": "43c1678c8b78060fa0d70965b1b6ddb2019d5fcb328faac603d51c8c527aac78",
+          "matches": true
+        },
+        {
+          "path": "history-initial-pins.json",
+          "bytes": 993515,
+          "sha256": "48b5cfefa2ff751fc3703447868901ec62466e148c298f349a6b457ce1ae6b83",
+          "declaredBytes": 993515,
+          "declaredSha256": "48b5cfefa2ff751fc3703447868901ec62466e148c298f349a6b457ce1ae6b83",
+          "matches": true
+        },
+        {
+          "path": "history-inventory.first.raw.txt",
+          "bytes": 294988,
+          "sha256": "18f348beb632a47ddd4686e8bd3486b37b15fef7b7b6b9c0727c9395255858de",
+          "declaredBytes": 294988,
+          "declaredSha256": "18f348beb632a47ddd4686e8bd3486b37b15fef7b7b6b9c0727c9395255858de",
+          "matches": true
+        },
+        {
+          "path": "history-inventory.raw.txt",
+          "bytes": 294988,
+          "sha256": "d3ced04766c4a0b86445edac27be61e910fe4d6e6bfab3ab78a9d3d6cf784398",
+          "declaredBytes": 294988,
+          "declaredSha256": "d3ced04766c4a0b86445edac27be61e910fe4d6e6bfab3ab78a9d3d6cf784398",
+          "matches": true
+        },
+        {
+          "path": "history-method.first.py",
+          "bytes": 4533,
+          "sha256": "a715c5b54c2d6a2585ed22b667adb6f5f89144799fb565744558124615db8798",
+          "declaredBytes": 4533,
+          "declaredSha256": "a715c5b54c2d6a2585ed22b667adb6f5f89144799fb565744558124615db8798",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 4524,
+          "sha256": "7ecab683b8c83261f1dbd61893e9d527bf46e4a090e788a3bf990da1aa5cf5e9",
+          "declaredBytes": 4524,
+          "declaredSha256": "7ecab683b8c83261f1dbd61893e9d527bf46e4a090e788a3bf990da1aa5cf5e9",
+          "matches": true
+        },
+        {
+          "path": "history-scope-clarification.json",
+          "bytes": 1366,
+          "sha256": "8fa717866c65b42a347cee97d352934743f7c9189d2004d18d057a6768ff3d2c",
+          "declaredBytes": 1366,
+          "declaredSha256": "8fa717866c65b42a347cee97d352934743f7c9189d2004d18d057a6768ff3d2c",
+          "matches": true
+        },
+        {
+          "path": "history.first.json",
+          "bytes": 1892,
+          "sha256": "24f5616c6b09a68f648dbb66c6cf96f15e274e5a7d2cac2077728a0e728cdfda",
+          "declaredBytes": 1892,
+          "declaredSha256": "24f5616c6b09a68f648dbb66c6cf96f15e274e5a7d2cac2077728a0e728cdfda",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 1887,
+          "sha256": "a338f45e71b29a35f575ff561f359b82f1a00cce8a80d64436000a5cf1418ed5",
+          "declaredBytes": 1887,
+          "declaredSha256": "a338f45e71b29a35f575ff561f359b82f1a00cce8a80d64436000a5cf1418ed5",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1428,
+          "sha256": "68f08a2aa99dbb44916eecd4891e05bbb5aec53d3ce9aae255a7a2efbc7fbbe1",
+          "declaredBytes": 1428,
+          "declaredSha256": "68f08a2aa99dbb44916eecd4891e05bbb5aec53d3ce9aae255a7a2efbc7fbbe1",
+          "matches": true
+        },
+        {
+          "path": "metadata-first-diagnostic.json",
+          "bytes": 1279,
+          "sha256": "7b34e30ce7000d070e99ddaf24408f94e86cfa574275ea5b3627598239addc35",
+          "declaredBytes": 1279,
+          "declaredSha256": "7b34e30ce7000d070e99ddaf24408f94e86cfa574275ea5b3627598239addc35",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 4681,
+          "sha256": "36a9ccb5e450c9bc5edcc3baa3937e6b70b4d9afc92e1d989042b9fe22b43e5f",
+          "declaredBytes": 4681,
+          "declaredSha256": "36a9ccb5e450c9bc5edcc3baa3937e6b70b4d9afc92e1d989042b9fe22b43e5f",
+          "matches": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 15098,
+          "sha256": "4486f109f2473d99898861d1424a30b0cf54c9923ac3b479e3935bde2770916f",
+          "declaredBytes": 15098,
+          "declaredSha256": "4486f109f2473d99898861d1424a30b0cf54c9923ac3b479e3935bde2770916f",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 17880,
+          "sha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+          "declaredBytes": 17880,
+          "declaredSha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 585,
+          "sha256": "db5788dd14eca9745733cb27098c3e8a5057d44b22cf5595200a9fbb98d78b48",
+          "declaredBytes": 585,
+          "declaredSha256": "db5788dd14eca9745733cb27098c3e8a5057d44b22cf5595200a9fbb98d78b48",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 23,
+      "directoryCountIncludingReceipt": 24,
+      "sourceManifestSnapshot": {
+        "bytes": 17880,
+        "sha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48"
+      },
+      "reportSnapshot": {
+        "bytes": 4681,
+        "sha256": "36a9ccb5e450c9bc5edcc3baa3937e6b70b4d9afc92e1d989042b9fe22b43e5f"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "main",
+          "path": "packages/core/src/composition/resolve-preset.ts",
+          "capturedSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+          "selectedCount": 38,
+          "displayCount": 97,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/composition/types.ts",
+          "capturedSha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+          "selectedCount": 25,
+          "displayCount": 52,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/composition/compiler.ts",
+          "capturedSha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+          "selectedCount": 72,
+          "displayCount": 95,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/engine/engine.ts",
+          "capturedSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+          "selectedCount": 20,
+          "displayCount": 71,
+          "classification": "product-selected",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/composition/compiler.test.ts",
+          "capturedSha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+          "selectedCount": 22,
+          "displayCount": 57,
+          "classification": "test-declaration",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/preset/index.ts",
+          "capturedSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+          "selectedCount": 0,
+          "displayCount": 1,
+          "classification": "navigation-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "main",
+          "path": "packages/core/src/colorizer.ts",
+          "capturedSha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 155,
+        "testDeclarationSemantic": 22,
+        "displayProductAndTest": 373,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 4,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "manifest.runs.product": 0,
+        "manifest.runs.helper": 0,
+        "manifest.runs.fixture": 0,
+        "manifest.runs.test": 0,
+        "manifest.runs.react": 0,
+        "manifest.runs.terminal": 0,
+        "manifest.runs.native": 0,
+        "manifest.runs.model": 0,
+        "manifest.runs.network": 0,
+        "manifest.runs.git": 0,
+        "receipt.productExecutions": 0
+      },
+      "reportLinks": [
+        {
+          "target": "decisions.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-first-diagnostic.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-objects.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-scope-clarification.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-excerpts.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "consumer-initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "77",
+      "directory": "/tmp/codeshell-audit-round77-agent-definitions",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 4332,
+        "sha256": "b78eb468ea51d4aebc9c10e0c7d4c5baca1d3a8657b54bda46e338981dd11282"
+      },
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "bytes": 1641,
+          "sha256": "e82d4b5f9501402c91b7f1c463b2d2bcd91374abeac7d17e5524188a16861e4b",
+          "declaredBytes": 1641,
+          "declaredSha256": "e82d4b5f9501402c91b7f1c463b2d2bcd91374abeac7d17e5524188a16861e4b",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-detail.json",
+          "bytes": 1258,
+          "sha256": "9b66bf29e0bd232219b8d48625f163f70fd9f846fd24a255a0465f13124d236d",
+          "declaredBytes": 1258,
+          "declaredSha256": "9b66bf29e0bd232219b8d48625f163f70fd9f846fd24a255a0465f13124d236d",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 42360,
+          "sha256": "a75a58422eb1188e806c752f77a3088498eb5c4a69ab8305a6799ca8df8dcf32",
+          "declaredBytes": 42360,
+          "declaredSha256": "a75a58422eb1188e806c752f77a3088498eb5c4a69ab8305a6799ca8df8dcf32",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 2573,
+          "sha256": "ec453db128c5d8c80a4bd33305b8d8c5e4c077cbbf3c8a0ad28da913d1ab89e3",
+          "declaredBytes": 2573,
+          "declaredSha256": "ec453db128c5d8c80a4bd33305b8d8c5e4c077cbbf3c8a0ad28da913d1ab89e3",
+          "matches": true
+        },
+        {
+          "path": "gate-decisions.json",
+          "bytes": 1576,
+          "sha256": "ba2f999ab8d9964d98038351df7fe956c91b023dca81a55cc3f0a6587daeecbd",
+          "declaredBytes": 1576,
+          "declaredSha256": "ba2f999ab8d9964d98038351df7fe956c91b023dca81a55cc3f0a6587daeecbd",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 372237,
+          "sha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+          "declaredBytes": 372237,
+          "declaredSha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3928,
+          "sha256": "ec080818b12f9cc6b3d48374790f93dc7921277f0cc10960776363e732669de0",
+          "declaredBytes": 3928,
+          "declaredSha256": "ec080818b12f9cc6b3d48374790f93dc7921277f0cc10960776363e732669de0",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 994434,
+          "sha256": "35e3313beea8bd7c1a21f05f797631ebebbe4d85f431ad54bbd2436539ced52f",
+          "declaredBytes": 994434,
+          "declaredSha256": "35e3313beea8bd7c1a21f05f797631ebebbe4d85f431ad54bbd2436539ced52f",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1195,
+          "sha256": "be7f7b9357169f77838c02e84f4a36a2430a5080cba338c94a9abe10beccb068",
+          "declaredBytes": 1195,
+          "declaredSha256": "be7f7b9357169f77838c02e84f4a36a2430a5080cba338c94a9abe10beccb068",
+          "matches": true
+        },
+        {
+          "path": "metadata-notes.json",
+          "bytes": 1109,
+          "sha256": "ee24a57137c0f745f06e13337d5d60a089897fdd7d487c6ffcceac5e23192342",
+          "declaredBytes": 1109,
+          "declaredSha256": "ee24a57137c0f745f06e13337d5d60a089897fdd7d487c6ffcceac5e23192342",
+          "matches": true
+        },
+        {
+          "path": "old-reviewmode-objects.json",
+          "bytes": 1412,
+          "sha256": "a11aceaeacbd66a19bd7c4fb460228ee60c1b5a3b775c89770ef278427668b23",
+          "declaredBytes": 1412,
+          "declaredSha256": "a11aceaeacbd66a19bd7c4fb460228ee60c1b5a3b775c89770ef278427668b23",
+          "matches": true
+        },
+        {
+          "path": "old-scope-selected.json",
+          "bytes": 130,
+          "sha256": "6eab69736095acdea419cf215a37eb9854d5db4f354702afd6991f13957fbb6b",
+          "declaredBytes": 130,
+          "declaredSha256": "6eab69736095acdea419cf215a37eb9854d5db4f354702afd6991f13957fbb6b",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 4285,
+          "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd",
+          "declaredBytes": 4285,
+          "declaredSha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 2735,
+          "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248",
+          "declaredBytes": 2735,
+          "declaredSha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 874,
+          "sha256": "06f190dc30e896571df1bec754caf0f6de25fe48c0d8742e29c57e775b4f270c",
+          "declaredBytes": 874,
+          "declaredSha256": "06f190dc30e896571df1bec754caf0f6de25fe48c0d8742e29c57e775b4f270c",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 15,
+      "directoryCountIncludingReceipt": 16,
+      "sourceManifestSnapshot": {
+        "bytes": 2735,
+        "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248"
+      },
+      "reportSnapshot": {
+        "bytes": 4285,
+        "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/core/src/agent/agent-definition-registry.ts",
+          "capturedSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/core/src/agent/agent-definition.ts",
+          "capturedSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionsHashOnly",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionsHashOnly",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 0,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 0,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 0,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "manifest.productsExecuted": 0,
+        "manifest.Git": 0,
+        "receipt.productHelperFixtureTestModelPermissionIdentityLockNativeNetworkGitExecutions": 0,
+        "receipt.productWrites": 0
+      },
+      "reportLinks": [
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "old-reviewmode-objects.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-detail.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "gate-decisions.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "old-scope-selected.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-notes.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "78",
+      "directory": "/tmp/codeshell-audit-round78-complete-gate-review",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 839,
+        "sha256": "a2f06a544218bdd7c37a11f0fa8873b560e5be9cfbc8e6df7e6c88c07c8b6648"
+      },
+      "artifactChecks": [
+        {
+          "path": "checks.json",
+          "bytes": 25800,
+          "sha256": "32e8ccf80d1a49428187450b623272cf4e57d49ea0e0bf34d69e382fd0f778dc",
+          "declaredBytes": 25800,
+          "declaredSha256": "32e8ccf80d1a49428187450b623272cf4e57d49ea0e0bf34d69e382fd0f778dc",
+          "matches": true
+        },
+        {
+          "path": "metadata-first-output.txt",
+          "bytes": 1034,
+          "sha256": "fc4ec2605e90d89f203f10cc9b02e364d5f784130069c8796cd022f82dc4a190",
+          "declaredBytes": 1034,
+          "declaredSha256": "fc4ec2605e90d89f203f10cc9b02e364d5f784130069c8796cd022f82dc4a190",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 2540,
+          "sha256": "09df82e1768361244bfd237fd0d514add3f16cf761980fd0fe70bae9ce4f4f67",
+          "declaredBytes": 2540,
+          "declaredSha256": "09df82e1768361244bfd237fd0d514add3f16cf761980fd0fe70bae9ce4f4f67",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 2688,
+          "sha256": "224e235a7876b5e16240834d9c560b8d726ef7bb5be5e7d21a66deddd9fc1a3a",
+          "declaredBytes": 2688,
+          "declaredSha256": "224e235a7876b5e16240834d9c560b8d726ef7bb5be5e7d21a66deddd9fc1a3a",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 4,
+      "directoryCountIncludingReceipt": 5,
+      "sourceManifestSnapshot": {
+        "bytes": 2688,
+        "sha256": "224e235a7876b5e16240834d9c560b8d726ef7bb5be5e7d21a66deddd9fc1a3a"
+      },
+      "reportSnapshot": {
+        "bytes": 2540,
+        "sha256": "09df82e1768361244bfd237fd0d514add3f16cf761980fd0fe70bae9ce4f4f67"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/core/src/agent/agent-definition.ts",
+          "capturedSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/core/src/agent/agent-definition-registry.ts",
+          "capturedSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": true,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 0,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 0,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 0,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "manifest.Git": 0,
+        "manifest.productOrMethodOrFixtureExecutions": 0,
+        "classificationDocument.execution.productHelperFunctionCalls": 0,
+        "classificationDocument.execution.productImports": 0,
+        "classificationDocument.execution.testsFixturesRun": 0,
+        "classificationDocument.execution.authorOrRepositoryMethodsRun": 0,
+        "classificationDocument.execution.ReactClockModelNativeNetwork": 0,
+        "classificationDocument.execution.Git": 0
+      },
+      "reportLinks": [
+        {
+          "target": "checks.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-first-output.txt",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    },
+    {
+      "packet": "79",
+      "directory": "/tmp/codeshell-audit-round79-session-usage",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 3810,
+        "sha256": "f55eae8a3201f0f8a5593ca88f5c6caf1cf7b53b3a17b0c606d22c1af5db686b"
+      },
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "bytes": 1312,
+          "sha256": "7d5550c0a1dab6437e18b1331989e7f297239a4dc9d6778ea106858c66176c50",
+          "declaredBytes": 1312,
+          "declaredSha256": "7d5550c0a1dab6437e18b1331989e7f297239a4dc9d6778ea106858c66176c50",
+          "matches": true
+        },
+        {
+          "path": "classification.json",
+          "bytes": 403,
+          "sha256": "8262dd1390ad8d345245c0acf41366e093399ed419bd895743e380b7f6382712",
+          "declaredBytes": 403,
+          "declaredSha256": "8262dd1390ad8d345245c0acf41366e093399ed419bd895743e380b7f6382712",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-detail.json",
+          "bytes": 1802,
+          "sha256": "867e993348facdd7dd07534fb1688e3711f236cb96bb5297ea4e6e815cb89c1e",
+          "declaredBytes": 1802,
+          "declaredSha256": "867e993348facdd7dd07534fb1688e3711f236cb96bb5297ea4e6e815cb89c1e",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 18337,
+          "sha256": "ca466e461cb4e24d96aab4629783aae57317b6707eb909aa3a8911289a9c77a1",
+          "declaredBytes": 18337,
+          "declaredSha256": "ca466e461cb4e24d96aab4629783aae57317b6707eb909aa3a8911289a9c77a1",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 2107,
+          "sha256": "074ca734d23565f03275e305f9fef75bb8d378977d3d834e7cae483cc0692063",
+          "declaredBytes": 2107,
+          "declaredSha256": "074ca734d23565f03275e305f9fef75bb8d378977d3d834e7cae483cc0692063",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 100769,
+          "sha256": "fbb0ac83656e30528c25c45a9f32e827bc10ca18405a2503d5a3c41864dc8ce4",
+          "declaredBytes": 100769,
+          "declaredSha256": "fbb0ac83656e30528c25c45a9f32e827bc10ca18405a2503d5a3c41864dc8ce4",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3887,
+          "sha256": "aa0de5e807e6656790c6e418d46a4509030f6f12edb061b805cbaea884d82f9c",
+          "declaredBytes": 3887,
+          "declaredSha256": "aa0de5e807e6656790c6e418d46a4509030f6f12edb061b805cbaea884d82f9c",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 994367,
+          "sha256": "c86168ef4fa45ff911517458b4acf11fbe2304de8aed1f69c6c15d7632c85a44",
+          "declaredBytes": 994367,
+          "declaredSha256": "c86168ef4fa45ff911517458b4acf11fbe2304de8aed1f69c6c15d7632c85a44",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1344,
+          "sha256": "a775e2452cd88f4ee47aee04df2f7882b7183ff34900a845d1f880ddd8e6ac38",
+          "declaredBytes": 1344,
+          "declaredSha256": "a775e2452cd88f4ee47aee04df2f7882b7183ff34900a845d1f880ddd8e6ac38",
+          "matches": true
+        },
+        {
+          "path": "old-scope-selected.json",
+          "bytes": 1681,
+          "sha256": "5faa6183d2d31a469a6a22c19999512c2beeb2c5b7d817364cd1852924056ead",
+          "declaredBytes": 1681,
+          "declaredSha256": "5faa6183d2d31a469a6a22c19999512c2beeb2c5b7d817364cd1852924056ead",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 3212,
+          "sha256": "0b5d24c5fbacbf2eba433ed98cda07877ab2d461be26363d7dd8147e2b87ae37",
+          "declaredBytes": 3212,
+          "declaredSha256": "0b5d24c5fbacbf2eba433ed98cda07877ab2d461be26363d7dd8147e2b87ae37",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 2157,
+          "sha256": "cba47b441fccf5381e3b016732cd6b7f24a5b7bb93c4dd10464481eebe7c99b9",
+          "declaredBytes": 2157,
+          "declaredSha256": "cba47b441fccf5381e3b016732cd6b7f24a5b7bb93c4dd10464481eebe7c99b9",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 727,
+          "sha256": "9f6d5c2e506c8d73a0de470328a58cde94b7049b9fd78ed0b06ed4ce8d9275a2",
+          "declaredBytes": 727,
+          "declaredSha256": "9f6d5c2e506c8d73a0de470328a58cde94b7049b9fd78ed0b06ed4ce8d9275a2",
+          "matches": true
+        }
+      ],
+      "receiptListedCount": 13,
+      "directoryCountIncludingReceipt": 14,
+      "sourceManifestSnapshot": {
+        "bytes": 2157,
+        "sha256": "cba47b441fccf5381e3b016732cd6b7f24a5b7bb93c4dd10464481eebe7c99b9"
+      },
+      "reportSnapshot": {
+        "bytes": 3212,
+        "sha256": "0b5d24c5fbacbf2eba433ed98cda07877ab2d461be26363d7dd8147e2b87ae37"
+      },
+      "sourceRowMetadata": [
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+          "capturedSha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "hashOnlyProducts",
+          "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+          "capturedSha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionHashOnly",
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        },
+        {
+          "collection": "instructionHashOnly",
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayCount": 0,
+          "classification": "instruction-hash-only",
+          "displayRangeMetadataReconstructed": false,
+          "productFilesystemAccess": false
+        }
+      ],
+      "scope": {
+        "productSemantic": 0,
+        "testDeclarationSemantic": 0,
+        "displayProductAndTest": 0,
+        "fullProductFiles": 0,
+        "selectedProductFiles": 0,
+        "instructionDisplaySeparately": 0
+      },
+      "displayRangeMetadataLimitations": [],
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredExecutions": {
+        "manifest.testExecutions": 0,
+        "receipt.productHelperImportReactTimerClientQueryFixtureTestModelNativeNetworkGitExecutions": 0,
+        "receipt.productWrites": 0
+      },
+      "reportLinks": [
+        {
+          "target": "initial-pins.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-detail.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "classification.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-method.py",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "old-scope-selected.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "withinPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "withinPacket": true,
+          "exists": true
+        }
+      ],
+      "sourceBodyOrCurrentProductSHAReadThisReview": false
+    }
+  ],
+  "totals": {
+    "packets": 9,
+    "receiptListedArtifacts": 133,
+    "receiptSnapshotsHashed": 9,
+    "allPacketFilesIncludingReceipts": 142,
+    "reportLinks": 79,
+    "sourceRowsMetadataOnly": 48,
+    "newUniqueSourceSemanticCoverage": 0
+  },
+  "failures": [],
+  "limits": [
+    "No product source body, current product SHA,80/81 directories, Git or author methods accessed/executed.",
+    "Method scripts/source captures/histories opaque byte hash only; report/source-manifest and designated metadata JSON inspected.",
+    "Root74 six non-full rows lack display ranges in manifest: declared display counts are summed and compared only; summary full81 has separate pure metadata display ranges. No source capture decoded.",
+    "Instructions217/222 text reads in71/72 remain separate from product coverage.72 copied semanticRead=false fields are retained alongside explicit instruction ranges, not converted to product full.",
+    "76 old1–115 versus97 and first-five inactive outputs unchanged;78 supports two canonical complete rows only; no global coverage reclassification or deduplicated source total published."
+  ]
+}
