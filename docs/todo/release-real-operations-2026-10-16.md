@@ -93,6 +93,61 @@ main, tags and publication remain outside that authorization. The branch is
 | [39009261349](https://github.com/cjhyy/codeshell/actions/runs/39009261349), source `ec17b2054`                     | Web 31 and the complete macOS job pass again. Linux source suites, directory UI and real AppImage build pass; extraction passes the previous LICENSE comparison but now fails its stricter directory check at `locales`. Source mode is 0755; this receipt omitted the extracted mode, so no new directory conversion is assumed. Main/update requests remain zero. Windows fails in its first Main evaluation with “Resulting promise was garbage collected”, before any of the seven startup operations. Its final exit is 1/no signal, observed 32 incarnations settle cleaned/zero remaining with no query/transport/deny/worker failures, and HOME remains. The receipt does not establish whether that exit precedes fixture cleanup. Windows UI repairs and real AppImage runtime acceptance remain pending. |
 | [39010572108](https://github.com/cjhyy/codeshell/actions/runs/39010572108), source `9cbd3a34c`                     | Windows completes all eight suites for the first time: 78 recorded checks and 12 actual Main launches, each with exit 0/no signal, observed custody cleaned/zero remaining/no query failure, and all eight suite HOMEs removed. This includes the actual Files short comment title. Web passes 31 behavior checks. Linux passes source suites, directory UI and real AppImage build; its new before-validation inventories prove 73 source directories change from 0755 to private 0700. The strict check stops before AppImage Main/update requests. macOS passes source and directory UI suites, then packaged updater metadata evaluation reports a garbage-collected promise before any updater operation; DMG is skipped. The overall matrix remains failed.                                                   |
 | [39012279115](https://github.com/cjhyy/codeshell/actions/runs/39012279115), source `badc2262a`                     | All four jobs complete successfully for the first time. Web passes 31 behavior checks; Linux runs the actual AppImage Main and all ten updater manifest GETs; macOS completes updater and DMG install/replacement. The new complete-path PNG/history/collapse cases pass in all three native panel steps, adding two to the prior 18. Independent receipts from all three native jobs are checked. Linux screenshots still show Chinese glyph boxes, so Chinese visual acceptance remains open despite the green job.                                                                                                                                                                                                                                                                                               |
+| [39013381607](https://github.com/cjhyy/codeshell/actions/runs/39013381607), source `3466cad1e`                     | Web's nine image unit regressions and 31 browser behavior checks pass. Linux completes all eight native suites and actual AppImage update checks; before/after font metadata plus five actual screenshots confirm Chinese glyphs in those samples. macOS completes native suites, updater and DMG again. Windows passes startup seven and Review eight with four normal Main exits, then fails the panel driver before its final report is written; the outer driver code is 1, not an observed Main exit. Later suites are skipped. Original panel error/stack, Main exit, custody and HOME outcome are unknown. Overall matrix is failed.                                                                                                                                                                         |
+
+The CI12 Windows failure is frozen at
+`ci-39013381607-windows-20261017/verified-summary.json` (SHA256
+`04e9b8dd0e9b5b86aaf85f7c43609f4d3c16eccc7f7a06156aa7d9767a4fe0a0`).
+Artifact `12094391101` retains 40 files, including the new generated-image
+screenshot and three browser layout screenshots, but no panel report, failure
+screenshot or body. The sole unsuppressed `git add alpha.txt` warning places
+execution near the Review staged transition; sequential source order is not a
+durable per-case receipt and those earlier panel operations are not counted as
+formal passes. The outer isolated runner observes its Node driver close with
+code 1/no signal and supplies only its own generic error. It does not observe
+Main exit. No original cause, crash or GC classification is established, and
+the prior CI11 green result does not replace this failed acceptance.
+
+Independent source review identifies a persistence gap: the panel catch stores
+the original exception only in memory before awaiting screenshot/body capture,
+and its sole report write follows all cleanup. Missing screenshots do not prove
+that catch was skipped, because screenshot failure is swallowed. The follow-up
+adds bounded synchronous phase/first-error evidence and Main stream/exit
+observations before diagnostic awaits, retaining the original 20 cases, timing,
+custody and normal-exit requirements. Failed owned HOMEs will remain available;
+passing runs still require their original successful cleanup. This is a fixture
+evidence repair, not a diagnosis or fix of the CI12 first cause. Its four precise
+artifact paths preserve the original report/body/PNG allowlist. CI12 has not been
+retried; the next remote run awaits the reviewed source changes.
+
+CI12's independently verified summaries remain
+`ci-39013381607-web-independent-audit.json` (SHA256
+`96a1727596ac98534d8abeb7fd778adea2e970b5ab38109d92c2d5ff2d9cbcb5`),
+`ci-39013381607-linux-independent-audit.json` (SHA256
+`1065e8d0dcac9f267d9540cc00a67b4d8b64c47bef2f2eda85b9194222499d7d`),
+and `ci-39013381607-mac/receipt-audit.json` (SHA256
+`a44591fee75dac879c41c623233019690ddb632e32a27741f07c8991cfd35358`).
+Mac/Linux's strict source/package/exit/custody/HOME checks pass. Web verifies
+its explicitly recorded checks and 88 source hashes, including the repaired attachment helper;
+its unit nine/45 assertions are separate from the 31 real-browser checks.
+The previously recorded SW/Auth lifecycle gaps remain. Mac's 98 receipt checks
+include updater ten GETs and both DMG UI copies; old metadata GC stays unknown.
+
+Linux's before-font receipt matches DejaVu Sans without Chinese coverage; after
+installing the CI prerequisite it matches Noto Sans CJK SC with `zh-cn` coverage.
+The actual generated-image, 1280px light Settings, 390px dark Settings, updater
+404 and malformed-YAML screenshots all show readable Chinese. These five
+samples close the previously observed glyph-box gap in this CI environment,
+without claiming every glyph or Linux installation. Actual AppImage Main/runtime
+identities, sandbox requests, source/cache bytes and full modes remain verified;
+all eight suite receipts pass, including panel 20 and updater ten manifest GETs.
+
+The next independent UI task addresses the recorded R2-10 header-only diff
+boundary: real Git Review still loses paths for mode-only/binary/empty changes,
+showing unknown-file titles and wrong open targets. Existing producer/consumer
+wiring is confirmed and focused owned-Git/React regressions reproduce it. The
+fix is not yet integrated or native-verified; it is separate from the unexplained
+CI12 Windows failure.
 
 Windows CI11's frozen summary is
 `ci-39012279115-windows-20261017/verified-summary.json` (SHA256
@@ -110,10 +165,11 @@ those bytes locally. The screenshot confirms one complete-path attachment card.
 Signature remains `not_verified`; previous GC/query failures remain unexplained.
 
 The supplementary full matrix [39013381607](https://github.com/cjhyy/codeshell/actions/runs/39013381607)
-is running from `3466cad1efa044093feef9df4c433a3bdec45c9f`, including the JPEG
-alias repair, its separate nine-unit gate and Linux font prerequisite/receipts.
-Its result and Chinese screenshots are pending. Subsequent local edits to this
-record do not change that frozen CI source or trigger another docs-only run.
+ran from `3466cad1efa044093feef9df4c433a3bdec45c9f`, including the JPEG alias
+repair, its separate nine-unit gate and Linux font prerequisite/receipts.
+Its final failed-matrix and passing Chinese sample results are recorded above.
+Subsequent local edits to this record do not change that frozen CI source or
+trigger another docs-only run.
 
 CI11's exact clean source is `badc2262a90966f6f903977b849adf1f22b55e9f`.
 Mac's independent receipt audit passes 98 consistency/acceptance checks
