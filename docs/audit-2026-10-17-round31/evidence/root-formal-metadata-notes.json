@@ -1,0 +1,17 @@
+{
+  "productExecution": false,
+  "productReruns": 0,
+  "sourceBytesChanged": false,
+  "classificationCountChanged": false,
+  "events": [
+    {
+      "kind": "Wording precision after independent review",
+      "originalFiles": [
+        "root-report.first.raw.txt",
+        "root-candidates.first.json",
+        "root-artifact-receipt.first.json"
+      ],
+      "correction": "Hook has a module-level export function; it is not re-exported through public barrel/package entries. Active report/candidate now qualify this explicitly. Original copied prep unchanged; current source/ranges and candidate-only classification unchanged."
+    }
+  ]
+}

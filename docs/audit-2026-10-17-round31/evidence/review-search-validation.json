@@ -1,0 +1,58 @@
+{
+  "baselineReportedByRoot": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "frozenUtc": "2026-10-17T11:59:41.641869+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "languageFixturesExecuted": 0,
+  "IntlCalls": 0,
+  "helperInvocations": 0,
+  "moduleImports": 0,
+  "terminalOrTTYActions": 0,
+  "nativeActions": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "newFormalSemanticReadLines": 0,
+  "reusedSemanticReadLines": 704,
+  "newMetadataReaderFailures": [
+    {
+      "receipt": "review-search-finalizer.first.exit.json",
+      "exitCode": 1,
+      "productFailure": false,
+      "metadataCompletion": "Imported stdlib re to complete receipt/link metadata only; no source semantic reread, copying mutation or product retry."
+    }
+  ],
+  "inheritedMetadataReaderFirstFailure": "search-review-prep/source-reader.first.exit.json",
+  "classificationAuthority": {
+    "rootFinalId": "SEARCH-R31-C1",
+    "rootFinalStatus": "candidate",
+    "rootFinalFormalFindings": 0,
+    "rootFinalCandidates": 1,
+    "rootFinalRelated": 0,
+    "independentPrepAssessment": "supports a new P3 static helper-contract defect, without actual application caller proof",
+    "notAdditionalFinding": true
+  },
+  "history": {
+    "preservedDatedPrep": "search-review-prep/history.json",
+    "prepFiles": 2851,
+    "prepExcludes": [
+      "current Round30",
+      "future Round31"
+    ],
+    "formalCurrentHistoryOwner": "Root",
+    "formalCurrentHistoryExpectedScope": "Includes frozen Round30; excludes current Round31",
+    "newScanByReviewer": false,
+    "formalCurrentHistoryIndependentlyCheckedAtThisFreeze": true,
+    "formalCurrentHistoryReference": "review-search-history-checks.json",
+    "formalCurrentHistorySha256": "2f9ccc201a31cde7a769a996b72433f29fb3f571127dc2105ddebf7948b042e9",
+    "formalCurrentFiles": 2921
+  },
+  "limits": [
+    "Root reported separate ES/Unicode spec verification; this reviewer did not repeat or claim that as independent spec/runtime evidence.",
+    "Root reported hook not exported, package exports only root/cli, App has no hook/setter caller and Instance does not expose the method. Reviewer reuses original bounded source locator limitation and does not claim new entry-source semantic reading.",
+    "All old sliceAnsi/R7 TUI diff/i18n failures remain skipped.",
+    "No product imports, function, test, terminal, native, auth, identity, permission, journal or real task experiment."
+  ]
+}

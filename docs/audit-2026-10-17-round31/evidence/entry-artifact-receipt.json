@@ -1,0 +1,37 @@
+{
+  "baseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "originalPrepParentReportedBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round31/entry-report.md",
+      "bytes": 3257,
+      "sha256": "e439443e4cbf5159e61d03005eed1831745a3c5f7cea27649b32d0e81af5d830"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "bytes": 14803,
+      "sha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-validation.json",
+      "bytes": 771,
+      "sha256": "d26bef8ee705f355e34b82acc398e86c4435e93ba98da58627b6dca28b059965"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-prep-copy-receipt.json",
+      "bytes": 2085,
+      "sha256": "e0b69efc2f505b2aa9e7e6394e11dda27e8c752a650c71e4e1cdd4d9ddfa7ea5"
+    }
+  ],
+  "artifactCount": 4,
+  "selfExcluded": true,
+  "prepCopiesSeparateCount": 5,
+  "samePrepSemanticReadNotRecounted": true,
+  "formalizationNewSemanticSourceReads": 0,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "parentGreekCandidateNotDuplicated": true,
+  "productExecutions": 0,
+  "gitCommands": 0
+}

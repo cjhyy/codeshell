@@ -1,0 +1,25 @@
+{
+  "readAtUTC": "2026-10-17T11:57:53.621450+00:00",
+  "sources": [
+    {
+      "url": "https://www.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt",
+      "observedHeader": "SpecialCasing-18.0.0.txt",
+      "selectedLines": [
+        199,
+        216
+      ],
+      "rule": "03A3; 03C2; 03A3; 03A3; Final_Sigma;",
+      "paraphrase": "Final sigma has a context-sensitive lowercase mapping. Non-final sigma uses U+03C3. Context is taken from the original complete string."
+    },
+    {
+      "url": "https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.tolowercase",
+      "observedTitle": "ECMAScript 2027 draft",
+      "selectedLines": [
+        3061,
+        3076
+      ],
+      "paraphrase": "String lowercasing follows Unicode Default Case Conversion including locale-insensitive SpecialCasing mappings and can depend on surrounding code points."
+    }
+  ],
+  "limits": "Primary specification reference only; does not identify or test installed Bun/Node/ICU versions, and is not product runtime evidence. No full external source text copied."
+}

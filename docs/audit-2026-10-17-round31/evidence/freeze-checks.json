@@ -1,0 +1,66 @@
+{
+  "files": [
+    {
+      "path": "root-report.md",
+      "bytes": 2945,
+      "sha256": "6576dbb28ca74a6752a544bbefbf7867f69825e673eea648a828b1f096fd9071"
+    },
+    {
+      "path": "evidence/root-artifact-receipt.json",
+      "bytes": 2192,
+      "sha256": "dd9bbf86f9ce18f25bcfb686f73dd806c37f0c485cac7d4049b6f0a712c19153"
+    },
+    {
+      "path": "entry-report.md",
+      "bytes": 3257,
+      "sha256": "e439443e4cbf5159e61d03005eed1831745a3c5f7cea27649b32d0e81af5d830"
+    },
+    {
+      "path": "evidence/entry-source-manifest.json",
+      "bytes": 14803,
+      "sha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644"
+    },
+    {
+      "path": "evidence/entry-validation.json",
+      "bytes": 771,
+      "sha256": "d26bef8ee705f355e34b82acc398e86c4435e93ba98da58627b6dca28b059965"
+    },
+    {
+      "path": "evidence/entry-prep-copy-receipt.json",
+      "bytes": 2085,
+      "sha256": "e0b69efc2f505b2aa9e7e6394e11dda27e8c752a650c71e4e1cdd4d9ddfa7ea5"
+    },
+    {
+      "path": "evidence/entry-artifact-receipt.json",
+      "bytes": 1260,
+      "sha256": "583d548c3efcd7a1d6bc70482d55454eb706b14a43eff80e3338246d1b13d04e"
+    },
+    {
+      "path": "evidence/review-search.md",
+      "bytes": 4500,
+      "sha256": "82dddd71d6bfb850179c4a198f2558e1bd00c2486e3be9bd5f0390c56e6ec9a4"
+    },
+    {
+      "path": "evidence/review-search-source-manifest.json",
+      "bytes": 16401,
+      "sha256": "fd18d6c5d5aa234115d354afbba220a63953cf437a8ceb49c928bdd0e150a518"
+    },
+    {
+      "path": "evidence/review-search-receipt.json",
+      "bytes": 2452,
+      "sha256": "b34bed6d2d4b6f1f8dd32c32df8f1509813fae0929ea8d8c1f85ce126c07218d"
+    },
+    {
+      "path": "evidence/review-aggregate-independent.md",
+      "bytes": 4600,
+      "sha256": "16a85ebe994bbeb7daa75a8bd953a8154137d86936a0640905bf5aa0cfaef482"
+    },
+    {
+      "path": "evidence/review-aggregate-independent-checks.json",
+      "bytes": 73317,
+      "sha256": "053339b741e90cc6331e6e4b67dca9b29cf5fda2b989bb47ec202a49b9bf62b1"
+    }
+  ],
+  "source": "Authors/reviewers explicit freeze-message hashes checked by Root after reading; not read-start proof.",
+  "productExecution": false
+}

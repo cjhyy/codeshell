@@ -1,0 +1,300 @@
+{
+  "parentReportedBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "reviewer": "aggregator_round27_resume",
+  "beforeReadAtUTC": "2026-10-17T11:55:40.855907+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "bytes": 2158,
+      "lineCount": 53,
+      "initialSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "coveredLineCount": 53,
+      "finishSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "bytes": 1738,
+      "lineCount": 52,
+      "initialSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          52
+        ]
+      ],
+      "coveredLineCount": 52,
+      "finishSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "bytes": 1895,
+      "lineCount": 56,
+      "initialSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "coveredLineCount": 56,
+      "finishSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "bytes": 89185,
+      "lineCount": 1968,
+      "initialSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          123,
+          205
+        ],
+        [
+          700,
+          727
+        ],
+        [
+          1280,
+          1365
+        ]
+      ],
+      "coveredLineCount": 197,
+      "finishSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "bytes": 7445,
+      "lineCount": 198,
+      "initialSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          198
+        ]
+      ],
+      "coveredLineCount": 198,
+      "finishSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "bytes": 2454,
+      "lineCount": 66,
+      "initialSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          66
+        ]
+      ],
+      "coveredLineCount": 66,
+      "finishSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "lineCount": 9,
+      "initialSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "coveredLineCount": 9,
+      "finishSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lineCount": 73,
+      "initialSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          73
+        ]
+      ],
+      "coveredLineCount": 73,
+      "finishSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "matchesInitialPin": true,
+      "role": "package-surface-metadata"
+    },
+    {
+      "path": "tests/search-highlight.test.ts",
+      "bytes": 4161,
+      "lineCount": 143,
+      "initialSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          143
+        ]
+      ],
+      "coveredLineCount": 143,
+      "finishSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "matchesInitialPin": true,
+      "role": "test-source-only"
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lineCount": 129,
+      "initialSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "firstPinTiming": "before this task direct semantic text read; prior rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          129
+        ]
+      ],
+      "coveredLineCount": 129,
+      "finishSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "matchesInitialPin": true,
+      "role": "package-surface-metadata"
+    },
+    {
+      "path": "packages/tui/src/render/root.ts",
+      "bytes": 4613,
+      "lineCount": 184,
+      "initialSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "firstPinTiming": "before selected/full direct semantic text read; prior rg export/return navigation only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          184
+        ]
+      ],
+      "coveredLineCount": 184,
+      "finishSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "matchesInitialPin": true,
+      "role": "product-source-static-only"
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "lineCount": 38,
+      "initialSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "firstPinTiming": "before direct script source text read; build script is not executed",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "coveredLineCount": 38,
+      "finishSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "matchesInitialPin": true,
+      "role": "build-script-source-only"
+    }
+  ],
+  "productExecution": false,
+  "gitCommands": 0,
+  "scope": "Round31 search real entry/export/consumer static frontier; no existing production UI exposure assumed.",
+  "additionalPinAtUTC": "2026-10-17T11:56:24.093721+00:00",
+  "metaBuildPinAtUTC": "2026-10-17T11:57:02.793845+00:00",
+  "referenceNavigation": {
+    "path": "reference-navigation.txt",
+    "command": "rg -n -g !docs/** -g !bugs/** -e use-search-highlight -e useSearchHighlight -e setSearchHighlight -e scanElementSubtree -e scanPositions -e applySearchHighlight -e findRowSearchMatches -e searchHighlightQuery .",
+    "scope": "Default rg nonignored repository source/test/script/config text, excluding docs and bugs; not dynamic import/alias proof or generated/external consumer exhaustion.",
+    "matchedLines": 30,
+    "matchedFiles": [
+      "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "packages/tui/src/render/ink.tsx",
+      "packages/tui/src/render/render-to-screen.ts",
+      "packages/tui/src/render/searchHighlight.ts",
+      "packages/tui/src/render/searchMatches.ts",
+      "tests/search-highlight.test.ts"
+    ],
+    "existingTestSource": {
+      "path": "tests/search-highlight.test.ts",
+      "declarationCount": 1,
+      "parameterCaseEntries": 9,
+      "executed": 0
+    },
+    "additionalNavigationOnlyLines": [
+      {
+        "path": "packages/tui/src/render/ink.tsx",
+        "lines": [
+          31,
+          34
+        ],
+        "note": "rg imports outside declared semantic ranges; not added to semantic coverage"
+      }
+    ]
+  },
+  "counts": {
+    "sourcePins": 12,
+    "full": 11,
+    "selected": 1,
+    "declaredReadLines": 1198,
+    "roleReadLines": {
+      "product-source-static-only": 815,
+      "test-source-only": 143,
+      "package-surface-metadata": 202,
+      "build-script-source-only": 38
+    }
+  },
+  "finishAtUTC": "2026-10-17T11:57:58.338216+00:00",
+  "historyMetadata": "No new full history corpus query in this entry-only subtask; parent/snapshot own historical cause/candidate dedup. No claim that any helper was never read before.",
+  "validation": {
+    "productAttempts": 0,
+    "productImports": 0,
+    "productFunctionCalls": 0,
+    "testsExecuted": 0,
+    "fixturesExecuted": 0,
+    "languageEval": 0,
+    "reactRuns": 0,
+    "stdinTtyNativeRuns": 0,
+    "networkRequests": 0,
+    "gitCommands": 0,
+    "authIdentityExperiments": 0,
+    "metadataErrors": []
+  },
+  "freezeAtUTC": "2026-10-17T11:58:33.889159+00:00",
+  "reportLocalLinksChecked": [
+    "reference-navigation.txt",
+    "source-manifest.json",
+    "entry-decision.json"
+  ]
+}

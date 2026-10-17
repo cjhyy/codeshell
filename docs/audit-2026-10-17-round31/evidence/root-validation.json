@@ -1,0 +1,13 @@
+{
+  "baseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "runs": [],
+  "productAttempts": 0,
+  "productImports": 0,
+  "productFunctions": 0,
+  "testRuns": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "newSemanticReadsDuringFormalization": 0,
+  "mode": "Static source and primary specification derivation only;9existing parameterized entries unexecuted."
+}
