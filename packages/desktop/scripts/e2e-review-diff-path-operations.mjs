@@ -346,13 +346,21 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     await header.getByRole("button", { name: /^(打开文件|Open file)$/ }).click();
     const panel = win.locator('[data-panel-id="files"][data-panel-active="true"]');
     await panel.waitFor();
-    await panel.getByText(files[name].trimEnd(), { exact: true }).waitFor();
+    const previewLines = [];
+    for (const line of files[name].trimEnd().split("\n")) {
+      // The production text preview renders each line as a separate row.
+      const renderedLine = panel.getByText(line, { exact: true });
+      await renderedLine.waitFor();
+      previewLines.push(await renderedLine.textContent());
+    }
+    assert.deepEqual(previewLines, files[name].trimEnd().split("\n"));
     const opened = await win.evaluate(() => window.__ownedReviewOpen.at(-1));
     assert.equal(opened.path, join(projectPath, name));
     assert.equal(await readFile(join(projectPath, name), "utf8"), files[name]);
     operations.push({
       action: `Review open ${name} reaches actual file preview`,
       opened,
+      previewLines,
       actualBytesSHA256: hash(await readFile(join(projectPath, name))),
     });
   }
