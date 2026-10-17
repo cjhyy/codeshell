@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "lines": 96,
+      "pinTimeUTC": "2026-10-17T12:33:17.887667+00:00",
+      "purpose": "before selected ordinary DTO / list producer mapping read; authority implementation excluded"
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "lines": 612,
+      "pinTimeUTC": "2026-10-17T12:33:17.891464+00:00",
+      "purpose": "before selected ordinary DTO / list producer mapping read; authority implementation excluded"
+    }
+  ]
+}

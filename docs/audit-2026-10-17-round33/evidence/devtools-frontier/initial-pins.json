@@ -1,0 +1,37 @@
+{
+  "parentContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "prepOnly": true,
+  "atUTC": "2026-10-17T12:13:59.815634+00:00",
+  "files": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lineCount": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "pinBeforeSemanticRead": true
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "lineCount": 36,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "pinBeforeSemanticRead": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "bytes": 5243,
+      "lineCount": 137,
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "pinBeforeSemanticRead": true
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "bytes": 189,
+      "lineCount": 7,
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "pinBeforeSemanticRead": true
+    }
+  ],
+  "productExecution": false,
+  "note": "Fresh host-neutral collector source scope. Actual page/browser/network/native adapters are not invoked."
+}

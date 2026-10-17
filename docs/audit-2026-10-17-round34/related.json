@@ -1,0 +1,7 @@
+{
+  "baseline": "40d79ff2190a98aa31067eb07006099c2726b21a",
+  "count": 0,
+  "related": [],
+  "sourceDecision": "evidence/utf8-frontier/decisions.json",
+  "note": "Root UTF8-R34-C1 is a static candidate, not runtime-confirmed. Independent same adjacent lead remains unclassified. D03 prior general encoding family is a separate JSON-lines decoder; no exact background cursor tail old cause established."
+}

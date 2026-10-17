@@ -1,0 +1,303 @@
+{
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentReportedFrozenRound33": "40d79ff2190a98aa31067eb07006099c2726b21a",
+  "mutableFutureExclusions": [
+    "Round34",
+    "Round35"
+  ],
+  "frozenUTC": "2026-10-17T12:35:42.052071+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/bound-tool-result.ts",
+      "bytes": 572,
+      "lineCount": 13,
+      "sha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "initialFilesystemSha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "finishFilesystemSha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:31:56.089658+00:00",
+      "pinTiming": "Before source semantic reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "coveredLineCount": 13,
+      "initialSemanticReadSha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe"
+    },
+    {
+      "path": "packages/core/src/engine/aux-key.ts",
+      "bytes": 451,
+      "lineCount": 12,
+      "sha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "initialFilesystemSha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "finishFilesystemSha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:31:56.089658+00:00",
+      "pinTiming": "Before source semantic reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "coveredLineCount": 12,
+      "initialSemanticReadSha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3"
+    },
+    {
+      "path": "packages/core/src/engine/aux-key.test.ts",
+      "bytes": 578,
+      "lineCount": 14,
+      "sha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "initialFilesystemSha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "finishFilesystemSha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:33:43.633426+00:00",
+      "pinTiming": "Before direct source range read; prior filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "coveredLineCount": 14,
+      "initialSemanticReadSha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8"
+    },
+    {
+      "path": "packages/core/src/engine/auxiliary-pipeline.ts",
+      "bytes": 9461,
+      "lineCount": 273,
+      "sha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "initialFilesystemSha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "finishFilesystemSha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:33:43.633426+00:00",
+      "pinTiming": "Before direct source range read; prior filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          102,
+          132
+        ]
+      ],
+      "coveredLineCount": 51,
+      "initialSemanticReadSha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de"
+    },
+    {
+      "path": "packages/core/src/tool-system/executor.ts",
+      "bytes": 36414,
+      "lineCount": 917,
+      "sha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "initialFilesystemSha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "finishFilesystemSha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:33:43.633426+00:00",
+      "pinTiming": "Before direct source range read; prior filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          818,
+          837
+        ]
+      ],
+      "coveredLineCount": 20,
+      "initialSemanticReadSha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/sources.ts",
+      "bytes": 27850,
+      "lineCount": 690,
+      "sha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "initialFilesystemSha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "finishFilesystemSha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:33:43.633426+00:00",
+      "pinTiming": "Before direct source range read; prior filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          447,
+          470
+        ]
+      ],
+      "coveredLineCount": 24,
+      "initialSemanticReadSha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:31:56.089658+00:00",
+      "pinTiming": "Before source semantic reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "hash-only; instructions reused from prior unchanged read",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:31:56.089658+00:00",
+      "pinTiming": "Before source semantic reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "hash-only; instructions reused from prior unchanged read",
+      "initialSemanticReadSha256": null
+    }
+  ],
+  "sourcePinCount": 8,
+  "semanticSourceCount": 6,
+  "productSourceLines": 120,
+  "testDeclarationLines": 14,
+  "totalDeclaredReadLines": 134,
+  "priorReportSemanticReadLines": 0,
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "ordinaryConclusions": [
+    "aux helper selects truthy defaults.auxText orundefined; empty string andlegacy auxModelKey behavior are explicitly covered by3unexecuted test declarations.",
+    "Actual auxiliary-pipeline reads settings thenresolves key; missingkey ormissingpoolentry returnsprovided fallback. Only source read; no client/model operation invoked.",
+    "bound-tool-result stores supplied snapshot inWeakMap andreturns errorresult directly orsnapshot/originalfallback. Actual registration/reader locations found; no ordinary data-wrapper counterexample established.",
+    "Private/trusted execution evidence semantics are outside this ordinary-data review. No identity/authority/security correctness conclusion or arbitrary object-mutation test."
+  ],
+  "sourceNavigationOnlyExcerptsExcludedFromDeclaredRanges": {
+    "packages/core/src/tool-system/executor.ts": [
+      [
+        26,
+        26
+      ],
+      [
+        754,
+        754
+      ]
+    ],
+    "packages/core/src/tool-system/builtin/sources.ts": [
+      [
+        39,
+        39
+      ]
+    ]
+  },
+  "history": {
+    "inventoryFiles": 3137,
+    "stats": {
+      "markdownFiles": 1321,
+      "jsonFiles": 1816,
+      "stringLeaves": 718308,
+      "scalarLeaves": 1064468
+    },
+    "occurrenceCounts": {
+      "exact-leaf": 175,
+      "ordinary-result-key": 165,
+      "old-failed": 0
+    },
+    "retainedContexts": {
+      "exact-leaf": 60,
+      "ordinary-result-key": 60,
+      "old-failed": 0
+    },
+    "contextCapEach": 60,
+    "coverageMetadataRows": 16,
+    "explicitSameCurrentShaFullOrSelectedRows": 0,
+    "contextsActuallyInspected": {
+      "exact-leaf": 8,
+      "ordinary-result-key": 8,
+      "old-failed": 0
+    },
+    "supplementApiCounts": {
+      "bound-api": 1,
+      "aux-api": 23
+    },
+    "supplementSavedContexts": {
+      "bound-api": 1,
+      "aux-api": 23
+    },
+    "supplementContextsInspected": {
+      "bound-api": 1,
+      "aux-api": 12
+    },
+    "supplementSameInventoryBytes": true,
+    "excluded": [
+      "docs/audit-2026-10-17-round34/",
+      "docs/audit-2026-10-17-round35/"
+    ],
+    "includesFrozen32And33": true,
+    "parseErrors": [],
+    "limits": "No explicit sameSHA full row found in conservative gate; inventories/import maps/no-row metadata are not proof never read. Old docs already describe unified aux behavior. Keywords/capped excerpts not semantic history exhaustion."
+  },
+  "metadataNotes": [
+    {
+      "kind": "Output budget",
+      "description": "Large combined coverage/context output was truncated. Exact andordinary groups were independently reread as bounded first8 each; only those counts declared,not all60."
+    },
+    {
+      "kind": "Boundary stop",
+      "description": "Bound helper comments/actual sources call areadjacent toprivate executed-output/authority mechanics. Only plain return/storage shape recorded; no further verification ofthose mechanisms."
+    }
+  ],
+  "validation": {
+    "runs": [],
+    "productAttempts": 0,
+    "testsExecuted": 0,
+    "productImports": 0,
+    "productFunctionEvaluations": 0,
+    "promiseLanguageFixtures": 0,
+    "fixturesWritten": 0,
+    "toolExecutions": 0,
+    "modelCalls": 0,
+    "networkRequests": 0,
+    "nativeRuns": 0,
+    "gitCommands": 0,
+    "runtimePasses": 0,
+    "runtimeExpectations": 0
+  },
+  "metadataFailures": [],
+  "limits": [
+    "No permissions/security/identity/authority experiment ornewfinding inthese families.",
+    "Two25line leaves full; other largepipeline/executor/sources files only selected ranges.",
+    "No oldfailed language/runtime/test direction reopened andnohistorical passcounts borrowed.",
+    "Root independently binds futureformal baseline/history; exact dated prep exclusions stay unchanged."
+  ]
+}

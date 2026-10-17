@@ -1,0 +1,14 @@
+{
+  "recordedUTC": "2026-10-17T12:37:20.744157+00:00",
+  "firstPackagingAttempt": {
+    "exitCode": 1,
+    "rawDiagnostic": "packaging-first.stderr.txt",
+    "rawDiagnosticSha256": "27274bdf958145f3d5d1a0b110dccf5009c24e32ace8cc107e5483564bdd4547",
+    "cause": "The metadata link-existence loop checked the review self-receipt link before creating author-receipt.json. All frozen input and source finish-hash assertions had completed successfully.",
+    "resolution": "Create the metadata receipt, then verify all report links and receipt rows. No author prep file changed.",
+    "productFailure": false
+  },
+  "productRetries": 0,
+  "gitCommands": 0,
+  "productAttempts": 0
+}

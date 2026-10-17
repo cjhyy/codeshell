@@ -1,0 +1,41 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/report.md",
+      "bytes": 5725,
+      "sha256": "31b89d1fe5df5a43a5d8525aa6f7a211b41250004333d1abcde522882edda070",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/source-manifest.json",
+      "bytes": 21325,
+      "sha256": "eb2b52b21f7a9402be3a879a3cfd5a168e5eaf2ebb09ad33c25b25793e7eebed",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/artifact-receipt.json",
+      "bytes": 3567,
+      "sha256": "0e1495daf6f99f4f33be560894f00ed48a31c6ff9bded657859eda29947d7795",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-core-result-frontier/review.md",
+      "bytes": 3468,
+      "sha256": "97232c300b5fb2225a7ab0a9b40656e4e3e91f7b7126bb57b54073f504acd549",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-core-result-frontier/source-manifest.json",
+      "bytes": 11613,
+      "sha256": "a0f14c0fde589c708e193418d3d7a129e46b0eda7d410f56cd338a6dd6d09bbc",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-core-result-frontier/reviewer-receipt.json",
+      "bytes": 2099,
+      "sha256": "654fdc18f2c90e0f228e49a8756e6f1a859e3852ce9574d545c581fc7d48aa2a",
+      "pinBeforeRootReportRead": true
+    }
+  ],
+  "productRuns": 0
+}

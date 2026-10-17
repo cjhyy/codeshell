@@ -1,0 +1,41 @@
+{
+  "mode": "pure static source and metadata audit",
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "productExecutions": 0,
+  "helperInvocations": 0,
+  "imports": 0,
+  "testsExecuted": 0,
+  "reactOrBrowserFixtureExecutions": 0,
+  "nativeOrCLIExecutions": 0,
+  "networkOperations": 0,
+  "gitCommands": 0,
+  "installUpdateCheckUninstallOperations": 0,
+  "userDirectoriesOrCredentialsTouched": false,
+  "sourceChanges": false,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round35-extensions-data-frontier",
+  "oldFailedDirectionsReopened": false,
+  "existingTestDeclarationsRead": 8,
+  "historicalPassCountsBorrowed": false,
+  "metadataAndNavigationNotes": [
+    {
+      "kind": "navigation",
+      "exitCode": 2,
+      "detail": "Filename search included guessed main/services/marketplace-service.ts and plugins-service.ts, absent in current inventory; stderr was redirected. No module/product run occurred. Actual inventory later identified main/plugins-service.ts; only ordinary DTO mapping was read."
+    },
+    {
+      "kind": "normal-no-match",
+      "detail": "Definition pattern did not occur in pinned source.ts/marketplace-service.ts. Filename and type export navigation then located installer.ts declaration; no installer invoked."
+    },
+    {
+      "kind": "delegation-unavailable",
+      "detail": "Independent readonly metadata reviewer spawn rejected because agent thread limit reached; no reviewer was created and no independent-review credit claimed."
+    },
+    {
+      "kind": "tool-output-truncation",
+      "detail": "Bulk broad ordinary-contract contexts were truncated. No assertion that all retained100 contexts were semantically read. Narrow no-cap focused query19 contexts and all58 target contexts/all21 old-failed contexts were read; broad1638 occurrences remain navigation metadata only."
+    }
+  ],
+  "semanticNegativeLimit": "No ordinary counterexample in the exact source/consumer selections. This is not an all-repository no-bug claim or a statement about external Panel package contents/remote refs, installer authority, real UI, destructive behavior, or filesystem results."
+}

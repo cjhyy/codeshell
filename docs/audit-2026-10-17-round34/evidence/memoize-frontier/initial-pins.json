@@ -1,0 +1,44 @@
+{
+  "capturedUTC": "2026-10-17T12:21:33.234933+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "context": "FutureRound34; Root requested exclude mutable32/33/34; no Git inspected",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only at capture; no semantic source read yet",
+      "timing": "Before direct semantic source reading; exact rg filename inventory only"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only at capture; no semantic source read yet",
+      "timing": "Before direct semantic source reading; exact rg filename inventory only"
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "bytes": 1329,
+      "lineCount": 35,
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "coverage": "hash-only at capture; no semantic source read yet",
+      "timing": "Before direct semantic source reading; exact rg filename inventory only"
+    },
+    {
+      "path": "packages/core/src/utils/task-sanitizer.ts",
+      "bytes": 963,
+      "lineCount": 34,
+      "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "coverage": "hash-only at capture; no semantic source read yet",
+      "timing": "Before direct semantic source reading; exact rg filename inventory only"
+    }
+  ],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0
+}

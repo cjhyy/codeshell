@@ -1,0 +1,10 @@
+{
+  "observedExitCode": 2,
+  "toolChunkId": "e54c98",
+  "kind": "metadata locator used two absent guessed module paths",
+  "diagnostic": "rg: packages/core/src/internal.ts: No such file or directory (os error 2)\nrg: packages/core/src/plugins/index.ts: No such file or directory (os error 2)\n",
+  "handling": "Actual index.internal.ts discovered by rg --files; no product/module import was attempted. Missing paths are excluded from source coverage.",
+  "fullRawCombinedOutputPersisted": false,
+  "productAttempts": 0,
+  "productFailure": false
+}

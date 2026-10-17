@@ -1,0 +1,30 @@
+{
+  "parentReportedPrepContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "mode": "static-only",
+  "runs": [],
+  "productAttempts": 0,
+  "productImports": 0,
+  "productFunctionCalls": 0,
+  "testRuns": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "fixturesExecuted": 0,
+  "languageFixtureEval": 0,
+  "installUpdateCheckCalls": 0,
+  "businessNetworkRequests": 0,
+  "gitCommands": 0,
+  "nativeRuns": 0,
+  "accountUserDirectoryOperations": 0,
+  "authPermissionCustodyExperiments": 0,
+  "existingTestDeclarationsRead": {
+    "parseSource": 17,
+    "installFromNpmSelected": 2,
+    "executed": 0
+  },
+  "sourceFinishChecksMatched": true,
+  "metadataRecheckFailures": 1,
+  "metadataFailureDiagnostic": "history-recheck.first.json",
+  "firstHistoryUnchanged": true,
+  "focusedCurrentMetadataSnapshotCompleted": true,
+  "oldFailedDirectionsRemainSkipped": true
+}

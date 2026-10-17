@@ -1,0 +1,520 @@
+{
+  "prepOnly": true,
+  "formalBaseline": null,
+  "initialParentContext": "Root reported mutableRound32 on4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "frozenUTC": "2026-10-17T12:19:41.942817+00:00",
+  "files": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lineCount": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "initialFilesystemSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "finishFilesystemSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          227
+        ]
+      ],
+      "coveredLineCount": 227,
+      "initialSemanticReadSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "pinTimingLimitation": null
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "lineCount": 36,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "initialFilesystemSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "finishFilesystemSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "coveredLineCount": 36,
+      "initialSemanticReadSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "pinTimingLimitation": null
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "bytes": 189,
+      "lineCount": 7,
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "initialFilesystemSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "finishFilesystemSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          7
+        ]
+      ],
+      "coveredLineCount": 7,
+      "initialSemanticReadSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "pinTimingLimitation": null
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "bytes": 5243,
+      "lineCount": 137,
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "initialFilesystemSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "finishFilesystemSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          137
+        ]
+      ],
+      "coveredLineCount": 137,
+      "initialSemanticReadSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "pinTimingLimitation": null
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "bytes": 2272,
+      "lineCount": 50,
+      "sha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "initialFilesystemSha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "finishFilesystemSha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "coveredLineCount": 50,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "bytes": 17657,
+      "lineCount": 466,
+      "sha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "initialFilesystemSha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "finishFilesystemSha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          205,
+          240
+        ]
+      ],
+      "coveredLineCount": 36,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "bytes": 668,
+      "lineCount": 10,
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "initialFilesystemSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "finishFilesystemSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "coveredLineCount": 10,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "bytes": 37488,
+      "lineCount": 1091,
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "initialFilesystemSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "finishFilesystemSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          22
+        ],
+        [
+          610,
+          635
+        ]
+      ],
+      "coveredLineCount": 48,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/desktop/src/main/browser-runtime/playwright-driver.ts",
+      "bytes": 24474,
+      "lineCount": 752,
+      "sha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "initialFilesystemSha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "finishFilesystemSha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          90
+        ]
+      ],
+      "coveredLineCount": 90,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/automation-host.ts",
+      "bytes": 19114,
+      "lineCount": 519,
+      "sha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "initialFilesystemSha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "finishFilesystemSha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          100,
+          116
+        ],
+        [
+          320,
+          339
+        ],
+        [
+          416,
+          435
+        ]
+      ],
+      "coveredLineCount": 57,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/background-runtime.ts",
+      "bytes": 29596,
+      "lineCount": 845,
+      "sha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "initialFilesystemSha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "finishFilesystemSha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          325,
+          360
+        ]
+      ],
+      "coveredLineCount": 36,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    },
+    {
+      "path": "packages/browser-devtools/README.md",
+      "bytes": 2940,
+      "lineCount": 56,
+      "sha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "initialFilesystemSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "finishFilesystemSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:48.022476+00:00",
+      "pinTiming": "Before independent direct source ranges; prior rg locator excerpts not full semantic coverage",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "coveredLineCount": 56,
+      "initialSemanticReadSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "pinTimingLimitation": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "bytes": 6661,
+      "lineCount": 38,
+      "sha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "initialFilesystemSha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "finishFilesystemSha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "initialEqualsFinish": true,
+      "captureRecord": "history-initial-pins.json",
+      "captureUTC": "2026-10-17T12:18:26.939225+00:00",
+      "pinTiming": "Dedicated pin after scanner excerpt inspection, before direct old report/full metadata comparison; no pre-excerpt pin claimed",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "coveredLineCount": 38,
+      "initialSemanticReadSha256": null,
+      "pinTimingLimitation": "Dedicated capture after inspected rg/scanner locator excerpts; before declared direct full/selected read. No pre-excerpt semantic hash claimed."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "hash-only; no source semantic reading in this review",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "hash-only; no source semantic reading in this review",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "bytes": 4011,
+      "lineCount": 84,
+      "sha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "initialFilesystemSha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "finishFilesystemSha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "initialEqualsFinish": true,
+      "captureRecord": "history-initial-pins.json",
+      "captureUTC": "2026-10-17T12:18:26.939225+00:00",
+      "pinTiming": "Dedicated pin after scanner excerpt inspection, before direct old report/full metadata comparison; no pre-excerpt pin claimed",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "hash-only; no source semantic reading in this review",
+      "initialSemanticReadSha256": null
+    }
+  ],
+  "semanticSourceCount": 13,
+  "sourcePinsIncludingHashOnly": 16,
+  "productTestSourceLines": 734,
+  "readmeContractLines": 56,
+  "priorReportLines": 38,
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "existingCauseExclusions": [
+    "DIAG-R10-01 eager collection enumeration before queue/node budget",
+    "CDP-R3-03 visibility:hidden ancestor pruning visible descendant, already excluded by R10"
+  ],
+  "priorVersionComparison": {
+    "checks": [
+      {
+        "path": "CODESHELL.md",
+        "oldR10FrozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "independentCurrentReadStartSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/browser-devtools/README.md",
+        "oldR10FrozenSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+        "independentCurrentReadStartSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/browser-devtools/src/contracts.ts",
+        "oldR10FrozenSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "independentCurrentReadStartSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/browser-devtools/src/index.ts",
+        "oldR10FrozenSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+        "independentCurrentReadStartSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/browser-devtools/src/inspector.ts",
+        "oldR10FrozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "independentCurrentReadStartSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/browser-devtools/src/inspector.test.ts",
+        "oldR10FrozenSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+        "independentCurrentReadStartSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+        "oldR10FrozenSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+        "independentCurrentReadStartSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      },
+      {
+        "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+        "oldR10FrozenSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+        "independentCurrentReadStartSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      }
+    ],
+    "note": "Historical full claim for package comes from direct R10 report/coverageLimit, not invented ranges in old manifest."
+  },
+  "ordinaryCounterevidence": [
+    "Core schema modes andmax_entries1..100 map to collector camelCase maxEntries; both clamp/default consistently.",
+    "Console/network listen only after first mode call; ring retains100 andreads recent last limit,stop unregisters both listeners and clears both arrays. Main-document navigation andpage closure cleanup source paths are explicit.",
+    "ActualPuppeteer/Playwright adapters pass injectedPage; driver/host paths preserve inspect options. This checks ordinary DTO flow only, not authority/lifecycle validation.",
+    "Performance contract does not promise latest/global order; existing earlier review already excludes using slice0 as speculative failure.",
+    "No arbitrary FakePage exceptions,invalidURLs,caller object mutation,pressure/largeDOM/security edges promoted into newfinding."
+  ],
+  "history": {
+    "inventoryFiles": 2988,
+    "stats": {
+      "markdownFiles": 1304,
+      "jsonFiles": 1684,
+      "stringLeaves": 645399,
+      "scalarLeaves": 957193
+    },
+    "occurrenceCounts": {
+      "exact-inspector": 105,
+      "recording-cap-contract": 11,
+      "old-failed": 10
+    },
+    "retainedContexts": {
+      "exact-inspector": 60,
+      "recording-cap-contract": 11,
+      "old-failed": 10
+    },
+    "contextsInspected": {
+      "exact-inspector": 20,
+      "recording-cap-contract": 11,
+      "old-failed": 10
+    },
+    "contextCapEach": 60,
+    "parseErrors": [],
+    "excluded": [
+      "docs/audit-2026-10-17-round32/",
+      "docs/audit-2026-10-17-round33/"
+    ],
+    "scope": "WholeMD andrecursive JSON value scalar keyword navigation,not historical semantic exhaustion. R10 report directly fullyread; extra exact path inventory isnot context semantic reading."
+  },
+  "sameSourceHistoricalCoverageConclusion": "R10 explicit full src/README/tests reading and same currentSHAs make this a same-version re-review,not an unread frontier. Desktop excerpt hashes do not imply old full driver coverage.",
+  "validation": {
+    "runs": [],
+    "productAttempts": 0,
+    "productImports": 0,
+    "productFunctionEvaluations": 0,
+    "pageEvaluateCalls": 0,
+    "domOrLanguageFixtures": 0,
+    "testsExecuted": 0,
+    "fixturesWritten": 0,
+    "browserRuns": 0,
+    "httpNetworkRequests": 0,
+    "nativeRuns": 0,
+    "modelCalls": 0,
+    "gitCommands": 0,
+    "runtimePasses": 0,
+    "runtimeExpectations": 0
+  },
+  "metadataFailures": [],
+  "limits": [
+    "No authentication/permission/custody/identity/authority experiment; incidental sourcefields are not a review ofthose mechanisms.",
+    "Five existing test declarations137lines readonly. No old5/24 or10/44 passedtests borrowed.",
+    "Old VM/largecollection/realbrowser/failedLink/import/lifecycle directions remain skipped.",
+    "Formalization must bind fresh baseline/history without overwriting dated prep context/exclusions; this review performs no Git."
+  ]
+}

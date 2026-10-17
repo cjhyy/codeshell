@@ -1,0 +1,30 @@
+{
+  "currentStatusMatchesR28FullRead": true,
+  "statusEvidence": "prior-status-pins.json",
+  "cachePriorDeclaration": [
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "location": "15",
+      "excerpt": "已静态阅读 `App.tsx` 草稿与图片附件异步归属、`ChatView.tsx` 图片读取/压缩/暂存、`settings/AdvancedSections.tsx` 的自定义指令和回复偏好、`useTargetedDebouncedSave.ts`、`useSettingsResource.ts`、`settingsCache.ts`、`subagents/SubagentSessionDetail.tsx`、`SubagentNavigation.ts`、`panels/FilesPanel.tsx` 文件根/预览选择，以及评论编解码与其 UI 接线。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "location": "15",
+      "excerpt": "` 草稿与图片附件异步归属、`ChatView.tsx` 图片读取/压缩/暂存、`settings/AdvancedSections.tsx` 的自定义指令和回复偏好、`useTargetedDebouncedSave.ts`、`useSettingsResource.ts`、`settingsCache.ts`、`subagents/SubagentSessionDetail.tsx`、`SubagentNavigation.ts`、`panels/FilesPanel.tsx` 文件根/预览选择，以及评论编解码与其 UI 接线。"
+    }
+  ],
+  "cacheCurrentVersusOldSha": "not established; no historical cache source SHA comparison claim",
+  "oldLoaderOnlyExcludedClue": [
+    {
+      "path": "docs/audit-2026-10-16/candidates.md",
+      "location": "15",
+      "excerpt": "| useSettingsResource 的 loader 变更不会自动 reload | 静态观察 | 未找到会改变 loader 的真实消费者，未登记确认 |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/desktop.md",
+      "location": "51",
+      "excerpt": "暂未确证的观察不计 bug：FS 检查与打开之间的通用竞态没有构造生产触发；Cloud 绑定 controller 按 id 缓存只在显示名更新时可能旧值，`ProjectRuntimeStore` 对不同目标会生成新 id，尚不足认定身份错误；`useSettingsResource` 仅 loader 变更不 reload 当前没有生产调用消费者。未运行原生 Electron/Chrome、真实凭据、模型、云或外部网络。"
+    }
+  ],
+  "meaning": "Metadata pin-only ranking does not erase actual prior report declarations or full semantic source manifests."
+}

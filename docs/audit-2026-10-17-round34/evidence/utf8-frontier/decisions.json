@@ -1,0 +1,33 @@
+{
+  "findings": [],
+  "candidates": [
+    {
+      "id": "UTF8-R34-C1",
+      "title": "Incremental background output can consume an unfinished UTF8 tail before its remaining bytes arrive",
+      "severity": "P3",
+      "status": "static-candidate",
+      "location": {
+        "path": "packages/core/src/runtime/background-shell.ts",
+        "start": 479,
+        "end": 498
+      },
+      "trigger": "A valid overall UTF8 process stream is split across data events, and an ordinary BashOutput incremental peek occurs after a partial character prefix but before the remaining bytes; retained new output is at most the16KiB cap.",
+      "cause": "onData writes original Buffer chunks into RingFile. For rawBuf.length <= READ_RETURN_CAP no safe cut is applied. toString(utf8) decodes the unfinished tail, then agentReadOffset advances by its complete byte count; later bytes cannot be rejoined for incremental output.",
+      "impact": "Static inference: replacement text and loss of the original character across successive incremental reads. Full retained snapshot may still recover the original after completion if bytes remain; no disk corruption or permanent raw-buffer loss claimed.",
+      "ordinaryEntry": "BashOutput definition explicitly advertises a STILL-RUNNING on-demand peek; default incremental directly calls the manager readOutput.",
+      "evidence": [
+        "source-manifest.json",
+        "external-sources.json"
+      ],
+      "validation": "No runtime/Buffer/stream/language fixture, shell or product test executed. Current host cross-character data event scheduling and peek timing were not observed.",
+      "classificationLimit": "Strong source-level candidate retained pending direct runtime evidence; no new formal finding. Independent review keeps same adjacent lead unclassified; Root owns candidate classification.",
+      "exclusions": [
+        "Not the complete valid-buffer16KiB helper cut: that ordinary helper path had no new counterexample.",
+        "NaN/fractional caps, arbitrary invalid Buffer input, ring wrap and all-snapshot UTF16 slicing are outside this item.",
+        "Historical exact-tail cause search found no matching record in stated inventory; regex search is not semantic exhaustion."
+      ]
+    }
+  ],
+  "related": [],
+  "productRuns": 0
+}

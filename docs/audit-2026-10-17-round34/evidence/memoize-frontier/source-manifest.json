@@ -1,0 +1,384 @@
+{
+  "prepOnly": true,
+  "formalBaseline": null,
+  "context": "FutureRound34. Root requested exclude mutable32/33/34; no Git inspected.",
+  "frozenUTC": "2026-10-17T12:24:51.314385+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "bytes": 1329,
+      "lineCount": 35,
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "initialFilesystemSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "finishFilesystemSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:21:33.234933+00:00",
+      "pinTiming": "Before direct semantic source reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "coveredLineCount": 35,
+      "initialSemanticReadSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075"
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "bytes": 11605,
+      "lineCount": 361,
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "initialFilesystemSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "finishFilesystemSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:23:15.520775+00:00",
+      "pinTiming": "Before direct selected source read; filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          170,
+          218
+        ]
+      ],
+      "coveredLineCount": 49,
+      "initialSemanticReadSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/memoize.md",
+      "bytes": 3557,
+      "lineCount": 23,
+      "sha256": "8943edc6030ed8d0ab832601b99796b93a2bee246aacc1a3872011775c06a218",
+      "initialFilesystemSha256": "8943edc6030ed8d0ab832601b99796b93a2bee246aacc1a3872011775c06a218",
+      "finishFilesystemSha256": "8943edc6030ed8d0ab832601b99796b93a2bee246aacc1a3872011775c06a218",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:23:15.520775+00:00",
+      "pinTiming": "After history scanner excerpts/coverage rows, before direct old report/metadata read; no pre-excerpt semantic hash claimed",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "coveredLineCount": 23,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "bytes": 2697,
+      "lineCount": 13,
+      "sha256": "6362141e446993b0e4b123eaf9eab06b8f874090701c93a362deeaf4cb448111",
+      "initialFilesystemSha256": "6362141e446993b0e4b123eaf9eab06b8f874090701c93a362deeaf4cb448111",
+      "finishFilesystemSha256": "6362141e446993b0e4b123eaf9eab06b8f874090701c93a362deeaf4cb448111",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:23:15.520775+00:00",
+      "pinTiming": "After history scanner excerpts/coverage rows, before direct old report/metadata read; no pre-excerpt semantic hash claimed",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "coveredLineCount": 13,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts",
+      "bytes": 3556,
+      "lineCount": 93,
+      "sha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+      "initialFilesystemSha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+      "finishFilesystemSha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+      "initialEqualsFinish": true,
+      "captureRecord": "test-initial-pin.json",
+      "captureUTC": "2026-10-17T12:23:33.172306+00:00",
+      "pinTiming": "Before direct existing test-source read; filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "coveredLineCount": 93,
+      "initialSemanticReadSha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:21:33.234933+00:00",
+      "pinTiming": "Before direct semantic source reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "hash-only; no source semantic reading by this review",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:21:33.234933+00:00",
+      "pinTiming": "Before direct semantic source reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "hash-only; no source semantic reading by this review",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/core/src/utils/task-sanitizer.ts",
+      "bytes": 963,
+      "lineCount": 34,
+      "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "initialFilesystemSha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "finishFilesystemSha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:21:33.234933+00:00",
+      "pinTiming": "Before direct semantic source reading; exact rg filename inventory only",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "hash-only; no source semantic reading by this review",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+      "bytes": 4807,
+      "lineCount": 172,
+      "sha256": "b3c4ce27b371d1d0ef4f76337d352dd2141aaff04e5ffdaa725354e1b7e007bb",
+      "initialFilesystemSha256": "b3c4ce27b371d1d0ef4f76337d352dd2141aaff04e5ffdaa725354e1b7e007bb",
+      "finishFilesystemSha256": "b3c4ce27b371d1d0ef4f76337d352dd2141aaff04e5ffdaa725354e1b7e007bb",
+      "initialEqualsFinish": true,
+      "captureRecord": "consumer-initial-pins.json",
+      "captureUTC": "2026-10-17T12:23:15.520775+00:00",
+      "pinTiming": "After history scanner excerpts/coverage rows, before direct old report/metadata read; no pre-excerpt semantic hash claimed",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "coverage": "hash-only; no source semantic reading by this review",
+      "initialSemanticReadSha256": null
+    }
+  ],
+  "semanticSourceCount": 5,
+  "hashOnlySourceCount": 4,
+  "productSourceLines": 84,
+  "existingHistoricalTestDeclarationLines": 93,
+  "priorReportLines": 36,
+  "instructionSemanticReadsAdded": 0,
+  "selectionDecision": "Both leaves have explicit same-current-SHA full coverage inR27. Re-review only memoize35 and ordinary consumer49 plus historical test93; task-sanitizer remains hash-only, no new sanitizer source claim.",
+  "sameCurrentShaExplicitHistoricalCoverage": [
+    {
+      "metadataPath": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+      "at": "$[\"files\"][1]",
+      "sourcePath": "packages/core/src/utils/memoize.ts",
+      "row": {
+        "path": "packages/core/src/utils/memoize.ts",
+        "bytes": 1329,
+        "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            35
+          ]
+        ],
+        "lineCount": 35,
+        "coveredLineCount": 35,
+        "note": "Explicit has() preserves cached undefined; synchronous throw occurs before cache.set."
+      },
+      "sameCurrentShaAnyField": true,
+      "coverageField": "full",
+      "explicitFullOrSelected": true
+    },
+    {
+      "metadataPath": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+      "at": "$[\"files\"][2]",
+      "sourcePath": "packages/core/src/utils/task-sanitizer.ts",
+      "row": {
+        "path": "packages/core/src/utils/task-sanitizer.ts",
+        "bytes": 963,
+        "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            34
+          ]
+        ],
+        "lineCount": 34,
+        "coveredLineCount": 34,
+        "note": "Noise heuristic read; no new ANSI/grapheme/sanitizer tests."
+      },
+      "sameCurrentShaAnyField": true,
+      "coverageField": "full",
+      "explicitFullOrSelected": true
+    },
+    {
+      "metadataPath": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][10]",
+      "sourcePath": "packages/core/src/utils/memoize.ts",
+      "row": {
+        "manifest": "root-frontier-source-manifest.json",
+        "path": "packages/core/src/utils/memoize.ts",
+        "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+        "coverage": "full",
+        "rootIndependentlyBoundFrozenBlob": true
+      },
+      "sameCurrentShaAnyField": true,
+      "coverageField": "full",
+      "explicitFullOrSelected": true
+    },
+    {
+      "metadataPath": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][11]",
+      "sourcePath": "packages/core/src/utils/task-sanitizer.ts",
+      "row": {
+        "manifest": "root-frontier-source-manifest.json",
+        "path": "packages/core/src/utils/task-sanitizer.ts",
+        "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+        "coverage": "full",
+        "rootIndependentlyBoundFrozenBlob": true
+      },
+      "sameCurrentShaAnyField": true,
+      "coverageField": "full",
+      "explicitFullOrSelected": true
+    }
+  ],
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "ordinaryCounterevidence": [
+    "memoize checks get plus has, preserving cached undefined; fn runs before cache.set,so synchronous throw does not cache a result.",
+    "Actual loader memoize(scanOnce,resolver) key uses home/installed registry mtime,scanPluginCommands returns memoized andexplicit invalidate clears cache. No loader/scanner/mtime operation invoked.",
+    "Minimal contract explicitly keeps cache for function lifetime and isnotLRU; ordinary selected callback is synchronous. No receiver-binding/cache replacement/Promise-language fixture defect invented."
+  ],
+  "sourceNavigationExcerptsExcludedFromSemanticRanges": {
+    "packages/core/src/plugins/pluginCommandsLoader.ts": [
+      [
+        22,
+        22
+      ],
+      [
+        122,
+        122
+      ]
+    ]
+  },
+  "history": {
+    "inventoryFiles": 2988,
+    "stats": {
+      "markdownFiles": 1304,
+      "jsonFiles": 1684,
+      "stringLeaves": 645399,
+      "scalarLeaves": 957193
+    },
+    "occurrenceCounts": {
+      "exact-source": 325,
+      "ordinary-cache-text": 1579,
+      "old-failed": 10
+    },
+    "retainedContexts": {
+      "exact-source": 60,
+      "ordinary-cache-text": 60,
+      "old-failed": 10
+    },
+    "contextCapEach": 60,
+    "contextsInspected": {
+      "exact-source": 20,
+      "ordinary-cache-text": 0,
+      "old-failed": 10
+    },
+    "structuredCoverageRowsInspected": 4,
+    "parseErrors": [],
+    "excluded": [
+      "docs/audit-2026-10-17-round32/",
+      "docs/audit-2026-10-17-round33/",
+      "docs/audit-2026-10-17-round34/"
+    ],
+    "finishCheck": {
+      "checkedUTC": "2026-10-17T12:24:05.436695+00:00",
+      "firstHistoryStartedUTC": "2026-10-17T12:22:00.956017+00:00",
+      "firstHistoryCompletedUTC": "2026-10-17T12:22:10.600156+00:00",
+      "inventoryRows": 2988,
+      "unchangedRows": 2988,
+      "changed": [],
+      "firstSnapshotUnmodified": true,
+      "productAttempts": 0,
+      "gitCommands": 0,
+      "note": "Byte comparison only. First dated history is not overwritten. Release document drift, if present, requires separate first diagnostic and dated delta, not a silently refreshed baseline."
+    },
+    "limitations": "Keyword contexts are not semantic history exhaustion. SameSHA full claims come from explicit coverage/ranges plus historical report,not inventory alone."
+  },
+  "metadataNotes": [
+    {
+      "kind": "No existing current test filename match",
+      "toolChunkId": "c3f90e",
+      "observedOuterExitCode": 1,
+      "description": "Memoize full leaf and actual consumer filenames printed. Final filename-only rg for memoize test under packages/tests had no match,returning1. Located historical R16 test source via actual docs inventory,not runtime fallback.",
+      "productFailure": false,
+      "productAttempts": 0,
+      "fullRawPersisted": false
+    },
+    {
+      "kind": "Historical report pin timing",
+      "description": "R16/R27 oldreport dedicated pins follow scanner excerpts/coverage rows; initialSemanticReadSha256 null kept. Direct full old-report reads follow pin."
+    },
+    {
+      "kind": "Release history snapshot stability",
+      "description": "All2988 inventoried bytes matched at history-finish-checks timestamp. No release doc drift detected,so no changed snapshot overwritten or fabricated dated delta."
+    }
+  ],
+  "validation": {
+    "runs": [],
+    "productAttempts": 0,
+    "testsExecuted": 0,
+    "productImports": 0,
+    "productFunctionEvaluations": 0,
+    "languageFixtures": 0,
+    "promiseFixtures": 0,
+    "fixturesWritten": 0,
+    "loaderScannerCalls": 0,
+    "realUserDataReads": 0,
+    "nativeRuns": 0,
+    "modelCalls": 0,
+    "networkRequests": 0,
+    "gitCommands": 0,
+    "runtimePasses": 0,
+    "runtimeExpectations": 0
+  },
+  "limits": [
+    "No Skill parser/registry/ANSI/sliceAnsi/i18n oroldfailed dynamic direction resumed.",
+    "Old R16 pass/expect figures are historical only; existing testsource text isnot this review execution.",
+    "External cache key invalidation/filesystem behavior wasnot validated; no current real consumer counterexample established.",
+    "Formalization must preserve dated snapshots and bind then-current baseline/history; Root owns Git."
+  ]
+}

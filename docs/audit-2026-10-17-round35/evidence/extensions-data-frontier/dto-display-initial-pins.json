@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "lines": 2982,
+      "pinTimeUTC": "2026-10-17T12:33:01.088657+00:00",
+      "purpose": "before focused ordinary DTO / display-key source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/extensions.ts",
+      "bytes": 136243,
+      "sha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+      "lines": 2460,
+      "pinTimeUTC": "2026-10-17T12:33:01.089717+00:00",
+      "purpose": "before focused ordinary DTO / display-key source reading"
+    }
+  ]
+}

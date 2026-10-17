@@ -1,0 +1,23 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "excluded": [
+    {
+      "direction": "prior local-uninstall routing",
+      "reason": "May30 older no-marketplace non-uninstallable design and June22 local-route issue/plan are prior history; current leaf/tests explicitly recognize null/local, no new cause or regression established.",
+      "newID": null
+    },
+    {
+      "direction": "ranking no-row",
+      "reason": "An inventory status is not proof of never-read semantic coverage or a new bug.",
+      "newID": null
+    }
+  ],
+  "scopeLimit": "ordinary recommendation/source DTO and install-key list splitting only; no product execution or install/authority behavior claim"
+}

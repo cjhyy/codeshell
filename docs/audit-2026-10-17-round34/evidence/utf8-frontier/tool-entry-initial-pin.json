@@ -1,0 +1,8 @@
+{
+  "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+  "bytes": 5335,
+  "lineCount": 130,
+  "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+  "pinBeforeSemanticRead": true,
+  "atUTC": "2026-10-17T12:29:37.381893+00:00"
+}

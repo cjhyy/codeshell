@@ -1,0 +1,9 @@
+{
+  "issue": "Aggregate reviewer identified ambiguous zero-network wording alongside read-only official web sources.",
+  "firstProposalSha256": "6c7a4d8c46065ca5d8175766aeaa420d9c8e89e3eeff25130534a1a4ce66f4e7",
+  "firstReceiptSha256": "812e52618898a3e8b59ce6cc34f2337a5723efd0d4081800036d0f9eb4e66bc3",
+  "change": "Final text distinguishes zero product network/HTTP business calls from official web document access. No source/classification/test/runtime changes.",
+  "productReruns": 0,
+  "diagnosticExitCode": null,
+  "reason": "Text review feedback, not a failed command."
+}

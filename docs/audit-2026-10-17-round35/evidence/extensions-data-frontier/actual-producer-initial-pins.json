@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "bytes": 43723,
+      "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "lines": 1228,
+      "pinTimeUTC": "2026-10-17T12:33:50.720755+00:00",
+      "purpose": "before selected declaration / ordinary DTO list mapping only"
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "lines": 323,
+      "pinTimeUTC": "2026-10-17T12:33:50.722768+00:00",
+      "purpose": "before selected declaration / ordinary DTO list mapping only"
+    }
+  ]
+}

@@ -1,0 +1,619 @@
+{
+  "selectedBy": "github-suffix contextual trailing/query/append/parseMarketplaceInput; source-normalization unsafeTransport/parseSource/case-sensitive/case policy",
+  "selectedCount": 75,
+  "matches": [
+    {
+      "pattern": "github-suffix",
+      "index": 3,
+      "path": "docs/archive/todo/review-infra-2026-07-08.md",
+      "at": "$",
+      "context": "rseMarketplaceInput.ts:35`\n- File: `packages/core/src/plugins/parseMarketplaceInput.ts:48`\n- Problem: direct plugin installs accept `http://`, `git://`, and `file://` remotes, and marketplace add accepts `http://...git`, with no warning or policy knob. Marketplace entries may pin SHA, but direct source parsing has no immutable pin concept.\n- Impact: users can install executable plugin code over unauthenticated transports, making MITM or local path confusion part of the plugin trust surface.\n- Concrete fix: default to `https`/SSH only, require an explicit unsafe flag for `http://` and `git://`, and encourage or require full SHA pins for remote plugin installs where possible.\n\n### 11. `copy-assets.mjs` silently succeeds when a glob matches zero files\n\n- File: `scripts/copy-assets.mjs:43`\n- File: `scripts/copy-assets.mjs:49`\n- File: `scripts/copy-assets.mjs:5"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 7,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"hits\"][\"diff_parser\"][21][\"snippet\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 10,
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"pipe_subject\"][17][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 11,
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"pipe_subject\"][33][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 12,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][1][\"observations\"][1]",
+      "context": "github:owned/notes.git appends .git again; suffix-free shorthand control gives one .git"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 13,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-candidates.json",
+      "at": "$[\"candidates\"][0][\"observations\"][1]",
+      "context": "github:owned/notes.git appends .git again; suffix-free shorthand control gives one .git"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 22,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "范化候选：\n\n| 自有输入字符串 | 实际纯函数结果 | 正常控制 |\n| --- | --- | --- |\n| `https://example.invalid/owned/notes.git/` | `url` 原样保留；`inferredName: \"notes.git\"` | 去掉尾斜杠后 `inferredName: \"notes\"` |\n| `github:owned/notes.git` | `url: \"https://github.com/owned/notes.git.git\"`；`inferredName: \"notes.git\"` | `github:owned/notes` 得到一个 `.git` 后缀和 `inferredName: \"notes\"` |\n\n第一条来自 [parseSource.ts:123](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-202610"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 23,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "rl` 原样保留；`inferredName: \"notes.git\"` | 去掉尾斜杠后 `inferredName: \"notes\"` |\n| `github:owned/notes.git` | `url: \"https://github.com/owned/notes.git.git\"`；`inferredName: \"notes.git\"` | `github:owned/notes` 得到一个 `.git` 后缀和 `inferredName: \"notes\"` |\n\n第一条来自 [parseSource.ts:123](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/co"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 25,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "扫描全部 `docs/`、`bugs/` 下 **1825 个 MD/JSON 文件（1102 MD、723 JSON）**，递归解析 **281762 个 JSON 叶子，0 parse error**，包含 archive/_archive，排除本轮目录。主模式命中 migration 110、parse-source 427、manifest 71；另追加 suffix-boundaries 45 个历史匹配。命中内容已阅读相关 audit/review 行与 round4、round8 报告；未找到该 `.git` 边界候选的旧登记。旧 transport policy、R8 marketplace 引号/Windows 名称、R4 YAML 保存及 migration providerKey 候选均不重验或计新项。\n\n完整静态阅读 `migrate-config.ts`、`parseSource.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 26,
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-resume-dedup.json",
+      "at": "$[\"matches\"][\"external-path-loss\"][0][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 27,
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-resume-dedup.json",
+      "at": "$[\"matches\"][\"external-path-loss\"][2][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 28,
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-resume-dedup.json",
+      "at": "$[\"matches\"][\"external-path-loss\"][4][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 29,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][65][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 30,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][66][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 31,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][104][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 32,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][105][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 33,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][108][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 34,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][109][\"context\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 35,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][65][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 36,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][66][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 37,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][104][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 38,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][105][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 39,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][108][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 40,
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "at": "$[\"hits\"][\"old-boundaries\"][109][\"excerpt\"]",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 43,
+      "path": "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+      "at": "$",
+      "context": "s collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 与 `plugins-validation.json` 相符，6+5 pass / 13+27 assertions / 0 fail / Completed；Root 首次 raw log 为 4 pass / 12 assertions / 0 fail / Completed。未验证全包 suite/build/typecheck/lint。\n\n本 lane 的两个失败 UI fixture 保持 SKIP：Mobile 的 additive hints 合同允许宿主忽略字段、且其首次运行在 React DOM 导入即失败；TUI 的 flushed control 也失败，无法证明 batch 特异性。它们没有因本次交叉复核被升格确认，也没有被变相补跑。\n"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 45,
+      "path": "docs/audit-2026-10-17-round8/evidence/cross-review-web.md",
+      "at": "$",
+      "context": "ve paths with either slash, while the deriver splits only on slash/colon. The same actual name guard called by `marketplaceDir` rejects the backslash-bearing derived tail, and `addMarketplace` calls that helper before clone. The macOS pure string fixture and forward-slash/POSIX/GitHub/HTTPS controls support this contract mismatch. No Windows-native filesystem, marketplace acquisition or clone was run.\n- The command log is Completed with 6 pass / 13 expect; parser log Completed with 5 pass / 27 expect; both have zero failures/skips. Final total 11 new focused tests / 40 expect is correct. Four fixture/log validation hashes and all 15 `ownedPaths` artifact hashes matched at review time. The corpus records 943 files, and its recorded 550 Markdown + 393 JSON counts agree; zero JSON parse errors are recorded.\n- Core finding source files `pluginCommandsLoader.ts`, `parseMarketplaceInput.ts`, `installer/paths.ts`, a"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 46,
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-findings.json",
+      "at": "$[\"confirmed\"][2][\"contract\"]",
+      "context": "parseMarketplaceInput explicitly supports drive-prefixed paths with either slash style, and deriveMarketplaceName takes the last repository path segment for the persisted marketplace name."
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 49,
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "at": "$",
+      "context": "ir IPC/UI, and a model submission were not executed.\n\n## PLUGIN-R8-03 — Accepted Windows marketplace source derives a rejected name (P3)\n\nLocation: `packages/core/src/plugins/parseMarketplaceInput.ts:86`. The parser explicitly accepts drive-prefixed local `.git` paths with forward or backward slashes at line 27. `deriveMarketplaceName` is documented to extract the repository tail, but splits only on `/` and `:`.\n\nThe real parser accepts `C:\\work\\skills.git`; the real deriver returns `\\work\\skills` rather than `skills`. The same real `assertSafePluginName` used by `marketplaceDir` rejects that name because it contains backslashes. The [parser fixture](evidence/plugins-parser-metadata.test.ts) proves this pure string chain on macOS; `C:/work/skills.git`, POSIX `/tmp/skills.git`, GitHub shorthand and HTTPS `.git` URLs all derive `skills` and pass the guard. Forward slashes are a workaround.\n\nStatic pr"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 56,
+      "path": "docs/review-2026-10-12/plugin-quality-round9.md",
+      "at": "$",
+      "context": "滤，不撤销任务，不解除安装按钮，也不使 service 重做安装。失败 job 的 retry 正常是有效反证，但不能修复 retained success：retry 仍调用相同 `installPluginForUi`，继续返回旧 installed job。\n\n**准确范围：** 必须是同一个 Main service 生命周期里，通过 queued marketplace installer 留下成功 job 的 plugin/market key。之前进程安装、当前无对应 job 的插件不应纳入。fresh query-suffixed service module 清空队列后成功重装，足以证明进程内状态阻塞；它不是实际 app restart 测试。可以表述重启 Main 后重新安装可恢复，不应表述永久无法重装或插件文件卸载失败。当前报告已保留这些条件。\n\n**分级：P2 合理。** 支持的卸载→重装流程被实际状态机阻断，且简单刷新/重开详情/等待 badge 消失均无法恢复。它不是单纯标签显示错误。\n\n## R52 / W19：相对路径源更新失败删除旧安装\n\n**入口与磁盘因果成立。** `PluginsTab.tsx:482–484` 的手动 Update item 无须等待 updateAvailable badge；其 callback 调用 install key，经 preload/Main 到 `plugins-service.ts:283–298`。fixture 使用真实有效 marketplace index 和 `./payload` 源，更新提交只让 payload 的 plugin manifest 无效，并未依靠非法 index、路径越界或人工删除旧安装目录触发。\n\nCore `pluginInstaller.ts:264–271` 把相对路径源先投到固定 `local` final path，`:267` 已删除旧 final。manifest projection/normalization 到 `:380–388` 才进行；失败在 `:389–394` 再删这个 fina"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 58,
+      "path": "docs/superpowers/plans/2026-06-04-beta-release-prep.md",
+      "at": "$",
+      "context": "Step 3: 验证类型 + 工具进了注册表**\n\nRun: `cd packages/core && bunx tsc --noEmit 2>&1 | grep -i \"index.ts\\|add-marketplace\"; echo \"exit:$?\"`\nExpected: 无输出。\n\n- [ ] **Step 4: 写注册测试并跑**\n\n在 `add-marketplace.test.ts` 末尾追加:\n\n```typescript\nimport { BUILTIN_TOOLS } from \"./index.js\";\n\nit(\"is registered in BUILTIN_TOOLS with ask permission\", () => {\n  const entry = BUILTIN_TOOLS.find((t) => t.definition.name === \"AddMarketplace\");\n  expect(entry).toBeDefined();\n  expect(entry!.definition.permissionDefault).toBe(\"ask\");\n  expect(entry!.definition.isReadOnly).toBe(false);\n});\n```\n\nRun: `cd packages/core && bun test src/tool-system/builtin/add-marketplace.test.ts`\nExpected: PASS(6 个用例)。\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add packages/core/src/tool-system/builtin/index.ts packages/core/src/tool-system/builtin/add-marketplace.test.ts\ngit commit -m \"feat(core): r"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 59,
+      "path": "docs/superpowers/plans/2026-09-26-optimization-lab-foundation.md",
+      "at": "$",
+      "context": "ackages/link/package.json packages/link/package.json` 之后加：\n\n```dockerfile\nCOPY packages/optimization-lab/package.json packages/optimization-lab/package.json\n```\n\n- [x] **Step 6: `.github/workflows/ci.yml`**：`rest` 分片的 `paths` 末尾追加 `packages/optimization-lab`：\n\n```yaml\npaths: >-\n  tests packages/coding packages/tui packages/pet packages/server\n  packages/chat packages/web packages/arena packages/cdp\n  packages/link packages/optimization-lab\n```\n\n- [x] **Step 7: `eslint.config.js`**\n  - `workspacePackageRoots` 数组在 `\"pet\",` 之后加 `\"optimization-lab\",`。\n  - `capabilityPackageRoots` 改为 `[\"coding\", \"arena\", \"pet\", \"optimization-lab\"]`。\n  - 启用 `custom-rules/codeshell-boundary-imports` 的 `files` 数组加一行 `\"packages/optimization-lab/src/**/*.{ts,tsx}\",`。\n\n- [x] **Step 8: `CODESHELL.md`**：把 `:10`、`:152` 的包数量 11 改为 12；在 `:121` 的构建顺序注释中，把新包放在 pet 之后。\n\n- [x] **Step 9: 验证**\n\n```bash\nb"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 4,
+      "path": "docs/archive/core-modules/plugins.md",
+      "at": "$",
+      "context": "s. |\n| `pluginCommandHook.ts` | Execute a single command-type plugin hook (env injection, timeout) — called by `loadPluginHooks`. |\n| `installer/parseSource.ts` | Pure parse of a `plugin install <source>` arg → `ParsedSource` (`local` path \\| `remote` git url + ref/subdir). No I/O. |\n| `installer/detectFormat.ts` | `detectPluginFormat(dir)` → `\"codex\"` if `.codex-plugin/plugin.json` exists, else `\"cc\"`. |\n| `installer/install.ts` | `installPluginFromPath` — local→installed dir; CC verbatim copy or Codex convert; writes `.cs-meta.json`; atomic temp→rename; registers install entry. |\n| `installer/installFromSource.ts` | `installPluginFromSource` — clone remote to temp, delegate to `installPluginFromPath`, rewrite recorded source back to the git string + record HEAD sha. |\n| `installer/loadPluginMcp.ts` | `mergePluginMcpServers(base, disabled?)` — fold every plugin's MCP servers (keyed `<plugin>:<server>`"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 7,
+      "path": "docs/archive/todo/final-signoff-2026-07-08.md",
+      "at": "$",
+      "context": "ault and rejected unless explicitly opted in at `packages/core/src/plugins/installer/parseSource.ts:74`.\n   - Update and check-update paths now parse installed metadata with `allowUnsafeTransport` false unless explicitly passed at `packages/core/src/plugins/installer/update.ts:105` and `packages/core/src/plugins/installer/checkUpdate.ts:35`.\n   - Tests cover uppercase schemes at `packages/core/src/plugins/installer/parseSource.test.ts:105`, unsafe update rejection at `packages/core/src/plugins/installer/update.test.ts:188`, and unsafe check-update rejection at `packages/core/src/plugins/installer/checkUpdate.test.ts:116`.\n\n4. CDP post-scroll click coordinates: resolved.\n   - `centerOf` intersects the page-space element box with the page-space viewport and subtracts `viewport.x/y` before dispatch at `packages/cdp/src/driver.ts:119` an"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 8,
+      "path": "docs/archive/todo/final-signoff-2026-07-08.md",
+      "at": "$",
+      "context": "passed at `packages/core/src/plugins/installer/update.ts:105` and `packages/core/src/plugins/installer/checkUpdate.ts:35`.\n   - Tests cover uppercase schemes at `packages/core/src/plugins/installer/parseSource.test.ts:105`, unsafe update rejection at `packages/core/src/plugins/installer/update.test.ts:188`, and unsafe check-update rejection at `packages/core/src/plugins/installer/checkUpdate.test.ts:116`.\n\n4. CDP post-scroll click coordinates: resolved.\n   - `centerOf` intersects the page-space element box with the page-space viewport and subtracts `viewport.x/y` before dispatch at `packages/cdp/src/driver.ts:119` and `packages/cdp/src/driver.ts:123`.\n   - Click dispatch uses the returned viewport-relative coordinates at `packages/cdp/src/driver.ts:138`.\n   - `layoutViewportRect` reads `pageX/pageY` and client dimensions at `packages/cdp/src/driver.ts:352` and `packag"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 9,
+      "path": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+      "at": "$",
+      "context": "ntly | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/core/src/plugins/installer/parseSource.ts:28` | `0d175ef0268c7cfa3657e1497d43f7f91d47b86b` | `packages/core/src/plugins/installer/parseSource.test.ts` and `packages/core/src/plugins/parseMarketplaceInput.test.ts`: reject unsafe transports by default, allow only explicit opt-in | Failing regressions observed, then affected parser/install/update tests passed twice before commit. |\n| `/image` reads whole file before size guard | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/cli/commands/builtin/image-command.ts:77` | `daebaccb3a1efb8a0263538554d674abf2982b9f` | `tests/ui/image-command.test.ts`: oversized unreadable image is rejected by size before `readFileSync` | Failing regression observed, then `bun test tests/ui/image-command.test.ts` passed twice before commit. |\n| `copy-assets.mjs` allows zero-match globs | `review-master-2026-07-08.md`, C"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 10,
+      "path": "docs/archive/todo/fix-review-followup-2026-07-08.md",
+      "at": "$",
+      "context": "unsafe transport bypass and update/check-update gap\n   - Commit: `bec64e44` (`fix(plugins): reject unsafe transports on update paths`)\n   - Test added/repaired: `packages/core/src/plugins/installer/parseSource.test.ts` covers uppercase unsafe schemes including `HTTP://`, `FILE://`, and `Git+SSH://`; `update.test.ts` and `checkUpdate.test.ts` cover unsafe installed metadata rejection by default.\n   - Verification: `bun test packages/core/src/plugins/installer/parseSource.test.ts packages/core/src/plugins/installer/update.test.ts packages/core/src/plugins/installer/checkUpdate.test.ts` passed.\n\n4. CDP click coordinate regression after scroll\n   - Commit: `6b44c57f` (`fix(cdp): dispatch scrolled clicks in viewport coordinates`)\n   - Test added/repaired: `packages/cdp/src/driver.test.ts` adds `dispatches viewport-relative coordinates after page scroll`, asserting a non-zero `layoutViewport.pageY` dispatches the viewport point.\n   -"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 13,
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "at": "$",
+      "context": "ile but immediately `readFileSync`s it before enforcing a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n| 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n\n## ALREADY-FIXED\n\nNone. Targeted `git log`/`git blame` checks did not show any reviewed finding with a resolving commit already present"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 14,
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "at": "$",
+      "context": "ust gate (`packages/core/src/plugins/pluginCommandHook.ts:91-115`). There is no test suite asserting remote/local plugin executable code remains disabled until trusted.\n  - Direct plugin source parsing accepts `http://`, `git://`, and `file://` as remote installs (`packages/core/src/plugins/installer/parseSource.ts:28-36`). Existing parser tests cover paths, GitHub shorthand, HTTPS, and SSH, but not rejecting or warning on insecure transports (`packages/core/src/plugins/installer/parseSource.test.ts:18-93`).\n- Risk: fixes to marketplace-only variable rewriting, per-plugin trust, or transport policy can regress silently on local/zip/direct-git paths. This is a supply-chain boundary because installed plugins can provide shell hooks and MCP stdio commands.\n- Master-file bugs shielded: plugin executable surfaces lack trust gate, local/zip/direct-git plugin installs s"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 15,
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "at": "$",
+      "context": "ote/local plugin executable code remains disabled until trusted.\n  - Direct plugin source parsing accepts `http://`, `git://`, and `file://` as remote installs (`packages/core/src/plugins/installer/parseSource.ts:28-36`). Existing parser tests cover paths, GitHub shorthand, HTTPS, and SSH, but not rejecting or warning on insecure transports (`packages/core/src/plugins/installer/parseSource.test.ts:18-93`).\n- Risk: fixes to marketplace-only variable rewriting, per-plugin trust, or transport policy can regress silently on local/zip/direct-git paths. This is a supply-chain boundary because installed plugins can provide shell hooks and MCP stdio commands.\n- Master-file bugs shielded: plugin executable surfaces lack trust gate, local/zip/direct-git plugin installs skip var rewrite, and insecure plugin transports are allowed silently (`docs/archive/todo/review-master-2026-07-08.md:34`, `docs/archive/tod"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 17,
+      "path": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "at": "$",
+      "context": "und literal `+`.\n\n## Findings by severity\n\n### 🟠 `0d175ef0` allows uppercase unsafe plugin schemes through the new default deny\n\nThe unsafe transport detection is case-sensitive: `unsafeTransport()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate.\n\nThe tests only cover lower-case unsafe schemes, so they would not catch this bypass. This is a root-cause gap in the security fix.\n\n### 🟠 `8ef89609` likely b"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 18,
+      "path": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "at": "$",
+      "context": "ort()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate.\n\nThe tests only cover lower-case unsafe schemes, so they would not catch this bypass. This is a root-cause gap in the security fix.\n\n### 🟠 `8ef89609` likely breaks clicks after scrolling by mixing page and viewport coordinate spaces\n\n`centerOf()` now intersects the node box with `layoutViewportRect()` and dispatches the resulting point directly as the mouse event coordinate at `packages/cdp/src/driver.ts:119` and `packages/cdp/src/driver.ts:123`. `layou"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 19,
+      "path": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "at": "$",
+      "context": "es are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate.\n\nThe tests only cover lower-case unsafe schemes, so they would not catch this bypass. This is a root-cause gap in the security fix.\n\n### 🟠 `8ef89609` likely breaks clicks after scrolling by mixing page and viewport coordinate spaces\n\n`centerOf()` now intersects the node box with `layoutViewportRect()` and dispatches the resulting point directly as the mouse event coordinate at `packages/cdp/src/driver.ts:119` and `packages/cdp/src/driver.ts:123`. `layoutViewportRect()` includes `layoutViewport.pageX/pageY` as the rectangle origin at `packages/cdp/src/driver.ts:363`.\n\nCDP `Input.dispatchMouseEvent` coordinates are viewport-rel"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 21,
+      "path": "docs/archive/todo/review-uncommitted-security-2026-07-08.md",
+      "at": "$",
+      "context": "te/check\n\nCommit: `0d175ef0 fix(plugins): reject unsafe source transports by default`\n\nThe default parser rejects lower-case `http://`, `git://`, and `file://` (`packages/core/src/plugins/installer/parseSource.ts:44`, `packages/core/src/plugins/installer/parseSource.ts:68`). The TUI install command requires `--allow-unsafe-transport` for those schemes.\n\nBut installed metadata is parsed with `allowUnsafeTransport: true` during update and update checks:\n\n- `packages/core/src/plugins/installer/update.ts:100`\n- `packages/core/src/plugins/installer/checkUpdate.ts:28`\n\nExploit path: a plugin installed before this hardening, or a plugin whose `.cs-meta.json` is edited, can continue to update over `http://`, `git://`, or `file://` without a fresh user opt-in. For `http://`, this preserves the MITM-able supply-chain path the commit is trying to close. For `file://`, it preserves local clone semantics in update/check paths even though new installs reject it by default.\n"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 22,
+      "path": "docs/archive/todo/review-uncommitted-security-2026-07-08.md",
+      "at": "$",
+      "context": "ackages/core/src/plugins/installer/parseSource.ts:68`). The TUI install command requires `--allow-unsafe-transport` for those schemes.\n\nBut installed metadata is parsed with `allowUnsafeTransport: true` during update and update checks:\n\n- `packages/core/src/plugins/installer/update.ts:100`\n- `packages/core/src/plugins/installer/checkUpdate.ts:28`\n\nExploit path: a plugin installed before this hardening, or a plugin whose `.cs-meta.json` is edited, can continue to update over `http://`, `git://`, or `file://` without a fresh user opt-in. For `http://`, this preserves the MITM-able supply-chain path the commit is trying to close. For `file://`, it preserves local clone semantics in update/check paths even though new installs reject it by default.\n\nTest gap: `packages/core/src/plugins/installer/parseSource.test.ts:95` covers install pars"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 23,
+      "path": "docs/archive/todo/review-uncommitted-security-2026-07-08.md",
+      "at": "$",
+      "context": " and unlisted absolute paths, but not against a path that was listed through a symlink whose real target is outside the active roots and merely contains a `.code-shell` segment.\n- Plugin source handling does not recognize `git+ssh://` as a remote source in `parseSource`; it is treated as a local path and will fail as a local install rather than being explicitly accepted or rejected. Lower-case `http://`, `git://`, and `file://` are rejected for fresh installs by default.\n"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 24,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"patterns\"][\"parse-source\"]",
+      "context": "parseSource|parseNpmPluginSource|插件.{0,30}(URL|url|来源|source|版本|tag)|plugin.{0,30}(source|npm selector|dist.tag)|userinfo|githubRepoToCloneUrl"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 28,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][12][\"text\"]",
+      "context": "| `installer/parseSource.ts` | Pure parse of a `plugin install <source>` arg → `ParsedSource` (`local` path \\| `remote` git url + ref/subdir). No I/O. |"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 31,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][34][\"text\"]",
+      "context": "   - Tests cover uppercase schemes at `packages/core/src/plugins/installer/parseSource.test.ts:105`, unsafe update rejection at `packages/core/src/plugins/installer/update.test.ts:188`, and unsafe check-update rejection at `packages/core/src/plugins/installer/checkUpdate.test.ts:116`."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 32,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][36][\"text\"]",
+      "context": "ntly | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/core/src/plugins/installer/parseSource.ts:28` | `0d175ef0268c7cfa3657e1497d43f7f91d47b86b` | `packages/core/src/plugins/installer/parseSource.test.ts` and `packages/core/src/plugins/parseMarketplaceInput.test.ts`: reject unsafe transports by default, allow only explicit opt-in | Failing regressions observed, then affected parser/install/update tests passed twice before commit. |"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 33,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][38][\"text\"]",
+      "context": "   - Test added/repaired: `packages/core/src/plugins/installer/parseSource.test.ts` covers uppercase unsafe schemes including `HTTP://`, `FILE://`, and `Git+SSH://`; `update.test.ts` and `checkUpdate.test.ts` cover unsafe installed metadata rejection by default."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 35,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][50][\"text\"]",
+      "context": "| 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 36,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][52][\"text\"]",
+      "context": "  - Direct plugin source parsing accepts `http://`, `git://`, and `file://` as remote installs (`packages/core/src/plugins/installer/parseSource.ts:28-36`). Existing parser tests cover paths, GitHub shorthand, HTTPS, and SSH, but not rejecting or warning on insecure transports (`packages/core/src/plugins/installer/parseSource.test.ts:18-93`)."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 37,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][52][\"text\"]",
+      "context": "  - Direct plugin source parsing accepts `http://`, `git://`, and `file://` as remote installs (`packages/core/src/plugins/installer/parseSource.ts:28-36`). Existing parser tests cover paths, GitHub shorthand, HTTPS, and SSH, but not rejecting or warning on insecure transports (`packages/core/src/plugins/installer/parseSource.test.ts:18-93`)."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 38,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][56][\"text\"]",
+      "context": "The unsafe transport detection is case-sensitive: `unsafeTransport()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 39,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][56][\"text\"]",
+      "context": "ort()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 40,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][56][\"text\"]",
+      "context": "es are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 42,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][59][\"text\"]",
+      "context": "The default parser rejects lower-case `http://`, `git://`, and `file://` (`packages/core/src/plugins/installer/parseSource.ts:44`, `packages/core/src/plugins/installer/parseSource.ts:68`). The TUI install command requires `--allow-unsafe-transport` for those schemes."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 43,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][61][\"text\"]",
+      "context": "- Plugin source handling does not recognize `git+ssh://` as a remote source in `parseSource`; it is treated as a local path and will fail as a local install rather than being explicitly accepted or rejected. Lower-case `http://`, `git://`, and `file://` are rejected for fresh installs by default."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 44,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][100][\"text\"]",
+      "context": "d47b86b` | `packages/core/src/plugins/installer/parseSource.test.ts` and `packages/core/src/plugins/parseMarketplaceInput.test.ts`: reject unsafe transports by default, allow only explicit opt-in | Failing regressions observed, then affected parser/install/update tests passed twice before commit. |"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 45,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"parse-source\"][106][\"text\"]",
+      "context": "The parser shard also exercises ordinary marketplace schema source normalization/owner fallback/version preservation, the documented binary format detection, and own-temp canonical manifest normalization/readback of displayName/defaultPrompt/brandColor. Source review covered `parseSource` npm/local/github/ref/subdir grammar, `normalizeManifest`, `detectFormat`, converter metadata handling, selected catalog identity/projection and command callers. No further fresh defect was confirmed there. These checks do not establish all source formats, assets, all plugins, all catalog states, runtime permissions, or any build/typecheck/lint/full suite."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 55,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "at": "$[\"hits\"][\"manifest\"][9][\"text\"]",
+      "context": "The parser shard also exercises ordinary marketplace schema source normalization/owner fallback/version preservation, the documented binary format detection, and own-temp canonical manifest normalization/readback of displayName/defaultPrompt/brandColor. Source review covered `parseSource` npm/local/github/ref/subdir grammar, `normalizeManifest`, `detectFormat`, converter metadata handling, selected catalog identity/projection and command callers. No further fresh defect was confirmed there. These checks do not establish all source formats, assets, all plugins, all catalog states, runtime permissions, or any build/typecheck/lint/full suite."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 56,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "es.git\"` | `github:owned/notes` 得到一个 `.git` 后缀和 `inferredName: \"notes\"` |\n\n第一条来自 [parseSource.ts:123](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:29) 把用户提供的 source 交给此 parser，[33](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:33) 在没有 `--name` 时选择 `inferredName`，接线仅静态核验"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 57,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:29) 把用户提供的 source 交给此 parser，[33](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:33) 在没有 `--name` 时选择 `inferredName`，接线仅静态核验。现有[设计规则](../superpowers/specs/2026-05-29-plugin-remote-install-design.md)与测试示例明确给出 `github:org/repo`、普通 HTTPS `.git` 和 SCP-style SSH，但未明确承诺两个边界形态必须被支持，也未找到当前正常应用生产器自动产生它们的证据。因此"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 58,
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"contextual-casing\"][1][\"context\"]",
+      "context": "und literal `+`.\n\n## Findings by severity\n\n### 🟠 `0d175ef0` allows uppercase unsafe plugin schemes through the new default deny\n\nThe unsafe transport detection is case-sensitive: `unsafeTransport()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate.\n\nThe tests only cover lower-case unsafe schemes, so they would not catch this bypass. This is a root-cause gap in the security fix.\n\n### 🟠 `8ef89609` likely b"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 59,
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"contextual-casing\"][1][\"context\"]",
+      "context": "ort()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate.\n\nThe tests only cover lower-case unsafe schemes, so they would not catch this bypass. This is a root-cause gap in the security fix.\n\n### 🟠 `8ef89609` likely breaks clicks after sc"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 60,
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"contextual-casing\"][1][\"context\"]",
+      "context": "es are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate.\n\nThe tests only cover lower-case unsafe schemes, so they would not catch this bypass. This is a root-cause gap in the security fix.\n\n### 🟠 `8ef89609` likely breaks clicks after sc"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 61,
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"contextual-casing\"][5][\"context\"]",
+      "context": "The unsafe transport detection is case-sensitive: `unsafeTransport()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 62,
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"contextual-casing\"][5][\"context\"]",
+      "context": "ort()` only checks lower-case `http://`, `git://`, and `file://` at `packages/core/src/plugins/installer/parseSource.ts:44`. The gate then trusts that result at `packages/core/src/plugins/installer/parseSource.ts:68`. URL schemes are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 63,
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "at": "$[\"hits\"][\"contextual-casing\"][5][\"context\"]",
+      "context": "es are case-insensitive in practice, so `HTTP://example.com/repo.git`, `GIT://...`, or `FILE://...` are still classified as remote by the generic `://` check at `packages/core/src/plugins/installer/parseSource.ts:35` but are not rejected by the unsafe-transport gate."
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 64,
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-dedup-corpus.json",
+      "at": "$[\"hits\"][\"plugin-metadata\"][8][\"excerpt\"]",
+      "context": "d47b86b` | `packages/core/src/plugins/installer/parseSource.test.ts` and `packages/core/src/plugins/parseMarketplaceInput.test.ts`: reject unsafe transports by default, allow only explicit opt-in | Failing regressions observed, then affected parser/install/update tests passed twice before commit. |"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 65,
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "at": "$",
+      "context": ", immutable first raw logs, exit responses and SHA256 values are recorded in [plugins-validation.json](evidence/plugins-validation.json).\n\nThe parser shard also exercises ordinary marketplace schema source normalization/owner fallback/version preservation, the documented binary format detection, and own-temp canonical manifest normalization/readback of displayName/defaultPrompt/brandColor. Source review covered `parseSource` npm/local/github/ref/subdir grammar, `normalizeManifest`, `detectFormat`, converter metadata handling, selected catalog identity/projection and command callers. No further fresh defect was confirmed there. These checks do not establish all source formats, assets, all plugins, all catalog states, runtime permissions, or any build/typecheck/lint/full suite.\n\nSkill frontmatter separator/CRLF candidates from round 6 were not revalidate"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 78,
+      "path": "docs/superpowers/specs/2026-05-19-plugin-marketplace-design.md",
+      "at": "$",
+      "context": "see `document-skills:pdf` in the listing, invoke `Skill(skill=\"document-skills:pdf\")` and confirm body loads.\n\n## Risks\n\n- **`anthropics/skills` is a `github` source with multiple plugins**: marketplace.json `plugins[]` array has entries with `source: \"./plugins/<name>\"` (relative path) and `source: { source: \"git-subdir\", ... }`. Both forms must work in Task 5.\n- **git clone latency**: ~10s for a typical marketplace repo. Slash command should print progress, but MVP: synchronous, single line \"Cloning...\" then result.\n- **Filesystem case insensitivity (macOS)**: plugin names should be case-preserved but compared case-sensitively, matching CC.\n- **Settings policy**: codeshell has `~/.code-shell/settings.json` but MVP skips `enabledPlugins` toggle — every install is implicitly enabled.\n\n## Acceptance\n\nWhen `/plugin install document-skills@anthropic-agent-skills` succeeds, `/skills` shows lines starting with `document-skills:` and the `Skill` tool can in"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 81,
+      "path": "docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md",
+      "at": "$",
+      "context": "SOString());\nconsole.log(`Installed '${name}' → ${dir}`);\n```\n`installPluginFromSource` 是 async(克隆是 async),install action 已经是 async,兼容。\n\n## 7. .cs-meta.json 的 source\n\n远程装时,`installPluginFromPath` 会先把 `source` 写成 realSrc(临时目录,装完即删——无意义)。编排器在装完后**改写** `.cs-meta.json` 的 `source` 为原始 git 串(`parsed.raw`),这样:\n- `plugin list` 显示的是 git 地址,不是 `/tmp/...`。\n- `plugin update` 能用这个 git 串重新克隆重装(见 §9)。\n\n## 8. 失败模式\n\n| 失败 | 行为 |\n|---|---|\n| PATH 无 `git` | gitClone 返回 error → 报 \"git not available / clone failed: …\",删 tmp,不登记 |\n| clone 失败(网络/私有库无权限/ref 不存在) | 同上,错误带 git stderr |\n| `#subdir` 在仓库里不存在 | 报 \"subdir not found in repo: <subdir>\",删 tmp |\n| 克隆成功但非合法插件 | 走 `installPluginFromPath` 现有校验报错(整装失败),删 tmp |\n| 名字已装(§9.1 现状) | `installPluginFromPath` 已有「already installed」拒装 |\n\n所有路径保证:**失败不留半装目录、不留临时目录、不写 installed_plugins.json**。\n\n## 9. update 增强\n\n`plugins/installer/update.ts` 现从 `.cs-meta.json.source` 重装,假设 source 是本地目录。改成:\n- `parseSource(me"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 82,
+      "path": "docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md",
+      "at": "$",
+      "context": "gins/installer/update.ts` 现从 `.cs-meta.json.source` 重装,假设 source 是本地目录。改成:\n- `parseSource(meta.source)`:\n  - local → 现状逻辑(detectFormat + version/mtime 比较)。\n  - remote → 重新 `installPluginFromSource` 重拉(git 源没有「本地 version 文件」,所以远程 update **总是重拉**,除非将来比 SHA;v1 远程 update 直接重装,等价于 `--force`,简单可靠)。\n\n## 10. 安全\n\n- `parseSource` 不执行任何东西,纯字符串解析。\n- 临时目录用 `mkdtemp`(进程私有),装完即删。\n- 不新增网络面:git 克隆走系统 `git`,与现有 `pluginInstaller`/`marketplaceManager` 同一信任模型(plugin = 安装即信任的用户代码,见 doc 17)。\n- 插件名仍过 `assertSafePluginName`(现有)。\n\n## 11. 测试\n\n- **`parseSource` 单测**(纯函数,无 I/O):\n  - `./x` / `/abs` / `x` → local,path 正确 resolve。\n  - `github:org/repo` → remote,url=`https://github.com/org/repo.git`,inferredName=`repo`。\n  - `github:org/repo@v1` → ref=`v1`。\n  - `github:org/repo#plugins/foo` → subdir=`plugins/foo`,inferredName=`foo`。\n  - `github:org/repo@main#plugins/foo` → re"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 83,
+      "path": "docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md",
+      "at": "$",
+      "context": "mSource` 集成测**(不依赖外网):\n  - `beforeEach`:`git init` 一个临时仓库,塞一个 fixture 插件(CC 或 Codex),`git add && commit`。\n  - 用 `file://<repo>` 或本地路径作 url 真的 `gitClone` → 装。\n  - 断言:`~/.code-shell/plugins/<name>/` 存在、`.cs-meta.json.source` === 原始 git 串(不是 /tmp)、临时克隆目录已删、installed_plugins.json 登记。\n  - subdir 用例:仓库里放 `sub/myplugin/`,装 `<repo>#sub/myplugin`。\n- **回归**:本地路径安装仍走通(现有 install.test.ts 全绿);`bun test packages/core/src` 全绿。\n\n## 12. 不做(v1)\n\n- marketplace.json 解析 / `install name@marketplace`(那套已由 `pluginInstaller.ts` + slash 命令覆盖,本 spec 不动)。\n- 远程 update 比 SHA 增量(直接重拉,YAGNI)。\n- 私有库凭证管理(靠用户的 git 凭证 helper,不自己存 token)。\n- 克隆缓存复用(每次重拉;插件不大,YAGNI)。\n\n## 13. 收益\n\n- 「填个 git 地址就能装」真正实现:`plugin install github:org/repo` 一步到位,不用手动 clone。\n- 改动小、风险低:新代码仅 `parseSource` + 编排器两块,git 克隆与 CC/Codex 转换全部复用现成件,执行层/marketplace 那套零碰。\n"
+    }
+  ],
+  "limit": "Initial75 selected excerpts were durably saved but tool output was truncated; no claim all75 were inspected. Only the targeted untruncated contexts listed in actualInspected are counted; full scan/match totals are unchanged.",
+  "priorOutputTruncated": true,
+  "priorToolChunkId": "085b39",
+  "actualInspectedCount": 11,
+  "actualInspected": [
+    {
+      "pattern": "github-suffix",
+      "index": 12,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][1][\"observations\"][1]",
+      "context": "github:owned/notes.git appends .git again; suffix-free shorthand control gives one .git"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 22,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "范化候选：\n\n| 自有输入字符串 | 实际纯函数结果 | 正常控制 |\n| --- | --- | --- |\n| `https://example.invalid/owned/notes.git/` | `url` 原样保留；`inferredName: \"notes.git\"` | 去掉尾斜杠后 `inferredName: \"notes\"` |\n| `github:owned/notes.git` | `url: \"https://github.com/owned/notes.git.git\"`；`inferredName: \"notes.git\"` | `github:owned/notes` 得到一个 `.git` 后缀和 `inferredName: \"notes\"` |\n\n第一条来自 [parseSource.ts:123](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-202610"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 23,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "rl` 原样保留；`inferredName: \"notes.git\"` | 去掉尾斜杠后 `inferredName: \"notes\"` |\n| `github:owned/notes.git` | `url: \"https://github.com/owned/notes.git.git\"`；`inferredName: \"notes.git\"` | `github:owned/notes` 得到一个 `.git` 后缀和 `inferredName: \"notes\"` |\n\n第一条来自 [parseSource.ts:123](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/co"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 24,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "6/codeshell/packages/tui/src/cli/commands/plugin.ts:33) 在没有 `--name` 时选择 `inferredName`，接线仅静态核验。现有[设计规则](../superpowers/specs/2026-05-29-plugin-remote-install-design.md)与测试示例明确给出 `github:org/repo`、普通 HTTPS `.git` 和 SCP-style SSH，但未明确承诺两个边界形态必须被支持，也未找到当前正常应用生产器自动产生它们的证据。因此本轮不给严重性，不声称真实安装失败、安装目录名必然错误、账号或网络故障。若后续确定支持这些边界形式，应分别在提取末段后去 `.git`、以及 GitHub shorthand 转换处避免重复附加后缀。\n\n证据：[纯解析 fixture](evidence/migration-source-pure.test.ts)、[首次原始日志](evidence/migration-source-pure.first.log)、[首次退出收据](evidence/migration-source-pure.first.exit.json)：**7 pass / 11 expect / exit 0 / Completed**。另外五项正常控制覆盖本地相对路径和空格路径、GitHub ref/subdir/raw、npm scoped exact-version 规范化、dist-tag/default latest、SCP-style SSH 元数据。测试以 `.invalid` 和自有 inert 名称为字符串，不读取任何账号或执行来源。\n\n## 生产 migration 的控制与旧候选排除\n\n真实 `migrateConfig` 对普通无版本的 image/video entries，按显式 `adapterKind + tag` 规则回填 catalogId，保留自"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 25,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "扫描全部 `docs/`、`bugs/` 下 **1825 个 MD/JSON 文件（1102 MD、723 JSON）**，递归解析 **281762 个 JSON 叶子，0 parse error**，包含 archive/_archive，排除本轮目录。主模式命中 migration 110、parse-source 427、manifest 71；另追加 suffix-boundaries 45 个历史匹配。命中内容已阅读相关 audit/review 行与 round4、round8 报告；未找到该 `.git` 边界候选的旧登记。旧 transport policy、R8 marketplace 引号/Windows 名称、R4 YAML 保存及 migration providerKey 候选均不重验或计新项。\n\n完整静态阅读 `migrate-config.ts`、`parseSource.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 49,
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "at": "$",
+      "context": "ir IPC/UI, and a model submission were not executed.\n\n## PLUGIN-R8-03 — Accepted Windows marketplace source derives a rejected name (P3)\n\nLocation: `packages/core/src/plugins/parseMarketplaceInput.ts:86`. The parser explicitly accepts drive-prefixed local `.git` paths with forward or backward slashes at line 27. `deriveMarketplaceName` is documented to extract the repository tail, but splits only on `/` and `:`.\n\nThe real parser accepts `C:\\work\\skills.git`; the real deriver returns `\\work\\skills` rather than `skills`. The same real `assertSafePluginName` used by `marketplaceDir` rejects that name because it contains backslashes. The [parser fixture](evidence/plugins-parser-metadata.test.ts) proves this pure string chain on macOS; `C:/work/skills.git`, POSIX `/tmp/skills.git`, GitHub shorthand and HTTPS `.git` URLs all derive `skills` and pass the guard. Forward slashes are a workaround.\n\nStatic pr"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 50,
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "at": "$",
+      "context": "its only on `/` and `:`.\n\nThe real parser accepts `C:\\work\\skills.git`; the real deriver returns `\\work\\skills` rather than `skills`. The same real `assertSafePluginName` used by `marketplaceDir` rejects that name because it contains backslashes. The [parser fixture](evidence/plugins-parser-metadata.test.ts) proves this pure string chain on macOS; `C:/work/skills.git`, POSIX `/tmp/skills.git`, GitHub shorthand and HTTPS `.git` URLs all derive `skills` and pass the guard. Forward slashes are a workaround.\n\nStatic propagation: TUI `plugin-handler.ts:116–121` and Desktop `marketplace-service.ts:350–355` pass the derived name unchanged to `addMarketplace`. Its first statement (`marketplaceManager.ts:97`) calls `marketplaceDir`, which invokes the validated guard at line 42 before any clone. No `addMarketplace`, Git operation or Windows-native filesystem was executed, and no broader Win"
+    },
+    {
+      "pattern": "github-suffix",
+      "index": 51,
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "at": "$",
+      "context": "ause it contains backslashes. The [parser fixture](evidence/plugins-parser-metadata.test.ts) proves this pure string chain on macOS; `C:/work/skills.git`, POSIX `/tmp/skills.git`, GitHub shorthand and HTTPS `.git` URLs all derive `skills` and pass the guard. Forward slashes are a workaround.\n\nStatic propagation: TUI `plugin-handler.ts:116–121` and Desktop `marketplace-service.ts:350–355` pass the derived name unchanged to `addMarketplace`. Its first statement (`marketplaceManager.ts:97`) calls `marketplaceDir`, which invokes the validated guard at line 42 before any clone. No `addMarketplace`, Git operation or Windows-native filesystem was executed, and no broader Windows support claim is made.\n\n## Validation and additional coverage\n\nTwo first guarded shards completed: **11 pass, 40 expect calls, 0 fail, 0 skipped**. These are eleven new focused proof/control tests, not eleven product bugs or an existing whol"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 56,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "es.git\"` | `github:owned/notes` 得到一个 `.git` 后缀和 `inferredName: \"notes\"` |\n\n第一条来自 [parseSource.ts:123](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:29) 把用户提供的 source 交给此 parser，[33](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:33) 在没有 `--name` 时选择 `inferredName`，接线仅静态核验"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 57,
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "at": "$",
+      "context": "installer/parseSource.ts:123)：先在整串 URL 末尾去 `.git`，再过滤空 path 段；尾斜杠使去后缀步骤不匹配。第二条来自 [parseSource.ts:182](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/parseSource.ts:182) 调用 [gitOps.ts:206](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/gitOps.ts:206)，后者无条件附加 `.git`。这两个具体返回值已由真实纯函数首次执行证明，**没有执行 Git、clone、插件安装或远程存在性验证**。\n\n当前 [CLI:29](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:29) 把用户提供的 source 交给此 parser，[33](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/plugin.ts:33) 在没有 `--name` 时选择 `inferredName`，接线仅静态核验。现有[设计规则](../superpowers/specs/2026-05-29-plugin-remote-install-design.md)与测试示例明确给出 `github:org/repo`、普通 HTTPS `.git` 和 SCP-style SSH，但未明确承诺两个边界形态必须被支持，也未找到当前正常应用生产器自动产生它们的证据。因此"
+    },
+    {
+      "pattern": "source-normalization",
+      "index": 65,
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "at": "$",
+      "context": ", immutable first raw logs, exit responses and SHA256 values are recorded in [plugins-validation.json](evidence/plugins-validation.json).\n\nThe parser shard also exercises ordinary marketplace schema source normalization/owner fallback/version preservation, the documented binary format detection, and own-temp canonical manifest normalization/readback of displayName/defaultPrompt/brandColor. Source review covered `parseSource` npm/local/github/ref/subdir grammar, `normalizeManifest`, `detectFormat`, converter metadata handling, selected catalog identity/projection and command callers. No further fresh defect was confirmed there. These checks do not establish all source formats, assets, all plugins, all catalog states, runtime permissions, or any build/typecheck/lint/full suite.\n\nSkill frontmatter separator/CRLF candidates from round 6 were not revalidate"
+    }
+  ],
+  "directPriorCandidateValueInspected": {
+    "path": "docs/audit-2026-10-17-round15/candidates.json",
+    "jsonPointer": "/candidates/1",
+    "id": "MIG-R15-C1"
+  }
+}

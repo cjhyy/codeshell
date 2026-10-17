@@ -1,0 +1,18 @@
+{
+  "checkedAtUTC": "2026-10-17T12:18:38.794676+00:00",
+  "originalHistoryFileUnchanged": true,
+  "originalHistorySha256": "9a1e2fa7a75eea23bcfb58c35717897ec8379f2d025ebe5f60f0eb6b17d81e42",
+  "originalInventoryRows": 2988,
+  "changedPaths": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "beforeBytes": 150208,
+      "beforeSha256": "3a8e251255d41687f76056ed3aaacd75726f213b1b8d533b1ad4c2305e9a35d9",
+      "currentBytes": 177252,
+      "currentSha256": "6d6d93ccacf72a6c6a87555b660b81ee10ba1d389b323db97ccab27220876bbf"
+    }
+  ],
+  "productExecution": false,
+  "gitCommands": 0,
+  "note": "Read-only diagnostic of metadata inventory changes after first full history scan; no source/helper/fixture function executed."
+}

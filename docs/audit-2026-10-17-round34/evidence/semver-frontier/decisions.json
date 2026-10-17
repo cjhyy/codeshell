@@ -1,0 +1,65 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound34Baseline": null,
+  "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "priorSameVersionNegativeCoverage": 1
+  },
+  "negativeReasoning": [
+    "17-line gte/gt/lt shim forwards both arguments and returned value unchanged to semver. No wrapper-specific transform, sort or truncation found.",
+    "Terminal gte arguments come after coerce success and use the parsed version.version plus literal thresholds. This does not verify real terminal support.",
+    "Updater gt compares latest/current values under try/catch; invalid-input inequality fallback is an explicit build-SHA policy, not a proven ordinary-producer failure.",
+    "No stronger valid-version ordinary producer counterexample established statically; underlying dependency behavior is not tested or claimed exhaustive.",
+    "Same398B/SHA wrapper was already full-read as negative in R27 and statically covered in R14; no new causal defect or candidate is added."
+  ],
+  "sourceConsumerStatus": {
+    "gte": "Used by TUI terminal version gates via internal export",
+    "gt": "Used by updater comparison",
+    "lt": "No ordinary in-repository call located; bounded source search only"
+  },
+  "history": {
+    "freshScan": true,
+    "reusedPriorScanResults": false,
+    "files": 2988,
+    "markdownFiles": 1304,
+    "jsonFiles": 1684,
+    "stringLeaves": 645399,
+    "scalarLeaves": 957193,
+    "occurrenceCounts": {
+      "semver-wrapper": 75,
+      "version-comparison": 76,
+      "updater-contract": 4
+    },
+    "retainedContextCounts": {
+      "semver-wrapper": 75,
+      "version-comparison": 76,
+      "updater-contract": 4
+    },
+    "contextCapEach": 100,
+    "actualInspectedPrefixContexts": 18,
+    "additionalTargetedContextsInspected": 5,
+    "priorSourceManifestRowsInspected": 2,
+    "parseErrors": 0,
+    "excluded": [
+      "mutable Round32",
+      "mutable Round33",
+      "future Round34"
+    ],
+    "archives": {
+      "archiveOrUnderscoreArchiveComponentFiles": 169,
+      "literalArchiveComponentFiles": 162,
+      "archiveSubstringFiles": 174
+    },
+    "endingUnchangedRows": 2988,
+    "endingDriftRows": 0,
+    "endingMissingPaths": 0,
+    "limits": "First18 selected excerpts are mostly inventory references; five further targeted report contexts plus two old source rows support same-version coverage. No all79selected/all155retained semantic-review claim."
+  },
+  "productAttempts": 0
+}

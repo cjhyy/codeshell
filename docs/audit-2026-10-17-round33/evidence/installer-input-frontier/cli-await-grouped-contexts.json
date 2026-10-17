@@ -1,0 +1,712 @@
+{
+  "source": "cli-await-history.current.json",
+  "allOccurrences": 149,
+  "groupCount": 18,
+  "grouping": "exact excerpt string equality only, not semantic cause equivalence",
+  "groups": [
+    {
+      "excerpt": "function installPluginFromPath(sourceDir: string, name: string, installedAt: string): Promise<string>; // returns installed dir",
+      "occurrences": 2,
+      "locations": [
+        {
+          "path": "docs/archive/core-modules/plugins.md",
+          "location": "52"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+          "location": "$[\"hits\"][\"parse-source\"][17][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "  : await installPluginFromPath(parsed.path, /* name */ \"my-plugin\", installedAt);",
+      "occurrences": 1,
+      "locations": [
+        {
+          "path": "docs/archive/core-modules/plugins.md",
+          "location": "109"
+        }
+      ]
+    },
+    {
+      "excerpt": "Inconsistent await handling of installPluginFromPath",
+      "occurrences": 2,
+      "locations": [
+        {
+          "path": "docs/archive/review-2026-05-30/findings.json",
+          "location": "$[151][\"title\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][5][\"excerpt\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "Lines 27-29 use a ternary expression where installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \"local\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.",
+      "occurrences": 2,
+      "locations": [
+        {
+          "path": "docs/archive/review-2026-05-30/findings.json",
+          "location": "$[151][\"detail\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+          "location": "$[\"hits\"][\"parse-source\"][30][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "ted. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \"local\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.",
+      "occurrences": 2,
+      "locations": [
+        {
+          "path": "docs/archive/review-2026-05-30/findings.json",
+          "location": "$[151][\"detail\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+          "location": "$[\"hits\"][\"parse-source\"][30][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "sole.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \"local\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.",
+      "occurrences": 2,
+      "locations": [
+        {
+          "path": "docs/archive/review-2026-05-30/findings.json",
+          "location": "$[151][\"detail\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+          "location": "$[\"hits\"][\"parse-source\"][30][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "Change line 27-28 to: `const dir = parsed.kind === \"local\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`",
+      "occurrences": 2,
+      "locations": [
+        {
+          "path": "docs/archive/review-2026-05-30/findings.json",
+          "location": "$[151][\"fix\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+          "location": "$[\"hits\"][\"parse-source\"][31][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "| `Unhandled error between tests`: `ENOENT stat .../rm-race-*/run.json.lock` (`ECOMPROMISED`) | PRE-EXISTING | Same `rm-race-*` lockfile errors occur in the base full-suite log before the plugin installer section. Targeted `RunManager.resume-race.test.ts` passes `5 pass / 0 fail`; this is a known full-suite async/lock cleanup artifact, not caused by the 32 commits. |",
+      "occurrences": 1,
+      "locations": [
+        {
+          "path": "docs/archive/todo/fix-verify-2026-07-08.md",
+          "location": "53"
+        }
+      ]
+    },
+    {
+      "excerpt": "\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"27-29\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Inconsistent await handling of installPluginFromPath\", \"detail\": \"Lines 27-29 use a ternary expression where installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`\"}, {\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"65\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Missing await for async uninstallPluginByName\", \"detail\": \"Line 65 calls `uninstallPluginByName(name)` withou",
+      "occurrences": 18,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"logs\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "e\": \"high\", \"title\": \"Inconsistent await handling of installPluginFromPath\", \"detail\": \"Lines 27-29 use a ternary expression where installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`\"}, {\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"65\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Missing await for async uninstallPluginByName\", \"detail\": \"Line 65 calls `uninstallPluginByName(name)` without await, but this appears to be called within an async function at line 75 that ",
+      "occurrences": 18,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"logs\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": " installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`\"}, {\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"65\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Missing await for async uninstallPluginByName\", \"detail\": \"Line 65 calls `uninstallPluginByName(name)` without await, but this appears to be called within an async function at line 75 that is itself awaited. If `uninstallPluginByName` is asynchronous, the promise is not being awaited, and the function may complete before uninstall finishes. The success message on line 67 could execute before the operation completes.\", \"",
+      "occurrences": 18,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"logs\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "le.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`\"}, {\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"65\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Missing await for async uninstallPluginByName\", \"detail\": \"Line 65 calls `uninstallPluginByName(name)` without await, but this appears to be called within an async function at line 75 that is itself awaited. If `uninstallPluginByName` is asynchronous, the promise is not being awaited, and the function may complete before uninstall finishes. The success message on line 67 could execute before the operation completes.\", \"fix\": \"Verify if uninstallPluginByName is async. If so, change line 66 to: `await uninstallPluginByName(name);`\"}, {\"file\": \"p",
+      "occurrences": 18,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"logs\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "nstallPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`\"}, {\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"65\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Missing await for async uninstallPluginByName\", \"detail\": \"Line 65 calls `uninstallPluginByName(name)` without await, but this appears to be called within an async function at line 75 that is itself awaited. If `uninstallPluginByName` is asynchronous, the promise is not being awaited, and the function may complete before uninstall finishes. The success message on line 67 could execute before the operation completes.\", \"fix\": \"Verify if uninstallPluginByName is async. If so, change line 66 to: `await uninstallPluginByName(name);`\"}, {\"file\": \"packages/tui/src/cli/commands/builtin/utility-commands.ts\", \"line\": \"33\", \"category\": \"performance\", \"severity\": \"medium\", \"",
+      "occurrences": 18,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][5][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][9][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"match\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+          "location": "$[\"records\"][13][\"matches\"][0][\"context\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+          "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"logs\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+          "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "\"file\": \"packages/tui/src/cli/commands/plugin.ts\", \"line\": \"27-29\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Inconsistent await handling of installPluginFromPath\", \"detail\": \"Lines 27-29 use a ternary expression where installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, ",
+      "occurrences": 9,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][7][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][8][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][9][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][10][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][11][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][12][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][22][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][25][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][28][\"excerpt\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "e\": \"high\", \"title\": \"Inconsistent await handling of installPluginFromPath\", \"detail\": \"Lines 27-29 use a ternary expression where installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, ",
+      "occurrences": 9,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][7][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][8][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][9][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][10][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][11][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][12][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][22][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][25][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][28][\"excerpt\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": " installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, ",
+      "occurrences": 9,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][7][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][8][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][9][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][10][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][11][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][12][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][22][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][25][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][28][\"excerpt\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "le.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \\\"local\\\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, ",
+      "occurrences": 9,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][7][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][8][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][9][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][10][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][11][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][12][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][22][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][25][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][28][\"excerpt\"]"
+        }
+      ]
+    },
+    {
+      "excerpt": "nstallPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.\", \"fix\": \"Change line 27-28 to: `const dir = parsed.kind === \\\"local\\\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, ",
+      "occurrences": 9,
+      "locations": [
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][7][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][8][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][9][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][10][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][11][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][12][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][22][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][25][\"excerpt\"]"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+          "location": "$[\"matches\"][\"mechanism\"][28][\"excerpt\"]"
+        }
+      ]
+    }
+  ]
+}

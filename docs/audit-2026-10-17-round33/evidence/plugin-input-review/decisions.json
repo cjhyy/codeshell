@@ -1,0 +1,74 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound33Baseline": null,
+  "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "unclassifiedStaticLeads": 1,
+    "oldCandidateExclusions": 1
+  },
+  "unclassifiedStaticLeads": [
+    {
+      "id": null,
+      "cause": "Marketplace GitHub HTTPS branch appends .git to the complete input string rather than parsed repository pathname.",
+      "staticExamplesNotExecuted": [
+        "https://github.com/owner/repo/ would be assembled as https://github.com/owner/repo/.git",
+        "https://github.com/owner/repo?tab=readme would be assembled as https://github.com/owner/repo?tab=readme.git"
+      ],
+      "consumerEvidence": "CLI marketplace add joins/trims raw input; Desktop service trims raw input; both call parseMarketplaceInput and derive name, manager passes source.url unchanged to gitClone and gitClone passes it as an argument.",
+      "missingEvidence": "Explicit supported-form/normal producer requirement for trailing-slash or web query URLs, and remote GitHub clone/HTTP behavior. No install failure inferred from source string assembly alone.",
+      "disposition": "Navigation observation only; not a candidate/formal/related entry unless Root establishes a stronger ordinary contract."
+    }
+  ],
+  "oldCandidateExclusions": [
+    {
+      "id": "MIG-R15-C1",
+      "reason": "parseSource .git/ inferredName and github:owner/repo.git double .git suffix already candidate with incomplete supported-input contract. No stronger current producer evidence or revalidation added."
+    }
+  ],
+  "oldFindingsNotReopened": [
+    "PLUGIN-R8-03 Windows marketplace name derivation",
+    "R8 marketplace quoted-source handling",
+    "Historical transport case/default policy",
+    "Historical failed Skill/frontmatter directions"
+  ],
+  "counterEvidence": [
+    "parseSource deliberately preserves full ordinary HTTPS source URL and current tests explicitly expect that behavior.",
+    "Marketplace comments/CLI usage support repository/git URL forms; no inspected text promises arbitrary GitHub browser URL canonicalization.",
+    "GitHub shorthand through parseMarketplaceInput strips optional .git before helper assembly; canonical source examples have a working-looking local DTO shape without proving clone success.",
+    "No server handling, remote existence, credentials, actual clone/install/check/update, real configuration or filesystem effects were observed."
+  ],
+  "history": {
+    "files": 2988,
+    "markdownFiles": 1304,
+    "jsonFiles": 1684,
+    "stringLeaves": 645399,
+    "scalarLeaves": 957193,
+    "occurrenceCounts": {
+      "plugin-input": 308,
+      "github-suffix": 79,
+      "source-normalization": 84
+    },
+    "savedContexts": {
+      "plugin-input": 100,
+      "github-suffix": 79,
+      "source-normalization": 84
+    },
+    "contextCapEach": 100,
+    "actualInspectedTargetedContexts": 11,
+    "directPriorCandidateValuesInspected": 1,
+    "initial75ContextOutputTruncated": true,
+    "parseErrors": 0,
+    "excluded": [
+      "current Round32",
+      "future Round33"
+    ],
+    "limits": "Complete MD/recursive JSON value-scalar inventory search includes archives; keyword/capped/truncated output is not semantic exhaustion."
+  },
+  "productAttempts": 0
+}

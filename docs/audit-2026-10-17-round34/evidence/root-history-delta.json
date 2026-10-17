@@ -1,0 +1,596 @@
+{
+  "priorFiles": 3063,
+  "currentFiles": 3137,
+  "addedFilesChecked": 74,
+  "addedInventory": [
+    {
+      "path": "docs/audit-2026-10-17-round33/README.md",
+      "bytes": 1659,
+      "sha256": "1e7cd0a6c85d7d78f3c04737a139300305d980db7fe00f7ce3336d3705fd300a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/candidates.json",
+      "bytes": 237,
+      "sha256": "e947683c07a3b5fd94924032e01046ede78112489337786289e973398a88bbe3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/coverage.json",
+      "bytes": 491,
+      "sha256": "842d9b1bd6d9e2936d50c5b0dc900d175754dd3a9045e96a8d122985f1ac424d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/author-receipt.json",
+      "bytes": 816,
+      "sha256": "74cfdac72d28c325378518da22b542b7be58e325c26b073f9c7ed2d660614655"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/decisions.json",
+      "bytes": 175,
+      "sha256": "b5276ce472b855449d138d937b9eaddafff53985e53d7bade8088b532daa76a7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/initial-pins.json",
+      "bytes": 1245,
+      "sha256": "a15d388ecedd6999bfb89703cfb9c65b15706b2083b5ed2ec2217380a38b7e5a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/review.md",
+      "bytes": 1173,
+      "sha256": "7e70005b756612241c76af8ec19367512e8254bb3528ac8a01e6d9049ef07016"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+      "bytes": 3103,
+      "sha256": "865c99992a47b2b8731c8322d9abffccdce4e2492ca551088caff573105b72f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/consumer-initial-pins.json",
+      "bytes": 2693,
+      "sha256": "38a1837ab354fe0f36195c7e09f8c6b97612689db982d327eb88c9cd29747d67"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history-initial-pins.json",
+      "bytes": 876,
+      "sha256": "ca531e33bf8fca2ed6e2e1dc9fa226e842162ca863748d0dbfe316610c597cf5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+      "bytes": 618274,
+      "sha256": "33b6e91f175fdbab0615eb3906cb5d3ce5a21642c2dbe8f2da57ed615a0e787b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/initial-pins.json",
+      "bytes": 2405,
+      "sha256": "19a5eeec810ceeb2540e943225cfb4ad94625aacb4a4cc927583154a5457d924"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+      "bytes": 4070,
+      "sha256": "828ffb9754001a48f7970d31281eb27fce280fac805704bd2fa5108c3894972c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/review.md",
+      "bytes": 4138,
+      "sha256": "42002e5a0532a9b548d72ca9300f78debfbb7220218ed40b956c891ec773a9ff"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/reviewer-receipt.json",
+      "bytes": 2060,
+      "sha256": "2e19f6b487d0cf7504391fbcd6017e01fd37078f79297e62df8d07858d6eccc2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+      "bytes": 24306,
+      "sha256": "31ac889ba43f69e428262ed12625d17c67b7d65ed0d82ad93924d61ab5b2f960"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/freeze-checks.json",
+      "bytes": 2717,
+      "sha256": "5e54e8db8bd96d3b846f5e5fa3c689fb47f419512bdf956f5c38ac33a48fe577"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/incoming-main-delta.json",
+      "bytes": 1763,
+      "sha256": "9c1a37a882a7502672ca7397606387d11634f5e52bf709aa4b34b405bc6814cf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/artifact-receipt.json",
+      "bytes": 3577,
+      "sha256": "2afe1c6ffb3e3411b17b1945e85a41941735c7de31e4f5aaff7c6dd6560d9497"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/cli-await-grouped-contexts.json",
+      "bytes": 39367,
+      "sha256": "c447da900b847bbfc02c6529f4a741b0fbe7869a07e561e62ee6cec6af0de2f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/cli-await-history.current.json",
+      "bytes": 756873,
+      "sha256": "18c56c4991d8356e6608e5db3bb6ed2c11a9da9ae824e3a1c13574feefbb915b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/decisions.json",
+      "bytes": 2856,
+      "sha256": "00b2dd5dd92167e15d508aeee807dd1de431ed982435c721674041e4efad3a49"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history-drift.json",
+      "bytes": 754,
+      "sha256": "9bab7cfcdd6aec6b94aae34ac1646afe1ef9efe19848d5c8dcec05c5134c99e4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history-recheck.first.json",
+      "bytes": 688,
+      "sha256": "95501bdb59273eec0ba7a2f5ab3c8f19b6773c9af52c1a5459472474ca3170f7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+      "bytes": 746971,
+      "sha256": "9a1e2fa7a75eea23bcfb58c35717897ec8379f2d025ebe5f60f0eb6b17d81e42"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/initial-pins.json",
+      "bytes": 9048,
+      "sha256": "0e85110cb41328768fc38a24652d642030578de0d9039501320ca2ad9f8fe311"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/legacy-cli-await-record.json",
+      "bytes": 1425,
+      "sha256": "1776ee9d8b459f8be844ef08bdb83c041c1968a2bd43bc92bf0be4cdee5f453d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/report.md",
+      "bytes": 4907,
+      "sha256": "f0c3cdaa8ef1b09bd5b3d5ca058835c5de5cb6cbcc5a1aea41496301f635677b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json",
+      "bytes": 14312,
+      "sha256": "aca3d6ade669e6755f7284053aa621b0a4268c20a6dff54ab49e16bdbae8b2cc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/validation.json",
+      "bytes": 860,
+      "sha256": "3e79c3071a7c4fb6bb9aaeeb34b39e8efbb5639843a2b3c425e4bc1f92e9d955"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/integration-before.json",
+      "bytes": 1375,
+      "sha256": "7831fd06a804bde091d3ef879e5073c7fc13be2ce642fb988ef8fdd8ffc70c21"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/integration-plan.json",
+      "bytes": 3896,
+      "sha256": "8193fd8dfaaadcc28418825499b050da5262436abc9c9ca3c42bd5069f5a186b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/integration-premerge.json",
+      "bytes": 1375,
+      "sha256": "182adfe89f6650bc2dd99c352f73525bea38486d33341fe421aa18ab15ef34d9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/author-receipt.json",
+      "bytes": 3388,
+      "sha256": "325acb9f64543787d58f64e1c0259fc5a4ffe86916af10813536f3564c481dc0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/decisions.json",
+      "bytes": 2760,
+      "sha256": "72431770e225ed7d209b094af9d73a0672e197b712fba1f9ec9ef2bcbe57be4b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/facade-initial-pin.json",
+      "bytes": 464,
+      "sha256": "136a094b9505ce2e318a2797f0d909a903e6c5c27c3b2173925d5b3a9f5912c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/finish-hash-checks.json",
+      "bytes": 1476,
+      "sha256": "b25bb3a31195c3b6cf3c324c3e59fc621064353a04bc22ad7c2b54fb1c8af4c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "bytes": 856192,
+      "sha256": "9c735a815a6439f4d7f21ff9c5e03156e5bc01142042ba90efb7b36320f2f501"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/initial-pins.json",
+      "bytes": 2963,
+      "sha256": "54366b18e6696da1b472d21f3b751b51538df429bbbeb27e0fd54bd8779747a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/navigation.first.exit.json",
+      "bytes": 548,
+      "sha256": "f8fe4b4f2fdcf8c543ed563581ceeb9d2ad59f0a6dcc144ba6e6dc1da92b5faa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/old-cause.json",
+      "bytes": 1648,
+      "sha256": "12187054b3b36685f658627217d2c483875e429fa99e251450ec78b5d1f4bcf7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/review.md",
+      "bytes": 4094,
+      "sha256": "ed6bd8e13dcfde82b8cf3b744f8abded3c7f0fa0afe1cc514a4f5cce9c53758c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/selected-history-contexts.json",
+      "bytes": 220749,
+      "sha256": "396203b0729fe7f030e4d370ca44ba8ce88dbe8f59ce17a152aa47a9c2a93ed2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/source-manifest.json",
+      "bytes": 7112,
+      "sha256": "1dbb0b738708315c8d5f9dd90734d0e81288354065ed59a3d6404ede6fb1f3c1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/validation.json",
+      "bytes": 1206,
+      "sha256": "422e7186e6b48a31cb074f1961e7f364c942aae11dbe482dfb0d12525e32a6f9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-frontier/author-receipt.json",
+      "bytes": 816,
+      "sha256": "150d3bce6bf47fcc2aa6b339a3904577e6f4a7fb43f5e9942fda2c4a08ef04f2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-frontier/decisions.json",
+      "bytes": 203,
+      "sha256": "8330e20249fc85cee95fccb14a811ea00245ba3b6873384dfe63b81178815ba5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-frontier/initial-pins.json",
+      "bytes": 1151,
+      "sha256": "c667c8ec6c3e147b1a60b073fef73531a00b136fba5c74fd26bcf5af73fdebc0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-frontier/review.md",
+      "bytes": 1102,
+      "sha256": "a368eedb8b7ba2fe15f5016d0eec0717c314e3fd0e155ee6189dfb750104a310"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-frontier/source-manifest.json",
+      "bytes": 2730,
+      "sha256": "10272701a2c645be4096add9e8f998b335646a253621a011f167ade78c65e0d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-frontier/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/author-receipt.json",
+      "bytes": 3087,
+      "sha256": "df78cc75727e88e510ddecd2b5fa2553686b84d10f7ee7ea3d41698f61e1a9a6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/consumer-initial-pins.json",
+      "bytes": 3304,
+      "sha256": "2eab4dd954d69d818d64b2bf775584d4b5c4115af9e93bc8db337f603201f40d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/decisions.json",
+      "bytes": 3431,
+      "sha256": "5d2344968041f09d8e64506ecc18b3583b7d647f10a99c07e742107d7fa77523"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/finish-hash-checks.json",
+      "bytes": 3355,
+      "sha256": "33fdf6b46172aa0ba0df8eda8fb1bac6f45ae8cf90b9183a5ecfe46a37c1700e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "bytes": 790761,
+      "sha256": "4532310eda13c2e7f770fb61950737eb9251092ef446e7022ad11e5f348cbacb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/initial-pins.json",
+      "bytes": 1028,
+      "sha256": "b89c225506eb9e202d429fc9618ae38adef72e2e8c2f6a5db5fde6fd9c693508"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/review.md",
+      "bytes": 3831,
+      "sha256": "a21c7128ecff7747f3ebb77055edb01c2c3b3e45985d939b5450174d4ea6b535"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "bytes": 79645,
+      "sha256": "26e6be05b4bd9d2ce8c8a15c5e6437a760ee47bace5c72ee54c4b2627408d1b9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/source-manifest.json",
+      "bytes": 9846,
+      "sha256": "bb800175624bb60d6ec1727a3d09bf30467f71374a397ff99c1c8c7f50b9401d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/source-reader.first.exit.json",
+      "bytes": 818,
+      "sha256": "509ec7a800f824b887555731d61a2aac9b2218a78e4c052f395b3647eb823f57"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/validation.json",
+      "bytes": 1483,
+      "sha256": "44fc178b76fef559c80bcdfe126ea8250afebdc194645b28e7c7a52608b5a099"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/prep-copy-receipt.json",
+      "bytes": 16064,
+      "sha256": "cc004f3a54edbe1e13b69d7d06318ee69c5a1ee60cd809b75f8e23e4a0ba9e91"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/review-aggregate.md",
+      "bytes": 3011,
+      "sha256": "88e3ec569f025615342a24854b8018ba5e92a52285bd0a81362ed662ff3a7aa8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history-delta.json",
+      "bytes": 17890,
+      "sha256": "9ec15f2c2628a9f834283b13d2d404a4ec08c76ef0b9faff123611b38fb5d4bd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "bytes": 769463,
+      "sha256": "54791da7dffc7eb829c0c8afa3304f7449bedff268fe00a3e5fd172e5f2a03c3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-receipt-checks.json",
+      "bytes": 26818,
+      "sha256": "558e139c0abe1ed66fafae1dc1dc1c7a08ed7c52e3f3117d2e9c5e86283a6625"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/worktrees-before.json",
+      "bytes": 6471,
+      "sha256": "13194639fa717a1f76c985041cfdd077fe7c358e18c32bde18353f44deab01aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence-index.json",
+      "bytes": 14200,
+      "sha256": "4eea401ce31cb56f97200f39a200326596d92e52138b012616470f8ddc4c3d2d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/findings.json",
+      "bytes": 235,
+      "sha256": "7d2a7953e0a5dbe767ce0e41e8d2d63c1d66deff24da51be6bf04277c9d6689d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/related.json",
+      "bytes": 234,
+      "sha256": "d5f1859a31123e85899bff21d3c58613f5fff9a7e7f795f0dc468d2c16bc9a45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "bytes": 42549,
+      "sha256": "4da9473029dc4fc20c1257fbdee5d8bdb055e3d7f79b24574c39ea6bed78c8d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/validation.json",
+      "bytes": 316,
+      "sha256": "3423b9645e93253dac4c3771fd75e706b4ee1e121daae2529abb1ce29bc39976"
+    }
+  ],
+  "addedOccurrenceCounts": {
+    "utf8-source": 0,
+    "partial-tail": 1,
+    "helper-contract": 32
+  },
+  "addedMatches": {
+    "utf8-source": [],
+    "partial-tail": [
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "at": "$[\"hits\"][\"local-await\"][8][\"context\"]",
+        "context": "s multibyte UTF-8 (CJK/emoji in identifiers or diagnostics) across chunks and desyncs the frame counter.\n- **One server per language, reused; lazy start.** `getClient` returns the live client if `ready` & alive; if `starting` it just `await`s a fixed 2s and returns whatever's there (no proper readiness signal). First call to an unstarted server pays spawn + `initialize` cost.\n- **30s per-request timeout.** `client.request` rejects with `LSP request \"<method>\" timed ou"
+      }
+    ],
+    "helper-contract": [
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+        "at": "$[\"inventory\"][590][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+        "at": "$[\"inventory\"][594][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize-preflight.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+        "at": "$[\"inventory\"][595][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize.first.exit.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+        "at": "$[\"inventory\"][619][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/cli-await-history.current.json",
+        "at": "$[\"inventory\"][589][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/cli-await-history.current.json",
+        "at": "$[\"inventory\"][593][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize-preflight.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/cli-await-history.current.json",
+        "at": "$[\"inventory\"][594][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize.first.exit.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/cli-await-history.current.json",
+        "at": "$[\"inventory\"][618][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"hits\"][\"old-failed\"][12][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"hits\"][\"old-failed\"][12][\"excerpt\"]",
+        "context": "、非 LRU；本轮没有把有意非 LRU 设计当缺陷。已有 round6 `skills-agents.md` 已说明目录 mtimes/显式失效合同及两个首次失败 SKIP 方向；本轮 direct memoize 入口没有恢复 Skill parser/registry 动态验证。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"hits\"][\"old-failed\"][13][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"hits\"][\"old-failed\"][14][\"excerpt\"]",
+        "context": "、非 LRU；本轮没有把有意非 LRU 设计当缺陷。已有 round6 `skills-agents.md` 已说明目录 mtimes/显式失效合同及两个首次失败 SKIP 方向；本轮 direct memoize 入口没有恢复 Skill parser/registry 动态验证。\n- 独立 metadata 逐项核验 root manifest **9 个**条目的冻结 Git blob SHA/bytes 与当前文件，全部一致，且阅读/执行 scope 有界；pin 清单并非全文件执"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"inventory\"][589][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"inventory\"][593][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize-preflight.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"inventory\"][594][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize.first.exit.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "at": "$[\"inventory\"][618][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "at": "$[\"inventory\"][590][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "at": "$[\"inventory\"][594][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize-preflight.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "at": "$[\"inventory\"][595][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize.first.exit.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "at": "$[\"inventory\"][619][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "at": "$[\"hits\"][\"promise-guard\"][55][\"context\"]",
+        "context": "packages/core/src/types.ts\", \"line\": \"101\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"SessionStatus includes 'paused' but it's not documented as a valid TerminalReason\", \"detail\": \"Line 101 defines SessionStatus as 'active' | 'paused' | TerminalReason. However, the JSDoc comment on lines 94-99 states: 'All other values match the {@link TerminalReason} the last run returned'. TerminalReason (lines 220-229) is a union of specific terminal states (comple"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "at": "$[\"hits\"][\"promise-guard\"][55][\"context\"]",
+        "context": "s includes 'paused' but it's not documented as a valid TerminalReason\", \"detail\": \"Line 101 defines SessionStatus as 'active' | 'paused' | TerminalReason. However, the JSDoc comment on lines 94-99 states: 'All other values match the {@link TerminalReason} the last run returned'. TerminalReason (lines 220-229) is a union of specific terminal states (comple"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/selected-history-contexts.json",
+        "at": "$[\"matches\"][199][\"context\"]",
+        "context": "packages/core/src/types.ts\", \"line\": \"101\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"SessionStatus includes 'paused' but it's not documented as a valid TerminalReason\", \"detail\": \"Line 101 defines SessionStatus as 'active' | 'paused' | TerminalReason. However, the JSDoc comment on lines 94-99 states: 'All other values match the {@link TerminalReason} the last run returned'. TerminalReason (lines 220-229) is a union of specific terminal states (comple"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/selected-history-contexts.json",
+        "at": "$[\"matches\"][199][\"context\"]",
+        "context": "s includes 'paused' but it's not documented as a valid TerminalReason\", \"detail\": \"Line 101 defines SessionStatus as 'active' | 'paused' | TerminalReason. However, the JSDoc comment on lines 94-99 states: 'All other values match the {@link TerminalReason} the last run returned'. TerminalReason (lines 220-229) is a union of specific terminal states (comple"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+        "at": "$[\"inventory\"][590][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+        "at": "$[\"inventory\"][594][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize-preflight.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+        "at": "$[\"inventory\"][595][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize.first.exit.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+        "at": "$[\"inventory\"][619][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "at": "$[\"inventory\"][590][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/review-memoize.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "at": "$[\"inventory\"][594][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize-preflight.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "at": "$[\"inventory\"][595][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/evidence/root-memoize.first.exit.json"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "at": "$[\"inventory\"][619][\"path\"]",
+        "context": "docs/audit-2026-10-17-round16/memoize.md"
+      }
+    ]
+  },
+  "preciseAdjacentTailAddedMatches": [],
+  "contextCap": null,
+  "rootActuallyReviewed": {
+    "partialTailSavedContexts": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "count": 20,
+    "untruncated": true,
+    "conclusions": [
+      "No exact background small-tail decode-and-offset old item found in these20.",
+      "D03 is an existing general fragmented UTF8 family at a separate JSON-lines decoder/transport; this candidate concerns background raw-byte cursor and is not claimed as a new encoding concept.",
+      "R25 CRLF cleaner/cursor source excerpts are same file but different CRLF progress-fold cause, not partial-tail decoding."
+    ]
+  },
+  "endingInventoryCheck": {
+    "files": 3137,
+    "changed": []
+  },
+  "productRuns": 0,
+  "limits": [
+    "All newly frozen33 rows searched, not only capped first80 full-history contexts.",
+    "Root read only20 partial-tail contexts; generic utf8-source118/helper-contract1667 occurrences not all semantically read."
+  ]
+}

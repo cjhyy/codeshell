@@ -1,0 +1,10 @@
+{
+  "path": "packages/core/src/runtime/background-shell.ts",
+  "bytes": 25112,
+  "lineCount": 702,
+  "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+  "atUTC": "2026-10-17T12:25:44.704342+00:00",
+  "initialSemanticReadSha256": null,
+  "pinBeforeDirectSelectedRead": true,
+  "limit": "rg locator excerpts on consumedBytes/safeCut already seen before dedicated pin; first semantic byte timestamp not reconstructed."
+}

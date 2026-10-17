@@ -1,0 +1,203 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound34Baseline": null,
+  "prepOnly": true,
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/utils/semver.ts",
+      "bytes": 398,
+      "lines": 17,
+      "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "semanticLines": 17,
+      "initialFilesystemSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "initialSemanticReadSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "initialCaptureUtc": "2026-10-17T12:21:24.807460+00:00",
+      "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+      "unchangedSinceDirectionPin": true,
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; pin precedes this direction read."
+    },
+    {
+      "path": "packages/tui/src/render/terminal.ts",
+      "bytes": 8286,
+      "lines": 250,
+      "sha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "semanticLines": 64,
+      "initialFilesystemSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "initialSemanticReadSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "initialCaptureUtc": "2026-10-17T12:22:02.791474+00:00",
+      "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+      "unchangedSinceDirectionPin": true,
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; pin precedes this direction read.",
+      "incidentalPrintedNotAuditedRanges": [
+        [
+          65,
+          250
+        ]
+      ],
+      "scopeLimit": "Full source was printed; only1-64 version-argument producer/gate is counted as semantic audit scope. Other terminal/native write/capability code is outside conclusions."
+    },
+    {
+      "path": "packages/core/src/updater.ts",
+      "bytes": 15946,
+      "lines": 441,
+      "sha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          34,
+          49
+        ],
+        [
+          115,
+          176
+        ],
+        [
+          180,
+          204
+        ]
+      ],
+      "semanticLines": 103,
+      "initialFilesystemSha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "initialSemanticReadSha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "initialCaptureUtc": "2026-10-17T12:22:02.788042+00:00",
+      "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+      "unchangedSinceDirectionPin": true,
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; pin precedes this direction read."
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lines": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          111,
+          117
+        ]
+      ],
+      "semanticLines": 7,
+      "initialFilesystemSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "initialSemanticReadSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "initialCaptureUtc": "2026-10-17T12:22:02.792272+00:00",
+      "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+      "unchangedSinceDirectionPin": true,
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; pin precedes this direction read."
+    },
+    {
+      "path": "packages/core/src/version.test.ts",
+      "bytes": 406,
+      "lines": 11,
+      "sha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "semanticLines": 11,
+      "initialFilesystemSha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "initialSemanticReadSha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "initialCaptureUtc": "2026-10-17T12:22:02.792770+00:00",
+      "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+      "unchangedSinceDirectionPin": true,
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; pin precedes this direction read."
+    },
+    {
+      "path": "packages/core/src/index.exports.test.ts",
+      "bytes": 18450,
+      "lines": 587,
+      "sha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          64,
+          79
+        ]
+      ],
+      "semanticLines": 16,
+      "initialFilesystemSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "initialSemanticReadSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "initialCaptureUtc": "2026-10-17T12:22:02.793468+00:00",
+      "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+      "unchangedSinceDirectionPin": true,
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; pin precedes this direction read."
+    }
+  ],
+  "metadataOnlyFiles": [
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "coverage": "selected-json-metadata",
+      "jsonPointers": [
+        "/name",
+        "/version",
+        "/dependencies/semver",
+        "/devDependencies/@types~1semver"
+      ],
+      "observedValues": {
+        "name": "@cjhyy/code-shell-core",
+        "version": "0.9.45",
+        "declaredSemverDependency": "^7.7.4",
+        "typesSemverDevDependency": null
+      },
+      "initialFilesystemSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "unchangedSinceDirectionPin": true,
+      "semanticLineCoverageClaim": false,
+      "installedDependencyVersionClaim": false,
+      "gitBlobCompared": false
+    }
+  ],
+  "stats": {
+    "semanticSourcePaths": 6,
+    "fullPaths": 2,
+    "selectedPaths": 4,
+    "semanticLines": 218,
+    "productSemanticLines": 191,
+    "testDeclarationLines": 27,
+    "selectedJsonMetadataPaths": 1,
+    "lateSemanticPins": 0
+  },
+  "priorSameVersionRead": "R27 full1-17 source manifest matches exact398B SHA94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e. R14 static row also matches. This is repeated independent reading, not a historically unread frontier claim.",
+  "limits": [
+    "Wrapper simply delegates to imported semver functions; no library implementation audit or executed semantic-correctness proof.",
+    "gt and gte ordinary version consumer arguments were inspected; no in-repository lt consumer found by bounded source locators. External/dynamic consumers are not disproved.",
+    "Terminal source65-250 was incidentally printed but excluded from semantic scope/native conclusions; no TTY/environment/device action.",
+    "Updater source stops at permission-probe signature; permission/installation/lock/native mechanisms are not followed or run.",
+    "Version/export tests are source declarations, not comparison tests or successful validation. No dedicated shim test located in bounded filenames/imports.",
+    "Source/metadata drift recorded in finish checks; prior history has a separate non-atomic dated inventory and end comparison."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

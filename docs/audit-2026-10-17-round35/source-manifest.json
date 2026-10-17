@@ -1,0 +1,450 @@
+{
+  "baseline": "99e9c67b413e2b576f3d8948e6ce10f5c25f5b10",
+  "mainHead": "99e9c67b413e2b576f3d8948e6ce10f5c25f5b10",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "bytes": 5879,
+      "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "currentBytes": 5879,
+      "currentSha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "mainBytes": 5879,
+      "mainSha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "bytes": 28861,
+      "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "currentBytes": 28861,
+      "currentSha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "mainBytes": 28861,
+      "mainSha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/aux-key.test.ts",
+      "bytes": 578,
+      "sha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "currentBytes": 578,
+      "currentSha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "mainBytes": 578,
+      "mainSha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/aux-key.ts",
+      "bytes": 451,
+      "sha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "currentBytes": 451,
+      "currentSha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "mainBytes": 451,
+      "mainSha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/auxiliary-pipeline.ts",
+      "bytes": 9461,
+      "sha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "currentBytes": 9461,
+      "currentSha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "mainBytes": 9461,
+      "mainSha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "bytes": 43723,
+      "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "currentBytes": 43723,
+      "currentSha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "mainBytes": 43723,
+      "mainSha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "currentBytes": 3214,
+      "currentSha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "mainBytes": 3214,
+      "mainSha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/bound-tool-result.ts",
+      "bytes": 572,
+      "sha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "currentBytes": 572,
+      "currentSha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "mainBytes": 572,
+      "mainSha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/sources.ts",
+      "bytes": 27850,
+      "sha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "currentBytes": 27850,
+      "currentSha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "mainBytes": 27850,
+      "mainSha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/executor.ts",
+      "bytes": 36414,
+      "sha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "currentBytes": 36414,
+      "currentSha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "mainBytes": 36414,
+      "mainSha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "currentBytes": 20169,
+      "currentSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "mainBytes": 20169,
+      "mainSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "currentBytes": 11267,
+      "currentSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "mainBytes": 11267,
+      "mainSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentBytes": 102234,
+      "currentSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "mainBytes": 102234,
+      "mainSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.test.ts",
+      "bytes": 2154,
+      "sha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+      "currentBytes": 2154,
+      "currentSha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+      "mainBytes": 2154,
+      "mainSha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.tsx",
+      "bytes": 51799,
+      "sha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+      "currentBytes": 51799,
+      "currentSha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+      "mainBytes": 51799,
+      "mainSha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "currentBytes": 18987,
+      "currentSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "mainBytes": 18987,
+      "mainSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/panelAppRecommendations.ts",
+      "bytes": 997,
+      "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+      "currentBytes": 997,
+      "currentSha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+      "mainBytes": 997,
+      "mainSha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "currentBytes": 2011,
+      "currentSha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "mainBytes": 2011,
+      "mainSha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "currentBytes": 1840,
+      "currentSha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "mainBytes": 1840,
+      "mainSha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/extensions.ts",
+      "bytes": 136243,
+      "sha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+      "currentBytes": 136243,
+      "currentSha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+      "mainBytes": 136243,
+      "mainSha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/extensions/panelAppRecommendations.ts",
+      "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.test.ts",
+      "sha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.tsx",
+      "sha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/i18n/ns/extensions.ts",
+      "sha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "coverage": "selected-history",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "coverage": "selected-history",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "packages/core/src/tool-system/bound-tool-result.ts",
+      "sha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "packages/core/src/engine/aux-key.ts",
+      "sha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "packages/core/src/engine/aux-key.test.ts",
+      "sha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "packages/core/src/engine/auxiliary-pipeline.ts",
+      "sha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "packages/core/src/tool-system/executor.ts",
+      "sha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "packages/core/src/tool-system/builtin/sources.ts",
+      "sha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "hashOnlyChecks": [
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only; instructions reused from prior unchanged read",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "core-result-frontier/source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only; instructions reused from prior unchanged read",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "navigationChecks": [
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/core/src/panel-apps/source.ts",
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "coverage": "selected-incidental",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "coverage": "snippet-only-incidental",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "instructionChecks": [
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full-instructions",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "extensions-data-frontier/source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full-instructions",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "note": "Original prep parent40d is preserved; formal baseline99e binds same source bytes. Same-version review does not establish historical novelty or complete packages."
+}

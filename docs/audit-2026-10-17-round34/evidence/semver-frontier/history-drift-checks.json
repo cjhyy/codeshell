@@ -1,0 +1,18 @@
+{
+  "checkedUTC": "2026-10-17T12:25:14.386421+00:00",
+  "freshHistoryStartedUTC": "2026-10-17T12:22:46.154205+00:00",
+  "freshHistoryCompletedUTC": "2026-10-17T12:22:55.373680+00:00",
+  "inventoryRows": 2988,
+  "unchangedRows": 2988,
+  "changedRows": [],
+  "missingPaths": [],
+  "readErrors": [],
+  "allCurrentBytesMatch": true,
+  "meaning": "Original dated history rows are retained. Potential release-document drift is compared honestly, not silently refreshed or blamed on product. No atomic all-repository snapshot or Git verification claimed.",
+  "archives": {
+    "archiveOrUnderscoreArchiveComponentFiles": 169,
+    "literalArchiveComponentFiles": 162,
+    "archiveSubstringFiles": 174
+  },
+  "productAttempts": 0
+}

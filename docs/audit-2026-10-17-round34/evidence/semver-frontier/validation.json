@@ -1,0 +1,25 @@
+{
+  "frozenUtc": "2026-10-17T12:25:14.386421+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "semverCalls": 0,
+  "coerceCalls": 0,
+  "CLIOrUpdaterActions": 0,
+  "npmActions": 0,
+  "networkRequests": 0,
+  "languageFixturesExecuted": 0,
+  "testsExecuted": 0,
+  "moduleImports": 0,
+  "nativeOrTTYActions": 0,
+  "permissionSecurityPaidOrInstallActions": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataFailures": [],
+  "limits": [
+    "Only metadata source/text/hash/JSON/regex operations. All source examples are static inference.",
+    "Declared package dependency range is metadata, not proof of installed dependency version or behavior.",
+    "No node_modules code, lock, permission/native/paid mechanism or actual terminal/update environment tested.",
+    "Old failed dynamic directions remain skipped. No full suite/build/typecheck/lint."
+  ]
+}

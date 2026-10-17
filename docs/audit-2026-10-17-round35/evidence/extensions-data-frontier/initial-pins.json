@@ -1,0 +1,49 @@
+{
+  "context": {
+    "rootSuppliedParentShort": "40d79ff",
+    "formalBaseline": null,
+    "prepOnly": true
+  },
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinTimeUTC": "2026-10-17T12:31:41.333851+00:00",
+      "purpose": "initial filesystem pin before present source content reading"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinTimeUTC": "2026-10-17T12:31:41.335842+00:00",
+      "purpose": "initial filesystem pin before present source content reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/panelAppRecommendations.ts",
+      "bytes": 997,
+      "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+      "lines": 43,
+      "pinTimeUTC": "2026-10-17T12:31:41.336710+00:00",
+      "purpose": "initial filesystem pin before present source content reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "lines": 39,
+      "pinTimeUTC": "2026-10-17T12:31:41.337413+00:00",
+      "purpose": "initial filesystem pin before present source content reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "lines": 39,
+      "pinTimeUTC": "2026-10-17T12:31:41.337805+00:00",
+      "purpose": "initial filesystem pin before present source content reading"
+    }
+  ]
+}

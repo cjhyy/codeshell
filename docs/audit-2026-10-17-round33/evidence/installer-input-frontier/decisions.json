@@ -1,0 +1,64 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "npmDecision": {
+    "status": "scoped-static-negative",
+    "contract": "Explicit Phase-A exact or dist-tag grammar. Scoped delimiter handling and omitted latest; resolved exact canonical version pinned into source+version; auto-update explicitly unavailable; update check git-only.",
+    "ordinaryCaller": "TUI cli/main156–157 registers plugin command; plugin.ts17–46 routes npm branch with await; installer metadata assignments338–341 -> install.ts48–55.",
+    "notClaimed": "No npm registry/HTTP/server outcome, extracted file or platform/semver function execution."
+  },
+  "legacyCliDecision": {
+    "status": "exact-old-root-cause-exclusion",
+    "newId": null,
+    "oldRawRecord": "docs/archive/review-2026-05-30/findings.json$[151]",
+    "oldConfirmedStatus": "not established; raw record severity/confidence copied as history only, not reclassified as confirmed",
+    "currentSources": [
+      "plugin.ts42–46 local missing await",
+      "install.ts26 async Promise<string>",
+      "plugin.ts90–101 runGuarded awaits only its callback",
+      "core/index.internal419–422 direct re-export",
+      "cli/main156–157 ordinary command registration"
+    ],
+    "reason": "Same file and ternary missing-await cause already recorded. Current async/callback chain supplements static causality but does not create a new finding or split logging/error propagation into another root cause.",
+    "counterevidence": "NPM35–40 and remote45 branches await their installer; this is not an npm selector bug.",
+    "notClaimed": [
+      "No actual CLI Promise output, process exit, unhandled rejection observation, installed-state mutation or file/data damage.",
+      "No separate new severity or assertion that original raw record was confirmed."
+    ]
+  },
+  "history": {
+    "firstSnapshotTotals": {
+      "files": 2988,
+      "archivePaths": 169,
+      "markdown": 1304,
+      "json": 1684,
+      "scalarLeaves": 957193,
+      "stringLeaves": 645399,
+      "parseErrors": 0
+    },
+    "firstMatchCounts": {
+      "npm-selector": 20,
+      "npm-contract": 44,
+      "cli-await": 149,
+      "old-failed": 76
+    },
+    "firstRetained": {
+      "npm-selector": 20,
+      "npm-contract": 44,
+      "cli-await": 100,
+      "old-failed": 76
+    },
+    "firstContextCap": 100,
+    "currentCliCompleteOccurrences": 149,
+    "currentCliContextCap": null,
+    "currentCliUniqueExactExcerptGroups": 18,
+    "firstAndCurrentSnapshotsDistinct": true,
+    "metadataDriftRecordedIn": [
+      "history-recheck.first.json",
+      "history-drift.json"
+    ],
+    "keywordLimits": "First NPM20/contracts44 retained; current CLI149 full contexts examined through18 exact-excerpt groups. Selected old-failed contexts only; no historical semantic exhaustion."
+  },
+  "oldFailedDirectionsRemainSkipped": true
+}
