@@ -8,16 +8,19 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI26, failed overall. Web, macOS and Linux pass their
-stated audited scopes. Windows completes 60 original operations/10 Main launches
-and separate new Review drafts three/one, then fails packaged UI launch at step 34:
-zero UI operations and actual Main 1928's abnormal `0xC0000005` exit. Its updater,
-early native-evidence upload and NSIS lifecycle are not reached. The private HOME
-is retained; the cause remains unknown. See the
-[CI26 actual record](#ci26--actual-platform-results-and-windows-packaged-launch-failure).
-CI25's different macOS query-timeout and Windows installer failures remain in the
-[CI25 record](#ci25--actual-platform-results-and-installation-failure). The NSIS
-uninstaller hook remains without successful native lifecycle validation.
+The latest completed run, CI27, failed overall. Web and Linux pass their stated
+audited scopes. macOS observes three Pet operation groups, then fails the
+post-exit Keychain identity gate: Main exits normally and observed custody is
+cleaned, but the pinned/current inode comparison differs. Windows passes original
+83 operations/12 Main launches and separate new Review drafts three/one, then
+fails its first NSIS-installed UI launch with zero UI operations and an abnormal
+`0xC0000005` Main exit. Both failure causes remain unknown; failed private HOMEs
+are retained and the Windows replacement/uninstall/OS-restoration gates are not
+reached. See the
+[CI27 actual record](#ci27--actual-platform-results-and-installed-ui-launch-failure).
+The distinct CI26 packaged-launch and CI25 query/Setup failures remain in their
+historical records. The NSIS uninstaller hook remains without successful native
+lifecycle validation.
 
 CI14 remains the latest fully passing matrix in its earlier, narrower scope,
 before expanded NSIS acceptance. The
@@ -3055,3 +3058,154 @@ is changed or repeated.
 These local checks are not a new native launch, a repaired Windows failure or
 current full release acceptance. Three-platform and Web runtime validation at this
 new candidate, plus the Windows installer lifecycle, remain pending.
+
+## CI27 — actual platform results and installed UI launch failure
+
+[Run 39058734301](https://github.com/cjhyy/codeshell/actions/runs/39058734301),
+attempt 1 / push, binds source `85216160aeca0c6f0a22866fd007b13c223a0500`.
+Final APIs bind four terminal jobs: Web and Linux succeed; macOS and Windows fail.
+The overall run fails and does not establish release readiness.
+
+Web passes 31 actual behaviors: ServiceWorker eleven, authentication four, child
+eight and annotations eight. Attachment nine/45 and pure lifecycle Node 64 remain
+separate. The old-reducer negative run retains two passing controls and six
+expected UI failures, with private HOME/profile preservation checked by the
+in-CI verifier. Six complete send/cancel payload arrays equal the final settled
+Host RPC rows, each exactly once. Five observed birth maps contain 7/19/10/10/10
+processes and settle to zero with normal browser exits, empty observed signal
+ledgers and the original late/HOME/profile gates. Its 57 regular public files pass
+ZIP CRC and 28 exact workflow patterns; 106 source hashes plus thirteen provenance
+pins and 33 PNG CRCs are independently checked. Two actual CJK/narrow PNGs are
+viewed without observed horizontal clipping. The shared wrapper adds only three
+hosted metadata names; credential filtering, HOME reconstruction and the complete
+Web job block remain unchanged. Desktop counts are not added to Web behaviors.
+Web summary has SHA-256
+`3f0f505ea8938c3cf925c26ab3ad72e534f62cf43a69e27de3570a680612616a`;
+its complete freeze has SHA-256
+`bf1ec9c47619f377affdeb261c73be7241fce17964c482b1abe5f4e488c7efc1`.
+
+macOS fails step 27 after one cold Main. Three actual Pet operation groups
+(cold renderer, reload and production second window) and two loadFile records
+are observed, but zero startup cycles are fully accepted. Main 6764, parent 6687,
+exits `0/null`; fourteen observed incarnations settle to zero with query failure
+false, nontruncated evidence and no recorded signal requests. The controller
+records normal exit/close at sequences 18/19, cleanup settlement at 22, post-exit
+Keychain preflight phase at 24 and first error at 25. The error is
+`CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED`, stage `account-before`:
+`sameInode` alone is false; home/path/device/owner comparisons are true.
+The private HOME is retained. `launchStarted:false` concerns this post-exit
+preflight invocation, not the Main that already ran. Raw pinned/current inode
+values are not uploaded, so physical replacement, actor, timing and cause are
+not established. This is not CI25's process-query timeout. Cycles two/three and
+all later source suites, Review drafts, packaged UI, updater and DMG are not reached.
+
+The Mac artifact has 22 canonical regular public entries, all CRC-checked, with
+ZIP SHA-256 `19cfdc2b188b818c178651aa9983592d632adfedfc3fa354b2f8c1edf5e5fb14`.
+Its failed-aware summary has SHA-256
+`e9797e392f54dbd127f5c5bbf36356749c8de49b644b2c88389eb97cd79e33d2`;
+independent key/visual peer has SHA-256
+`5b539dfe87fe508754b0565c2bfc2c6863ef8bdfcc297574018efcc74e3df726`.
+Two actual images show readable Chinese trust-dialog text and a wrapped owned
+path. The second-window frame is translucent with dialog/background overlap;
+one frame does not establish a persistent visual defect or validate later screens.
+The generated startup guard SHA is recorded only; private generated bytes are
+not uploaded and are not treated as a static Git source hash.
+
+All four prepared Mac success readers remain unexecuted. Their v1 count
+substitution accidentally changes two 524,288-byte limits to 524,458; peer review
+catches this before execution and v2 restores the original caps. The first actual
+failed-aware reader also stops on an incorrect requirement that two bootstrap
+identity/probe receipt logs be empty. The corrected v4 checks their exact identity
+and seven-probe contract; true worker/denial ledgers still must be empty. It runs
+once with exit zero. The retained errors and 39 metadata conditions are offline
+audit facts, not additional native cases or changes to the original failure/gates.
+
+Linux passes original 83 operations/twelve Main launches and separate Review
+drafts three/one. Draft Main 5987 exits normally with fifteen observed incarnations
+settled to zero. Packaged UI Main 8652 exits normally with eleven observed
+incarnations settled to zero and an empty recorded signal ledger. Actual AppImage
+Main 9155 and runtime 9150 exit normally, with sixteen observed incarnations settled
+to zero, ten owned manifest GETs and the source/cache full-07777, byte-identity and
+sandbox-helper 04755 gates. Runtime inner-HOME removal and intentionally retained
+outer-launcher scratch remain distinct. Recorded custody does not prove OS-wide
+process/signal completeness or every descendant's normal exit. Twenty-two map
+copies/218 edges, 35 PNG CRCs and three actual image views are not additional
+native operations. Three preserved readers finish their only execution with exit
+zero; two additional offline metadata errors remain retained. Linux summary has
+SHA-256 `4b50a371b3413eeab758325494642703decc80f3b6e13962773775878506382a`;
+its complete freeze has SHA-256
+`1cdfc289266e926561b77e6e4dfafdb8bf3748d4b0cdd1e6041ee37220ee941c`.
+
+Windows passes original 83 operations/12 normal Main launches, plus separate
+Review drafts three/one. Draft Main 4216 exits normally with 21 observed
+incarnations settled to zero, five production prepare IPCs and three accepted
+seeds. Step 39 then fails in the first NSIS-installed UI. Builder 1592 and Setup
+5148 exit `0/null`, and installed payload/registration/two-shortcut identity checks
+complete. The installed UI Node controller 3772 exits `1/null`; its actual Main
+5224, parent 3772, birth `2026-10-17T18:49:32.9906110Z`, exits
+`3221225477/null` (`0xC0000005`) before a returned runtime identity or any UI
+operation. This separate one-incarnation Main custody is cleaned to zero without
+recorded signals; that does not substitute for normal-exit acceptance. Eight of
+sixteen NSIS phases complete. Replacement, uninstall, installation absence, cache
+cleanup, final OS state and final integrity are not reached. Failed owned roots
+and the installed UI private HOME are retained. Neither six normal NSIS roots nor
+26 installed/replacement UI operations are established.
+
+The new bounded passive Main collector actually queries and returns
+`unknown/no-exact-application-event`, not absence of a crash or a module diagnosis.
+SDK forced-cleanup suppression and empty observed signal ledgers do not establish
+kernel ordering or the crash cause. The receipt reports a 1,693-byte first-error
+file, with written flag and hash, but nested `ui-first/first-error.json` is missing
+from the CI27 NSIS upload list. Its absent bytes cannot be independently rehashed.
+Six actual collector source pins are bound to the controlled CRLF forms. The
+uninstaller hook is source/build/payload-bound only; its macro is not executed.
+Raw App/Setup/uninstaller bytes are not uploaded and signature remains
+`not_verified`; runtime inventory/receipt binding is not direct binary rehash or
+OS restoration proof.
+
+The final Windows artifact contains 143 regular public entries, all CRC-checked,
+with ZIP SHA-256 `c7560867feff9c25c26aee11a51637eb34c01f79cb8ab0f4e0ee7bc364cdf7ec`.
+Its verified failed summary has SHA-256
+`8041080ec8d7b3cfa41a84ea3f0f6ce1a079c6fd65357928b0adec60487623f5`;
+NSIS detail has SHA-256
+`fa2ae9746462946eeefe6679b04273700a8c759fb174086f35fa9d7d2466b0f6`.
+Independent Panel key peer has SHA-256
+`a508f1c164e55ae0f7637d7af27c3ad5f36089afcedf5eb9e058efd2b909c655`;
+its summary binding has SHA-256
+`9170662b92d1aa2374b8fb4f4a18db89c78d73b9f81193dfc7aefb97a897bb6c`.
+These overlapping metadata predicates do not increase native operation totals.
+
+Actual native-job Bun gates are 445 tests across 32 files, with 3,550 expectations
+on macOS, 3,547 on Linux and 3,541 on Windows. Write eleven/38, output sixteen/32
+and branch fifteen/50 remain separately reported. Review diagnostic thirteen and
+combined draft/lineage/invocation 72 pure Node contracts are separate gates;
+Windows installer/collector 73 pure contracts are not 73 actual Windows events.
+R52 numeric helper coverage is not DOM/canvas/image-encoding validation, and
+MessageStream SSR cases do not establish a dedicated native goal-button click or
+Core goal mutation. No current or historical inode/query/GC/NSIS cause or
+accidental discovery consequence is explained by these passing subsets.
+
+Root's `ci27-final-matrix-binding-20261018.json` has SHA-256
+`b9349102149826f2e317e1aed32489e2a5ccdb20bd071e51a41a79e176b10949`.
+It binds seventeen proof references, final API source/job status and artifact
+digests. Those are provenance checks, not native checks. The run remains failed;
+no release, formal signing, publication or current full acceptance is established.
+
+## Follow-up — installed UI first-error artifacts (source preparation)
+
+Commit `406f75a483c6a99f4fddd2b3ab57dc70728ecaf5`, parent the exact CI27
+source, adds only two final-upload literals:
+`windows-nsis/ui-first/first-error.json` and
+`windows-nsis/ui-replaced/first-error.json`. Removing them restores the complete
+CI27 workflow byte-for-byte. Final native public patterns become 166; early native
+91 and Web 28 remain unchanged. Runtime bodies, budgets, sixteen phases, six
+controller roots, 26 UI actions and absence/OS/cache/custody/HOME gates are unchanged.
+Format/diff/source checks are local preparation, without a new native execution.
+Source proof has SHA-256
+`fb0553c7c037b234c3c91dcbb5ada66fee9df5c6a6b8f45e79bd0f1d01c03b74`;
+workflow SHA-256 is
+`ffc4e7ae4749430dae0b14ab4c66a883733ddb2bc5552e15b2d5731b86922863`.
+Its initial source-metadata slicing error is retained. At this preparation
+checkpoint CI28 has not been pushed or executed. It does not recover the missing
+file from the frozen CI27 ZIP, validate the uninstaller hook or explain/repair the
+abnormal installed Main exit.
