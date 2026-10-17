@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T17:05:28.498077+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "bytes": 4292,
+      "lines": 133,
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

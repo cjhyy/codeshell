@@ -1,0 +1,70 @@
+{
+  "atUTC": "2026-10-17T16:54:05.020284+00:00",
+  "files": [
+    {
+      "path": "packages/web/app/app.css",
+      "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "bytes": 21770,
+      "lines": 1177,
+      "displayedLineRanges": [
+        [
+          417,
+          520
+        ],
+        [
+          1080,
+          1102
+        ]
+      ],
+      "numbered": [
+        {
+          "start": 417,
+          "end": 520,
+          "text": "417: /* Centered transcript and inset composer follow Desktop's main-chat proportions. */\n418: .chat {\n419:   flex: 1;\n420:   display: flex;\n421:   flex-direction: column;\n422:   min-width: 0;\n423:   min-height: 0;\n424: }\n425: .banner {\n426:   padding: 8px 20px;\n427:   overflow-wrap: anywhere;\n428:   font-size: 12px;\n429:   color: var(--warning);\n430:   background: color-mix(in srgb, var(--warning) 7%, transparent);\n431:   border-bottom: 1px solid var(--subtle);\n432:   flex-shrink: 0;\n433:   line-height: 1.6;\n434: }\n435: .banner.goal {\n436:   align-self: stretch;\n437:   border: 1px solid var(--border);\n438:   border-radius: 8px;\n439: }\n440: .banner .ghost {\n441:   margin-left: 8px;\n442:   padding: 2px 8px;\n443: }\n444: .message-viewport {\n445:   position: relative;\n446:   display: flex;\n447:   flex: 1;\n448:   min-width: 0;\n449:   min-height: 0;\n450: }\n451: .latest-messages {\n452:   position: absolute;\n453:   z-index: 2;\n454:   bottom: 12px;\n455:   left: 50%;\n456:   transform: translateX(-50%);\n457:   display: flex;\n458:   align-items: center;\n459:   justify-content: center;\n460:   gap: 8px;\n461:   max-width: calc(100% - 24px);\n462:   min-height: 36px;\n463:   padding: 8px 14px;\n464:   border: 1px solid var(--border);\n465:   border-radius: 24px;\n466:   background: var(--surface);\n467:   color: var(--text);\n468:   box-shadow: var(--shadow);\n469:   font-size: 12px;\n470:   cursor: pointer;\n471:   white-space: nowrap;\n472: }\n473: .latest-messages:hover {\n474:   background: var(--hover);\n475: }\n476: .latest-count {\n477:   color: var(--muted);\n478:   font-size: 11px;\n479: }\n480: .latest-announcement {\n481:   position: absolute;\n482:   width: 1px;\n483:   height: 1px;\n484:   padding: 0;\n485:   margin: -1px;\n486:   overflow: hidden;\n487:   clip-path: inset(50%);\n488:   white-space: nowrap;\n489:   border: 0;\n490: }\n491: .messages {\n492:   flex: 1;\n493:   min-height: 0;\n494:   overflow-y: auto;\n495:   overscroll-behavior: contain;\n496:   padding: 28px 24px 16px;\n497: }\n498: .transcript {\n499:   max-width: 736px;\n500:   width: 100%;\n501:   display: flex;\n502:   flex-direction: column;\n503:   gap: 18px;\n504:   margin: 0 auto;\n505: }\n506: .chat-empty .messages {\n507:   display: flex;\n508:   padding-top: 32px;\n509: }\n510: .chat-empty .transcript {\n511:   justify-content: center;\n512: }\n513: .empty-chat {\n514:   text-align: center;\n515:   padding: 24px 0 32px;\n516: }\n517: .welcome-mark {\n518:   width: 44px;\n519:   height: 44px;\n520:   border-radius: 13px;"
+        },
+        {
+          "start": 1080,
+          "end": 1102,
+          "text": "1080:     padding-top: max(14px, env(safe-area-inset-top));\n1081:   }\n1082:   .rail-footer {\n1083:     padding-bottom: max(12px, env(safe-area-inset-bottom));\n1084:   }\n1085:   .workbench-topbar {\n1086:     padding: 0 12px;\n1087:     gap: 8px;\n1088:     height: 50px;\n1089:   }\n1090:   .messages {\n1091:     padding: 24px 18px 12px;\n1092:   }\n1093:   .transcript {\n1094:     gap: 16px;\n1095:   }\n1096:   .msg {\n1097:     font-size: 14px;\n1098:   }\n1099:   .msg.user {\n1100:     max-width: 92%;\n1101:   }\n1102:   .composer-wrap {"
+        }
+      ]
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "bytes": 53688,
+      "lines": 1404,
+      "displayedLineRanges": [
+        [
+          270,
+          301
+        ],
+        [
+          330,
+          366
+        ],
+        [
+          783,
+          849
+        ]
+      ],
+      "numbered": [
+        {
+          "start": 270,
+          "end": 301,
+          "text": "270:         if (event.shiftKey && document.activeElement === first) {\n271:           event.preventDefault();\n272:           last?.focus();\n273:         } else if (!event.shiftKey && document.activeElement === last) {\n274:           event.preventDefault();\n275:           first?.focus();\n276:         }\n277:       }\n278:     };\n279:     document.addEventListener(\"keydown\", onKey);\n280:     return () => document.removeEventListener(\"keydown\", onKey);\n281:   }, [narrow, sidebarOpen]);\n282: \n283:   React.useLayoutEffect(() => {\n284:     const textarea = textareaRef.current;\n285:     if (!textarea || view !== \"chat\") return;\n286:     textarea.style.height = \"auto\";\n287:     textarea.style.height = `${Math.min(180, Math.max(64, textarea.scrollHeight))}px`;\n288:   }, [draft, view]);\n289: \n290:   const closeMobileSidebar = () => {\n291:     if (narrow) {\n292:       const source = document.activeElement;\n293:       if (sidebarOpen && source instanceof HTMLElement && source !== document.body)\n294:         sidebarCloseFocus.current = {\n295:           source,\n296:           workspace: controller.workspaceKey,\n297:           cancelled: false,\n298:         };\n299:       setSidebarOpen(false);\n300:       sidebarToggleRef.current?.focus();\n301:     }"
+        },
+        {
+          "start": 330,
+          "end": 366,
+          "text": "330:   openFilesHandler.current = openFiles;\n331:   const openMessageFile = React.useCallback((path: string) => openFilesHandler.current(path), []);\n332:   React.useEffect(() => {\n333:     if (!navigationDirty && !controller.uploadBusy && !controller.hasUnsent) return;\n334:     const onUnload = (event: BeforeUnloadEvent) => {\n335:       event.preventDefault();\n336:       event.returnValue = \"\";\n337:     };\n338:     window.addEventListener(\"beforeunload\", onUnload);\n339:     return () => window.removeEventListener(\"beforeunload\", onUnload);\n340:   }, [navigationDirty, controller.uploadBusy, controller.hasUnsent]);\n341: \n342:   const openConversation = (action: () => void) =>\n343:     requestNavigation(() => {\n344:       setView(\"chat\");\n345:       closeMobileSidebar();\n346:       latest.resume();\n347:       action();\n348:     });\n349:   const openSession = (id: string, intent?: ReturnType<typeof historyFocus.capture>) => {\n350:     if (historyHandoff.current) historyFocus.finish(historyHandoff.current.request, null);\n351:     historyHandoff.current = null;\n352:     // A keyboard-opened history row is removed by this navigation. Keep that\n353:     // actual intent through the selected-session commit, not later replay.\n354:     if (intent && !narrow)\n355:       historyHandoff.current = {\n356:         request: historyFocus.adopt(intent),\n357:         id,\n358:         workspace: controller.workspaceKey,\n359:       };\n360:     openConversation(() => void controller.selectSession(id));\n361:   };\n362:   const startNewSession = () => openConversation(controller.newSession);\n363:   const send = () => {\n364:     if (controller.send()) latest.resume();\n365:   };\n366:   const stop = controller.stop;"
+        },
+        {
+          "start": 783,
+          "end": 849,
+          "text": "783:                 {chat.items.map((item) => {\n784:                   switch (item.kind) {\n785:                     case \"user\":\n786:                       return (\n787:                         <div key={item.id} className=\"msg user\">\n788:                           {item.text}\n789:                           {item.attachments?.map((attachment, index) =>\n790:                             hub && attachment.path ? (\n791:                               <button\n792:                                 className=\"attachment attachment-open\"\n793:                                 key={index}\n794:                                 onClick={() => openFiles(attachment.path)}\n795:                               >\n796:                                 📎 {attachment.name}\n797:                               </button>\n798:                             ) : (\n799:                               <span className=\"attachment\" key={index}>\n800:                                 📎 {attachment.name}\n801:                               </span>\n802:                             ),\n803:                           )}\n804:                         </div>\n805:                       );\n806:                     case \"assistant\":\n807:                       if (item.done && !item.text && !item.reasoning) return null;\n808:                       return (\n809:                         <div key={item.id} className=\"msg assistant\">\n810:                           <MessageContent\n811:                             text={item.text}\n812:                             reasoning={item.reasoning}\n813:                             streaming={!item.done}\n814:                             onOpenFile={hub ? openMessageFile : undefined}\n815:                           />\n816:                         </div>\n817:                       );\n818:                     case \"tool\":\n819:                       return (\n820:                         <div key={item.id} className={`msg tool${item.error ? \" tool-error\" : \"\"}`}>\n821:                           <ToolMessage item={item} running={running} />\n822:                         </div>\n823:                       );\n824:                     case \"subagent\":\n825:                       return (\n826:                         <div key={item.id} className=\"msg info\">\n827:                           ↳ {item.label} · {subagentStatusLabel(item.status)}\n828:                         </div>\n829:                       );\n830:                     case \"system\":\n831:                       return (\n832:                         <div key={item.id} className=\"msg info\">\n833:                           {item.text}\n834:                         </div>\n835:                       );\n836:                     case \"system_error\":\n837:                       return (\n838:                         <div key={item.id} className=\"msg error\">\n839:                           {item.text}\n840:                         </div>\n841:                       );\n842:                     default:\n843:                       return null;\n844:                   }\n845:                 })}\n846:                 {controller.approvalContent}\n847: \n848:                 {empty ? (\n849:                   <div className=\"empty-chat\">"
+        }
+      ]
+    }
+  ]
+}

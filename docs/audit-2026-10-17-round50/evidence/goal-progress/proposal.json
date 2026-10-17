@@ -1,0 +1,22 @@
+{
+  "id": "GOAL-R91-C1",
+  "proposedFormalId": "DESKTOP-R50-01",
+  "priority": "P3",
+  "title": "工具回合的过程分组丢失目标“再续”按钮回调",
+  "file": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+  "startLine": 190,
+  "endLine": 191,
+  "status": "static-source proposal for formal50; independent92 review separately required before promotion",
+  "condition": "Same unfinished user turn already contains a visible non-bookkeeping tool; ordinary approaching_limit goal marker remains, then a top-level model stream has busy=true and nonnull streamingAssistantId, so liveTurnActive=true and authoritative user turnTiming not completed.",
+  "observedSourceResult": "foldTurnProcess places the approaching marker in innerItems. MessageStream process-card branch does not pass onExtendGoal, and inner GoalProgressView has no onExtend. Leaf77 therefore omits its entire extend button region.",
+  "expected": "The goal approaching marker retains its offered extension action while this normal goal/tool turn remains active, as flat renderer and emitter explicitly provide.",
+  "counterexamples": [
+    "No-tool turn renders flat with the callback.",
+    "Closed/non-live turn may expose trailing marker after lastTool; no claim every frame/all phases lose the action.",
+    "No approaching marker or intentionally callback-free historical contexts are not this trigger.",
+    "Other possible Goal controls are not certified or claimed unavailable."
+  ],
+  "oldCauseDisposition": "Focused group-callback query0 of4693 current frozen history MD+recursive JSON scalar files; canonical112 catalogue has no item of this cause. Old July test-coverage gap mentions server extension failures/legacy routing, not this grouping callback. Existing B2 source comment concerns not_met pruning the marker, whereas this branch retains marker and omits callback. Limited search is not exhaustive semantic reading of all history.",
+  "validation": "Static source only. No React/DOM/helper/product/test/network execution; no observed frame, frequency or user-loss measurement.",
+  "originalFalseSuccessHypothesis": "Not promoted: clicked-before-result path observed in static source, but ordinary failure/UI manifestation was not separately established; do not count a second finding."
+}

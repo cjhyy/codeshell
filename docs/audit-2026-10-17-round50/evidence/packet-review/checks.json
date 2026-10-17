@@ -1,0 +1,5405 @@
+{
+  "stage": "frozen metadata review",
+  "files": [],
+  "packets": [
+    {
+      "packet": "84-latest-scroll-review",
+      "directory": "/tmp/codeshell-audit-round84-latest-scroll-review",
+      "exists": true,
+      "inputPins": [
+        {
+          "path": "coverage-review.compact.json",
+          "bytes": 6385,
+          "sha256": "0595c4140b591bc79d045ecc13a7de0f1c47a12c4a40ae3f8ea42d6b27233048",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.990622+00:00"
+        },
+        {
+          "path": "coverage-rows.json",
+          "bytes": 53480,
+          "sha256": "d83ebf0f828b43cc3d1fb3a43e70c2323409b912a662cea38da7e05ce064c730",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.991800+00:00"
+        },
+        {
+          "path": "css-initial-pin.json",
+          "bytes": 298,
+          "sha256": "445cd695358c39dafdf3690eeae04a5a5efa8ea3ed83215d0a232e0a91f72c64",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.992209+00:00"
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 865,
+          "sha256": "bb2c3490c7b6ac941536a6accfe8d871356f3e124fc57fe81eec738d2106606a",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.992584+00:00"
+        },
+        {
+          "path": "finalize-metadata.py",
+          "bytes": 7235,
+          "sha256": "17e46b6666a79527cf94fcb7f3620ebdcb8aaf405306aa06e90e91e13296e7af",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.992957+00:00"
+        },
+        {
+          "path": "history-first-exit.json",
+          "bytes": 52,
+          "sha256": "feca00acc1b47088dcae71b1fe1504691baf079c2299da22f212a895d1a0dd61",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.993316+00:00"
+        },
+        {
+          "path": "history-first.txt",
+          "bytes": 237,
+          "sha256": "3f2190eda760536f1dbbb22ac7cb02c72ca6ecc5eba91a2bd7545450a481bfbc",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.993605+00:00"
+        },
+        {
+          "path": "history.json",
+          "bytes": 1092670,
+          "sha256": "881b9ea3e129120794588d667309c45a21631f91386c57c658931b8a379c6ca1",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.994857+00:00"
+        },
+        {
+          "path": "hook-excerpts.first.json",
+          "bytes": 7598,
+          "sha256": "5b7c26b753b441dc4ceff170472575b11eb4835a517d28b6fa1b8f4b6d20af05",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.995298+00:00"
+        },
+        {
+          "path": "layout-navigation-first-exit.json",
+          "bytes": 79,
+          "sha256": "3d2e8584d2c86f723df0c1593ecb3500204eb32296a18499c37e99b8e091a5db",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.995647+00:00"
+        },
+        {
+          "path": "layout-navigation.first.txt",
+          "bytes": 8260,
+          "sha256": "cb5fea2ff809de8c417f1c427db587ae85b1f08b82d9d2bf7f5ef925a43bc18c",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.995879+00:00"
+        },
+        {
+          "path": "layout-source-excerpts.json",
+          "bytes": 10744,
+          "sha256": "d6228252f01b1924545595116b08c3c34aa88eae682d68e4daffbcc24133e215",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.996395+00:00"
+        },
+        {
+          "path": "report.md",
+          "bytes": 2107,
+          "sha256": "742aa4552b98b2387f74985bd7fd6fd1f34c4d08d4a9cdf33948c33a8107d5f9",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.996704+00:00"
+        },
+        {
+          "path": "reviewer-receipt.json",
+          "bytes": 2967,
+          "sha256": "9be0e6f26828fcd5de022c6054bc026de26313e5cd03696befb8f0e64ade1a58",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.999191+00:00"
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 2931,
+          "sha256": "e10f79441acc048630bc51ebf0b9d6558ecbe353e78950cf3e9087c4e136d4fe",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.999505+00:00"
+        },
+        {
+          "path": "selection-initial-pins.json",
+          "bytes": 1019,
+          "sha256": "4c302c80c358943e2e9bb4927f4d53a0888632023feef974de2beca355c64f62",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:17.999744+00:00"
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 5844,
+          "sha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.000091+00:00"
+        },
+        {
+          "path": "validation.json",
+          "bytes": 387,
+          "sha256": "ae1d00ca929412270dc53db0e2d7838cd05374480c6689d8bc72b1ebedd2a43f",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.000438+00:00"
+        },
+        {
+          "path": "workbench-excerpts.first.json",
+          "bytes": 7022,
+          "sha256": "49c92c3c36df2375633ea47fccd6cdd501c6a45386ac9947d825df9f0cdc86a2",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.000801+00:00"
+        }
+      ],
+      "roleInThisReview": "Independent packet metadata integrity review only; no new source review",
+      "receiptName": "reviewer-receipt.json",
+      "receiptRows": 18,
+      "exactReceiptSet": true,
+      "missingFromReceipt": [],
+      "extraReceiptRows": [],
+      "duplicateReceiptPaths": 0,
+      "receiptRowChecks": [
+        {
+          "path": "coverage-review.compact.json",
+          "bytes": 6385,
+          "sha256": "0595c4140b591bc79d045ecc13a7de0f1c47a12c4a40ae3f8ea42d6b27233048",
+          "matchesReceipt": true
+        },
+        {
+          "path": "coverage-rows.json",
+          "bytes": 53480,
+          "sha256": "d83ebf0f828b43cc3d1fb3a43e70c2323409b912a662cea38da7e05ce064c730",
+          "matchesReceipt": true
+        },
+        {
+          "path": "css-initial-pin.json",
+          "bytes": 298,
+          "sha256": "445cd695358c39dafdf3690eeae04a5a5efa8ea3ed83215d0a232e0a91f72c64",
+          "matchesReceipt": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 865,
+          "sha256": "bb2c3490c7b6ac941536a6accfe8d871356f3e124fc57fe81eec738d2106606a",
+          "matchesReceipt": true
+        },
+        {
+          "path": "finalize-metadata.py",
+          "bytes": 7235,
+          "sha256": "17e46b6666a79527cf94fcb7f3620ebdcb8aaf405306aa06e90e91e13296e7af",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-first-exit.json",
+          "bytes": 52,
+          "sha256": "feca00acc1b47088dcae71b1fe1504691baf079c2299da22f212a895d1a0dd61",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-first.txt",
+          "bytes": 237,
+          "sha256": "3f2190eda760536f1dbbb22ac7cb02c72ca6ecc5eba91a2bd7545450a481bfbc",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 1092670,
+          "sha256": "881b9ea3e129120794588d667309c45a21631f91386c57c658931b8a379c6ca1",
+          "matchesReceipt": true
+        },
+        {
+          "path": "hook-excerpts.first.json",
+          "bytes": 7598,
+          "sha256": "5b7c26b753b441dc4ceff170472575b11eb4835a517d28b6fa1b8f4b6d20af05",
+          "matchesReceipt": true
+        },
+        {
+          "path": "layout-navigation-first-exit.json",
+          "bytes": 79,
+          "sha256": "3d2e8584d2c86f723df0c1593ecb3500204eb32296a18499c37e99b8e091a5db",
+          "matchesReceipt": true
+        },
+        {
+          "path": "layout-navigation.first.txt",
+          "bytes": 8260,
+          "sha256": "cb5fea2ff809de8c417f1c427db587ae85b1f08b82d9d2bf7f5ef925a43bc18c",
+          "matchesReceipt": true
+        },
+        {
+          "path": "layout-source-excerpts.json",
+          "bytes": 10744,
+          "sha256": "d6228252f01b1924545595116b08c3c34aa88eae682d68e4daffbcc24133e215",
+          "matchesReceipt": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 2107,
+          "sha256": "742aa4552b98b2387f74985bd7fd6fd1f34c4d08d4a9cdf33948c33a8107d5f9",
+          "matchesReceipt": true
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 2931,
+          "sha256": "e10f79441acc048630bc51ebf0b9d6558ecbe353e78950cf3e9087c4e136d4fe",
+          "matchesReceipt": true
+        },
+        {
+          "path": "selection-initial-pins.json",
+          "bytes": 1019,
+          "sha256": "4c302c80c358943e2e9bb4927f4d53a0888632023feef974de2beca355c64f62",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 5844,
+          "sha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4",
+          "matchesReceipt": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 387,
+          "sha256": "ae1d00ca929412270dc53db0e2d7838cd05374480c6689d8bc72b1ebedd2a43f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "workbench-excerpts.first.json",
+          "bytes": 7022,
+          "sha256": "49c92c3c36df2375633ea47fccd6cdd501c6a45386ac9947d825df9f0cdc86a2",
+          "matchesReceipt": true
+        }
+      ],
+      "reportLinks": [
+        {
+          "label": "source manifest",
+          "href": "source-manifest.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4"
+        },
+        {
+          "label": "hook",
+          "href": "hook-excerpts.first.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "5b7c26b753b441dc4ceff170472575b11eb4835a517d28b6fa1b8f4b6d20af05"
+        },
+        {
+          "label": "Workbench初摘",
+          "href": "workbench-excerpts.first.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "49c92c3c36df2375633ea47fccd6cdd501c6a45386ac9947d825df9f0cdc86a2"
+        },
+        {
+          "label": "布局补摘",
+          "href": "layout-source-excerpts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "d6228252f01b1924545595116b08c3c34aa88eae682d68e4daffbcc24133e215"
+        },
+        {
+          "label": "导航",
+          "href": "layout-navigation.first.txt",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "cb5fea2ff809de8c417f1c427db587ae85b1f08b82d9d2bf7f5ef925a43bc18c"
+        },
+        {
+          "label": "扫描",
+          "href": "history.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "881b9ea3e129120794588d667309c45a21631f91386c57c658931b8a379c6ca1"
+        },
+        {
+          "label": "实际12行投影",
+          "href": "coverage-review.compact.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "0595c4140b591bc79d045ecc13a7de0f1c47a12c4a40ae3f8ea42d6b27233048"
+        },
+        {
+          "label": "检查",
+          "href": "ending-checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "bb2c3490c7b6ac941536a6accfe8d871356f3e124fc57fe81eec738d2106606a"
+        },
+        {
+          "label": "验证",
+          "href": "validation.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "ae1d00ca929412270dc53db0e2d7838cd05374480c6689d8bc72b1ebedd2a43f"
+        },
+        {
+          "label": "回执",
+          "href": "reviewer-receipt.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "9be0e6f26828fcd5de022c6054bc026de26313e5cd03696befb8f0e64ade1a58"
+        }
+      ],
+      "manifestRangeChecks": [
+        {
+          "pointer": "/files/0",
+          "path": "packages/web/app/useLatestMessages.ts",
+          "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+          "coverage": "full",
+          "declaredFileLines": 173,
+          "selectedLineRanges": [
+            [
+              1,
+              173
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              1,
+              173
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 173,
+          "declaredSemanticLines": 173,
+          "computedBodyDisplayedLines": 173,
+          "declaredBodyDisplayedLines": 173,
+          "computedDisplayIncludingNavigationLines": 173,
+          "declaredDisplayIncludingNavigationLines": null,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Full current173-line static hook module read, including output comparisons, unread transitions, follow/snap/onScroll and ResizeObserver source. Earlier83 selected97 and current85 overlap; not first-ever/unread or browser/React/layout certification."
+        },
+        {
+          "pointer": "/files/1",
+          "path": "packages/web/app/Workbench.tsx",
+          "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+          "coverage": "selected",
+          "declaredFileLines": 1404,
+          "selectedLineRanges": [
+            [
+              155,
+              164
+            ],
+            [
+              283,
+              288
+            ],
+            [
+              342,
+              348
+            ],
+            [
+              360,
+              364
+            ],
+            [
+              755,
+              788
+            ],
+            [
+              806,
+              849
+            ],
+            [
+              861,
+              894
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              147,
+              166
+            ],
+            [
+              746,
+              792
+            ],
+            [
+              849,
+              905
+            ],
+            [
+              270,
+              301
+            ],
+            [
+              330,
+              366
+            ],
+            [
+              783,
+              849
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 140,
+          "declaredSemanticLines": 140,
+          "computedBodyDisplayedLines": 249,
+          "declaredBodyDisplayedLines": 249,
+          "computedDisplayIncludingNavigationLines": 249,
+          "declaredDisplayIncludingNavigationLines": null,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Actual hook props/scope and active flag, textarea resize source, explicit resume on conversation/send, mounted hidden chat section, listRef/onScroll/contentRef, item switches and approval placement, jump button and announcement. Adjacent sidebar focus, unload/attachments/authority actions displayed only and not certified."
+        },
+        {
+          "pointer": "/files/2",
+          "path": "packages/web/app/app.css",
+          "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+          "coverage": "selected",
+          "declaredFileLines": 1177,
+          "selectedLineRanges": [
+            [
+              418,
+              424
+            ],
+            [
+              444,
+              512
+            ],
+            [
+              1090,
+              1095
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              417,
+              520
+            ],
+            [
+              1080,
+              1102
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 82,
+          "declaredSemanticLines": 82,
+          "computedBodyDisplayedLines": 127,
+          "declaredBodyDisplayedLines": 127,
+          "computedDisplayIncludingNavigationLines": 127,
+          "declaredDisplayIncludingNavigationLines": null,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Selected structural viewport/messages/transcript sizing, overflow, jump button and announcement plus responsive padding/gap. No computed style or global stylesheet proof."
+        }
+      ],
+      "computedManifestTotals": {
+        "sourceRows": 3,
+        "full": 1,
+        "selected": 2,
+        "hashOnly": 0,
+        "semanticLines": 395,
+        "bodyDisplayedLines": 549,
+        "displayIncludingNavigationLines": 549,
+        "testDeclarationLines": 0,
+        "productSemanticLines": 395
+      },
+      "declaredManifestTotals": {
+        "full": 1,
+        "selected": 2,
+        "semanticLines": 395,
+        "bodyDisplayedLines": 549,
+        "testDeclarationLines": 0
+      },
+      "manifestCountChecks": {
+        "full": {
+          "declared": 1,
+          "computed": 1,
+          "matches": true
+        },
+        "selected": {
+          "declared": 2,
+          "computed": 2,
+          "matches": true
+        },
+        "semanticLines": {
+          "declared": 395,
+          "computed": 395,
+          "matches": true
+        },
+        "bodyDisplayedLines": {
+          "declared": 549,
+          "computed": 549,
+          "matches": true
+        },
+        "testDeclarationLines": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        }
+      },
+      "metadataSemanticReadFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json",
+        "history-first-exit.json",
+        "layout-navigation-first-exit.json"
+      ],
+      "failedCheckGroups": [],
+      "endingInputFileChecks": {
+        "checkedUTC": "2026-10-17T17:05:47.230329+00:00",
+        "sameExactFileSet": true,
+        "added": [],
+        "removed": [],
+        "files": [
+          {
+            "path": "coverage-review.compact.json",
+            "bytes": 6385,
+            "sha256": "0595c4140b591bc79d045ecc13a7de0f1c47a12c4a40ae3f8ea42d6b27233048",
+            "matchesInitial": true
+          },
+          {
+            "path": "coverage-rows.json",
+            "bytes": 53480,
+            "sha256": "d83ebf0f828b43cc3d1fb3a43e70c2323409b912a662cea38da7e05ce064c730",
+            "matchesInitial": true
+          },
+          {
+            "path": "css-initial-pin.json",
+            "bytes": 298,
+            "sha256": "445cd695358c39dafdf3690eeae04a5a5efa8ea3ed83215d0a232e0a91f72c64",
+            "matchesInitial": true
+          },
+          {
+            "path": "ending-checks.json",
+            "bytes": 865,
+            "sha256": "bb2c3490c7b6ac941536a6accfe8d871356f3e124fc57fe81eec738d2106606a",
+            "matchesInitial": true
+          },
+          {
+            "path": "finalize-metadata.py",
+            "bytes": 7235,
+            "sha256": "17e46b6666a79527cf94fcb7f3620ebdcb8aaf405306aa06e90e91e13296e7af",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-first-exit.json",
+            "bytes": 52,
+            "sha256": "feca00acc1b47088dcae71b1fe1504691baf079c2299da22f212a895d1a0dd61",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-first.txt",
+            "bytes": 237,
+            "sha256": "3f2190eda760536f1dbbb22ac7cb02c72ca6ecc5eba91a2bd7545450a481bfbc",
+            "matchesInitial": true
+          },
+          {
+            "path": "history.json",
+            "bytes": 1092670,
+            "sha256": "881b9ea3e129120794588d667309c45a21631f91386c57c658931b8a379c6ca1",
+            "matchesInitial": true
+          },
+          {
+            "path": "hook-excerpts.first.json",
+            "bytes": 7598,
+            "sha256": "5b7c26b753b441dc4ceff170472575b11eb4835a517d28b6fa1b8f4b6d20af05",
+            "matchesInitial": true
+          },
+          {
+            "path": "layout-navigation-first-exit.json",
+            "bytes": 79,
+            "sha256": "3d2e8584d2c86f723df0c1593ecb3500204eb32296a18499c37e99b8e091a5db",
+            "matchesInitial": true
+          },
+          {
+            "path": "layout-navigation.first.txt",
+            "bytes": 8260,
+            "sha256": "cb5fea2ff809de8c417f1c427db587ae85b1f08b82d9d2bf7f5ef925a43bc18c",
+            "matchesInitial": true
+          },
+          {
+            "path": "layout-source-excerpts.json",
+            "bytes": 10744,
+            "sha256": "d6228252f01b1924545595116b08c3c34aa88eae682d68e4daffbcc24133e215",
+            "matchesInitial": true
+          },
+          {
+            "path": "report.md",
+            "bytes": 2107,
+            "sha256": "742aa4552b98b2387f74985bd7fd6fd1f34c4d08d4a9cdf33948c33a8107d5f9",
+            "matchesInitial": true
+          },
+          {
+            "path": "reviewer-receipt.json",
+            "bytes": 2967,
+            "sha256": "9be0e6f26828fcd5de022c6054bc026de26313e5cd03696befb8f0e64ade1a58",
+            "matchesInitial": true
+          },
+          {
+            "path": "scan-history.py",
+            "bytes": 2931,
+            "sha256": "e10f79441acc048630bc51ebf0b9d6558ecbe353e78950cf3e9087c4e136d4fe",
+            "matchesInitial": true
+          },
+          {
+            "path": "selection-initial-pins.json",
+            "bytes": 1019,
+            "sha256": "4c302c80c358943e2e9bb4927f4d53a0888632023feef974de2beca355c64f62",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-manifest.json",
+            "bytes": 5844,
+            "sha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4",
+            "matchesInitial": true
+          },
+          {
+            "path": "validation.json",
+            "bytes": 387,
+            "sha256": "ae1d00ca929412270dc53db0e2d7838cd05374480c6689d8bc72b1ebedd2a43f",
+            "matchesInitial": true
+          },
+          {
+            "path": "workbench-excerpts.first.json",
+            "bytes": 7022,
+            "sha256": "49c92c3c36df2375633ea47fccd6cdd501c6a45386ac9947d825df9f0cdc86a2",
+            "matchesInitial": true
+          }
+        ],
+        "unchanged": true
+      }
+    },
+    {
+      "packet": "85-latest-scroll",
+      "directory": "/tmp/codeshell-audit-round85-latest-scroll",
+      "exists": true,
+      "inputPins": [
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 18410,
+          "sha256": "9e72fd2099237ddbd35627aa1136ef34fbe36859b5a332175331d4b6b2fa16fd",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.001705+00:00"
+        },
+        {
+          "path": "coverage-gate-selected.json",
+          "bytes": 2180,
+          "sha256": "a1641bcb6407d24e0ce06a118e55d9c5eba29f377ae873e91fda9bde1a52aa29",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.002040+00:00"
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1388,
+          "sha256": "827a5d3b6a17fe0a89dda45ade0e539d3c13c254398b2a7bc3d76dd20c071508",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.002487+00:00"
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 103721,
+          "sha256": "ca640f19bb1e7a8ab88c4cd3ec0f3ab5310bf31a734e7347b4a9f576e9596768",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.003059+00:00"
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3834,
+          "sha256": "8ed37fa430da7df74bdc533d1f6df039c85fb13219d3068039bcfa2fb1b7dae8",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.003347+00:00"
+        },
+        {
+          "path": "history.json",
+          "bytes": 940575,
+          "sha256": "c2e300d8d3c585541ee6d5f95544b85c7d240d9c7d235bfa5616c6c8dfffdfac",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.004484+00:00"
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1675,
+          "sha256": "89e18256c969339511e5744e2ef7aba2a6cbda421b1699f3c3a54f2818e6cc33",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.004834+00:00"
+        },
+        {
+          "path": "prior-same-sha-selected.json",
+          "bytes": 3114,
+          "sha256": "2aa3f28e3076e66a17631fd2aa5cb4c09b2b73e754bef157757f9967b0034b24",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.005152+00:00"
+        },
+        {
+          "path": "report.md",
+          "bytes": 3842,
+          "sha256": "4a7ab0b89355da0d356c3d49c13662a9f06cc9f82954138d6052c66bd20d8407",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.005492+00:00"
+        },
+        {
+          "path": "reviewer-receipt.json",
+          "bytes": 2268,
+          "sha256": "e82963ae70f9571d717d4f73ea3d996832604554e1040cc498967f4b1bc7faaf",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.005957+00:00"
+        },
+        {
+          "path": "source-display-pins.json",
+          "bytes": 1760,
+          "sha256": "9b37183d2ff20c148398cedf4a2fad848e0deabeeb4bf49efdc1ea7a7741b343",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.006423+00:00"
+        },
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 9303,
+          "sha256": "38f6ae120d4b68a112641c2e1b6fca6773ae694560c6f48ecbecb7a5315a28f5",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.010289+00:00"
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 7863,
+          "sha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.010584+00:00"
+        },
+        {
+          "path": "validation.json",
+          "bytes": 605,
+          "sha256": "ae081fb4f55d86c632e219e6d4e2caeff523efed41e4459d6f5395e83f262058",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.010794+00:00"
+        }
+      ],
+      "roleInThisReview": "Own-author metadata self-check; not independent source review",
+      "receiptName": "reviewer-receipt.json",
+      "receiptRows": 13,
+      "exactReceiptSet": true,
+      "missingFromReceipt": [],
+      "extraReceiptRows": [],
+      "duplicateReceiptPaths": 0,
+      "receiptRowChecks": [
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 18410,
+          "sha256": "9e72fd2099237ddbd35627aa1136ef34fbe36859b5a332175331d4b6b2fa16fd",
+          "matchesReceipt": true
+        },
+        {
+          "path": "coverage-gate-selected.json",
+          "bytes": 2180,
+          "sha256": "a1641bcb6407d24e0ce06a118e55d9c5eba29f377ae873e91fda9bde1a52aa29",
+          "matchesReceipt": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1388,
+          "sha256": "827a5d3b6a17fe0a89dda45ade0e539d3c13c254398b2a7bc3d76dd20c071508",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 103721,
+          "sha256": "ca640f19bb1e7a8ab88c4cd3ec0f3ab5310bf31a734e7347b4a9f576e9596768",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3834,
+          "sha256": "8ed37fa430da7df74bdc533d1f6df039c85fb13219d3068039bcfa2fb1b7dae8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 940575,
+          "sha256": "c2e300d8d3c585541ee6d5f95544b85c7d240d9c7d235bfa5616c6c8dfffdfac",
+          "matchesReceipt": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1675,
+          "sha256": "89e18256c969339511e5744e2ef7aba2a6cbda421b1699f3c3a54f2818e6cc33",
+          "matchesReceipt": true
+        },
+        {
+          "path": "prior-same-sha-selected.json",
+          "bytes": 3114,
+          "sha256": "2aa3f28e3076e66a17631fd2aa5cb4c09b2b73e754bef157757f9967b0034b24",
+          "matchesReceipt": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 3842,
+          "sha256": "4a7ab0b89355da0d356c3d49c13662a9f06cc9f82954138d6052c66bd20d8407",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-display-pins.json",
+          "bytes": 1760,
+          "sha256": "9b37183d2ff20c148398cedf4a2fad848e0deabeeb4bf49efdc1ea7a7741b343",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 9303,
+          "sha256": "38f6ae120d4b68a112641c2e1b6fca6773ae694560c6f48ecbecb7a5315a28f5",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 7863,
+          "sha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079",
+          "matchesReceipt": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 605,
+          "sha256": "ae081fb4f55d86c632e219e6d4e2caeff523efed41e4459d6f5395e83f262058",
+          "matchesReceipt": true
+        }
+      ],
+      "reportLinks": [
+        {
+          "label": "current初始pins",
+          "href": "initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "89e18256c969339511e5744e2ef7aba2a6cbda421b1699f3c3a54f2818e6cc33"
+        },
+        {
+          "label": "fresh history",
+          "href": "history.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "c2e300d8d3c585541ee6d5f95544b85c7d240d9c7d235bfa5616c6c8dfffdfac"
+        },
+        {
+          "label": "选读4个canonical简表",
+          "href": "coverage-gate-selected.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "a1641bcb6407d24e0ce06a118e55d9c5eba29f377ae873e91fda9bde1a52aa29"
+        },
+        {
+          "label": "正式49原83两条selected",
+          "href": "prior-same-sha-selected.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "2aa3f28e3076e66a17631fd2aa5cb4c09b2b73e754bef157757f9967b0034b24"
+        },
+        {
+          "label": "方法",
+          "href": "history-method.py",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "8ed37fa430da7df74bdc533d1f6df039c85fb13219d3068039bcfa2fb1b7dae8"
+        },
+        {
+          "label": "窗口原件",
+          "href": "history-contexts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "ca640f19bb1e7a8ab88c4cd3ec0f3ab5310bf31a734e7347b4a9f576e9596768"
+        },
+        {
+          "label": "manifest",
+          "href": "source-manifest.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079"
+        },
+        {
+          "label": "显示前pins",
+          "href": "source-display-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "9b37183d2ff20c148398cedf4a2fad848e0deabeeb4bf49efdc1ea7a7741b343"
+        },
+        {
+          "label": "摘录",
+          "href": "source-excerpts.txt",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "38f6ae120d4b68a112641c2e1b6fca6773ae694560c6f48ecbecb7a5315a28f5"
+        },
+        {
+          "label": "current结束哈希",
+          "href": "ending-checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "827a5d3b6a17fe0a89dda45ade0e539d3c13c254398b2a7bc3d76dd20c071508"
+        },
+        {
+          "label": "validation",
+          "href": "validation.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "ae081fb4f55d86c632e219e6d4e2caeff523efed41e4459d6f5395e83f262058"
+        },
+        {
+          "label": "receipt",
+          "href": "reviewer-receipt.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "e82963ae70f9571d717d4f73ea3d996832604554e1040cc498967f4b1bc7faaf"
+        }
+      ],
+      "manifestRangeChecks": [
+        {
+          "pointer": "/files/0",
+          "path": "packages/web/app/useLatestMessages.ts",
+          "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+          "coverage": "selected",
+          "declaredFileLines": 173,
+          "selectedLineRanges": [
+            [
+              66,
+              173
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              66,
+              173
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 108,
+          "declaredSemanticLines": 108,
+          "computedBodyDisplayedLines": 108,
+          "declaredBodyDisplayedLines": 108,
+          "computedDisplayIncludingNavigationLines": 108,
+          "declaredDisplayIncludingNavigationLines": 108,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Supplemental static review of following/snap, onScroll/at-bottom, ordinary layout effect and ResizeObserver callback/cleanup, jump/focus source. Prior83 selected97 data lines already read at sameSHA. No actual DOM/React/layout/timer/scroll execution or connection/auth certification. Module remains selected, not new full frontier."
+        },
+        {
+          "pointer": "/files/1",
+          "path": "packages/web/app/Workbench.tsx",
+          "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+          "coverage": "selected",
+          "declaredFileLines": 1404,
+          "selectedLineRanges": [
+            [
+              18,
+              18
+            ],
+            [
+              757,
+              782
+            ],
+            [
+              863,
+              894
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              757,
+              782
+            ],
+            [
+              863,
+              894
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              18,
+              18
+            ]
+          ],
+          "computedSemanticLines": 59,
+          "declaredSemanticLines": 59,
+          "computedBodyDisplayedLines": 58,
+          "declaredBodyDisplayedLines": 58,
+          "computedDisplayIncludingNavigationLines": 59,
+          "declaredDisplayIncludingNavigationLines": 59,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Actual app.css import, scrollable messages element tabindex/id/listRef/onScroll, transcript contentRef, conditional jump button and its onClick plus announcement text. No auth/room identity/approval or Host mechanism expanded."
+        },
+        {
+          "pointer": "/files/2",
+          "path": "packages/web/app/app.css",
+          "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+          "coverage": "selected",
+          "declaredFileLines": 1177,
+          "selectedLineRanges": [
+            [
+              444,
+              456
+            ],
+            [
+              461,
+              463
+            ],
+            [
+              480,
+              512
+            ],
+            [
+              1090,
+              1095
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              440,
+              516
+            ],
+            [
+              1085,
+              1101
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              100,
+              100
+            ],
+            [
+              444,
+              444
+            ],
+            [
+              451,
+              451
+            ],
+            [
+              473,
+              473
+            ],
+            [
+              491,
+              491
+            ],
+            [
+              495,
+              495
+            ],
+            [
+              498,
+              498
+            ],
+            [
+              506,
+              506
+            ],
+            [
+              510,
+              510
+            ],
+            [
+              979,
+              979
+            ],
+            [
+              989,
+              989
+            ],
+            [
+              1090,
+              1090
+            ],
+            [
+              1093,
+              1093
+            ]
+          ],
+          "computedSemanticLines": 55,
+          "declaredSemanticLines": 55,
+          "computedBodyDisplayedLines": 94,
+          "declaredBodyDisplayedLines": 94,
+          "computedDisplayIncludingNavigationLines": 97,
+          "declaredDisplayIncludingNavigationLines": 97,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Selected structural sizing/overflow/absolute jump and hidden announcement rules for actual message viewport/messages/transcript; responsive padding/gap. CSS source only, no computed style/layout observation or global stylesheet correctness conclusion; nonTS source not part of earlier4643 denominator."
+        }
+      ],
+      "computedManifestTotals": {
+        "sourceRows": 3,
+        "full": 0,
+        "selected": 3,
+        "hashOnly": 0,
+        "semanticLines": 222,
+        "bodyDisplayedLines": 260,
+        "displayIncludingNavigationLines": 264,
+        "testDeclarationLines": 0,
+        "productSemanticLines": 222
+      },
+      "declaredManifestTotals": {
+        "selectedProductSourceRows": 3,
+        "fullProductModuleRows": 0,
+        "semanticLines": 222,
+        "bodyDisplayedLines": 260,
+        "displayedUnionIncludingNavigationLines": 264,
+        "testDeclarationLines": 0,
+        "prior83OverlapLines": 50,
+        "thisReadOutside83Lines": 172,
+        "notNewUniqueAllHistoryCoverage": true
+      },
+      "manifestCountChecks": {
+        "selectedProductSourceRows": {
+          "declared": 3,
+          "computed": 3,
+          "matches": true
+        },
+        "fullProductModuleRows": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        },
+        "semanticLines": {
+          "declared": 222,
+          "computed": 222,
+          "matches": true
+        },
+        "bodyDisplayedLines": {
+          "declared": 260,
+          "computed": 260,
+          "matches": true
+        },
+        "displayedUnionIncludingNavigationLines": {
+          "declared": 264,
+          "computed": 264,
+          "matches": true
+        },
+        "testDeclarationLines": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        }
+      },
+      "metadataSemanticReadFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "failedCheckGroups": [],
+      "endingInputFileChecks": {
+        "checkedUTC": "2026-10-17T17:05:47.230329+00:00",
+        "sameExactFileSet": true,
+        "added": [],
+        "removed": [],
+        "files": [
+          {
+            "path": "coverage-gate-rows.json",
+            "bytes": 18410,
+            "sha256": "9e72fd2099237ddbd35627aa1136ef34fbe36859b5a332175331d4b6b2fa16fd",
+            "matchesInitial": true
+          },
+          {
+            "path": "coverage-gate-selected.json",
+            "bytes": 2180,
+            "sha256": "a1641bcb6407d24e0ce06a118e55d9c5eba29f377ae873e91fda9bde1a52aa29",
+            "matchesInitial": true
+          },
+          {
+            "path": "ending-checks.json",
+            "bytes": 1388,
+            "sha256": "827a5d3b6a17fe0a89dda45ade0e539d3c13c254398b2a7bc3d76dd20c071508",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-contexts.json",
+            "bytes": 103721,
+            "sha256": "ca640f19bb1e7a8ab88c4cd3ec0f3ab5310bf31a734e7347b4a9f576e9596768",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-method.py",
+            "bytes": 3834,
+            "sha256": "8ed37fa430da7df74bdc533d1f6df039c85fb13219d3068039bcfa2fb1b7dae8",
+            "matchesInitial": true
+          },
+          {
+            "path": "history.json",
+            "bytes": 940575,
+            "sha256": "c2e300d8d3c585541ee6d5f95544b85c7d240d9c7d235bfa5616c6c8dfffdfac",
+            "matchesInitial": true
+          },
+          {
+            "path": "initial-pins.json",
+            "bytes": 1675,
+            "sha256": "89e18256c969339511e5744e2ef7aba2a6cbda421b1699f3c3a54f2818e6cc33",
+            "matchesInitial": true
+          },
+          {
+            "path": "prior-same-sha-selected.json",
+            "bytes": 3114,
+            "sha256": "2aa3f28e3076e66a17631fd2aa5cb4c09b2b73e754bef157757f9967b0034b24",
+            "matchesInitial": true
+          },
+          {
+            "path": "report.md",
+            "bytes": 3842,
+            "sha256": "4a7ab0b89355da0d356c3d49c13662a9f06cc9f82954138d6052c66bd20d8407",
+            "matchesInitial": true
+          },
+          {
+            "path": "reviewer-receipt.json",
+            "bytes": 2268,
+            "sha256": "e82963ae70f9571d717d4f73ea3d996832604554e1040cc498967f4b1bc7faaf",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-display-pins.json",
+            "bytes": 1760,
+            "sha256": "9b37183d2ff20c148398cedf4a2fad848e0deabeeb4bf49efdc1ea7a7741b343",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-excerpts.txt",
+            "bytes": 9303,
+            "sha256": "38f6ae120d4b68a112641c2e1b6fca6773ae694560c6f48ecbecb7a5315a28f5",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-manifest.json",
+            "bytes": 7863,
+            "sha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079",
+            "matchesInitial": true
+          },
+          {
+            "path": "validation.json",
+            "bytes": 605,
+            "sha256": "ae081fb4f55d86c632e219e6d4e2caeff523efed41e4459d6f5395e83f262058",
+            "matchesInitial": true
+          }
+        ],
+        "unchanged": true
+      }
+    },
+    {
+      "packet": "86-trace-store-query",
+      "directory": "/tmp/codeshell-audit-round86-trace-store-query",
+      "exists": true,
+      "inputPins": [
+        {
+          "path": "classification.json",
+          "bytes": 730,
+          "sha256": "622bbdc2431848587062de052572e6e9d0436c595a02ec367b4ae2179c7e7922",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.011511+00:00"
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 756,
+          "sha256": "29a9254faf7cba17663e74754560df052da2f99348c12e8537e1026876f80916",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.011865+00:00"
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 15648,
+          "sha256": "290845af0ea01d79668c64d64a7d7f5ae7876201cd4c997de41846ab70868bbf",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.012226+00:00"
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 3048,
+          "sha256": "1aab675dbac51411341d8432c97b8d059e1593bc414ec9bdf961754922163303",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.012452+00:00"
+        },
+        {
+          "path": "gate-decision.json",
+          "bytes": 1265,
+          "sha256": "f02b30adf4f0684fbcf2391933e1a41033a4185b52ea237419f4e0b3c58ea7c5",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.012839+00:00"
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 55115,
+          "sha256": "6af43da261dc93167818c69ae61e617944803d97b4acc8f4a6ec3a4c115ca55d",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.013396+00:00"
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3912,
+          "sha256": "170dbfdaf2412a1ee7cfb27488b2f4d6dd55e981536a642f638385d70804cffd",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.013702+00:00"
+        },
+        {
+          "path": "history.json",
+          "bytes": 1040931,
+          "sha256": "8dcfc2bdddf611bf1a7cf084c4e3efeb12dccf19c756a59d8b35645f131e9e86",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.015071+00:00"
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1041,
+          "sha256": "69110d98584fa9a5e4e3bd8d06552e051ccf0a471b91d37fc2336fd19928bd68",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.015566+00:00"
+        },
+        {
+          "path": "report.md",
+          "bytes": 5891,
+          "sha256": "8850e796a40434cb3f07c76763000d25aff8ad30f9157def5e5333b51cbad0e7",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.015960+00:00"
+        },
+        {
+          "path": "reviewer-receipt.json",
+          "bytes": 2845,
+          "sha256": "2c749f63475aad1bc9bfd372bc9e8046e45c48b281d14fd85ff1e9992f991f03",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.016229+00:00"
+        },
+        {
+          "path": "sessions-test-initial-pin.json",
+          "bytes": 301,
+          "sha256": "3a45d858e0575d88c261376eaceef2aff8de1829bdfa72d8a4fef2613e58deaf",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.017210+00:00"
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 65763,
+          "sha256": "c7cf48ae5a8b76265d4762597c37115f676b6b29805f5ced23a91d9518f2b5fa",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.017848+00:00"
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 13074,
+          "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.018175+00:00"
+        },
+        {
+          "path": "support-initial-pins.json",
+          "bytes": 299,
+          "sha256": "f0eb1ce2bf5daba2091ee92af7dcfe9a195bef735dc8d05904ca5e6559636851",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.018416+00:00"
+        },
+        {
+          "path": "validation.json",
+          "bytes": 1229,
+          "sha256": "daa2f3d6ed1b9d0997c7aaca11c67a60dadc943b9bcd15d534534398789daf5c",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.018660+00:00"
+        }
+      ],
+      "roleInThisReview": "Independent packet metadata integrity review only; no new source review",
+      "receiptName": "reviewer-receipt.json",
+      "receiptRows": 15,
+      "exactReceiptSet": true,
+      "missingFromReceipt": [],
+      "extraReceiptRows": [],
+      "duplicateReceiptPaths": 0,
+      "receiptRowChecks": [
+        {
+          "path": "classification.json",
+          "bytes": 730,
+          "sha256": "622bbdc2431848587062de052572e6e9d0436c595a02ec367b4ae2179c7e7922",
+          "matchesReceipt": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 756,
+          "sha256": "29a9254faf7cba17663e74754560df052da2f99348c12e8537e1026876f80916",
+          "matchesReceipt": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 15648,
+          "sha256": "290845af0ea01d79668c64d64a7d7f5ae7876201cd4c997de41846ab70868bbf",
+          "matchesReceipt": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 3048,
+          "sha256": "1aab675dbac51411341d8432c97b8d059e1593bc414ec9bdf961754922163303",
+          "matchesReceipt": true
+        },
+        {
+          "path": "gate-decision.json",
+          "bytes": 1265,
+          "sha256": "f02b30adf4f0684fbcf2391933e1a41033a4185b52ea237419f4e0b3c58ea7c5",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 55115,
+          "sha256": "6af43da261dc93167818c69ae61e617944803d97b4acc8f4a6ec3a4c115ca55d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3912,
+          "sha256": "170dbfdaf2412a1ee7cfb27488b2f4d6dd55e981536a642f638385d70804cffd",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 1040931,
+          "sha256": "8dcfc2bdddf611bf1a7cf084c4e3efeb12dccf19c756a59d8b35645f131e9e86",
+          "matchesReceipt": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1041,
+          "sha256": "69110d98584fa9a5e4e3bd8d06552e051ccf0a471b91d37fc2336fd19928bd68",
+          "matchesReceipt": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 5891,
+          "sha256": "8850e796a40434cb3f07c76763000d25aff8ad30f9157def5e5333b51cbad0e7",
+          "matchesReceipt": true
+        },
+        {
+          "path": "sessions-test-initial-pin.json",
+          "bytes": 301,
+          "sha256": "3a45d858e0575d88c261376eaceef2aff8de1829bdfa72d8a4fef2613e58deaf",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 65763,
+          "sha256": "c7cf48ae5a8b76265d4762597c37115f676b6b29805f5ced23a91d9518f2b5fa",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 13074,
+          "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd",
+          "matchesReceipt": true
+        },
+        {
+          "path": "support-initial-pins.json",
+          "bytes": 299,
+          "sha256": "f0eb1ce2bf5daba2091ee92af7dcfe9a195bef735dc8d05904ca5e6559636851",
+          "matchesReceipt": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 1229,
+          "sha256": "daa2f3d6ed1b9d0997c7aaca11c67a60dadc943b9bcd15d534534398789daf5c",
+          "matchesReceipt": true
+        }
+      ],
+      "reportLinks": [
+        {
+          "label": "分类记录",
+          "href": "classification.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "622bbdc2431848587062de052572e6e9d0436c595a02ec367b4ae2179c7e7922"
+        },
+        {
+          "label": "最初 pins",
+          "href": "initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "69110d98584fa9a5e4e3bd8d06552e051ccf0a471b91d37fc2336fd19928bd68"
+        },
+        {
+          "label": "support pins",
+          "href": "support-initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "f0eb1ce2bf5daba2091ee92af7dcfe9a195bef735dc8d05904ca5e6559636851"
+        },
+        {
+          "label": "consumer pins",
+          "href": "consumer-initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "29a9254faf7cba17663e74754560df052da2f99348c12e8537e1026876f80916"
+        },
+        {
+          "label": "sessions test pin",
+          "href": "sessions-test-initial-pin.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "3a45d858e0575d88c261376eaceef2aff8de1829bdfa72d8a4fef2613e58deaf"
+        },
+        {
+          "label": "历史库存",
+          "href": "history.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "8dcfc2bdddf611bf1a7cf084c4e3efeb12dccf19c756a59d8b35645f131e9e86"
+        },
+        {
+          "label": "扫描方法",
+          "href": "history-method.py",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "170dbfdaf2412a1ee7cfb27488b2f4d6dd55e981536a642f638385d70804cffd"
+        },
+        {
+          "label": "contexts",
+          "href": "history-contexts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "6af43da261dc93167818c69ae61e617944803d97b4acc8f4a6ec3a4c115ca55d"
+        },
+        {
+          "label": "精确 path/SHA 对象",
+          "href": "coverage-gate-objects.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "290845af0ea01d79668c64d64a7d7f5ae7876201cd4c997de41846ab70868bbf"
+        },
+        {
+          "label": "gate decision",
+          "href": "gate-decision.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "f02b30adf4f0684fbcf2391933e1a41033a4185b52ea237419f4e0b3c58ea7c5"
+        },
+        {
+          "label": "源码清单",
+          "href": "source-manifest.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd"
+        },
+        {
+          "label": "source excerpts",
+          "href": "source-excerpts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "c7cf48ae5a8b76265d4762597c37115f676b6b29805f5ced23a91d9518f2b5fa"
+        },
+        {
+          "label": "validation",
+          "href": "validation.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "daa2f3d6ed1b9d0997c7aaca11c67a60dadc943b9bcd15d534534398789daf5c"
+        },
+        {
+          "label": "checks",
+          "href": "ending-checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "1aab675dbac51411341d8432c97b8d059e1593bc414ec9bdf961754922163303"
+        },
+        {
+          "label": "冻结回执",
+          "href": "reviewer-receipt.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "2c749f63475aad1bc9bfd372bc9e8046e45c48b281d14fd85ff1e9992f991f03"
+        }
+      ],
+      "manifestRangeChecks": [
+        {
+          "pointer": "/files/0",
+          "path": "packages/core/src/model-traces/store.ts",
+          "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+          "coverage": "selected",
+          "declaredFileLines": 624,
+          "selectedLineRanges": [
+            [
+              49,
+              57
+            ],
+            [
+              137,
+              170
+            ],
+            [
+              200,
+              201
+            ],
+            [
+              204,
+              216
+            ],
+            [
+              227,
+              442
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              16,
+              38
+            ],
+            [
+              49,
+              59
+            ],
+            [
+              137,
+              446
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              1,
+              1
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              14,
+              14
+            ],
+            [
+              15,
+              15
+            ],
+            [
+              40,
+              40
+            ],
+            [
+              60,
+              60
+            ],
+            [
+              62,
+              62
+            ],
+            [
+              63,
+              63
+            ],
+            [
+              529,
+              529
+            ],
+            [
+              538,
+              538
+            ],
+            [
+              550,
+              550
+            ],
+            [
+              570,
+              570
+            ]
+          ],
+          "computedSemanticLines": 274,
+          "declaredSemanticLines": 274,
+          "computedBodyDisplayedLines": 344,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 356,
+          "declaredDisplayIncludingNavigationLines": 356,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Ordinary bounded query fields, string predicates, metadata projection, stable sort/cursor/slice, per-session aggregation and page DTO. Excludes workspaceScopes admission/visibility, prune/FS/deserialization, crypto, get/write and host mechanisms, including adjacent displayed lines."
+        },
+        {
+          "pointer": "/files/1",
+          "path": "packages/core/src/model-traces/types.ts",
+          "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+          "coverage": "selected",
+          "declaredFileLines": 214,
+          "selectedLineRanges": [
+            [
+              94,
+              105
+            ],
+            [
+              108,
+              145
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              94,
+              145
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              4,
+              4
+            ],
+            [
+              5,
+              5
+            ],
+            [
+              6,
+              6
+            ],
+            [
+              22,
+              22
+            ],
+            [
+              30,
+              30
+            ],
+            [
+              32,
+              32
+            ],
+            [
+              40,
+              40
+            ],
+            [
+              58,
+              58
+            ],
+            [
+              146,
+              146
+            ],
+            [
+              164,
+              164
+            ],
+            [
+              177,
+              177
+            ]
+          ],
+          "computedSemanticLines": 50,
+          "declaredSemanticLines": 50,
+          "computedBodyDisplayedLines": 52,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 63,
+          "declaredDisplayIncludingNavigationLines": 63,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Ordinary summary/list/session query and page DTO fields. Host workspaceScopes declaration106–107 navigation only, no authority review."
+        },
+        {
+          "pointer": "/files/2",
+          "path": "packages/server/src/model-trace-history.ts",
+          "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "coverage": "selected",
+          "declaredFileLines": 242,
+          "selectedLineRanges": [
+            [
+              54,
+              89
+            ],
+            [
+              203,
+              206
+            ],
+            [
+              213,
+              218
+            ],
+            [
+              223,
+              229
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              54,
+              89
+            ],
+            [
+              203,
+              229
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              21,
+              21
+            ],
+            [
+              22,
+              22
+            ],
+            [
+              92,
+              92
+            ],
+            [
+              98,
+              98
+            ],
+            [
+              117,
+              117
+            ],
+            [
+              180,
+              180
+            ],
+            [
+              232,
+              232
+            ],
+            [
+              239,
+              239
+            ]
+          ],
+          "computedSemanticLines": 53,
+          "declaredSemanticLines": 53,
+          "computedBodyDisplayedLines": 63,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 71,
+          "declaredDisplayIncludingNavigationLines": 71,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Only ordinary query field validation, validated-spread forwarding to Store, session cursor-error mapping. Scope/visibility selection and all Host/authority paths excluded."
+        },
+        {
+          "pointer": "/files/3",
+          "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+          "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+          "coverage": "selected",
+          "declaredFileLines": 925,
+          "selectedLineRanges": [
+            [
+              250,
+              258
+            ],
+            [
+              299,
+              306
+            ],
+            [
+              372,
+              382
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              240,
+              277
+            ],
+            [
+              295,
+              313
+            ],
+            [
+              365,
+              385
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              106,
+              106
+            ],
+            [
+              331,
+              331
+            ],
+            [
+              581,
+              581
+            ],
+            [
+              634,
+              634
+            ],
+            [
+              638,
+              638
+            ],
+            [
+              640,
+              640
+            ],
+            [
+              656,
+              656
+            ],
+            [
+              657,
+              657
+            ],
+            [
+              680,
+              680
+            ],
+            [
+              708,
+              708
+            ],
+            [
+              709,
+              709
+            ],
+            [
+              802,
+              802
+            ]
+          ],
+          "computedSemanticLines": 28,
+          "declaredSemanticLines": 28,
+          "computedBodyDisplayedLines": 78,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 90,
+          "declaredDisplayIncludingNavigationLines": 90,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Real ordinary Desktop sessions/list calls, limit50/100, consumption and forwarding of returned items/nextCursor. Adjacent React orchestration only displayed; no UI/async lifecycle or Host/native certification."
+        },
+        {
+          "pointer": "/files/4",
+          "path": "packages/core/src/model-traces/store.test.ts",
+          "sha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+          "coverage": "selected",
+          "declaredFileLines": 332,
+          "selectedLineRanges": [
+            [
+              119,
+              139
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              119,
+              143
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              38,
+              38
+            ],
+            [
+              44,
+              44
+            ],
+            [
+              63,
+              63
+            ],
+            [
+              101,
+              101
+            ],
+            [
+              144,
+              144
+            ],
+            [
+              166,
+              166
+            ],
+            [
+              195,
+              195
+            ],
+            [
+              215,
+              215
+            ],
+            [
+              234,
+              234
+            ],
+            [
+              259,
+              259
+            ],
+            [
+              272,
+              272
+            ],
+            [
+              289,
+              289
+            ]
+          ],
+          "computedSemanticLines": 21,
+          "declaredSemanticLines": 21,
+          "computedBodyDisplayedLines": 25,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 37,
+          "declaredDisplayIncludingNavigationLines": 37,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "test-declaration",
+          "purposeOrScope": "One ordinary metadata list/paging/search and projection test declaration used as static intended contract. All tests unexecuted; adjacent get/private body and malformed cursor assertion excluded."
+        },
+        {
+          "pointer": "/files/5",
+          "path": "packages/core/src/model-traces/sessions.test.ts",
+          "sha256": "a7b0ed309b87a93f39eef3269cb6db43d1c6b52bda4fa7e5e288cfcc4eb7f346",
+          "coverage": "selected",
+          "declaredFileLines": 243,
+          "selectedLineRanges": [
+            [
+              39,
+              49
+            ],
+            [
+              56,
+              81
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              39,
+              81
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              82,
+              82
+            ],
+            [
+              106,
+              106
+            ],
+            [
+              149,
+              149
+            ],
+            [
+              172,
+              172
+            ]
+          ],
+          "computedSemanticLines": 37,
+          "declaredSemanticLines": 37,
+          "computedBodyDisplayedLines": 43,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 47,
+          "declaredDisplayIncludingNavigationLines": 47,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "test-declaration",
+          "purposeOrScope": "One ordinary grouping/latest-ended/counts/sorted labels/page result test declaration used as intended contract.50–55 writeFileSync/createHash corruption setup is display/navigation only; no file or crypto mechanism read or executed."
+        }
+      ],
+      "computedManifestTotals": {
+        "sourceRows": 6,
+        "full": 0,
+        "selected": 6,
+        "hashOnly": 0,
+        "semanticLines": 463,
+        "bodyDisplayedLines": 605,
+        "displayIncludingNavigationLines": 664,
+        "testDeclarationLines": 58,
+        "productSemanticLines": 405
+      },
+      "declaredManifestTotals": {
+        "semanticFiles": 6,
+        "full": 0,
+        "selected": 6,
+        "semanticLines": 463,
+        "productSemanticLines": 405,
+        "testDeclarationSemanticLines": 58,
+        "uniqueDisplayedLines": 664,
+        "declaredTestTitlesNavigated": 17,
+        "ordinaryTestDeclarationsSelected": 2,
+        "testsExecuted": 0
+      },
+      "manifestCountChecks": {
+        "semanticFiles": {
+          "declared": 6,
+          "computed": 6,
+          "matches": true
+        },
+        "full": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        },
+        "selected": {
+          "declared": 6,
+          "computed": 6,
+          "matches": true
+        },
+        "semanticLines": {
+          "declared": 463,
+          "computed": 463,
+          "matches": true
+        },
+        "productSemanticLines": {
+          "declared": 405,
+          "computed": 405,
+          "matches": true
+        },
+        "testDeclarationSemanticLines": {
+          "declared": 58,
+          "computed": 58,
+          "matches": true
+        },
+        "uniqueDisplayedLines": {
+          "declared": 664,
+          "computed": 664,
+          "matches": true
+        }
+      },
+      "metadataSemanticReadFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "failedCheckGroups": [],
+      "endingInputFileChecks": {
+        "checkedUTC": "2026-10-17T17:05:47.230329+00:00",
+        "sameExactFileSet": true,
+        "added": [],
+        "removed": [],
+        "files": [
+          {
+            "path": "classification.json",
+            "bytes": 730,
+            "sha256": "622bbdc2431848587062de052572e6e9d0436c595a02ec367b4ae2179c7e7922",
+            "matchesInitial": true
+          },
+          {
+            "path": "consumer-initial-pins.json",
+            "bytes": 756,
+            "sha256": "29a9254faf7cba17663e74754560df052da2f99348c12e8537e1026876f80916",
+            "matchesInitial": true
+          },
+          {
+            "path": "coverage-gate-objects.json",
+            "bytes": 15648,
+            "sha256": "290845af0ea01d79668c64d64a7d7f5ae7876201cd4c997de41846ab70868bbf",
+            "matchesInitial": true
+          },
+          {
+            "path": "ending-checks.json",
+            "bytes": 3048,
+            "sha256": "1aab675dbac51411341d8432c97b8d059e1593bc414ec9bdf961754922163303",
+            "matchesInitial": true
+          },
+          {
+            "path": "gate-decision.json",
+            "bytes": 1265,
+            "sha256": "f02b30adf4f0684fbcf2391933e1a41033a4185b52ea237419f4e0b3c58ea7c5",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-contexts.json",
+            "bytes": 55115,
+            "sha256": "6af43da261dc93167818c69ae61e617944803d97b4acc8f4a6ec3a4c115ca55d",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-method.py",
+            "bytes": 3912,
+            "sha256": "170dbfdaf2412a1ee7cfb27488b2f4d6dd55e981536a642f638385d70804cffd",
+            "matchesInitial": true
+          },
+          {
+            "path": "history.json",
+            "bytes": 1040931,
+            "sha256": "8dcfc2bdddf611bf1a7cf084c4e3efeb12dccf19c756a59d8b35645f131e9e86",
+            "matchesInitial": true
+          },
+          {
+            "path": "initial-pins.json",
+            "bytes": 1041,
+            "sha256": "69110d98584fa9a5e4e3bd8d06552e051ccf0a471b91d37fc2336fd19928bd68",
+            "matchesInitial": true
+          },
+          {
+            "path": "report.md",
+            "bytes": 5891,
+            "sha256": "8850e796a40434cb3f07c76763000d25aff8ad30f9157def5e5333b51cbad0e7",
+            "matchesInitial": true
+          },
+          {
+            "path": "reviewer-receipt.json",
+            "bytes": 2845,
+            "sha256": "2c749f63475aad1bc9bfd372bc9e8046e45c48b281d14fd85ff1e9992f991f03",
+            "matchesInitial": true
+          },
+          {
+            "path": "sessions-test-initial-pin.json",
+            "bytes": 301,
+            "sha256": "3a45d858e0575d88c261376eaceef2aff8de1829bdfa72d8a4fef2613e58deaf",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-excerpts.json",
+            "bytes": 65763,
+            "sha256": "c7cf48ae5a8b76265d4762597c37115f676b6b29805f5ced23a91d9518f2b5fa",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-manifest.json",
+            "bytes": 13074,
+            "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd",
+            "matchesInitial": true
+          },
+          {
+            "path": "support-initial-pins.json",
+            "bytes": 299,
+            "sha256": "f0eb1ce2bf5daba2091ee92af7dcfe9a195bef735dc8d05904ca5e6559636851",
+            "matchesInitial": true
+          },
+          {
+            "path": "validation.json",
+            "bytes": 1229,
+            "sha256": "daa2f3d6ed1b9d0997c7aaca11c67a60dadc943b9bcd15d534534398789daf5c",
+            "matchesInitial": true
+          }
+        ],
+        "unchanged": true
+      }
+    },
+    {
+      "packet": "87-frontier-selection",
+      "directory": "/tmp/codeshell-audit-round87-frontier-selection",
+      "exists": true,
+      "inputPins": [
+        {
+          "path": "artifact-receipt.json",
+          "bytes": 3526,
+          "sha256": "57a08652e94bdb07deb692f5c005a6372a57e5fc67fbb618d41eadbb71872d90",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.019393+00:00"
+        },
+        {
+          "path": "candidate-initial-pins.json",
+          "bytes": 18899,
+          "sha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.019801+00:00"
+        },
+        {
+          "path": "candidates.json",
+          "bytes": 60480,
+          "sha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.020397+00:00"
+        },
+        {
+          "path": "canonical-metadata-read.json",
+          "bytes": 80272,
+          "sha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.021000+00:00"
+        },
+        {
+          "path": "checks.json",
+          "bytes": 4061,
+          "sha256": "ada25085bb54648828bc953917fd39108357601166e481ba1af551477f3b9478",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.021212+00:00"
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 9399,
+          "sha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.021534+00:00"
+        },
+        {
+          "path": "finalize-metadata.py",
+          "bytes": 16299,
+          "sha256": "beecd042e17369a5f2ddd8b5e9a7e2b6fea9a4692b56e9c46fef9f23529c27c3",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.021825+00:00"
+        },
+        {
+          "path": "first-reader-diagnostic.json",
+          "bytes": 844,
+          "sha256": "8685fa915baf9b03b2cb3690311a6e664fbc97c7b6035504fcd296207db870b9",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.022111+00:00"
+        },
+        {
+          "path": "first-reader-stderr.txt",
+          "bytes": 692,
+          "sha256": "016a50bbf0c22caf73c2cdcd109519f9e251bfcfddda5331df80d0ccb876d295",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.022363+00:00"
+        },
+        {
+          "path": "first-reader.py",
+          "bytes": 430,
+          "sha256": "42e41cb0b753e4a3460c77467306aa96e0586f2c89a0d84ebcdd2f1fe353ab1e",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.022588+00:00"
+        },
+        {
+          "path": "history-claims.json",
+          "bytes": 317268,
+          "sha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.023229+00:00"
+        },
+        {
+          "path": "history-initial-inventory.json",
+          "bytes": 940029,
+          "sha256": "3ba7dbb7d148145a0cbd864a61a43e705d973183d9d663beabc9197777360cc4",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.024285+00:00"
+        },
+        {
+          "path": "history-inventory-command.json",
+          "bytes": 234,
+          "sha256": "d529c9bcb268ca0f8b8f61c6b0a3497420dc89ede1591ffe417f0c8239ea2ce8",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.024616+00:00"
+        },
+        {
+          "path": "history-locators.json",
+          "bytes": 260887,
+          "sha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.025307+00:00"
+        },
+        {
+          "path": "history-summary.json",
+          "bytes": 1005,
+          "sha256": "091f780ef53634408c3c0c6c24e9b0d378698096da7b76d4f33fb035180b6331",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.025539+00:00"
+        },
+        {
+          "path": "report.md",
+          "bytes": 6283,
+          "sha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.025868+00:00"
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 5977,
+          "sha256": "7d4b6e92b651a1e03b7ace342fba017daacdb55c09fd493cc532aca97edbf8e8",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.026166+00:00"
+        },
+        {
+          "path": "selection-input-pins.json",
+          "bytes": 907,
+          "sha256": "4006c6c8c4910bba6de52d024a113cfeb29fd933aab212b7448a87a983a9481d",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.026442+00:00"
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 17425,
+          "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.026874+00:00"
+        }
+      ],
+      "roleInThisReview": "Independent packet metadata integrity review only; no new source review",
+      "receiptName": "artifact-receipt.json",
+      "receiptRows": 18,
+      "exactReceiptSet": true,
+      "missingFromReceipt": [],
+      "extraReceiptRows": [],
+      "duplicateReceiptPaths": 0,
+      "receiptRowChecks": [
+        {
+          "path": "candidate-initial-pins.json",
+          "bytes": 18899,
+          "sha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "candidates.json",
+          "bytes": 60480,
+          "sha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+          "matchesReceipt": true
+        },
+        {
+          "path": "canonical-metadata-read.json",
+          "bytes": 80272,
+          "sha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "checks.json",
+          "bytes": 4061,
+          "sha256": "ada25085bb54648828bc953917fd39108357601166e481ba1af551477f3b9478",
+          "matchesReceipt": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 9399,
+          "sha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "finalize-metadata.py",
+          "bytes": 16299,
+          "sha256": "beecd042e17369a5f2ddd8b5e9a7e2b6fea9a4692b56e9c46fef9f23529c27c3",
+          "matchesReceipt": true
+        },
+        {
+          "path": "first-reader-diagnostic.json",
+          "bytes": 844,
+          "sha256": "8685fa915baf9b03b2cb3690311a6e664fbc97c7b6035504fcd296207db870b9",
+          "matchesReceipt": true
+        },
+        {
+          "path": "first-reader-stderr.txt",
+          "bytes": 692,
+          "sha256": "016a50bbf0c22caf73c2cdcd109519f9e251bfcfddda5331df80d0ccb876d295",
+          "matchesReceipt": true
+        },
+        {
+          "path": "first-reader.py",
+          "bytes": 430,
+          "sha256": "42e41cb0b753e4a3460c77467306aa96e0586f2c89a0d84ebcdd2f1fe353ab1e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-claims.json",
+          "bytes": 317268,
+          "sha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-initial-inventory.json",
+          "bytes": 940029,
+          "sha256": "3ba7dbb7d148145a0cbd864a61a43e705d973183d9d663beabc9197777360cc4",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-inventory-command.json",
+          "bytes": 234,
+          "sha256": "d529c9bcb268ca0f8b8f61c6b0a3497420dc89ede1591ffe417f0c8239ea2ce8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-locators.json",
+          "bytes": 260887,
+          "sha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-summary.json",
+          "bytes": 1005,
+          "sha256": "091f780ef53634408c3c0c6c24e9b0d378698096da7b76d4f33fb035180b6331",
+          "matchesReceipt": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 6283,
+          "sha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+          "matchesReceipt": true
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 5977,
+          "sha256": "7d4b6e92b651a1e03b7ace342fba017daacdb55c09fd493cc532aca97edbf8e8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "selection-input-pins.json",
+          "bytes": 907,
+          "sha256": "4006c6c8c4910bba6de52d024a113cfeb29fd933aab212b7448a87a983a9481d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 17425,
+          "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+          "matchesReceipt": true
+        }
+      ],
+      "reportLinks": [
+        {
+          "label": "candidates",
+          "href": "candidates.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830"
+        },
+        {
+          "label": "original metadata reading",
+          "href": "canonical-metadata-read.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b"
+        },
+        {
+          "label": "first script",
+          "href": "first-reader.py",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "42e41cb0b753e4a3460c77467306aa96e0586f2c89a0d84ebcdd2f1fe353ab1e"
+        },
+        {
+          "label": "diagnostic",
+          "href": "first-reader-diagnostic.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "8685fa915baf9b03b2cb3690311a6e664fbc97c7b6035504fcd296207db870b9"
+        },
+        {
+          "label": "observed stderr",
+          "href": "first-reader-stderr.txt",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "016a50bbf0c22caf73c2cdcd109519f9e251bfcfddda5331df80d0ccb876d295"
+        },
+        {
+          "label": "Source manifest",
+          "href": "source-manifest.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9"
+        },
+        {
+          "label": "checks",
+          "href": "checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "ada25085bb54648828bc953917fd39108357601166e481ba1af551477f3b9478"
+        },
+        {
+          "label": "initial source pins",
+          "href": "candidate-initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f"
+        },
+        {
+          "label": "history summary",
+          "href": "history-summary.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "091f780ef53634408c3c0c6c24e9b0d378698096da7b76d4f33fb035180b6331"
+        },
+        {
+          "label": "history inventory",
+          "href": "history-initial-inventory.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "3ba7dbb7d148145a0cbd864a61a43e705d973183d9d663beabc9197777360cc4"
+        },
+        {
+          "label": "claim locators",
+          "href": "history-claims.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6"
+        },
+        {
+          "label": "ending checks",
+          "href": "ending-checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e"
+        },
+        {
+          "label": "artifact receipt",
+          "href": "artifact-receipt.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "57a08652e94bdb07deb692f5c005a6372a57e5fc67fbb618d41eadbb71872d90"
+        }
+      ],
+      "manifestRangeChecks": [
+        {
+          "pointer": "/files/0",
+          "path": "packages/desktop/src/renderer/app/appUtils.ts",
+          "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b",
+          "coverage": "hash-only",
+          "declaredFileLines": 133,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/1",
+          "path": "packages/desktop/src/renderer/app/panelResize.ts",
+          "sha256": "5b675510d786e7ff066a37d640a82b81e7a424625b71356dbbf42c2231cea1eb",
+          "coverage": "hash-only",
+          "declaredFileLines": 138,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/2",
+          "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+          "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+          "coverage": "hash-only",
+          "declaredFileLines": 132,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/3",
+          "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+          "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+          "coverage": "hash-only",
+          "declaredFileLines": 101,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/4",
+          "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+          "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+          "coverage": "hash-only",
+          "declaredFileLines": 247,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/5",
+          "path": "packages/desktop/src/renderer/chat/InlineMedia.tsx",
+          "sha256": "e524441cab42116d22f65d92cd5426f1208443f8e5b10e9baefef60b551a00fd",
+          "coverage": "hash-only",
+          "declaredFileLines": 217,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/6",
+          "path": "packages/desktop/src/renderer/chat/Lightbox.tsx",
+          "sha256": "121cf951006b6fccb3480b434f138f5c6da31f38411a8697b9f332961595ca2f",
+          "coverage": "hash-only",
+          "declaredFileLines": 277,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/7",
+          "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+          "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+          "coverage": "hash-only",
+          "declaredFileLines": 370,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/8",
+          "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+          "sha256": "76035097cf49fd084e37b40af41083399abccdb9fb8001a3e794f9c0ae006606",
+          "coverage": "hash-only",
+          "declaredFileLines": 321,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/9",
+          "path": "packages/desktop/src/renderer/chat/compress.ts",
+          "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+          "coverage": "hash-only",
+          "declaredFileLines": 218,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/10",
+          "path": "packages/desktop/src/renderer/chat/useAnchoredPopover.ts",
+          "sha256": "4e65c1ce50d43e503cb08a0996f278d5a5517274f4b6dbb0eca818d92ac3094d",
+          "coverage": "hash-only",
+          "declaredFileLines": 178,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/11",
+          "path": "packages/desktop/src/renderer/components/ui/dialog.tsx",
+          "sha256": "0976fd006b5a53f9f9d757b3f29db5b70398574206c57979561368014d6aeb9b",
+          "coverage": "hash-only",
+          "declaredFileLines": 106,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/12",
+          "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+          "sha256": "7a72942d0501c35855369da74d054e521f7ee894c300b69e8e07503138f84d9a",
+          "coverage": "hash-only",
+          "declaredFileLines": 175,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/13",
+          "path": "packages/desktop/src/renderer/components/ui/select.tsx",
+          "sha256": "2ccde9d04ba947ebbc836787ff7f4a4de93417fc2b5a1b3b9c88d3f9b21d06dd",
+          "coverage": "hash-only",
+          "declaredFileLines": 157,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/14",
+          "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+          "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+          "coverage": "hash-only",
+          "declaredFileLines": 114,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/15",
+          "path": "packages/desktop/src/renderer/messages/AgentMessageView.tsx",
+          "sha256": "a4c449c3edd5ba7aedd0c8a7a97e61edcecf4c46a4ca541079510ef1ad680f3b",
+          "coverage": "hash-only",
+          "declaredFileLines": 132,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/16",
+          "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+          "sha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+          "coverage": "hash-only",
+          "declaredFileLines": 103,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/17",
+          "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+          "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+          "coverage": "hash-only",
+          "declaredFileLines": 130,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/18",
+          "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+          "sha256": "72ed464af77d98bb613c179ee3fab5e46e41f946ec448cbb9ee517b09933ab58",
+          "coverage": "hash-only",
+          "declaredFileLines": 165,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/19",
+          "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+          "coverage": "hash-only",
+          "declaredFileLines": 133,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/20",
+          "path": "packages/desktop/src/renderer/messages/time.ts",
+          "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+          "coverage": "hash-only",
+          "declaredFileLines": 107,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/21",
+          "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+          "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+          "coverage": "hash-only",
+          "declaredFileLines": 103,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/22",
+          "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+          "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+          "coverage": "hash-only",
+          "declaredFileLines": 110,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/23",
+          "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+          "coverage": "hash-only",
+          "declaredFileLines": 121,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/24",
+          "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+          "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b",
+          "coverage": "hash-only",
+          "declaredFileLines": 294,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/25",
+          "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+          "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae",
+          "coverage": "hash-only",
+          "declaredFileLines": 141,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/26",
+          "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+          "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+          "coverage": "hash-only",
+          "declaredFileLines": 183,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/27",
+          "path": "packages/desktop/src/renderer/theme.ts",
+          "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+          "coverage": "hash-only",
+          "declaredFileLines": 155,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/28",
+          "path": "packages/desktop/src/renderer/theme-packs.ts",
+          "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+          "coverage": "hash-only",
+          "declaredFileLines": 245,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        },
+        {
+          "pointer": "/files/29",
+          "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+          "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "coverage": "hash-only",
+          "declaredFileLines": 206,
+          "selectedLineRanges": [],
+          "displayedLineRanges": [],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 0,
+          "declaredSemanticLines": 0,
+          "computedBodyDisplayedLines": 0,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 0,
+          "declaredDisplayIncludingNavigationLines": 0,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": null
+        }
+      ],
+      "computedManifestTotals": {
+        "sourceRows": 30,
+        "full": 0,
+        "selected": 0,
+        "hashOnly": 30,
+        "semanticLines": 0,
+        "bodyDisplayedLines": 0,
+        "displayIncludingNavigationLines": 0,
+        "testDeclarationLines": 0,
+        "productSemanticLines": 0
+      },
+      "declaredManifestTotals": {
+        "productHashOnlyFiles": 30,
+        "productSourceBodiesDisplayed": 0,
+        "productSemanticFiles": 0,
+        "productSemanticLines": 0,
+        "productNavigationLines": 0,
+        "testDeclarationLines": 0,
+        "testsExecuted": 0
+      },
+      "manifestCountChecks": {
+        "productHashOnlyFiles": {
+          "declared": 30,
+          "computed": 30,
+          "matches": true
+        },
+        "productSemanticLines": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        },
+        "testDeclarationLines": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        }
+      },
+      "metadataSemanticReadFiles": [
+        "report.md",
+        "source-manifest.json",
+        "artifact-receipt.json",
+        "ending-checks.json",
+        "first-reader-diagnostic.json",
+        "first-reader-stderr.txt",
+        "checks.json",
+        "candidates.json (schema/count only; no claim bodies)"
+      ],
+      "failedCheckGroups": [],
+      "endingInputFileChecks": {
+        "checkedUTC": "2026-10-17T17:05:47.230329+00:00",
+        "sameExactFileSet": true,
+        "added": [],
+        "removed": [],
+        "files": [
+          {
+            "path": "artifact-receipt.json",
+            "bytes": 3526,
+            "sha256": "57a08652e94bdb07deb692f5c005a6372a57e5fc67fbb618d41eadbb71872d90",
+            "matchesInitial": true
+          },
+          {
+            "path": "candidate-initial-pins.json",
+            "bytes": 18899,
+            "sha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+            "matchesInitial": true
+          },
+          {
+            "path": "candidates.json",
+            "bytes": 60480,
+            "sha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+            "matchesInitial": true
+          },
+          {
+            "path": "canonical-metadata-read.json",
+            "bytes": 80272,
+            "sha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b",
+            "matchesInitial": true
+          },
+          {
+            "path": "checks.json",
+            "bytes": 4061,
+            "sha256": "ada25085bb54648828bc953917fd39108357601166e481ba1af551477f3b9478",
+            "matchesInitial": true
+          },
+          {
+            "path": "ending-checks.json",
+            "bytes": 9399,
+            "sha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+            "matchesInitial": true
+          },
+          {
+            "path": "finalize-metadata.py",
+            "bytes": 16299,
+            "sha256": "beecd042e17369a5f2ddd8b5e9a7e2b6fea9a4692b56e9c46fef9f23529c27c3",
+            "matchesInitial": true
+          },
+          {
+            "path": "first-reader-diagnostic.json",
+            "bytes": 844,
+            "sha256": "8685fa915baf9b03b2cb3690311a6e664fbc97c7b6035504fcd296207db870b9",
+            "matchesInitial": true
+          },
+          {
+            "path": "first-reader-stderr.txt",
+            "bytes": 692,
+            "sha256": "016a50bbf0c22caf73c2cdcd109519f9e251bfcfddda5331df80d0ccb876d295",
+            "matchesInitial": true
+          },
+          {
+            "path": "first-reader.py",
+            "bytes": 430,
+            "sha256": "42e41cb0b753e4a3460c77467306aa96e0586f2c89a0d84ebcdd2f1fe353ab1e",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-claims.json",
+            "bytes": 317268,
+            "sha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-initial-inventory.json",
+            "bytes": 940029,
+            "sha256": "3ba7dbb7d148145a0cbd864a61a43e705d973183d9d663beabc9197777360cc4",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-inventory-command.json",
+            "bytes": 234,
+            "sha256": "d529c9bcb268ca0f8b8f61c6b0a3497420dc89ede1591ffe417f0c8239ea2ce8",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-locators.json",
+            "bytes": 260887,
+            "sha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-summary.json",
+            "bytes": 1005,
+            "sha256": "091f780ef53634408c3c0c6c24e9b0d378698096da7b76d4f33fb035180b6331",
+            "matchesInitial": true
+          },
+          {
+            "path": "report.md",
+            "bytes": 6283,
+            "sha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+            "matchesInitial": true
+          },
+          {
+            "path": "scan-history.py",
+            "bytes": 5977,
+            "sha256": "7d4b6e92b651a1e03b7ace342fba017daacdb55c09fd493cc532aca97edbf8e8",
+            "matchesInitial": true
+          },
+          {
+            "path": "selection-input-pins.json",
+            "bytes": 907,
+            "sha256": "4006c6c8c4910bba6de52d024a113cfeb29fd933aab212b7448a87a983a9481d",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-manifest.json",
+            "bytes": 17425,
+            "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+            "matchesInitial": true
+          }
+        ],
+        "unchanged": true
+      }
+    },
+    {
+      "packet": "88-plugin-presentation",
+      "directory": "/tmp/codeshell-audit-round88-plugin-presentation",
+      "exists": true,
+      "inputPins": [
+        {
+          "path": "canonical-gate-object.json",
+          "bytes": 963,
+          "sha256": "b8ec778c2004d18cba62c050730f9ebfb636045797a228003f4efefb54a7458b",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.027338+00:00"
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 2404,
+          "sha256": "0bb0cd5d0a9e232af3cb9712ac63ba54c84f684bb9d8513406d7c41caaa5fd51",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.027733+00:00"
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1772,
+          "sha256": "11ce0f35be8f30f9555f6eab31ccccf561475b1ebd960181d796fb3b6988020d",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.028114+00:00"
+        },
+        {
+          "path": "history-cause-method.py",
+          "bytes": 2592,
+          "sha256": "79643e9f710f7b5ee6188b56e35470579b66dcefc620341780ea6a9c60d76ee3",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.028511+00:00"
+        },
+        {
+          "path": "history-cause-selected.json",
+          "bytes": 4600,
+          "sha256": "5ab3b92a153d83e916800f7b947255e84975846c9d0eeff32dbbb36a3c5cea32",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.028819+00:00"
+        },
+        {
+          "path": "history-causes.json",
+          "bytes": 33824,
+          "sha256": "48204c369a4bc822a64f899710dbc29c3c16dc23387e5dcf81ee1328213c2a8c",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.029245+00:00"
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 5085,
+          "sha256": "f5519552d35ae99de60ab50b319430f8c927171a7e2b95610ade9eebb66ae39e",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.029525+00:00"
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3846,
+          "sha256": "4babc3e1f3f728e6f56fe532c514801d6d99f3e7576d9f7ccd6f4b78c608f754",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.029823+00:00"
+        },
+        {
+          "path": "history.json",
+          "bytes": 940583,
+          "sha256": "595cafb6febb3c256549cc730959cb9ae9f0df53f868ab54c7056f47e8192d37",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.030934+00:00"
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 652,
+          "sha256": "1198f6ad03562837be3aaa55c4734bc8d60b5b810e950228c7ee07ad4ebe4c41",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.031270+00:00"
+        },
+        {
+          "path": "report.md",
+          "bytes": 3814,
+          "sha256": "f9bcb806a34135620cc242957657368a312ed8c02f2961c15eb2c80ac740e03b",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.031564+00:00"
+        },
+        {
+          "path": "reviewer-receipt.json",
+          "bytes": 2581,
+          "sha256": "9f482676c9a75385ce234aa6cc7b9e1fcab729c529b42b386ed1e8abd32899a0",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.032000+00:00"
+        },
+        {
+          "path": "source-display-pins.json",
+          "bytes": 2687,
+          "sha256": "6894058f84a8a9d3109629a6436fcc805ba3fcb96e2a69fa3eb4f1c09f41f3ee",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.032367+00:00"
+        },
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 10241,
+          "sha256": "21c10c84874a0320fcf31c96e037404d9c4b6d9619349a6fadb166ab075e57c4",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.032645+00:00"
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 9527,
+          "sha256": "37ffe1273bbe469210c4ba67f201c036a01dd15652e65511d0264d399dcfe7d8",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.032921+00:00"
+        },
+        {
+          "path": "validation.json",
+          "bytes": 712,
+          "sha256": "f25bec3d9d3cf357eca0439a1f8e5cb7a10cb15eb26d95a41d26f24bd6f56014",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.033134+00:00"
+        }
+      ],
+      "roleInThisReview": "Own-author metadata self-check; not independent source review",
+      "receiptName": "reviewer-receipt.json",
+      "receiptRows": 15,
+      "exactReceiptSet": true,
+      "missingFromReceipt": [],
+      "extraReceiptRows": [],
+      "duplicateReceiptPaths": 0,
+      "receiptRowChecks": [
+        {
+          "path": "canonical-gate-object.json",
+          "bytes": 963,
+          "sha256": "b8ec778c2004d18cba62c050730f9ebfb636045797a228003f4efefb54a7458b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 2404,
+          "sha256": "0bb0cd5d0a9e232af3cb9712ac63ba54c84f684bb9d8513406d7c41caaa5fd51",
+          "matchesReceipt": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 1772,
+          "sha256": "11ce0f35be8f30f9555f6eab31ccccf561475b1ebd960181d796fb3b6988020d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-cause-method.py",
+          "bytes": 2592,
+          "sha256": "79643e9f710f7b5ee6188b56e35470579b66dcefc620341780ea6a9c60d76ee3",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-cause-selected.json",
+          "bytes": 4600,
+          "sha256": "5ab3b92a153d83e916800f7b947255e84975846c9d0eeff32dbbb36a3c5cea32",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-causes.json",
+          "bytes": 33824,
+          "sha256": "48204c369a4bc822a64f899710dbc29c3c16dc23387e5dcf81ee1328213c2a8c",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 5085,
+          "sha256": "f5519552d35ae99de60ab50b319430f8c927171a7e2b95610ade9eebb66ae39e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3846,
+          "sha256": "4babc3e1f3f728e6f56fe532c514801d6d99f3e7576d9f7ccd6f4b78c608f754",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 940583,
+          "sha256": "595cafb6febb3c256549cc730959cb9ae9f0df53f868ab54c7056f47e8192d37",
+          "matchesReceipt": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 652,
+          "sha256": "1198f6ad03562837be3aaa55c4734bc8d60b5b810e950228c7ee07ad4ebe4c41",
+          "matchesReceipt": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 3814,
+          "sha256": "f9bcb806a34135620cc242957657368a312ed8c02f2961c15eb2c80ac740e03b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-display-pins.json",
+          "bytes": 2687,
+          "sha256": "6894058f84a8a9d3109629a6436fcc805ba3fcb96e2a69fa3eb4f1c09f41f3ee",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 10241,
+          "sha256": "21c10c84874a0320fcf31c96e037404d9c4b6d9619349a6fadb166ab075e57c4",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 9527,
+          "sha256": "37ffe1273bbe469210c4ba67f201c036a01dd15652e65511d0264d399dcfe7d8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 712,
+          "sha256": "f25bec3d9d3cf357eca0439a1f8e5cb7a10cb15eb26d95a41d26f24bd6f56014",
+          "matchesReceipt": true
+        }
+      ],
+      "reportLinks": [
+        {
+          "label": "首读pin",
+          "href": "initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "1198f6ad03562837be3aaa55c4734bc8d60b5b810e950228c7ee07ad4ebe4c41"
+        },
+        {
+          "label": "fresh history",
+          "href": "history.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "595cafb6febb3c256549cc730959cb9ae9f0df53f868ab54c7056f47e8192d37"
+        },
+        {
+          "label": "原R28 canonical对象",
+          "href": "canonical-gate-object.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "b8ec778c2004d18cba62c050730f9ebfb636045797a228003f4efefb54a7458b"
+        },
+        {
+          "label": "简表",
+          "href": "coverage-gate-rows.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "0bb0cd5d0a9e232af3cb9712ac63ba54c84f684bb9d8513406d7c41caaa5fd51"
+        },
+        {
+          "label": "窗口",
+          "href": "history-contexts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "f5519552d35ae99de60ab50b319430f8c927171a7e2b95610ade9eebb66ae39e"
+        },
+        {
+          "label": "方法",
+          "href": "history-method.py",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "4babc3e1f3f728e6f56fe532c514801d6d99f3e7576d9f7ccd6f4b78c608f754"
+        },
+        {
+          "label": "helper/旧展示词补查",
+          "href": "history-cause-method.py",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "79643e9f710f7b5ee6188b56e35470579b66dcefc620341780ea6a9c60d76ee3"
+        },
+        {
+          "label": "查询原件",
+          "href": "history-causes.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "48204c369a4bc822a64f899710dbc29c3c16dc23387e5dcf81ee1328213c2a8c"
+        },
+        {
+          "label": "3个窗口",
+          "href": "history-cause-selected.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "5ab3b92a153d83e916800f7b947255e84975846c9d0eeff32dbbb36a3c5cea32"
+        },
+        {
+          "label": "manifest",
+          "href": "source-manifest.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "37ffe1273bbe469210c4ba67f201c036a01dd15652e65511d0264d399dcfe7d8"
+        },
+        {
+          "label": "显示前pins",
+          "href": "source-display-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "6894058f84a8a9d3109629a6436fcc805ba3fcb96e2a69fa3eb4f1c09f41f3ee"
+        },
+        {
+          "label": "摘录",
+          "href": "source-excerpts.txt",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "21c10c84874a0320fcf31c96e037404d9c4b6d9619349a6fadb166ab075e57c4"
+        },
+        {
+          "label": "Ending",
+          "href": "ending-checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "11ce0f35be8f30f9555f6eab31ccccf561475b1ebd960181d796fb3b6988020d"
+        },
+        {
+          "label": "验证",
+          "href": "validation.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "f25bec3d9d3cf357eca0439a1f8e5cb7a10cb15eb26d95a41d26f24bd6f56014"
+        },
+        {
+          "label": "receipt",
+          "href": "reviewer-receipt.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "9f482676c9a75385ce234aa6cc7b9e1fcab729c529b42b386ed1e8abd32899a0"
+        }
+      ],
+      "manifestRangeChecks": [
+        {
+          "pointer": "/files/0",
+          "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+          "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+          "coverage": "selected",
+          "declaredFileLines": 114,
+          "selectedLineRanges": [
+            [
+              34,
+              58
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              1,
+              114
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 25,
+          "declaredSemanticLines": 25,
+          "computedBodyDisplayedLines": 114,
+          "declaredBodyDisplayedLines": 114,
+          "computedDisplayIncludingNavigationLines": 114,
+          "declaredDisplayIncludingNavigationLines": 114,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Only ordinary logo fallback/source selection, first-three screenshots projection and list-media availability OR. Image/URL security validation4–32, approval state/bridges60–89 and legal URL policy91–114 merely displayed/excluded; no safety or permission certification, no module-full claim."
+        },
+        {
+          "pointer": "/files/1",
+          "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+          "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+          "coverage": "selected",
+          "declaredFileLines": 530,
+          "selectedLineRanges": [
+            [
+              84,
+              97
+            ],
+            [
+              99,
+              103
+            ],
+            [
+              511,
+              530
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              84,
+              103
+            ],
+            [
+              509,
+              530
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              33,
+              33
+            ],
+            [
+              88,
+              88
+            ],
+            [
+              511,
+              511
+            ],
+            [
+              512,
+              512
+            ],
+            [
+              513,
+              513
+            ],
+            [
+              517,
+              517
+            ],
+            [
+              523,
+              523
+            ]
+          ],
+          "computedSemanticLines": 39,
+          "declaredSemanticLines": 39,
+          "computedBodyDisplayedLines": 42,
+          "declaredBodyDisplayedLines": 42,
+          "computedDisplayIncludingNavigationLines": 43,
+          "declaredDisplayIncludingNavigationLines": 43,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Actual availability predicate and returned-media dictionary mapping, followed by logo light/dark/fallback JSX fields. Native getPluginMedia call is the boundary; implementation, ownership/install keys, lifecycle races/React timing and installation actions not reviewed."
+        },
+        {
+          "pointer": "/files/2",
+          "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+          "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+          "coverage": "selected",
+          "declaredFileLines": 711,
+          "selectedLineRanges": [
+            [
+              52,
+              52
+            ],
+            [
+              63,
+              64
+            ],
+            [
+              66,
+              69
+            ],
+            [
+              71,
+              73
+            ],
+            [
+              104,
+              105
+            ],
+            [
+              229,
+              249
+            ],
+            [
+              509,
+              527
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              100,
+              107
+            ],
+            [
+              229,
+              249
+            ],
+            [
+              509,
+              527
+            ],
+            [
+              52,
+              73
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              24,
+              24
+            ],
+            [
+              25,
+              25
+            ],
+            [
+              28,
+              28
+            ],
+            [
+              52,
+              52
+            ],
+            [
+              63,
+              63
+            ],
+            [
+              66,
+              66
+            ],
+            [
+              71,
+              71
+            ],
+            [
+              104,
+              104
+            ],
+            [
+              105,
+              105
+            ],
+            [
+              229,
+              229
+            ],
+            [
+              232,
+              232
+            ],
+            [
+              235,
+              235
+            ],
+            [
+              238,
+              238
+            ],
+            [
+              240,
+              240
+            ],
+            [
+              509,
+              509
+            ],
+            [
+              513,
+              513
+            ],
+            [
+              516,
+              516
+            ],
+            [
+              528,
+              528
+            ]
+          ],
+          "computedSemanticLines": 52,
+          "declaredSemanticLines": 52,
+          "computedBodyDisplayedLines": 70,
+          "declaredBodyDisplayedLines": 70,
+          "computedDisplayIncludingNavigationLines": 74,
+          "declaredDisplayIncludingNavigationLines": 74,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Independent media request/state data and actual logo/screenshot list consumption. Approval action declarations53–58, legal/approval106–107 and detail/native mechanisms merely adjacent display/excluded. No getPluginDetail/native or filesystem correctness audit."
+        },
+        {
+          "pointer": "/files/3",
+          "path": "packages/desktop/src/shared/plugin-media.ts",
+          "sha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+          "coverage": "selected",
+          "declaredFileLines": 14,
+          "selectedLineRanges": [
+            [
+              1,
+              6
+            ],
+            [
+              9,
+              14
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              1,
+              14
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 12,
+          "declaredSemanticLines": 12,
+          "computedBodyDisplayedLines": 14,
+          "declaredBodyDisplayedLines": 14,
+          "computedDisplayIncludingNavigationLines": 14,
+          "declaredDisplayIncludingNavigationLines": 14,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Ordinary availability and media DTO fields only. Security/path-containment comment8 is displayed but not used as certification; no host producer implementation reviewed."
+        }
+      ],
+      "computedManifestTotals": {
+        "sourceRows": 4,
+        "full": 0,
+        "selected": 4,
+        "hashOnly": 0,
+        "semanticLines": 128,
+        "bodyDisplayedLines": 240,
+        "displayIncludingNavigationLines": 245,
+        "testDeclarationLines": 0,
+        "productSemanticLines": 128
+      },
+      "declaredManifestTotals": {
+        "selectedProductRows": 4,
+        "fullProductModuleRows": 0,
+        "productSemanticLines": 128,
+        "bodyDisplayedLines": 240,
+        "displayedUnionIncludingNavigationLines": 245,
+        "hashOnlyExistingTests": 1,
+        "testDeclarationLines": 0,
+        "notAllHistoryUniqueFirstReadClaim": true
+      },
+      "manifestCountChecks": {
+        "selectedProductRows": {
+          "declared": 4,
+          "computed": 4,
+          "matches": true
+        },
+        "fullProductModuleRows": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        },
+        "productSemanticLines": {
+          "declared": 128,
+          "computed": 128,
+          "matches": true
+        },
+        "bodyDisplayedLines": {
+          "declared": 240,
+          "computed": 240,
+          "matches": true
+        },
+        "displayedUnionIncludingNavigationLines": {
+          "declared": 245,
+          "computed": 245,
+          "matches": true
+        },
+        "testDeclarationLines": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        }
+      },
+      "metadataSemanticReadFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "failedCheckGroups": [],
+      "endingInputFileChecks": {
+        "checkedUTC": "2026-10-17T17:05:47.230329+00:00",
+        "sameExactFileSet": true,
+        "added": [],
+        "removed": [],
+        "files": [
+          {
+            "path": "canonical-gate-object.json",
+            "bytes": 963,
+            "sha256": "b8ec778c2004d18cba62c050730f9ebfb636045797a228003f4efefb54a7458b",
+            "matchesInitial": true
+          },
+          {
+            "path": "coverage-gate-rows.json",
+            "bytes": 2404,
+            "sha256": "0bb0cd5d0a9e232af3cb9712ac63ba54c84f684bb9d8513406d7c41caaa5fd51",
+            "matchesInitial": true
+          },
+          {
+            "path": "ending-checks.json",
+            "bytes": 1772,
+            "sha256": "11ce0f35be8f30f9555f6eab31ccccf561475b1ebd960181d796fb3b6988020d",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-cause-method.py",
+            "bytes": 2592,
+            "sha256": "79643e9f710f7b5ee6188b56e35470579b66dcefc620341780ea6a9c60d76ee3",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-cause-selected.json",
+            "bytes": 4600,
+            "sha256": "5ab3b92a153d83e916800f7b947255e84975846c9d0eeff32dbbb36a3c5cea32",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-causes.json",
+            "bytes": 33824,
+            "sha256": "48204c369a4bc822a64f899710dbc29c3c16dc23387e5dcf81ee1328213c2a8c",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-contexts.json",
+            "bytes": 5085,
+            "sha256": "f5519552d35ae99de60ab50b319430f8c927171a7e2b95610ade9eebb66ae39e",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-method.py",
+            "bytes": 3846,
+            "sha256": "4babc3e1f3f728e6f56fe532c514801d6d99f3e7576d9f7ccd6f4b78c608f754",
+            "matchesInitial": true
+          },
+          {
+            "path": "history.json",
+            "bytes": 940583,
+            "sha256": "595cafb6febb3c256549cc730959cb9ae9f0df53f868ab54c7056f47e8192d37",
+            "matchesInitial": true
+          },
+          {
+            "path": "initial-pins.json",
+            "bytes": 652,
+            "sha256": "1198f6ad03562837be3aaa55c4734bc8d60b5b810e950228c7ee07ad4ebe4c41",
+            "matchesInitial": true
+          },
+          {
+            "path": "report.md",
+            "bytes": 3814,
+            "sha256": "f9bcb806a34135620cc242957657368a312ed8c02f2961c15eb2c80ac740e03b",
+            "matchesInitial": true
+          },
+          {
+            "path": "reviewer-receipt.json",
+            "bytes": 2581,
+            "sha256": "9f482676c9a75385ce234aa6cc7b9e1fcab729c529b42b386ed1e8abd32899a0",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-display-pins.json",
+            "bytes": 2687,
+            "sha256": "6894058f84a8a9d3109629a6436fcc805ba3fcb96e2a69fa3eb4f1c09f41f3ee",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-excerpts.txt",
+            "bytes": 10241,
+            "sha256": "21c10c84874a0320fcf31c96e037404d9c4b6d9619349a6fadb166ab075e57c4",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-manifest.json",
+            "bytes": 9527,
+            "sha256": "37ffe1273bbe469210c4ba67f201c036a01dd15652e65511d0264d399dcfe7d8",
+            "matchesInitial": true
+          },
+          {
+            "path": "validation.json",
+            "bytes": 712,
+            "sha256": "f25bec3d9d3cf357eca0439a1f8e5cb7a10cb15eb26d95a41d26f24bd6f56014",
+            "matchesInitial": true
+          }
+        ],
+        "unchanged": true
+      }
+    },
+    {
+      "packet": "89-composer-suggestions",
+      "directory": "/tmp/codeshell-audit-round89-composer-suggestions",
+      "exists": true,
+      "inputPins": [
+        {
+          "path": "classification.json",
+          "bytes": 736,
+          "sha256": "38969bd27b7cf28848dad217192a15e7390c0d05d52ab7468634face95abf677",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.033736+00:00"
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 566,
+          "sha256": "d28e8f1b876a286daf7ef5540a44f5a0a2d5ca38cada6195af487c66fdf5fc2e",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.034101+00:00"
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 4357,
+          "sha256": "166a13d4ef91f3ecfb832e4566e1ed7af00218fb0665ff1d52ae5f6c95b72f37",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.034384+00:00"
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 2013,
+          "sha256": "294bb94559143321585d688827cc122ff1f4ddf3d358af647b0d63c5d2014cb9",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.034765+00:00"
+        },
+        {
+          "path": "gate-decision.json",
+          "bytes": 1102,
+          "sha256": "e34892375b9a03b12a4198128b746dcdbe657aea2fd73dbe38cd035aa7782bdd",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.035029+00:00"
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 36480,
+          "sha256": "b9976fb5a18c642e9130a956db9d243f3d1e53b861622f728cfa172fe938861d",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.035430+00:00"
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3836,
+          "sha256": "5f96211c398d593f9d0982dc610fc6e03626604d6dbd358fd09b162c3e209220",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.035632+00:00"
+        },
+        {
+          "path": "history.json",
+          "bytes": 1040935,
+          "sha256": "9346878eca09dfe43a5eb1dee217c5c216e3b2633feae7bd917314f5f564765e",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.036755+00:00"
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1039,
+          "sha256": "f2e27789b25cc3b4e5f0efea4f1da98a1bf2b797522f52a11521b4ab3f7cffa8",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.036964+00:00"
+        },
+        {
+          "path": "prior-overlap.json",
+          "bytes": 3111,
+          "sha256": "e35255d865ccb4ebc884bd46bfb5b602805fee284a8db5686fedccab14d283d5",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.037353+00:00"
+        },
+        {
+          "path": "report.md",
+          "bytes": 5935,
+          "sha256": "af7d651117ab616512018cc9b5bf2add41cc6af248f0646af31571f36b63e007",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.037634+00:00"
+        },
+        {
+          "path": "reviewer-receipt.json",
+          "bytes": 2768,
+          "sha256": "e68df5c5a1dc6dab2fa8bd1dca074881679bf1e1fcff59c3d8dd8e97243715e5",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.037941+00:00"
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 77123,
+          "sha256": "24f0354b6e49c902d988cff23eb6909675af9009a90ddc915abb499996110d63",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.038421+00:00"
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 9869,
+          "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.039313+00:00"
+        },
+        {
+          "path": "validation.json",
+          "bytes": 1419,
+          "sha256": "68b5bb7db69e52c513167143f521732cb38f263036ff9a087f19e7499c1c5334",
+          "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:01:18.039609+00:00"
+        }
+      ],
+      "roleInThisReview": "Independent packet metadata integrity review only; no new source review",
+      "receiptName": "reviewer-receipt.json",
+      "receiptRows": 14,
+      "exactReceiptSet": true,
+      "missingFromReceipt": [],
+      "extraReceiptRows": [],
+      "duplicateReceiptPaths": 0,
+      "receiptRowChecks": [
+        {
+          "path": "classification.json",
+          "bytes": 736,
+          "sha256": "38969bd27b7cf28848dad217192a15e7390c0d05d52ab7468634face95abf677",
+          "matchesReceipt": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 566,
+          "sha256": "d28e8f1b876a286daf7ef5540a44f5a0a2d5ca38cada6195af487c66fdf5fc2e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "bytes": 4357,
+          "sha256": "166a13d4ef91f3ecfb832e4566e1ed7af00218fb0665ff1d52ae5f6c95b72f37",
+          "matchesReceipt": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 2013,
+          "sha256": "294bb94559143321585d688827cc122ff1f4ddf3d358af647b0d63c5d2014cb9",
+          "matchesReceipt": true
+        },
+        {
+          "path": "gate-decision.json",
+          "bytes": 1102,
+          "sha256": "e34892375b9a03b12a4198128b746dcdbe657aea2fd73dbe38cd035aa7782bdd",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 36480,
+          "sha256": "b9976fb5a18c642e9130a956db9d243f3d1e53b861622f728cfa172fe938861d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3836,
+          "sha256": "5f96211c398d593f9d0982dc610fc6e03626604d6dbd358fd09b162c3e209220",
+          "matchesReceipt": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 1040935,
+          "sha256": "9346878eca09dfe43a5eb1dee217c5c216e3b2633feae7bd917314f5f564765e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1039,
+          "sha256": "f2e27789b25cc3b4e5f0efea4f1da98a1bf2b797522f52a11521b4ab3f7cffa8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "prior-overlap.json",
+          "bytes": 3111,
+          "sha256": "e35255d865ccb4ebc884bd46bfb5b602805fee284a8db5686fedccab14d283d5",
+          "matchesReceipt": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 5935,
+          "sha256": "af7d651117ab616512018cc9b5bf2add41cc6af248f0646af31571f36b63e007",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 77123,
+          "sha256": "24f0354b6e49c902d988cff23eb6909675af9009a90ddc915abb499996110d63",
+          "matchesReceipt": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 9869,
+          "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad",
+          "matchesReceipt": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 1419,
+          "sha256": "68b5bb7db69e52c513167143f521732cb38f263036ff9a087f19e7499c1c5334",
+          "matchesReceipt": true
+        }
+      ],
+      "reportLinks": [
+        {
+          "label": "分类记录",
+          "href": "classification.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "38969bd27b7cf28848dad217192a15e7390c0d05d52ab7468634face95abf677"
+        },
+        {
+          "label": "初始 pins",
+          "href": "initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "f2e27789b25cc3b4e5f0efea4f1da98a1bf2b797522f52a11521b4ab3f7cffa8"
+        },
+        {
+          "label": "fresh history",
+          "href": "history.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "9346878eca09dfe43a5eb1dee217c5c216e3b2633feae7bd917314f5f564765e"
+        },
+        {
+          "label": "方法",
+          "href": "history-method.py",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "5f96211c398d593f9d0982dc610fc6e03626604d6dbd358fd09b162c3e209220"
+        },
+        {
+          "label": "contexts",
+          "href": "history-contexts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "b9976fb5a18c642e9130a956db9d243f3d1e53b861622f728cfa172fe938861d"
+        },
+        {
+          "label": "精确 path/SHA 对象",
+          "href": "coverage-gate-objects.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "166a13d4ef91f3ecfb832e4566e1ed7af00218fb0665ff1d52ae5f6c95b72f37"
+        },
+        {
+          "label": "gate decision",
+          "href": "gate-decision.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "e34892375b9a03b12a4198128b746dcdbe657aea2fd73dbe38cd035aa7782bdd"
+        },
+        {
+          "label": "consumer pins",
+          "href": "consumer-initial-pins.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "d28e8f1b876a286daf7ef5540a44f5a0a2d5ca38cada6195af487c66fdf5fc2e"
+        },
+        {
+          "label": "源码范围",
+          "href": "source-manifest.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad"
+        },
+        {
+          "label": "后捕获 excerpts",
+          "href": "source-excerpts.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "24f0354b6e49c902d988cff23eb6909675af9009a90ddc915abb499996110d63"
+        },
+        {
+          "label": "旧范围重叠",
+          "href": "prior-overlap.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "e35255d865ccb4ebc884bd46bfb5b602805fee284a8db5686fedccab14d283d5"
+        },
+        {
+          "label": "validation",
+          "href": "validation.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "68b5bb7db69e52c513167143f521732cb38f263036ff9a087f19e7499c1c5334"
+        },
+        {
+          "label": "ending checks",
+          "href": "ending-checks.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "294bb94559143321585d688827cc122ff1f4ddf3d358af647b0d63c5d2014cb9"
+        },
+        {
+          "label": "receipt",
+          "href": "reviewer-receipt.json",
+          "relative": true,
+          "withinExactPacket": true,
+          "exists": true,
+          "sha256": "e68df5c5a1dc6dab2fa8bd1dca074881679bf1e1fcff59c3d8dd8e97243715e5"
+        }
+      ],
+      "manifestRangeChecks": [
+        {
+          "pointer": "/files/0",
+          "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+          "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+          "coverage": "selected",
+          "declaredFileLines": 101,
+          "selectedLineRanges": [
+            [
+              11,
+              30
+            ],
+            [
+              54,
+              101
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              1,
+              101
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 68,
+          "declaredSemanticLines": 68,
+          "computedBodyDisplayedLines": 101,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 101,
+          "declaredDisplayIncludingNavigationLines": 101,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Ordinary option ID, listbox/active descendant association source, dependency fields, focus-interception markup and children contract. Anchor geometry31–53 and imports1–10 navigation/adjacency only; no DOM/browser/React/focus timing validation."
+        },
+        {
+          "pointer": "/files/1",
+          "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+          "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+          "coverage": "selected",
+          "declaredFileLines": 370,
+          "selectedLineRanges": [
+            [
+              31,
+              34
+            ],
+            [
+              47,
+              53
+            ],
+            [
+              158,
+              193
+            ],
+            [
+              199,
+              370
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              1,
+              370
+            ]
+          ],
+          "navigationLineRanges": [],
+          "computedSemanticLines": 219,
+          "declaredSemanticLines": 219,
+          "computedBodyDisplayedLines": 370,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 370,
+          "declaredDisplayIncludingNavigationLines": 370,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Ordinary item discriminant and selected/callback props, filtered list slices, stable flat-list order and matching section offsets, callback propagation and option IDs/onPick.16–30 imports,35–46 Host/config props,55–157 IPC/search/timer/authority adjacency and194–198 scroll effect are display/navigation only. Helper implementations and actual native/authority operations not reviewed."
+        },
+        {
+          "pointer": "/files/2",
+          "path": "packages/desktop/src/renderer/ChatView.tsx",
+          "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+          "coverage": "selected",
+          "declaredFileLines": 2622,
+          "selectedLineRanges": [
+            [
+              271,
+              278
+            ],
+            [
+              780,
+              784
+            ],
+            [
+              842,
+              872
+            ],
+            [
+              953,
+              985
+            ],
+            [
+              1341,
+              1407
+            ],
+            [
+              2149,
+              2226
+            ],
+            [
+              2230,
+              2233
+            ],
+            [
+              2253,
+              2258
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              271,
+              282
+            ],
+            [
+              842,
+              872
+            ],
+            [
+              953,
+              985
+            ],
+            [
+              1341,
+              1413
+            ],
+            [
+              2128,
+              2228
+            ],
+            [
+              2230,
+              2260
+            ]
+          ],
+          "navigationLineRanges": [
+            [
+              16,
+              16
+            ],
+            [
+              70,
+              70
+            ],
+            [
+              74,
+              74
+            ],
+            [
+              75,
+              75
+            ],
+            [
+              76,
+              76
+            ],
+            [
+              77,
+              77
+            ],
+            [
+              78,
+              78
+            ],
+            [
+              79,
+              79
+            ],
+            [
+              80,
+              80
+            ],
+            [
+              492,
+              492
+            ],
+            [
+              496,
+              496
+            ],
+            [
+              497,
+              497
+            ],
+            [
+              779,
+              779
+            ],
+            [
+              780,
+              780
+            ],
+            [
+              781,
+              781
+            ],
+            [
+              782,
+              782
+            ],
+            [
+              783,
+              783
+            ],
+            [
+              784,
+              784
+            ],
+            [
+              1024,
+              1024
+            ],
+            [
+              1028,
+              1028
+            ],
+            [
+              1070,
+              1070
+            ],
+            [
+              1071,
+              1071
+            ],
+            [
+              1073,
+              1073
+            ],
+            [
+              1077,
+              1077
+            ],
+            [
+              1078,
+              1078
+            ],
+            [
+              1083,
+              1083
+            ],
+            [
+              1087,
+              1087
+            ],
+            [
+              1098,
+              1098
+            ],
+            [
+              1103,
+              1103
+            ],
+            [
+              1113,
+              1113
+            ],
+            [
+              1116,
+              1116
+            ],
+            [
+              1129,
+              1129
+            ],
+            [
+              1135,
+              1135
+            ],
+            [
+              1137,
+              1137
+            ],
+            [
+              1140,
+              1140
+            ],
+            [
+              1142,
+              1142
+            ],
+            [
+              1153,
+              1153
+            ],
+            [
+              1154,
+              1154
+            ],
+            [
+              1158,
+              1158
+            ],
+            [
+              1214,
+              1214
+            ],
+            [
+              1417,
+              1417
+            ],
+            [
+              1421,
+              1421
+            ],
+            [
+              1428,
+              1428
+            ],
+            [
+              2285,
+              2285
+            ],
+            [
+              2456,
+              2456
+            ],
+            [
+              2513,
+              2513
+            ],
+            [
+              2560,
+              2560
+            ],
+            [
+              2603,
+              2603
+            ]
+          ],
+          "computedSemanticLines": 232,
+          "declaredSemanticLines": 232,
+          "computedBodyDisplayedLines": 281,
+          "declaredBodyDisplayedLines": null,
+          "computedDisplayIncludingNavigationLines": 329,
+          "declaredDisplayIncludingNavigationLines": 329,
+          "allRangesWithinDeclaredFileLength": true,
+          "semanticWithinDisplayedOrNavigation": true,
+          "semanticCountMatches": true,
+          "bodyCountMatches": true,
+          "displayCountMatches": true,
+          "navigationOnlyComplementMatches": true,
+          "fullOnlyIfAllDeclaredLinesSelected": true,
+          "endingHashMatchesInitial": true,
+          "sourceKind": "product",
+          "purposeOrScope": "Real slash/mention ordinary query open/reset/clamp, list and selected-index state, keyboard mapping, actual child props/option callbacks and textarea change/key handler binding. Plugin/builtin execution, applyMentionPick replacement implementation, native attachment/Host mechanisms, submit behavior and all React event timing remain call boundaries or adjacent display only."
+        }
+      ],
+      "computedManifestTotals": {
+        "sourceRows": 3,
+        "full": 0,
+        "selected": 3,
+        "hashOnly": 0,
+        "semanticLines": 519,
+        "bodyDisplayedLines": 752,
+        "displayIncludingNavigationLines": 800,
+        "testDeclarationLines": 0,
+        "productSemanticLines": 519
+      },
+      "declaredManifestTotals": {
+        "semanticFiles": 3,
+        "full": 0,
+        "selected": 3,
+        "semanticLines": 519,
+        "productSemanticLines": 519,
+        "testSemanticLines": 0,
+        "uniqueDisplayedLines": 800,
+        "testsExecuted": 0,
+        "testDeclarationsRead": 0
+      },
+      "manifestCountChecks": {
+        "semanticFiles": {
+          "declared": 3,
+          "computed": 3,
+          "matches": true
+        },
+        "full": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        },
+        "selected": {
+          "declared": 3,
+          "computed": 3,
+          "matches": true
+        },
+        "semanticLines": {
+          "declared": 519,
+          "computed": 519,
+          "matches": true
+        },
+        "productSemanticLines": {
+          "declared": 519,
+          "computed": 519,
+          "matches": true
+        },
+        "testSemanticLines": {
+          "declared": 0,
+          "computed": 0,
+          "matches": true
+        },
+        "uniqueDisplayedLines": {
+          "declared": 800,
+          "computed": 800,
+          "matches": true
+        }
+      },
+      "metadataSemanticReadFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "failedCheckGroups": [],
+      "endingInputFileChecks": {
+        "checkedUTC": "2026-10-17T17:05:47.230329+00:00",
+        "sameExactFileSet": true,
+        "added": [],
+        "removed": [],
+        "files": [
+          {
+            "path": "classification.json",
+            "bytes": 736,
+            "sha256": "38969bd27b7cf28848dad217192a15e7390c0d05d52ab7468634face95abf677",
+            "matchesInitial": true
+          },
+          {
+            "path": "consumer-initial-pins.json",
+            "bytes": 566,
+            "sha256": "d28e8f1b876a286daf7ef5540a44f5a0a2d5ca38cada6195af487c66fdf5fc2e",
+            "matchesInitial": true
+          },
+          {
+            "path": "coverage-gate-objects.json",
+            "bytes": 4357,
+            "sha256": "166a13d4ef91f3ecfb832e4566e1ed7af00218fb0665ff1d52ae5f6c95b72f37",
+            "matchesInitial": true
+          },
+          {
+            "path": "ending-checks.json",
+            "bytes": 2013,
+            "sha256": "294bb94559143321585d688827cc122ff1f4ddf3d358af647b0d63c5d2014cb9",
+            "matchesInitial": true
+          },
+          {
+            "path": "gate-decision.json",
+            "bytes": 1102,
+            "sha256": "e34892375b9a03b12a4198128b746dcdbe657aea2fd73dbe38cd035aa7782bdd",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-contexts.json",
+            "bytes": 36480,
+            "sha256": "b9976fb5a18c642e9130a956db9d243f3d1e53b861622f728cfa172fe938861d",
+            "matchesInitial": true
+          },
+          {
+            "path": "history-method.py",
+            "bytes": 3836,
+            "sha256": "5f96211c398d593f9d0982dc610fc6e03626604d6dbd358fd09b162c3e209220",
+            "matchesInitial": true
+          },
+          {
+            "path": "history.json",
+            "bytes": 1040935,
+            "sha256": "9346878eca09dfe43a5eb1dee217c5c216e3b2633feae7bd917314f5f564765e",
+            "matchesInitial": true
+          },
+          {
+            "path": "initial-pins.json",
+            "bytes": 1039,
+            "sha256": "f2e27789b25cc3b4e5f0efea4f1da98a1bf2b797522f52a11521b4ab3f7cffa8",
+            "matchesInitial": true
+          },
+          {
+            "path": "prior-overlap.json",
+            "bytes": 3111,
+            "sha256": "e35255d865ccb4ebc884bd46bfb5b602805fee284a8db5686fedccab14d283d5",
+            "matchesInitial": true
+          },
+          {
+            "path": "report.md",
+            "bytes": 5935,
+            "sha256": "af7d651117ab616512018cc9b5bf2add41cc6af248f0646af31571f36b63e007",
+            "matchesInitial": true
+          },
+          {
+            "path": "reviewer-receipt.json",
+            "bytes": 2768,
+            "sha256": "e68df5c5a1dc6dab2fa8bd1dca074881679bf1e1fcff59c3d8dd8e97243715e5",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-excerpts.json",
+            "bytes": 77123,
+            "sha256": "24f0354b6e49c902d988cff23eb6909675af9009a90ddc915abb499996110d63",
+            "matchesInitial": true
+          },
+          {
+            "path": "source-manifest.json",
+            "bytes": 9869,
+            "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad",
+            "matchesInitial": true
+          },
+          {
+            "path": "validation.json",
+            "bytes": 1419,
+            "sha256": "68b5bb7db69e52c513167143f521732cb38f263036ff9a087f19e7499c1c5334",
+            "matchesInitial": true
+          }
+        ],
+        "unchanged": true
+      }
+    }
+  ],
+  "checkedUTC": "2026-10-17T17:04:34.485630+00:00",
+  "problems": [],
+  "execution": {
+    "product": 0,
+    "productSourcesRead": 0,
+    "authorMethodsExecuted": 0,
+    "Git": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "DOMReactTimersUI": 0,
+    "networkNative": 0,
+    "metadataOnly": "Own Python stdlib hashing/JSON/range accounting and report Markdown link parsing only; source excerpts/scripts hashed as opaque bytes."
+  },
+  "scope": {
+    "allowedPacketsOnly": true,
+    "freshHistoryScan": false,
+    "mutable90_91_92Read": false,
+    "ownAuthorPackets": [
+      85,
+      88
+    ],
+    "newProductSemanticLines": 0,
+    "doesNotCertifySourceRootCauseOrRuntime": true
+  },
+  "crossPacketManifestHashComparisons": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "rows": [
+        {
+          "packet": "84-latest-scroll-review",
+          "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+        },
+        {
+          "packet": "85-latest-scroll",
+          "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+        }
+      ],
+      "sameSha256": true
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "rows": [
+        {
+          "packet": "84-latest-scroll-review",
+          "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+        },
+        {
+          "packet": "85-latest-scroll",
+          "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+        }
+      ],
+      "sameSha256": true
+    },
+    {
+      "path": "packages/web/app/app.css",
+      "rows": [
+        {
+          "packet": "84-latest-scroll-review",
+          "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11"
+        },
+        {
+          "packet": "85-latest-scroll",
+          "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11"
+        }
+      ],
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "rows": [
+        {
+          "packet": "87-frontier-selection",
+          "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12"
+        },
+        {
+          "packet": "89-composer-suggestions",
+          "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12"
+        }
+      ],
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+      "rows": [
+        {
+          "packet": "87-frontier-selection",
+          "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429"
+        },
+        {
+          "packet": "89-composer-suggestions",
+          "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429"
+        }
+      ],
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "rows": [
+        {
+          "packet": "87-frontier-selection",
+          "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc"
+        },
+        {
+          "packet": "88-plugin-presentation",
+          "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc"
+        }
+      ],
+      "sameSha256": true
+    }
+  ],
+  "endingCheckedUTC": "2026-10-17T17:05:47.230329+00:00",
+  "totals": {
+    "packets": 6,
+    "actualInputArtifacts": 99,
+    "verifiedSelfExcludedReceiptRows": 93,
+    "reportLocalLinksChecked": 79,
+    "manifestRowsRangeChecked": 49,
+    "authorMetadataSourceSemanticsRepeatedByThisReview": 0,
+    "allInputsUnchanged": true,
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "limits": [
+    "Exact six packet directories only; no fresh history scan or mutable90/91/92 reads.",
+    "Source ranges validated against declared manifest lengths/counts, not independently against product bodies or runtime.",
+    "Receipt-byte integrity does not certify author semantic/root-cause/runtime conclusions.",
+    "All historical query totals/caps and diagnostics remain dated author metadata; no independent full-history semantic review.",
+    "Source excerpts, methods and retained history captures were only opaque byte-hashed, never executed or decoded as new product semantics.",
+    "85 and88 were written by this reviewer and are own-author metadata self-checks.",
+    "No adding overlapping84/85 or other repeated source selections as unique/global coverage."
+  ],
+  "ownMetadataDiagnostics": {
+    "errors": [],
+    "truncations": [],
+    "allObservedCommandExitsBeforeFinalizer": 0
+  },
+  "inheritedMetadataDiagnostics": [
+    {
+      "packet": 87,
+      "diagnostic": "first-reader-diagnostic.json",
+      "exitCode": 1,
+      "errorType": "TypeError",
+      "scope": "Tuple-key Counter JSON summary formatting after59 metadata rows; author preserves stderr; original full stdout not separately captured. Not a product/test failure; no author method rerun by this reviewer."
+    },
+    {
+      "packet": 84,
+      "diagnostics": [
+        "history-first-exit.json",
+        "layout-navigation-first-exit.json"
+      ],
+      "observedDeclaredExitCodes": [
+        0,
+        0
+      ],
+      "scope": "Successful dated metadata/navigation commands; do not classify first filenames as failures."
+    },
+    {
+      "packet": 89,
+      "diagnostic": "validation.json /nonfatalNoMatchSearch",
+      "scope": "Filename-only test query no match; individual rg exit not captured; containing tool exit0. Not proof tests absent or product failure."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T17:02:23.375250+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "bytes": 29998,
+      "lines": 733,
+      "beforeCurrentLineNavigationAndBody": true
+    }
+  ]
+}

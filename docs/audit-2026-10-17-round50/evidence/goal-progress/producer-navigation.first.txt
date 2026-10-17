@@ -1,0 +1,10 @@
+315:   * Whether an approaching_limit marker was already emitted for the current
+456:   * maxStopBlocks) and we haven't announced it yet, emit one approaching_limit
+471:      status: "approaching_limit",
+473:      turnsRemaining: prox.turnsRemaining,
+474:      stopBlocksRemaining: prox.stopBlocksRemaining,
+1030:        const turnsRemaining = this.config.maxTurns - this.turnCount;
+1031:        if (turnsRemaining === 2) {
+1038:        } else if (turnsRemaining === 1) {
+1045:        } else if (turnsRemaining === 0) {
+1454:          if (turnsRemaining === 0) {

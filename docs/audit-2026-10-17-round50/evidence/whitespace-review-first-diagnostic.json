@@ -1,0 +1,7 @@
+{
+  "toolChunk": "845e66",
+  "exitCode": 1,
+  "beforeOutputJsonWritten": true,
+  "error": "AssertionError: numbered blank format93: includes colon, first metadata regex only allowed digits and whitespace",
+  "productRuns": 0
+}

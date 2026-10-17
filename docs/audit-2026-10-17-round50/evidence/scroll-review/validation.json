@@ -1,0 +1,18 @@
+{
+  "formal": 0,
+  "candidate": 0,
+  "newRelated": 0,
+  "productHelperFunctionOrImportRuns": 0,
+  "testsFixturesRun": 0,
+  "ReactDOMClockTimerRuns": 0,
+  "realUserDataRead": 0,
+  "nativeNetworkModelGitRuns": 0,
+  "mutableRoot84Read": false,
+  "sourceWrites": 0,
+  "metadataErrors": 0,
+  "metadataOutputTruncations": 0,
+  "allObservedCompletedCommandExitCodes": 0,
+  "metadataExecution": "Own standard-library range/hash/JSON audit I/O and history scanner; rg paths/navigation only. No repository/product scripts.",
+  "ending": "ending-checks.json",
+  "samePhysicalPrior83ReadNotRecappedAsNewFull": true
+}

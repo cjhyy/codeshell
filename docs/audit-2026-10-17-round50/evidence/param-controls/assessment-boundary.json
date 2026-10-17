@@ -1,0 +1,32 @@
+{
+  "writtenUTC": "2026-10-17T17:01:43.196698+00:00",
+  "originalHistorySpecRead": {
+    "path": "docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md",
+    "bytes": 16584,
+    "sha256": "3e14e41d7ea8351f2ebfca649dc4213e5ff3e536bab77fb799173c64204c7f5b",
+    "paragraphs": [
+      {
+        "paragraph": 59,
+        "startLine": 238,
+        "endLine": 238,
+        "text": "## 10. 开放问题(写实现计划时定)"
+      },
+      {
+        "paragraph": 60,
+        "startLine": 240,
+        "endLine": 244,
+        "text": "1. **rules.ts 导入形态**:一次性生成内置 catalog vs 运行时把 rules 投影合进 catalog。\n2. **wire 映射的复杂度边界**:最小版只需 `field`;Anthropic 嵌套字段(`thinking.budget_tokens`)、二选一互斥(effort vs budget)等复杂映射做到哪。\n3. **`paramValues` 的校验**:实例存的值是否对照 `params` 校验(枚举越界/范围),还是宽松透传。\n4. **文本 UI 分支与 connUi 的复用边界**:文本卡片多大程度共用 `connUi`。\n"
+      }
+    ]
+  },
+  "assessmentFirst": "Initial author message called the old design open question a contract counter-evidence and tentatively planned0/0/0. This wording overstated its relevance to current correctness.",
+  "rootClarification": "Old unresolved design question does not prove current implementation correct, does not exempt min/max UI contract. Classify only current proven ordinary call/save/consumer bounds.",
+  "activeAssessment": "Current min/max attributes and direct numeric patch/save forwarding are proven in source. No current must-reject contract or actual error consumer/DOM or real save outcome established in this bounded audit; unconfirmed, not promoted. This is not a finding that implementation is correct.",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "productRerun": false,
+  "providerOrAuthorityMechanismExpansion": false
+}

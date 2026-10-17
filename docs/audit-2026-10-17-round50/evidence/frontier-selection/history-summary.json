@@ -1,0 +1,36 @@
+{
+  "startedUTC": "2026-10-17T16:48:42.249138+00:00",
+  "finishedUTC": "2026-10-17T16:48:50.888561+00:00",
+  "counts": {
+    "markdownFiles": 1457,
+    "jsonFiles": 3236,
+    "jsonScalarValues": 3168045,
+    "jsonStringValues": 2129441,
+    "jsonContainingTargetPathValues": 184,
+    "historyFiles": 4693,
+    "excludedAudit50PlusFiles": 0,
+    "archiveExactDirectoryFiles": 162,
+    "archiveSubstringFiles": 174,
+    "claims": 407,
+    "canonicalManifestHintClaims": 59
+  },
+  "parseErrors": [],
+  "qualifierKeyInventory": {
+    "scope": 3,
+    "coverageStatus": 32,
+    "coverage": 43,
+    "coveragePrepEarlierFilesystemSha256": 1,
+    "coveragePrepEarlierPinIsNotSemanticReadProof": 1,
+    "kind": 20,
+    "coverageKind": 102,
+    "scopeFields": 110,
+    "exactScopeFields": 4
+  },
+  "globalCoverageClassificationChanged": false,
+  "productBodiesRead": 0,
+  "currentProductHashChecks": 30,
+  "productExecutions": 0,
+  "gitOperations": 0,
+  "webAccesses": 0,
+  "errorsOrTruncationBeforeThisScript": 0
+}

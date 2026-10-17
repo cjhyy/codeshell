@@ -1,0 +1,16 @@
+packages/desktop/src/renderer/messages/streamGroups.ts:67:  kind: "turn_process_group";
+packages/desktop/src/renderer/messages/streamGroups.ts:219:export function buildStreamItems(
+packages/desktop/src/renderer/messages/streamGroups.ts:230: * group is structurally identical to the previous render's. buildStreamItems
+packages/desktop/src/renderer/messages/streamGroups.ts:267:  if (item.kind === "turn_process_group") {
+packages/desktop/src/renderer/messages/streamGroups.ts:285:    if (p.kind === "tool_group" || p.kind === "turn_process_group") {
+packages/desktop/src/renderer/messages/streamGroups.ts:291:    if (n.kind !== "tool_group" && n.kind !== "turn_process_group") return n;
+packages/desktop/src/renderer/messages/streamGroups.ts:498:      kind: "turn_process_group",
+packages/desktop/src/renderer/messages/streamGroups.ts:670:export function processGroupActivityLabel(group: TurnProcessGroup): string {
+packages/desktop/src/renderer/messages/streamGroups.ts:681:export function processGroupDuration(durationMs: number | undefined): string | undefined {
+packages/desktop/src/renderer/messages/streamGroups.ts:699:export function processGroupLabel(durationMs: number | undefined): string {
+packages/desktop/src/renderer/MessageStream.tsx:18:import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
+packages/desktop/src/renderer/MessageStream.tsx:37:  groupStreamItemsIntoContextTurns,
+packages/desktop/src/renderer/MessageStream.tsx:432:          const built = buildStreamItems(messages, { liveTurnActive });
+packages/desktop/src/renderer/MessageStream.tsx:445:    () => alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns),
+packages/desktop/src/renderer/MessageStream.tsx:451:    if (m.kind === "turn_process_group") {
+packages/desktop/src/renderer/MessageStream.tsx:596:      case "goal_progress":

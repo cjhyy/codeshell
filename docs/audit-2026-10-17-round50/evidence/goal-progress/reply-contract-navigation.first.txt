@@ -1,0 +1,7 @@
+packages/desktop/src/main/external-runtime-goal-rpc.ts:9:  "agent/goalExtend",
+packages/desktop/src/main/external-runtime-goal-rpc.ts:75:  service(): Pick<ExternalRuntimeService, "getGoal" | "updateGoal" | "deleteGoal" | "extendGoal">;
+packages/desktop/src/main/external-runtime-goal-rpc.ts:130:          case "agent/goalExtend": {
+packages/desktop/src/main/external-runtime-goal-rpc.ts:147:            result = await service.extendGoal(sessionId, limits, callerWebContentsId);
+packages/desktop/src/preload/types.d.ts:1124:  goalExtend(
+packages/desktop/src/preload/index.ts:609:  goalExtend: (
+packages/desktop/src/preload/index.ts:618:    rpc("agent/goalExtend", { sessionId, ...opts }).then(rpcResult) as Promise<{

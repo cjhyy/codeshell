@@ -1,0 +1,19 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "--hidden",
+    "--no-ignore",
+    "docs",
+    "bugs",
+    "-g",
+    "*.md",
+    "-g",
+    "*.MD",
+    "-g",
+    "*.json"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "stdoutPathCount": 4693
+}

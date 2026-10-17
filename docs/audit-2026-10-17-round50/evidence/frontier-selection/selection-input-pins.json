@@ -1,0 +1,23 @@
+{
+  "rootReportedContext": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b external only; Git0",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "pinnedUTC": "2026-10-17T16:46:09.701773+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/status-transitions.json",
+      "bytes": 54654,
+      "sha256": "96105e210c3c48dbc209edc6e4e9e26c239bcd1bb98db90a158988403c679ed5",
+      "pinnedUTC": "2026-10-17T16:46:09.704252+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000",
+      "pinnedUTC": "2026-10-17T16:46:09.704586+00:00"
+    }
+  ]
+}

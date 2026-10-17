@@ -1,0 +1,1410 @@
+{
+  "latest-scroll": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/2369",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/105/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/33/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/4029/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/2/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/29/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/59/context",
+      "valueChars": 1080,
+      "contextStart": 53,
+      "contextEnd": 1080,
+      "text": "完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/60/context",
+      "valueChars": 1080,
+      "contextStart": 0,
+      "contextEnd": 806,
+      "text": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的生产 `targetForCwd` 还用这个结果构建 `{ projectId }`，小写 cwd 在错误项目",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/2/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/33/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/63/context",
+      "valueChars": 1063,
+      "contextStart": 36,
+      "contextEnd": 1063,
+      "text": "完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/format_contract/56/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/format_contract/126/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/rows/1/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/rows/8/context",
+      "valueChars": 1080,
+      "contextStart": 53,
+      "contextEnd": 1080,
+      "text": "完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/rows/9/context",
+      "valueChars": 1080,
+      "contextStart": 0,
+      "contextEnd": 806,
+      "text": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的生产 `targetForCwd` 还用这个结果构建 `{ projectId }`，小写 cwd 在错误项目",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/rows/16/context",
+      "valueChars": 1063,
+      "contextStart": 36,
+      "contextEnd": 1063,
+      "text": "完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+      "locator": "/web-format/2/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+      "locator": "/web-format/29/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+      "locator": "/web-format/57/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+      "locator": "/hits/packages~1web~1src~1lib~1format.ts/13/excerpt",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+      "locator": "/hits/packages~1web~1src~1lib~1format.ts/37/excerpt",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+      "locator": "/commentbox/3/text",
+      "valueChars": 1300,
+      "contextStart": 919,
+      "contextEnd": 1300,
+      "text": "完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/Mess",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+      "locator": "/hits/draft_switch/25/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+      "locator": "/hits/draft_switch/26/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/16067/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/16067/directSourcePathsInObject/0",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/16068/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/16068/directSourcePathsInObject/0",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/4352/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/4352/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "locator": "/unknownPaths/3941",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/4353/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json",
+      "locator": "/files/2/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+      "locator": "/sourceChecks/6/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/7/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/8/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/29/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/30/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/31/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/32/context",
+      "valueChars": 751,
+      "contextStart": 0,
+      "contextEnd": 751,
+      "text": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/33/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/34/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/35/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/37/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/38/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/39/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/40/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/41/context",
+      "valueChars": 751,
+      "contextStart": 0,
+      "contextEnd": 751,
+      "text": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/42/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/44/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/45/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/46/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/49/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/50/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/53/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/54/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/84/context",
+      "valueChars": 1068,
+      "contextStart": 0,
+      "contextEnd": 1068,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/7/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/8/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/9/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/10/context",
+      "valueChars": 751,
+      "contextStart": 0,
+      "contextEnd": 751,
+      "text": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/11/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/12/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/13/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/15/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/16/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/17/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/18/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/19/context",
+      "valueChars": 751,
+      "contextStart": 0,
+      "contextEnd": 751,
+      "text": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/20/context",
+      "valueChars": 1000,
+      "contextStart": 0,
+      "contextEnd": 1000,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/22/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/23/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/history-filename-scope-selected.json",
+      "locator": "/contexts/24/context",
+      "valueChars": 1068,
+      "contextStart": 0,
+      "contextEnd": 1068,
+      "text": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/report.md",
+      "locator": "markdown-text",
+      "valueChars": 3387,
+      "contextStart": 1909,
+      "contextEnd": 3059,
+      "text": "es](source-manifest.json)、[captured excerpts](source-excerpts.json)\n\n目标 295 行全部显示过，但只将普通复制标签/代码、text/reasoning、streaming/settled、tool/status 分支计入语义范围；HTML、链接、文件宿主回调及平台剪贴板分支只显示到边界，不给其安全/native 正确性结论。因此该 row 是 selected，不能升级为全文语义覆盖。三个产品文件合计454行语义，既有测试仅57行普通声明，合计511行；902行是正文与 rg 导航的去重显示并集。4 selected rows、3 hash-only rows、0 explicit semantic full rows。`useLatestMessages.ts` 仅 pin，正文0；没有扩展旧滚动方向。manifest 保留 body ranges、额外导航行和 canonical union，重复显示不重复计数。\n\n所选正常合同未建立新反例：streaming 明确按纯文本分支展示，settled 将原 text 传给 ReactMarkdown；reasoning 独立折叠；工具 args/result 与单行摘要分离，result 使用 nullish fallback。现有声明包括普通标题/列表/表格/代码、streaming 保持纯文本、reasoning 分离、工作区路径标签、普通工具参数/结果，均只读未运行。安全相关断言也曾显示，但没有采用为安全审查或 pass 证据。\n\n补充函数名和展示旧因检索使用相同 dated 4162 文件集。4 个显示 helper 名称命中0；Web/复制/展示词命中61、保留61，上限100，未发生 cap 截断。实际选读4个旧窗口；Desktop R2-05 是 stripMarkdown 纯文本复制改变 fenced-code 正文，TUI R2-06/R2-07 是另一消费者的围栏/表格问题，均未恢复运行或重报。旧 Unicode 截断、上下文路由、HTML/宿主机制不展开为新 candidate/related。旧 observed Web markup 只是历史输出片段，不能证明本版本全文审查或本轮运行。[cause scan](history-display-causes.json)、[selected windows](history-cause-selected.json)、[decisions](decisions.json)\n\n结束核对7个 pin 的当前源码/指引 SHA 全相同。dated 历史的4162 include",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "locator": "/files/4/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "locator": "/files/4/prepPinRow/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "locator": "/files/5/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "locator": "/hashOnlyChecks/0/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/0/object/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/0/object/prepPinRow/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/1/object/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/0/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/1/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/2/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/3/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/4/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/5/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/6/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/7/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/8/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/9/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/10/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/11/row/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/ending-checks.json",
+      "locator": "/sourceChecks/0/path",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages/0/text",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages/1/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages/2/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages/3/text",
+      "valueChars": 37,
+      "contextStart": 0,
+      "contextEnd": 37,
+      "text": "packages/web/app/useLatestMessages.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages/4/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    }
+  ],
+  "latest-scroll-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/4029/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/16068/sourceHashFields/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/4352/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/4352/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/4353/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json",
+      "locator": "/files/2/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+      "locator": "/sourceChecks/6/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+      "locator": "/sourceChecks/6/initialSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "locator": "/files/4/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "locator": "/files/4/initialSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "locator": "/files/4/prepPinRow/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "locator": "/files/5/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "locator": "/files/5/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "locator": "/files/5/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "locator": "/hashOnlyChecks/0/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/0/object/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/0/object/initialSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/0/object/prepPinRow/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "locator": "/rows/1/object/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/0/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/3/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/4/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/5/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/6/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/7/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/8/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/9/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/10/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "locator": "/rows/11/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/ending-checks.json",
+      "locator": "/sourceChecks/0/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/0/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/1/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/2/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/3/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/4/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/5/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/6/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/7/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/8/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/9/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/10/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/11/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/12/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/13/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "locator": "/latest-messages-sha/14/text",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/initial-pins.json",
+      "locator": "/files/0/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/report.md",
+      "locator": "markdown-text",
+      "valueChars": 2793,
+      "contextStart": 0,
+      "contextEnd": 995,
+      "text": "# useLatestMessages 普通消息集合投影\n\n结果 **0正式 / 0候选 / 0新增关联**。所读普通状态/DTO合同未建立新反例；这是有界negative，不是整个hook、Web、房间或连接机制正确性认证。未读取可变80/81材料，未改75/78冻件。\n\n实际目标`packages/web/app/useLatestMessages.ts`173行/6078B，SHAd0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71，[初始pin](initial-pins.json)在正文前。own[fresh history](history.json)于2026-10-17 16:29:39–43 UTC纳冻结48排49+：4492=1442MD+3050JSON，1953735strings/2921270scalars、169archive/_archive、0parse。path/basename80、SHA15，cap100全保存，但不当实际读尽。12个简表字段对象均库存/派生或47 hash-only，[两canonical原object](canonical-gate-objects.json)亦明确hash-only；未建立same-SHA full/readScope/reviewMode完整依据，不等于历史从未阅读。机器字段检查含scope/review/inspectionScope/readScope/reviewMode，不能仅凭词命中自动升级。\n\n实际读了[7个旧窗口](history-selected-contexts.json)：R2仅提cwd→project→新会话目标接线，UI-02是路径大小写归属旧因；47明确hook只pin、body0。不重报这些旧因或重开旧动态方向，亦不声称全部历史语义查尽。[原方法](history-method.py)、[所有保留窗口](history-contexts.json)、[简表](coverage-gate-rows.json)保留。\n\n## 普通生产与消费反证\n\nvisibleOutput不计用户回声及done且text/reasoning皆空的assistant；outputChanged忽略",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-display-pins.json",
+      "locator": "/files/0/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "locator": "/files/0/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "locator": "/files/0/endingSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "locator": "/files/0/initialSemanticReadSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "locator": "/files/0/dedicatedSelectedReadSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "locator": "/files/39/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "locator": "/files/39/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "locator": "/files/39/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "locator": "/workerSourceChecks/30/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "wholeValueIncluded": true
+    }
+  ]
+}

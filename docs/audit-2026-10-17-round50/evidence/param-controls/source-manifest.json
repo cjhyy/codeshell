@@ -1,0 +1,1067 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootContextCommitExternal": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "GitOperations": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "bytes": 3183,
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "lines": 103,
+      "pinnedUTC": "2026-10-17T16:54:18.635683+00:00",
+      "timing": "Before current90 body/locator review",
+      "sourceKind": "product",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "coveredLineCount": 103,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "displayedLineCount": 103,
+      "navigationOrIncidentalOnlyLineCount": 0,
+      "scope": "Whole103-line source read for ordinary enum/number/toggle/text value/display/onChange contract; DOM/browser behavior and provider execution unobserved.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "bytes": 2402,
+      "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "lines": 62,
+      "pinnedUTC": "2026-10-17T16:54:18.636778+00:00",
+      "timing": "Before current90 body/locator review",
+      "sourceKind": "test-declaration",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "coveredLineCount": 62,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "displayedLineCount": 62,
+      "navigationOrIncidentalOnlyLineCount": 0,
+      "scope": "Existing test declaration read statically in full; no module imported, helper invoked, rendering or tests executed.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "bytes": 7376,
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "lines": 194,
+      "pinnedUTC": "2026-10-17T16:55:30.517615+00:00",
+      "timing": "Before content rg/selected read",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          21,
+          24
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          159,
+          166
+        ],
+        [
+          178,
+          180
+        ]
+      ],
+      "coveredLineCount": 17,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          55
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          154,
+          183
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        10,
+        18,
+        30,
+        32,
+        49,
+        63,
+        99,
+        119,
+        149,
+        151,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        171,
+        178
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          55
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          99,
+          99
+        ],
+        [
+          119,
+          119
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          154,
+          183
+        ]
+      ],
+      "displayedLineCount": 90,
+      "navigationOrIncidentalOnlyLineCount": 73,
+      "scope": "Ordinary params/current values/onPatch/save event wiring. Credential props/content only incidental display or locator; credentials, identity, removal and native mechanisms not audited.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "lines": 2984,
+      "pinnedUTC": "2026-10-17T16:56:00.574980+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2649,
+          2670
+        ]
+      ],
+      "coveredLineCount": 22,
+      "bodyDisplayedLineRanges": [
+        [
+          2649,
+          2671
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        2649,
+        2650,
+        2662,
+        2663,
+        2669
+      ],
+      "displayedLineRanges": [
+        [
+          2649,
+          2671
+        ]
+      ],
+      "displayedLineCount": 23,
+      "navigationOrIncidentalOnlyLineCount": 1,
+      "scope": "Selected mirrored ParamSpec/ModelPreset DTO only; other2984-line preload surface not read.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0"
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "bytes": 5401,
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "lines": 121,
+      "pinnedUTC": "2026-10-17T16:56:00.576810+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          17,
+          20
+        ],
+        [
+          29,
+          31
+        ],
+        [
+          33,
+          59
+        ],
+        [
+          66,
+          74
+        ]
+      ],
+      "coveredLineCount": 43,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        59,
+        76
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "displayedLineCount": 76,
+      "navigationOrIncidentalOnlyLineCount": 33,
+      "scope": "Selected ordinary ParamSpec and ModelPreset schemas, finite numeric bounds and wire field DTO. Adapter/provider/identity mechanism not reviewed.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1"
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.ts",
+      "bytes": 2112,
+      "sha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391",
+      "lines": 55,
+      "pinnedUTC": "2026-10-17T16:56:00.577438+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "product",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "coveredLineCount": 55,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        8,
+        18,
+        47
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "displayedLineCount": 55,
+      "navigationOrIncidentalOnlyLineCount": 0,
+      "scope": "Whole ordinary generic projection/documentation helper read, not executed. This is a helper contract, not proof that every text provider executes it.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391"
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.test.ts",
+      "bytes": 3057,
+      "sha256": "9bff9fc073f4101adf59ca651c57a4b8566aa154be4ca42028ab54d841081495",
+      "lines": 76,
+      "pinnedUTC": "2026-10-17T16:56:00.578040+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "test-declaration",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "coveredLineCount": 76,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "displayedLineCount": 76,
+      "navigationOrIncidentalOnlyLineCount": 0,
+      "scope": "Existing test declaration read statically in full; no module imported, helper invoked, rendering or tests executed.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "9bff9fc073f4101adf59ca651c57a4b8566aa154be4ca42028ab54d841081495"
+    },
+    {
+      "path": "packages/core/src/model-catalog/builtin.ts",
+      "bytes": 23756,
+      "sha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35",
+      "lines": 585,
+      "pinnedUTC": "2026-10-17T16:56:00.578699+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          46,
+          54
+        ],
+        [
+          62,
+          109
+        ]
+      ],
+      "coveredLineCount": 57,
+      "bodyDisplayedLineRanges": [
+        [
+          40,
+          109
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        49,
+        51,
+        66,
+        68,
+        75,
+        77,
+        84,
+        87,
+        94,
+        97,
+        104,
+        107,
+        115,
+        451,
+        455,
+        473,
+        479,
+        482,
+        489,
+        516,
+        520,
+        531,
+        537,
+        540
+      ],
+      "displayedLineRanges": [
+        [
+          40,
+          109
+        ],
+        [
+          115,
+          115
+        ],
+        [
+          451,
+          451
+        ],
+        [
+          455,
+          455
+        ],
+        [
+          473,
+          473
+        ],
+        [
+          479,
+          479
+        ],
+        [
+          482,
+          482
+        ],
+        [
+          489,
+          489
+        ],
+        [
+          516,
+          516
+        ],
+        [
+          520,
+          520
+        ],
+        [
+          531,
+          531
+        ],
+        [
+          537,
+          537
+        ],
+        [
+          540,
+          540
+        ]
+      ],
+      "displayedLineCount": 82,
+      "navigationOrIncidentalOnlyLineCount": 25,
+      "scope": "Ordinary concrete enum/numeric ParamSpec literal producer. Provider capabilities and comments describing old live verification do not count as observations.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/TextConnectionsPanel.tsx",
+      "bytes": 8889,
+      "sha256": "05229ff4405261230ca97076d60588e9adb8a458dcdd96d49a041954a5388356",
+      "lines": 251,
+      "pinnedUTC": "2026-10-17T16:56:00.579646+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          229,
+          233
+        ],
+        [
+          238,
+          238
+        ],
+        [
+          241,
+          241
+        ]
+      ],
+      "coveredLineCount": 7,
+      "bodyDisplayedLineRanges": [
+        [
+          229,
+          245
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        16,
+        64,
+        229,
+        238,
+        241
+      ],
+      "displayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          229,
+          245
+        ]
+      ],
+      "displayedLineCount": 19,
+      "navigationOrIncidentalOnlyLineCount": 12,
+      "scope": "Ordinary Card mount/instance/catalog props and patch/save forwarding only. Credential operations, focus/native machinery and other callbacks displayed but not audited.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "05229ff4405261230ca97076d60588e9adb8a458dcdd96d49a041954a5388356"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "bytes": 14636,
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "lines": 390,
+      "pinnedUTC": "2026-10-17T16:56:00.580784+00:00",
+      "timing": "Before current90 content locator/selected read; inventory-only names already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          149,
+          163
+        ],
+        [
+          232,
+          236
+        ],
+        [
+          256,
+          257
+        ],
+        [
+          261,
+          267
+        ]
+      ],
+      "coveredLineCount": 29,
+      "bodyDisplayedLineRanges": [
+        [
+          148,
+          178
+        ],
+        [
+          231,
+          237
+        ],
+        [
+          256,
+          280
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        15,
+        18,
+        33,
+        47,
+        49,
+        50,
+        51,
+        70,
+        71,
+        111,
+        128,
+        150,
+        151,
+        152,
+        155,
+        182,
+        200,
+        202,
+        233,
+        239,
+        256,
+        312,
+        317,
+        333,
+        383
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          47,
+          47
+        ],
+        [
+          49,
+          51
+        ],
+        [
+          70,
+          71
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          148,
+          178
+        ],
+        [
+          182,
+          182
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          202,
+          202
+        ],
+        [
+          231,
+          237
+        ],
+        [
+          239,
+          239
+        ],
+        [
+          256,
+          280
+        ],
+        [
+          312,
+          312
+        ],
+        [
+          317,
+          317
+        ],
+        [
+          333,
+          333
+        ],
+        [
+          383,
+          383
+        ]
+      ],
+      "displayedLineCount": 91,
+      "navigationOrIncidentalOnlyLineCount": 62,
+      "scope": "Only current in-memory patch and modelConnections payload/save call boundary. Mutation locks, credential handling, async-generation correctness, authority/read/store implementation not audited.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "bytes": 8807,
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "lines": 235,
+      "pinnedUTC": "2026-10-17T16:56:22.280976+00:00",
+      "timing": "Before current90 content locator/selected read",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          27,
+          27
+        ],
+        [
+          85,
+          98
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          117,
+          141
+        ]
+      ],
+      "coveredLineCount": 42,
+      "bodyDisplayedLineRanges": [
+        [
+          19,
+          29
+        ],
+        [
+          84,
+          105
+        ],
+        [
+          116,
+          141
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        19,
+        27,
+        93,
+        94,
+        96,
+        104,
+        122,
+        123,
+        125,
+        137,
+        138,
+        140,
+        175
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          29
+        ],
+        [
+          84,
+          105
+        ],
+        [
+          116,
+          141
+        ],
+        [
+          175,
+          175
+        ]
+      ],
+      "displayedLineCount": 60,
+      "navigationOrIncidentalOnlyLineCount": 18,
+      "scope": "paramValues DTO, ordinary default seeding and modelSelectionPatch compatibility logic only. ID generation/path/provider/credential mechanisms stop at boundaries.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/input.tsx",
+      "bytes": 648,
+      "sha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394",
+      "lines": 21,
+      "pinnedUTC": "2026-10-17T16:58:13.955508+00:00",
+      "timing": "Before current90 content locator/selected read",
+      "sourceKind": "product",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "coveredLineCount": 21,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "displayedLineCount": 21,
+      "navigationOrIncidentalOnlyLineCount": 0,
+      "scope": "Whole ordinary input wrapper; static props forwarding only.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/button.tsx",
+      "bytes": 2115,
+      "sha256": "c49a019df145d3a28aa938095cd3a83970e61dc473230336beaf75f2b60bbfff",
+      "lines": 56,
+      "pinnedUTC": "2026-10-17T16:58:13.957874+00:00",
+      "timing": "Before current90 content locator/selected read",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          43,
+          51
+        ]
+      ],
+      "coveredLineCount": 9,
+      "bodyDisplayedLineRanges": [
+        [
+          38,
+          56
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        45,
+        46
+      ],
+      "displayedLineRanges": [
+        [
+          38,
+          56
+        ]
+      ],
+      "displayedLineCount": 19,
+      "navigationOrIncidentalOnlyLineCount": 10,
+      "scope": "Native button props forwarding declaration only; no DOM/event/native validation observed.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "c49a019df145d3a28aa938095cd3a83970e61dc473230336beaf75f2b60bbfff"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connUi.tsx",
+      "bytes": 3656,
+      "sha256": "7239fdbb620eba31a00ac410b5bd07a4dc9ab1e9f05adf05e5560a9d4d2417e5",
+      "lines": 122,
+      "pinnedUTC": "2026-10-17T16:58:13.958555+00:00",
+      "timing": "Before current90 content locator/selected read",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          23,
+          43
+        ]
+      ],
+      "coveredLineCount": 21,
+      "bodyDisplayedLineRanges": [
+        [
+          23,
+          45
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        14,
+        15,
+        16,
+        23,
+        32,
+        55,
+        80,
+        81,
+        83,
+        90,
+        105,
+        106,
+        107,
+        115,
+        116,
+        121
+      ],
+      "displayedLineRanges": [
+        [
+          14,
+          16
+        ],
+        [
+          23,
+          45
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          80,
+          81
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          90,
+          90
+        ],
+        [
+          105,
+          107
+        ],
+        [
+          115,
+          116
+        ],
+        [
+          121,
+          121
+        ]
+      ],
+      "displayedLineCount": 37,
+      "navigationOrIncidentalOnlyLineCount": 16,
+      "scope": "Card article markup only. Other native/key/secret-field snippets are navigation/incidental, not semantic.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "7239fdbb620eba31a00ac410b5bd07a4dc9ab1e9f05adf05e5560a9d4d2417e5"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "lines": 731,
+      "pinnedUTC": "2026-10-17T16:58:56.963708+00:00",
+      "timing": "Before current90 content locator/selected read",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          258,
+          259
+        ]
+      ],
+      "coveredLineCount": 2,
+      "bodyDisplayedLineRanges": [
+        [
+          248,
+          263
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        259
+      ],
+      "displayedLineRanges": [
+        [
+          248,
+          263
+        ]
+      ],
+      "displayedLineCount": 16,
+      "navigationOrIncidentalOnlyLineCount": 14,
+      "scope": "Only ordinary paramValues record unknown schema; does not establish behavior of every persistence/validation layer.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "lines": 29,
+      "pinnedUTC": "2026-10-17T16:58:56.966511+00:00",
+      "timing": "Before current90 content locator/selected read",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          22,
+          29
+        ]
+      ],
+      "coveredLineCount": 8,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        22
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "displayedLineCount": 29,
+      "navigationOrIncidentalOnlyLineCount": 21,
+      "scope": "writeSettings patch forwarding boundary22–29 only; updateScopedSettings authority and event implementation not followed/executed.",
+      "firstEverReadClaim": false,
+      "pinBeforeCurrentBodyRead": true,
+      "frozenGitBlobBoundByThisAuthor": false,
+      "endingSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734"
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedUTC": "2026-10-17T16:54:18.631325+00:00",
+      "timing": "Before current90 body/locator review",
+      "coverage": "full",
+      "displayedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "currentInstructionReadLines": 217
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedUTC": "2026-10-17T16:54:18.634742+00:00",
+      "timing": "Before current90 body/locator review",
+      "coverage": "hash-only",
+      "displayedLineRanges": [],
+      "currentInstructionReadLines": 0
+    }
+  ],
+  "totals": {
+    "productFiles": 14,
+    "testDeclarationFiles": 2,
+    "productFull": 3,
+    "productSelected": 11,
+    "productSemanticLines": 436,
+    "testDeclarationLines": 138,
+    "semanticPlusTestLines": 574,
+    "productDisplayLines": 721,
+    "testDisplayLines": 138,
+    "totalProductAndTestDisplayLines": 859,
+    "testExecutions": 0
+  },
+  "rangeConvention": "Inclusive1-based canonical unions. displayedLineRanges=union(bodyDisplayedLineRanges,additionalNavigationSnippetLines); selected semantic subset. Display is not semantic coverage. No doubled repeated displays.",
+  "scope": "Finite ordinary ParamControls DTO review; no runtime validation, provider/authority/native mechanism correctness claim. Existing consumers may have prior reads; no global or first-ever coverage count upgrade."
+}

@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T17:02:42.033315+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "bytes": 29998,
+      "lines": 733,
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "bytes": 10530,
+      "lines": 279,
+      "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

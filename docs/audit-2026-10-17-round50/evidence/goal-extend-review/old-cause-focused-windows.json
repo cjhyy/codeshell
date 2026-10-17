@@ -1,0 +1,338 @@
+{
+  "selection": "From retained first100 broad contexts only, not all111 total; exact full follow-up query needed if omission relevant.",
+  "selected": [
+    {
+      "index": 1,
+      "path": "docs/architecture/04-protocol-and-sessions.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5504,
+      "context": "e/src/protocol/tcp-transport.ts:14`, `packages/core/src/protocol/tcp-transport.ts:73`).\n\n`RunParams` is now richer than the old \"task + cwd\" surface: it requires a client-minted `sessionId`, supports `clientMessageId` idempotency, per-run `cwd`, `permissionMode`, `model`, `projectTrusted`, `planMode`, `requireExisting`, and `goal` (`packages/core/src/protocol/types.ts:76`). The method table includes `Run`, `Approve`, `Cancel`, `Configure`, `Query`, `Inject`, `Steer`, `Unsteer`, `CloseSession`, `GoalExtend`, `GoalClear`, `GoalGet`, `BackgroundShells`, and `BackgroundWork` (`packages/core/src/protocol/types.ts:333`). Stream events are always wrapped for multi-session routing as `{ sessionId, event }` (`packages/core/src/protocol/types.ts:311`).\n\n`AgentClient.run()` accepts either the legacy string form or the object form needed by multi-session servers, stamps the logger with the caller/resolved session id, and sends `Methods.Run` (`packages/core/src/protocol/client.ts:107`, `packages/core/src/protocol/client.ts:129`, `packages/core/src/protocol/client.ts:135`). Its private `request()` stores a resolver by JSON-RPC id before transport send, and `handleResponse()` resolves or rejects with the protocol error code attached (`packages/core/src/protocol/client.ts:349`, `packages/core/src/protocol/client.ts:357`). Notifications become emitter events: `agent/streamEvent` re-emits the session enve",
+      "completeScalar": false
+    },
+    {
+      "index": 2,
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 21640,
+      "context": "oal` call short-circuits to `completed` without running the judge,\nand clears the persisted goal; a confirmed `cancel_goal` does the same for user\nor model-directed cancellation (`packages/core/src/tool-system/builtin/complete-goal.ts:1`,\n`packages/core/src/engine/turn-loop.ts:1071`,\n`packages/core/src/tool-system/builtin/cancel-goal.ts:1`,\n`packages/core/src/engine/turn-loop.ts:1090`). This is intentionally not a\n\"judge and tool must both agree\" protocol.\n\nGoal control also has protocol RPCs: `GoalExtend` updates the active turn loop\nbudget through `applyGoalExtension`, `GoalClear` clears active or persisted\nstate, and `GoalGet` returns live or stored goal state\n(`packages/core/src/protocol/server.ts:747`,\n`packages/core/src/engine/engine.ts:3028`,\n`packages/core/src/engine/turn-loop.ts:233`,\n`packages/core/src/engine/goal.ts:237`,\n`packages/core/src/protocol/server.ts:801`,\n`packages/core/src/protocol/server.ts:830`).\n\n## 6. Where to read next\n\n- Engine turn-loop control flow and goal ceilings: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tool execution, approval, and background-capable tools: [02 · Tool system](02-tool-system.md)\n- Protocol sessions, injected wakeup turns, and session lifecycle: [04 · Protocol & sessions](04-protocol-and-sessions.md)\n",
+      "completeScalar": false
+    },
+    {
+      "index": 3,
+      "path": "docs/architecture/11-feature-inventory.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 13672,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |\n| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`",
+      "completeScalar": false
+    },
+    {
+      "index": 5,
+      "path": "docs/archive/persistent-goal-design-2026-06-15.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1822,
+      "context": "\n\n## 三、core 改造（持久化 goal）\n\n### 3.1 goal 存进 session state\n`session state` 加字段 `activeGoal?: GoalConfig`（连同设置时间/起始 turn 基线）。\n- `engine.run` 取 goal 优先级改为：`options?.goal ?? session.state.activeGoal ?? this.config.goal`。\n- 当 `options.goal` 传入且与 session.activeGoal 不同 → **覆盖**写入 `session.state.activeGoal` 并 saveState（新 goal 覆盖旧，发事件 `goal_set`/`goal_replaced`）。\n- goal 达成（judge met）→ 清 `session.state.activeGoal` + saveState + 事件 `goal_progress(met)`（已有）。\n\n### 3.2 清除接口\n新增协议方法 `agent/goalClear`（类比已有 `agent/goalExtend`）：\n- 清 `session.state.activeGoal` + saveState + 事件 `goal_cleared`。\n- desktop 经 `window.codeshell.goalClear(sessionId)` 调。\n\n### 3.3 打断不清 goal\n确认现有 abort 路径**不**碰 `session.state.activeGoal`（abort 只停 turn-loop）。下条消息 `engine.run` 仍从 `session.state.activeGoal` 取到 → 自动续 goal。需测试覆盖：set goal → abort → 再 send（不带 goal）→ 断言仍在 goal 下跑。\n\n### 3.4 hook 注册改为「session 有 activeGoal 就挂」\n`engine.ts:1802` 的条件从 `if (normalizedGoal && ...)` 改为 `if (resolvedGoal && ...)`，其中 `resolvedGoal = options?.goal ?? session.state.activeGoal ?? config.goal`。`finally` 仍 unregister（per-run 注册不变，只是来源变持久）。\n\n### 3.5 resume 恢复\nsession 加载时 `activeGoal` 自然随 state 恢复（已落盘）。对齐 CC：恢复条件，但 turn/token 基线重置（设 goal 时记的基线在 resume 时刷新）。\n\n### 测试（TDD）\n- session state 序列化/反序列化带 activeGoal。\n- `run` 不传 goal 但 session 有 activeGoal → judge 被调、续跑。\n- 传新 goal → 覆盖 session.activeGoal + 发 goal_replaced。\n- judge met → 清 activeGoal。\n- goalClear → 清 + 事件。",
+      "completeScalar": false
+    },
+    {
+      "index": 6,
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 20422,
+      "context": "1`、`packages/core/src/protocol/types.ts:22`、`packages/core/src/protocol/types.ts:335`。StreamEvent 类型本身来自 `packages/core/src/types.ts:429`，protocol 用 `AgentStreamEventNotification` 给多会话事件加 `sessionId` envelope，见 `packages/core/src/protocol/types.ts:11`、`packages/core/src/protocol/types.ts:313`。\n\n**How**\n\nClient -> Server 方法包括 `agent/run`、`agent/approve`、`agent/cancel`、`agent/configure`、`agent/query`、`agent/inject`、`agent/steer`、`agent/unsteer`、`agent/closeSession`、`agent/releaseWorkspace`、`agent/goalExtend`、`agent/goalClear`、`agent/goalGet`、`agent/backgroundShells`、`agent/backgroundWork`，见 `packages/core/src/protocol/types.ts:335`。Server -> Client notification 包括 `agent/streamEvent`、`agent/approvalRequest`、`agent/approvalResolved`、`agent/status`，见 `packages/core/src/protocol/types.ts:365`。`RunParams` 要求 client-minted `sessionId`，并携带 cwd、permissionMode、model、projectTrusted、planMode、requireExisting、goal 等 per-run 控制，见 `packages/core/src/protocol/types.ts:72`。\n\nStreamEvent 当前全部形状为：`session_started`、`session_title`、`stream_request_start`、`steer_injected`、`text_delta`、`tool_use_start`、`tool_use_args_delta`、`tool_result`、`assistant_message`、`turn_complete`、`goal_progress`、`goal_set`、`goal_cleared`、`error`、`tombstone`、`task_update`、`memory_recalled`、`thinking_delta`、`agent_start`、`agent_backgrounded`、`agent_end`、`agent_heartbeat`、`tool_summary`、`context_compact`、`usage_update`、`background_agent_",
+      "completeScalar": false
+    },
+    {
+      "index": 7,
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23128,
+      "context": "、`packages/core/src/protocol/server.ts:440`、`packages/core/src/protocol/server.ts:463`、`packages/core/src/protocol/server.ts:490`。legacy path 用单个 abortController 和 running flag 保护重入，见 `packages/core/src/protocol/server.ts:528`。\n\nApproval 在多会话路径按 `(sessionId, requestId)` 查 `ChatSession.pendingApprovals`，不回退到 legacy 全局 map，见 `packages/core/src/protocol/server.ts:652`。Cancel 会 abort session、drain queued turns，并主动 resolve pending approval/ask 为 cancelled，见 `packages/core/src/protocol/server.ts:713`。GoalExtend/Clear/Get、BackgroundShells/BackgroundWork、CloseSession/ReleaseWorkspace、Configure/Query/Inject/Steer/Unsteer 都在 server 内显式处理，见 `packages/core/src/protocol/server.ts:771`、`packages/core/src/protocol/server.ts:895`、`packages/core/src/protocol/server.ts:966`、`packages/core/src/protocol/server.ts:1030`、`packages/core/src/protocol/server.ts:1227`、`packages/core/src/protocol/server.ts:1788`、`packages/core/src/protocol/server.ts:1834`。\n\n**Why**\n\n多会话审批不能回退到 legacy map，是 fail-closed 的隔离要求：错 session 的 UI response 不能解开另一个 session 的 pending prompt，见 `packages/core/src/protocol/server.ts:655`。`requireExisting` 是为 cron “继续这个会话” 场景设计：目标 session 被用户删除时必须显式失败，避免在空白上下文里静默执行，见 `packages/core/src/protocol/server.ts:424`。Background work 的 auto-wakeup 是为了 interactive session 不再由 Engine 长时间 park，而是在后台完成事件到达时唤醒 idle session 继续总结/判断 goal，见 `packages/core/src/protocol/server.ts:220`、`packages/core/src/protocol/s",
+      "completeScalar": false
+    },
+    {
+      "index": 15,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6184,
+      "context": "Client closed\" packages/core/src/protocol -g '*test.ts'` 未命中 client 相关断言。 | 若回归，调用方 promise 可能悬挂、错误 code 丢失、流事件/approval/status handler 不触发，或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool",
+      "completeScalar": false
+    },
+    {
+      "index": 16,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6324,
+      "context": "或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 M",
+      "completeScalar": false
+    },
+    {
+      "index": 17,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6335,
+      "context": "g run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透",
+      "completeScalar": false
+    },
+    {
+      "index": 18,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6352,
+      "context": "entClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_",
+      "completeScalar": false
+    },
+    {
+      "index": 19,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6463,
+      "context": "；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor",
+      "completeScalar": false
+    },
+    {
+      "index": 20,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6557,
+      "context": "`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long execut",
+      "completeScalar": false
+    },
+    {
+      "index": 21,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6612,
+      "context": " handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeo",
+      "completeScalar": false
+    },
+    {
+      "index": 22,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6680,
+      "context": "ndleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeoutMs`；`ToolRegistry cascades parent abort while executor is pending`",
+      "completeScalar": false
+    },
+    {
+      "index": 23,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6753,
+      "context": "d`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeoutMs`；`ToolRegistry cascades parent abort while executor is pending`；`ToolRegistry normalizes thrown executor error into ToolResult`。 | 中 |\n|",
+      "completeScalar": false
+    },
+    {
+      "index": 24,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12302,
+      "context": "ol_result`、子代理隔离、终态映射和 determinism。\n- `transcriptsReducer.ts` 的 hydrate/steer/clientMessageId 去重保护覆盖充分，尤其覆盖了 lagging snapshot 不擦掉 confirmed steer 的场景。\n\n## 建议补测顺序\n\n1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": false
+    },
+    {
+      "index": 34,
+      "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+      "pointer": "/hits/all_429/5/context",
+      "kind": "json-value-scalar",
+      "offset": 527,
+      "context": "1`、`packages/core/src/protocol/types.ts:22`、`packages/core/src/protocol/types.ts:335`。StreamEvent 类型本身来自 `packages/core/src/types.ts:429`，protocol 用 `AgentStreamEventNotification` 给多会话事件加 `sessionId` envelope，见 `packages/core/src/protocol/types.ts:11`、`packages/core/src/protocol/types.ts:313`。\n\n**How**\n\nClient -> Server 方法包括 `agent/run`、`agent/approve`、`agent/cancel`、`agent/configure`、`agent/query`、`agent/inject`、`agent/steer`、`agent/unsteer`、`agent/closeSession`、`agent/releaseWorkspace`、`agent/goalExtend`、`agent/goalClear`、`agent",
+      "completeScalar": true
+    },
+    {
+      "index": 37,
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "pointer": "/hits/local-await/47/context",
+      "kind": "json-value-scalar",
+      "offset": 599,
+      "context": "Client closed\" packages/core/src/protocol -g '*test.ts'` 未命中 client 相关断言。 | 若回归，调用方 promise 可能悬挂、错误 code 丢失、流事件/approval/status handler 不触发，或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|",
+      "completeScalar": true
+    },
+    {
+      "index": 38,
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "pointer": "/hits/local-await/47/context",
+      "kind": "json-value-scalar",
+      "offset": 739,
+      "context": "或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|",
+      "completeScalar": true
+    },
+    {
+      "index": 49,
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/cause-history.json",
+      "pointer": "/contexts/fallback-partial/7/text",
+      "kind": "json-value-scalar",
+      "offset": 337,
+      "context": "1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "index": 50,
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused-selected.json",
+      "pointer": "/rows/19/context",
+      "kind": "json-value-scalar",
+      "offset": 322,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "index": 51,
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+      "pointer": "/hits/tui_revoke/2/context",
+      "kind": "json-value-scalar",
+      "offset": 322,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "index": 52,
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "pointer": "/hits/index.ts/81/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 210,
+      "context": "| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |",
+      "completeScalar": true
+    },
+    {
+      "index": 54,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-excerpts.json",
+      "pointer": "/snapshots/18/text",
+      "kind": "json-value-scalar",
+      "offset": 1079,
+      "context": "  onComposerSeedConsumed={onComposerSeedConsumed}\n                    draft={composerDraft.text}\n                    onDraftChange={setComposerDraftText}\n                    attachments={composerDraft.attachments}\n                    onAttachmentsChange={setComposerDraftAttachments}\n                    anchors={anchors}\n                    onRemoveAnchor={removeAnchor}\n                    onClearAnchors={clearAnchors}\n                    onAskUserAnswer={handleAskUserAnswer}\n                    onExtendGoal={extendGoal}\n                    onAttachImagePath={(p) => void attachImageByPath(p)}\n                    onPrepareAttachmentSession={prepareAttachmentSession}\n                    imageDetail={imageDetail}\n                    pendingApproval={visibleApproval}\n                    onApprovalDecide={\n                      visibleApproval\n                        ? (decision, reason, scope, pathScope) =>\n                            decideEnvelope(visibleApproval, decision, reason, scope, pathScope)\n                        : undefined\n                    }\n                    permissionMode={permissionMode}\n                    onPermissionChange={onPermissionChange}\n                    goalEnabled={goalEnabled}\n",
+      "completeScalar": false
+    },
+    {
+      "index": 55,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/6/context",
+      "kind": "json-value-scalar",
+      "offset": 1075,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n",
+      "completeScalar": true
+    },
+    {
+      "index": 56,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/7/context",
+      "kind": "json-value-scalar",
+      "offset": 839,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 ",
+      "completeScalar": true
+    },
+    {
+      "index": 57,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/8/context",
+      "kind": "json-value-scalar",
+      "offset": 655,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src",
+      "completeScalar": true
+    },
+    {
+      "index": 58,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/9/context",
+      "kind": "json-value-scalar",
+      "offset": 451,
+      "context": ".tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/Ch",
+      "completeScalar": true
+    },
+    {
+      "index": 59,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/10/context",
+      "kind": "json-value-scalar",
+      "offset": 168,
+      "context": " 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |\n| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`",
+      "completeScalar": true
+    },
+    {
+      "index": 60,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/6/context",
+      "kind": "json-value-scalar",
+      "offset": 1045,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n",
+      "completeScalar": true
+    },
+    {
+      "index": 61,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/7/context",
+      "kind": "json-value-scalar",
+      "offset": 809,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 ",
+      "completeScalar": true
+    },
+    {
+      "index": 62,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/8/context",
+      "kind": "json-value-scalar",
+      "offset": 625,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src",
+      "completeScalar": true
+    },
+    {
+      "index": 63,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/9/context",
+      "kind": "json-value-scalar",
+      "offset": 421,
+      "context": "\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/Ch",
+      "completeScalar": true
+    },
+    {
+      "index": 64,
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/10/context",
+      "kind": "json-value-scalar",
+      "offset": 138,
+      "context": "rc/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |\n| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`",
+      "completeScalar": true
+    },
+    {
+      "index": 93,
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1800,
+      "context": "lush 不卡)\n\n## D. 权限审批(核心:手机弹窗允许,等同桌面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] ",
+      "completeScalar": false
+    },
+    {
+      "index": 94,
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1834,
+      "context": "面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] H6 空态 / 加载态 / 错误态(各页)\n- [ ] H7 滚动:",
+      "completeScalar": false
+    },
+    {
+      "index": 95,
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3574,
+      "context": "(markdown 包体)、F3、原生 push。\n\n---\n\n## 完成状态(2026-06-10 本轮)\n\n**已做并验证(tsc + 45 mobile 单测 + renderToStaticMarkup 渲染冒烟 + 浏览器 boot 冒烟 phone/tablet 零错误 + 642 全仓测试绿):**\n- A1-A5 连接/身份(useRemoteSocket 态机 + 退出登录 + 设备名)\n- B1-B6 会话(session.list/history 协议+main+UI;进桌面会话回放;新建;当前指示)\n- C1-C2、C4-C6 聊天(user/assistant/reasoning/工具卡/子代理/错误流;运行态;停止;composer)\n- D1-D6 审批(工具/描述/摘要/风险红;允许拒绝;deny 理由;scope once/session/project;\n  pathScope file/dir/tool;AskUser 选项+自由输入+optionsOnly)— 端到端协议对齐核实\n- D7 等待态(StatusBar waiting)\n- E1 goal 横幅;E2 延长目标(按钮,默认 +100 轮);E3 子代理行(按 agentId)\n- F1 权限模式切换(default/acceptEdits/bypass + bypass 二次确认);F2 model.set 协议+main(无 UI)\n- G2-G6 房间 UI(列表/权限 badge 危险红/从项目新建/进出/历史回放/发消息/关)\n- H1-H7 布局(单列+安全区/平板 820px 两栏/顶栏/抽屉/暗色 token/空加载错误态/自动贴底)\n- I1-I4 工程(lib 单测/协议 @protocol 共享/双 tsc+build 绿/删 mobile-ui.ts 690 行)\n\n**未做(留给后续/需用户):**\n- C3 Markdown 渲染(评估包体后;现为纯文本+等宽 pre,代码可读)\n- C7 流批量(React key 稳定已是主要护栏;未测出卡顿,YAGNI)\n- E4 后台 shell 查看/kill(协议未接,P1)\n- F2 model UI / F3 planMode(P2)\n- I5 真机/平板冒烟:需用户手机+桌面 Electron 跑起来扫码实测(浏览器 boot 已冒烟,\n  WS 链路需真 main)。清单见 2026-06-06 §10.3。\n",
+      "completeScalar": false
+    }
+  ]
+}

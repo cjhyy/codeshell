@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-10-17T17:03:45.820740+00:00",
+  "path": "packages/core/src/engine/turn-loop.ts",
+  "displayedLineRanges": [
+    [
+      450,
+      482
+    ]
+  ],
+  "text": "450:     }\n451:     return goalBudgetTerminationReason(this.goalTracker, Date.now());\n452:   }\n453: \n454:   /**\n455:    * Goal mode only: if the run is nearing EITHER stop ceiling (maxTurns or\n456:    * maxStopBlocks) and we haven't announced it yet, emit one approaching_limit\n457:    * marker so the UI can offer a \"再续\" button while the run is still live.\n458:    * Watches both limits because a re-blocked goal hits the stop-block cap long\n459:    * before maxTurns. Idempotent within an approach window via approachAnnounced.\n460:    */\n461:   private maybeAnnounceApproachingLimit(): void {\n462:     if (!this.config.goal || this.approachAnnounced) return;\n463:     const cap = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;\n464:     const prox = limitProximity(this.turnCount, this.config.maxTurns, this.stopBlockCount, cap);\n465:     if (!prox.approaching) return;\n466:     this.approachAnnounced = true;\n467:     this.config.onStream?.({\n468:       type: \"goal_progress\",\n469:       goalId: this.config.goal.goalId,\n470:       revision: this.config.goal.revision,\n471:       status: \"approaching_limit\",\n472:       round: this.stopBlockCount,\n473:       turnsRemaining: prox.turnsRemaining,\n474:       stopBlocksRemaining: prox.stopBlocksRemaining,\n475:       nearest: prox.nearest,\n476:     });\n477:   }\n478: \n479:   constructor(\n480:     private readonly deps: TurnLoopDeps,\n481:     // Not readonly: extend() bumps maxTurns mid-run (TODO 3.1), and the\n482:     // constructor below rewrites onStream. The loop reads config fields fresh"
+}

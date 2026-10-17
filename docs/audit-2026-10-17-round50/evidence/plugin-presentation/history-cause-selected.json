@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "query": "plugin-logo-fallback",
+      "index": 0,
+      "path": "docs/architecture/11-feature-inventory.md",
+      "pointer": "markdown-text",
+      "valueChars": 41296,
+      "contextStart": 29434,
+      "contextEnd": 30534,
+      "text": "/builtin/extra-commands.ts:198`，`packages/tui/src/ui/components/ModelManager.tsx:83` | `/models` |\n| `/login` | 带 key 直接保存并热加载；不带参数进入 onboarding | `packages/tui/src/cli/commands/builtin/extra-commands.ts:52`，`packages/tui/src/ui/components/OnboardingPrompt.tsx:40` | `/login sk-...` / `/login` |\n| `/logout` | 清空模型和凭证相关设置 | `packages/tui/src/cli/commands/builtin/extra-commands.ts:118` | `/logout` |\n| `/effort` | 设/查推理 effort | `packages/tui/src/cli/commands/builtin/core-commands.ts:75` | `/effort high` |\n| `/permissions` · `/perm` | 查/切权限模式，`rules` 列生效规则 | `packages/tui/src/cli/commands/builtin/permissions-command.ts:17` | `/permissions auto` / `/permissions rules` |\n| `/config` | show/get/set 设置，set 尝试 JSON 解析 | `packages/tui/src/cli/commands/builtin/core-commands.ts:695` | `/config show` / `/config set model.temperature 0.5` |\n| `/features` | 列引擎解析后的 feature flags | `packages/tui/src/cli/commands/builtin/features-command.ts:11` | `/features` |\n\n**状态 / 工具 / 用量**\n\n| 命令 | 做什么 | 入口 | 用法 |\n|------|--------|------|------|\n| `/cost` | 显示 token 用量和成本，支持 stats/detail | `packages/tui/src/cli/c",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "plugin-logo-fallback",
+      "index": 1,
+      "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+      "pointer": "markdown-text",
+      "valueChars": 27379,
+      "contextStart": 10828,
+      "contextEnd": 11928,
+      "text": "nal/repo marketplace auto-discovery remain missing. |\n| Install metadata/assets               | **Full for local UI metadata**  | Codex display text, developer/category/capabilities, HTTPS website/privacy/terms links, brand color, up to three 128-character starter prompts, composer icon, light/dark logos, and up to three screenshots survive normalization. Starter prompts can be appended to the current composer draft but never auto-send or discard unsent text. Raster assets are containment-, format-, dimension-, and size-checked before bounded data-URL serving to Desktop.                                                                                                                                                                                                    |\n| Sharing and publication               | **Missing**                     | No workspace sharing links, public directory submission, review pipeline, or organization-managed install policy.                                                                                                                                        ",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "plugin-screenshot-cap",
+      "index": 0,
+      "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+      "pointer": "markdown-text",
+      "valueChars": 27379,
+      "contextStart": 10828,
+      "contextEnd": 11928,
+      "text": "nal/repo marketplace auto-discovery remain missing. |\n| Install metadata/assets               | **Full for local UI metadata**  | Codex display text, developer/category/capabilities, HTTPS website/privacy/terms links, brand color, up to three 128-character starter prompts, composer icon, light/dark logos, and up to three screenshots survive normalization. Starter prompts can be appended to the current composer draft but never auto-send or discard unsent text. Raster assets are containment-, format-, dimension-, and size-checked before bounded data-URL serving to Desktop.                                                                                                                                                                                                    |\n| Sharing and publication               | **Missing**                     | No workspace sharing links, public directory submission, review pipeline, or organization-managed install policy.                                                                                                                                        ",
+      "wholeValueIncluded": false
+    }
+  ],
+  "actualWindowReads": 3,
+  "notAll20RetainedRead": true,
+  "scope": "Bounded text windows only, broad AND may match separated terms in one large MD, not exact-cause proof."
+}

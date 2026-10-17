@@ -1,0 +1,105 @@
+packages/web/app/app.css:83:  overflow: hidden;
+packages/web/app/app.css:99:  overflow-y: auto;
+packages/web/app/app.css:100:  overscroll-behavior-y: contain;
+packages/web/app/app.css:229:  overflow: hidden;
+packages/web/app/app.css:230:  text-overflow: ellipsis;
+packages/web/app/app.css:280:  overflow: hidden;
+packages/web/app/app.css:282:  text-overflow: ellipsis;
+packages/web/app/app.css:355:  overflow: hidden;
+packages/web/app/app.css:357:  text-overflow: ellipsis;
+packages/web/app/app.css:393:  overflow: hidden;
+packages/web/app/app.css:395:  text-overflow: ellipsis;
+packages/web/app/app.css:400:  overflow: hidden;
+packages/web/app/app.css:402:  text-overflow: ellipsis;
+packages/web/app/app.css:417:/* Centered transcript and inset composer follow Desktop's main-chat proportions. */
+packages/web/app/app.css:427:  overflow-wrap: anywhere;
+packages/web/app/app.css:451:.latest-messages {
+packages/web/app/app.css:473:.latest-messages:hover {
+packages/web/app/app.css:486:  overflow: hidden;
+packages/web/app/app.css:491:.messages {
+packages/web/app/app.css:494:  overflow-y: auto;
+packages/web/app/app.css:495:  overscroll-behavior: contain;
+packages/web/app/app.css:498:.transcript {
+packages/web/app/app.css:506:.chat-empty .messages {
+packages/web/app/app.css:510:.chat-empty .transcript {
+packages/web/app/app.css:547:  overflow-wrap: anywhere;
+packages/web/app/app.css:558:  overflow-wrap: anywhere;
+packages/web/app/app.css:580:  overflow: auto;
+packages/web/app/app.css:647:  overflow-y: auto;
+packages/web/app/app.css:688:  overflow: hidden;
+packages/web/app/app.css:689:  text-overflow: ellipsis;
+packages/web/app/app.css:759:  overflow-wrap: anywhere;
+packages/web/app/app.css:783:  overflow-wrap: anywhere;
+packages/web/app/app.css:807:  overflow-wrap: anywhere;
+packages/web/app/app.css:820:  overflow-x: auto;
+packages/web/app/app.css:848:  overflow-wrap: anywhere;
+packages/web/app/app.css:955:  overflow-wrap: anywhere;
+packages/web/app/app.css:965:  overflow: hidden;
+packages/web/app/app.css:978:  overflow-y: auto;
+packages/web/app/app.css:979:  overscroll-behavior: contain;
+packages/web/app/app.css:983:  overflow-wrap: anywhere;
+packages/web/app/app.css:988:  overflow-y: auto;
+packages/web/app/app.css:989:  overscroll-behavior: contain;
+packages/web/app/app.css:1045:  overflow-wrap: anywhere;
+packages/web/app/app.css:1090:  .messages {
+packages/web/app/app.css:1093:  .transcript {
+packages/web/app/app.css:1176:  overflow-wrap: anywhere;
+packages/web/app/Workbench.tsx:127:    if (view === "chat") url.searchParams.delete("view");
+packages/web/app/Workbench.tsx:128:    else url.searchParams.set("view", view === "panel" ? "panels" : view);
+packages/web/app/Workbench.tsx:129:    if (view === "settings" && settingsSection !== "overview")
+packages/web/app/Workbench.tsx:162:    active: view === "chat",
+packages/web/app/Workbench.tsx:168:    if (view !== "chat" || narrow || handoff.workspace !== controller.workspaceKey) {
+packages/web/app/Workbench.tsx:173:      historyFocus.finish(handoff.request, latest.listRef.current);
+packages/web/app/Workbench.tsx:175:  }, [activeId, controller.workspaceKey, historyFocus, latest.listRef, narrow, view]);
+packages/web/app/Workbench.tsx:285:    if (!textarea || view !== "chat") return;
+packages/web/app/Workbench.tsx:305:    if (view === "settings" && settingsSection === section) {
+packages/web/app/Workbench.tsx:346:      latest.resume();
+packages/web/app/Workbench.tsx:364:    if (controller.send()) latest.resume();
+packages/web/app/Workbench.tsx:379:    view === "chat"
+packages/web/app/Workbench.tsx:381:      : view === "files"
+packages/web/app/Workbench.tsx:383:        : view === "activity"
+packages/web/app/Workbench.tsx:385:          : view === "history"
+packages/web/app/Workbench.tsx:387:            : view === "links"
+packages/web/app/Workbench.tsx:389:              : view === "panels" || view === "panel"
+packages/web/app/Workbench.tsx:390:                ? openedPanel && view === "panel"
+packages/web/app/Workbench.tsx:473:              className={`nav-button${view === "chat" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:480:              aria-current={view === "chat" ? "page" : undefined}
+packages/web/app/Workbench.tsx:488:                  className={`nav-button${view === "activity" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:495:                  aria-current={view === "activity" ? "page" : undefined}
+packages/web/app/Workbench.tsx:501:                  className={`nav-button${view === "history" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:508:                  aria-current={view === "history" ? "page" : undefined}
+packages/web/app/Workbench.tsx:514:                  className={`nav-button${view === "files" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:516:                  aria-current={view === "files" ? "page" : undefined}
+packages/web/app/Workbench.tsx:522:                  className={`nav-button${view === "settings" && settingsSection === "skills" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:525:                    view === "settings" && settingsSection === "skills" ? "page" : undefined
+packages/web/app/Workbench.tsx:532:                  className={`nav-button${view === "panels" || view === "panel" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:539:                  aria-current={view === "panels" || view === "panel" ? "page" : undefined}
+packages/web/app/Workbench.tsx:545:                  className={`nav-button${view === "links" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:552:                  aria-current={view === "links" ? "page" : undefined}
+packages/web/app/Workbench.tsx:558:                  className={`nav-button${view === "settings" && settingsSection !== "skills" ? " active" : ""}`}
+packages/web/app/Workbench.tsx:561:                    view === "settings" && settingsSection !== "skills" ? "page" : undefined
+packages/web/app/Workbench.tsx:597:                    sessionId === activeId && view === "chat" ? "session active" : "session"
+packages/web/app/Workbench.tsx:612:                    item.sessionId === activeId && view === "chat" ? "session active" : "session"
+packages/web/app/Workbench.tsx:615:                  aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
+packages/web/app/Workbench.tsx:747:        {view !== "chat" && approvals.length > 0 ? (
+packages/web/app/Workbench.tsx:757:          hidden={view !== "chat"}
+packages/web/app/Workbench.tsx:762:              className="messages"
+packages/web/app/Workbench.tsx:767:              ref={latest.listRef}
+packages/web/app/Workbench.tsx:768:              onScroll={latest.onScroll}
+packages/web/app/Workbench.tsx:770:              <div className="transcript" ref={latest.contentRef}>
+packages/web/app/Workbench.tsx:863:            {latest.showJump && (
+packages/web/app/Workbench.tsx:866:                className="latest-messages"
+packages/web/app/Workbench.tsx:869:                  latest.newOutputCount
+packages/web/app/Workbench.tsx:870:                    ? `回到最新消息，${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出`
+packages/web/app/Workbench.tsx:873:                onClick={latest.jumpToLatest}
+packages/web/app/Workbench.tsx:877:                {latest.newOutputCount > 0 && (
+packages/web/app/Workbench.tsx:879:                    {latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出
+packages/web/app/Workbench.tsx:890:              {latest.newOutputCount > 0
+packages/web/app/Workbench.tsx:891:                ? `${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出，可回到最新消息。`
+packages/web/app/Workbench.tsx:1056:        {view === "settings" && hub ? (
+packages/web/app/Workbench.tsx:1068:        {view === "files" && hub ? (
+packages/web/app/Workbench.tsx:1076:        {view === "activity" && hub ? (
+packages/web/app/Workbench.tsx:1092:        {view === "history" && hub ? (
+packages/web/app/Workbench.tsx:1102:        {view === "links" && hub ? (
+packages/web/app/Workbench.tsx:1111:        {view === "panels" && hub ? (
+packages/web/app/Workbench.tsx:1128:        {view === "panel" && hub && openedPanel?.workspaceKey === controller.workspaceKey ? (

@@ -1,0 +1,3223 @@
+[
+  {
+    "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+    "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+    "captureTiming": "After actual tool displays d20b5a/d601f7/22e623/e1e63b/826d17. Not a pre-read pin. Contains only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import {"
+      },
+      {
+        "line": 2,
+        "text": "  useEffect,"
+      },
+      {
+        "line": 3,
+        "text": "  useLayoutEffect,"
+      },
+      {
+        "line": 4,
+        "text": "  useMemo,"
+      },
+      {
+        "line": 5,
+        "text": "  useState,"
+      },
+      {
+        "line": 6,
+        "text": "  type ReactNode,"
+      },
+      {
+        "line": 7,
+        "text": "  type RefObject,"
+      },
+      {
+        "line": 8,
+        "text": "} from \"react\";"
+      },
+      {
+        "line": 9,
+        "text": "import { Popover, PopoverAnchor, PopoverContent } from \"@/components/ui/popover\";"
+      },
+      {
+        "line": 10,
+        "text": ""
+      },
+      {
+        "line": 11,
+        "text": "export function suggestionOptionId(listboxId: string, identity: string): string {"
+      },
+      {
+        "line": 12,
+        "text": "  return `${listboxId}-option-${encodeURIComponent(identity)}`;"
+      },
+      {
+        "line": 13,
+        "text": "}"
+      },
+      {
+        "line": 14,
+        "text": ""
+      },
+      {
+        "line": 15,
+        "text": "/** Suggestions share the textarea's focus while escaping clipped chat/dock surfaces. */"
+      },
+      {
+        "line": 16,
+        "text": "export function ComposerSuggestions({"
+      },
+      {
+        "line": 17,
+        "text": "  id,"
+      },
+      {
+        "line": 18,
+        "text": "  anchorRef,"
+      },
+      {
+        "line": 19,
+        "text": "  label,"
+      },
+      {
+        "line": 20,
+        "text": "  selected,"
+      },
+      {
+        "line": 21,
+        "text": "  items,"
+      },
+      {
+        "line": 22,
+        "text": "  children,"
+      },
+      {
+        "line": 23,
+        "text": "}: {"
+      },
+      {
+        "line": 24,
+        "text": "  id: string;"
+      },
+      {
+        "line": 25,
+        "text": "  anchorRef: RefObject<HTMLElement | null>;"
+      },
+      {
+        "line": 26,
+        "text": "  label: string;"
+      },
+      {
+        "line": 27,
+        "text": "  selected: number;"
+      },
+      {
+        "line": 28,
+        "text": "  items: readonly unknown[];"
+      },
+      {
+        "line": 29,
+        "text": "  children: ReactNode;"
+      },
+      {
+        "line": 30,
+        "text": "}) {"
+      },
+      {
+        "line": 31,
+        "text": "  const [content, setContent] = useState<HTMLDivElement | null>(null);"
+      },
+      {
+        "line": 32,
+        "text": "  const virtualAnchor = useMemo("
+      },
+      {
+        "line": 33,
+        "text": "    () => ({"
+      },
+      {
+        "line": 34,
+        "text": "      current: {"
+      },
+      {
+        "line": 35,
+        "text": "        getBoundingClientRect: () =>"
+      },
+      {
+        "line": 36,
+        "text": "          anchorRef.current?.getBoundingClientRect() ?? {"
+      },
+      {
+        "line": 37,
+        "text": "            top: 0,"
+      },
+      {
+        "line": 38,
+        "text": "            left: 0,"
+      },
+      {
+        "line": 39,
+        "text": "            right: 0,"
+      },
+      {
+        "line": 40,
+        "text": "            bottom: 0,"
+      },
+      {
+        "line": 41,
+        "text": "            width: 0,"
+      },
+      {
+        "line": 42,
+        "text": "            height: 0,"
+      },
+      {
+        "line": 43,
+        "text": "            x: 0,"
+      },
+      {
+        "line": 44,
+        "text": "            y: 0,"
+      },
+      {
+        "line": 45,
+        "text": "            toJSON: () => ({}),"
+      },
+      {
+        "line": 46,
+        "text": "          },"
+      },
+      {
+        "line": 47,
+        "text": "        get contextElement() {"
+      },
+      {
+        "line": 48,
+        "text": "          return anchorRef.current ?? undefined;"
+      },
+      {
+        "line": 49,
+        "text": "        },"
+      },
+      {
+        "line": 50,
+        "text": "      },"
+      },
+      {
+        "line": 51,
+        "text": "    }),"
+      },
+      {
+        "line": 52,
+        "text": "    [anchorRef],"
+      },
+      {
+        "line": 53,
+        "text": "  );"
+      },
+      {
+        "line": 54,
+        "text": "  // Link the native multiline textbox to the actual portal, rather than a"
+      },
+      {
+        "line": 55,
+        "text": "  // parent's delayed copy of an asynchronously changing mention list. The"
+      },
+      {
+        "line": 56,
+        "text": "  // callback ref also covers Radix mounting its portal after our first render."
+      },
+      {
+        "line": 57,
+        "text": "  useLayoutEffect(() => {"
+      },
+      {
+        "line": 58,
+        "text": "    const anchor = anchorRef.current;"
+      },
+      {
+        "line": 59,
+        "text": "    if (!anchor || !content) return;"
+      },
+      {
+        "line": 60,
+        "text": "    anchor.setAttribute(\"aria-controls\", id);"
+      },
+      {
+        "line": 61,
+        "text": "    const active = content.querySelector<HTMLElement>('[role=\"option\"][aria-selected=\"true\"]');"
+      },
+      {
+        "line": 62,
+        "text": "    if (active?.id) anchor.setAttribute(\"aria-activedescendant\", active.id);"
+      },
+      {
+        "line": 63,
+        "text": "    else anchor.removeAttribute(\"aria-activedescendant\");"
+      },
+      {
+        "line": 64,
+        "text": "    return () => {"
+      },
+      {
+        "line": 65,
+        "text": "      // An old popup must not clear a replacement popup's association."
+      },
+      {
+        "line": 66,
+        "text": "      if (anchor.getAttribute(\"aria-controls\") !== id) return;"
+      },
+      {
+        "line": 67,
+        "text": "      const currentContent = document.getElementById(id);"
+      },
+      {
+        "line": 68,
+        "text": "      if (currentContent && currentContent !== content) return;"
+      },
+      {
+        "line": 69,
+        "text": "      anchor.removeAttribute(\"aria-controls\");"
+      },
+      {
+        "line": 70,
+        "text": "      anchor.removeAttribute(\"aria-activedescendant\");"
+      },
+      {
+        "line": 71,
+        "text": "    };"
+      },
+      {
+        "line": 72,
+        "text": "  }, [anchorRef, content, id, items, selected]);"
+      },
+      {
+        "line": 73,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 74,
+        "text": "    content"
+      },
+      {
+        "line": 75,
+        "text": "      ?.querySelector('[role=\"option\"][aria-selected=\"true\"]')"
+      },
+      {
+        "line": 76,
+        "text": "      ?.scrollIntoView({ block: \"nearest\" });"
+      },
+      {
+        "line": 77,
+        "text": "  }, [content, items, selected]);"
+      },
+      {
+        "line": 78,
+        "text": ""
+      },
+      {
+        "line": 79,
+        "text": "  return ("
+      },
+      {
+        "line": 80,
+        "text": "    <Popover open>"
+      },
+      {
+        "line": 81,
+        "text": "      <PopoverAnchor virtualRef={virtualAnchor} />"
+      },
+      {
+        "line": 82,
+        "text": "      <PopoverContent"
+      },
+      {
+        "line": 83,
+        "text": "        ref={setContent}"
+      },
+      {
+        "line": 84,
+        "text": "        id={id}"
+      },
+      {
+        "line": 85,
+        "text": "        side=\"top\""
+      },
+      {
+        "line": 86,
+        "text": "        sideOffset={8}"
+      },
+      {
+        "line": 87,
+        "text": "        role=\"listbox\""
+      },
+      {
+        "line": 88,
+        "text": "        aria-label={label}"
+      },
+      {
+        "line": 89,
+        "text": "        className=\"cs-popup-surface max-h-[min(20rem,var(--radix-popover-content-available-height))] w-80 rounded-md p-1\""
+      },
+      {
+        "line": 90,
+        "text": "        onOpenAutoFocus={(event) => event.preventDefault()}"
+      },
+      {
+        "line": 91,
+        "text": "        onCloseAutoFocus={(event) => event.preventDefault()}"
+      },
+      {
+        "line": 92,
+        "text": "        // The composer owns blur, Escape and selection. The floating list"
+      },
+      {
+        "line": 93,
+        "text": "        // only owns positioning; it must not move the textarea's caret/focus."
+      },
+      {
+        "line": 94,
+        "text": "        onInteractOutside={(event) => event.preventDefault()}"
+      },
+      {
+        "line": 95,
+        "text": "        onEscapeKeyDown={(event) => event.preventDefault()}"
+      },
+      {
+        "line": 96,
+        "text": "      >"
+      },
+      {
+        "line": 97,
+        "text": "        {children}"
+      },
+      {
+        "line": 98,
+        "text": "      </PopoverContent>"
+      },
+      {
+        "line": 99,
+        "text": "    </Popover>"
+      },
+      {
+        "line": 100,
+        "text": "  );"
+      },
+      {
+        "line": 101,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+    "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+    "captureTiming": "After actual tool displays d20b5a/d601f7/22e623/e1e63b/826d17. Not a pre-read pin. Contains only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "/**"
+      },
+      {
+        "line": 2,
+        "text": " * MentionPopover — the picker that opens when the user types `@` in the"
+      },
+      {
+        "line": 3,
+        "text": " * composer. Shows two sections:"
+      },
+      {
+        "line": 4,
+        "text": " *"
+      },
+      {
+        "line": 5,
+        "text": " *   插件 — installed skills filtered by the query after `@`"
+      },
+      {
+        "line": 6,
+        "text": " *   文件 — fuzzy file search in the active repo"
+      },
+      {
+        "line": 7,
+        "text": " *"
+      },
+      {
+        "line": 8,
+        "text": " * The popover is fully controlled by ChatView: ChatView decides when the"
+      },
+      {
+        "line": 9,
+        "text": " * mention is \"open\" (caret is inside an @-token) and what the current"
+      },
+      {
+        "line": 10,
+        "text": " * query is. The popover loads skills once per `open` and re-runs the"
+      },
+      {
+        "line": 11,
+        "text": " * file search whenever the query changes. Keyboard navigation (↑/↓ to"
+      },
+      {
+        "line": 12,
+        "text": " * move, Enter to insert, Esc to close) is wired from ChatView via"
+      },
+      {
+        "line": 13,
+        "text": " * `selected` + the imperative `onMoveSelection` callbacks — the popover"
+      },
+      {
+        "line": 14,
+        "text": " * exposes its flat item list through `items` so ChatView can drive the"
+      },
+      {
+        "line": 15,
+        "text": " * cursor without owning render details."
+      },
+      {
+        "line": 16,
+        "text": " */"
+      },
+      {
+        "line": 17,
+        "text": "import React, { useEffect, useMemo, useRef, useState, type RefObject } from \"react\";"
+      },
+      {
+        "line": 18,
+        "text": "import { Clock, FileText, Folder, Puzzle, Search } from \"lucide-react\";"
+      },
+      {
+        "line": 19,
+        "text": "import type {"
+      },
+      {
+        "line": 20,
+        "text": "  SkillSummary,"
+      },
+      {
+        "line": 21,
+        "text": "  FileSearchHit,"
+      },
+      {
+        "line": 22,
+        "text": "  InputAttachmentMeta,"
+      },
+      {
+        "line": 23,
+        "text": "  RendererConfigurationTarget,"
+      },
+      {
+        "line": 24,
+        "text": "} from \"../../preload/types\";"
+      },
+      {
+        "line": 25,
+        "text": "import { cn } from \"@/lib/utils\";"
+      },
+      {
+        "line": 26,
+        "text": "import { useT } from \"../i18n/I18nProvider\";"
+      },
+      {
+        "line": 27,
+        "text": "import { filterMentionSkills } from \"./mention\";"
+      },
+      {
+        "line": 28,
+        "text": "import { ComposerSuggestions, suggestionOptionId } from \"./ComposerSuggestions\";"
+      },
+      {
+        "line": 29,
+        "text": "import { nativeBasename } from \"../nativePath\";"
+      },
+      {
+        "line": 30,
+        "text": ""
+      },
+      {
+        "line": 31,
+        "text": "export type MentionItem ="
+      },
+      {
+        "line": 32,
+        "text": "  | { kind: \"skill\"; skill: SkillSummary }"
+      },
+      {
+        "line": 33,
+        "text": "  | { kind: \"file\"; file: FileSearchHit }"
+      },
+      {
+        "line": 34,
+        "text": "  | { kind: \"recent\"; attachment: InputAttachmentMeta };"
+      },
+      {
+        "line": 35,
+        "text": ""
+      },
+      {
+        "line": 36,
+        "text": "interface Props {"
+      },
+      {
+        "line": 37,
+        "text": "  listboxId: string;"
+      },
+      {
+        "line": 38,
+        "text": "  anchorRef: RefObject<HTMLElement | null>;"
+      },
+      {
+        "line": 39,
+        "text": "  /** Active repo cwd. When null the popover only shows skills (no files). */"
+      },
+      {
+        "line": 40,
+        "text": "  cwd: string | null;"
+      },
+      {
+        "line": 41,
+        "text": "  /** Authoritative root within a multi-root project. */"
+      },
+      {
+        "line": 42,
+        "text": "  rootId: string | null;"
+      },
+      {
+        "line": 43,
+        "text": "  configurationTarget: RendererConfigurationTarget;"
+      },
+      {
+        "line": 44,
+        "text": "  projectId?: string | null;"
+      },
+      {
+        "line": 45,
+        "text": "  projectRoots?: Array<{ id: string; path: string }>;"
+      },
+      {
+        "line": 46,
+        "text": "  /** Query string after the `@` — empty when user has only typed `@`. */"
+      },
+      {
+        "line": 47,
+        "text": "  query: string;"
+      },
+      {
+        "line": 48,
+        "text": "  /** Index into the flat list (skills first, then files). */"
+      },
+      {
+        "line": 49,
+        "text": "  selected: number;"
+      },
+      {
+        "line": 50,
+        "text": "  /** Pick callback — ChatView turns this into a textarea replacement. */"
+      },
+      {
+        "line": 51,
+        "text": "  onPick: (item: MentionItem) => void;"
+      },
+      {
+        "line": 52,
+        "text": "  /** Bubble the flat list back up so ChatView can clamp `selected`. */"
+      },
+      {
+        "line": 53,
+        "text": "  onItemsChange: (items: MentionItem[]) => void;"
+      },
+      {
+        "line": 54,
+        "text": "}"
+      },
+      {
+        "line": 55,
+        "text": ""
+      },
+      {
+        "line": 56,
+        "text": "const EMPTY_PROJECT_ROOTS: Array<{ id: string; path: string }> = [];"
+      },
+      {
+        "line": 57,
+        "text": ""
+      },
+      {
+        "line": 58,
+        "text": "export function MentionPopover({"
+      },
+      {
+        "line": 59,
+        "text": "  listboxId,"
+      },
+      {
+        "line": 60,
+        "text": "  anchorRef,"
+      },
+      {
+        "line": 61,
+        "text": "  cwd,"
+      },
+      {
+        "line": 62,
+        "text": "  rootId,"
+      },
+      {
+        "line": 63,
+        "text": "  configurationTarget,"
+      },
+      {
+        "line": 64,
+        "text": "  projectId,"
+      },
+      {
+        "line": 65,
+        "text": "  projectRoots = EMPTY_PROJECT_ROOTS,"
+      },
+      {
+        "line": 66,
+        "text": "  query,"
+      },
+      {
+        "line": 67,
+        "text": "  selected,"
+      },
+      {
+        "line": 68,
+        "text": "  onPick,"
+      },
+      {
+        "line": 69,
+        "text": "  onItemsChange,"
+      },
+      {
+        "line": 70,
+        "text": "}: Props) {"
+      },
+      {
+        "line": 71,
+        "text": "  const { t } = useT();"
+      },
+      {
+        "line": 72,
+        "text": "  const [skills, setSkills] = useState<SkillSummary[]>([]);"
+      },
+      {
+        "line": 73,
+        "text": "  const [files, setFiles] = useState<FileSearchHit[]>([]);"
+      },
+      {
+        "line": 74,
+        "text": "  const [recent, setRecent] = useState<InputAttachmentMeta[]>([]);"
+      },
+      {
+        "line": 75,
+        "text": "  const activeOptionRef = useRef<HTMLLIElement | null>(null);"
+      },
+      {
+        "line": 76,
+        "text": ""
+      },
+      {
+        "line": 77,
+        "text": "  // Skills list: loaded once per cwd. Stable across keystrokes; we"
+      },
+      {
+        "line": 78,
+        "text": "  // filter renderer-side so the @-prefix typing is instant."
+      },
+      {
+        "line": 79,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 80,
+        "text": "    let cancelled = false;"
+      },
+      {
+        "line": 81,
+        "text": "    if (!cwd) {"
+      },
+      {
+        "line": 82,
+        "text": "      setSkills([]);"
+      },
+      {
+        "line": 83,
+        "text": "      return;"
+      },
+      {
+        "line": 84,
+        "text": "    }"
+      },
+      {
+        "line": 85,
+        "text": "    void window.codeshell"
+      },
+      {
+        "line": 86,
+        "text": "      .listSkills(configurationTarget)"
+      },
+      {
+        "line": 87,
+        "text": "      .then((s) => {"
+      },
+      {
+        "line": 88,
+        "text": "        if (!cancelled) setSkills(s);"
+      },
+      {
+        "line": 89,
+        "text": "      })"
+      },
+      {
+        "line": 90,
+        "text": "      .catch(() => {"
+      },
+      {
+        "line": 91,
+        "text": "        if (!cancelled) setSkills([]);"
+      },
+      {
+        "line": 92,
+        "text": "      });"
+      },
+      {
+        "line": 93,
+        "text": "    return () => {"
+      },
+      {
+        "line": 94,
+        "text": "      cancelled = true;"
+      },
+      {
+        "line": 95,
+        "text": "    };"
+      },
+      {
+        "line": 96,
+        "text": "  }, [configurationTarget, cwd]);"
+      },
+      {
+        "line": 97,
+        "text": ""
+      },
+      {
+        "line": 98,
+        "text": "  // File search: re-run whenever query changes, with a small debounce so"
+      },
+      {
+        "line": 99,
+        "text": "  // fast typing doesn't fire a search per character."
+      },
+      {
+        "line": 100,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 101,
+        "text": "    let cancelled = false;"
+      },
+      {
+        "line": 102,
+        "text": "    if (!cwd) {"
+      },
+      {
+        "line": 103,
+        "text": "      setFiles([]);"
+      },
+      {
+        "line": 104,
+        "text": "      return;"
+      },
+      {
+        "line": 105,
+        "text": "    }"
+      },
+      {
+        "line": 106,
+        "text": "    const handle = setTimeout(() => {"
+      },
+      {
+        "line": 107,
+        "text": "      const request ="
+      },
+      {
+        "line": 108,
+        "text": "        projectId && rootId"
+      },
+      {
+        "line": 109,
+        "text": "          ? window.codeshell.searchProjectFiles(projectId, query, rootId).then((hits) =>"
+      },
+      {
+        "line": 110,
+        "text": "              hits"
+      },
+      {
+        "line": 111,
+        "text": "                .filter((hit) => hit.rootId === rootId)"
+      },
+      {
+        "line": 112,
+        "text": "                .map((hit) => {"
+      },
+      {
+        "line": 113,
+        "text": "                  const root = projectRoots.find((candidate) => candidate.id === hit.rootId);"
+      },
+      {
+        "line": 114,
+        "text": "                  if (!root) return hit;"
+      },
+      {
+        "line": 115,
+        "text": "                  const separator = root.path.includes(\"\\\\\") ? \"\\\\\" : \"/\";"
+      },
+      {
+        "line": 116,
+        "text": "                  return {"
+      },
+      {
+        "line": 117,
+        "text": "                    ...hit,"
+      },
+      {
+        "line": 118,
+        "text": "                    path: `${root.path.replace(/[\\\\/]+$/, \"\")}${separator}${hit.path}`,"
+      },
+      {
+        "line": 119,
+        "text": "                  };"
+      },
+      {
+        "line": 120,
+        "text": "                }),"
+      },
+      {
+        "line": 121,
+        "text": "            )"
+      },
+      {
+        "line": 122,
+        "text": "          : Promise.resolve([]);"
+      },
+      {
+        "line": 123,
+        "text": "      void request"
+      },
+      {
+        "line": 124,
+        "text": "        .then((hits) => {"
+      },
+      {
+        "line": 125,
+        "text": "          if (!cancelled) setFiles(hits);"
+      },
+      {
+        "line": 126,
+        "text": "        })"
+      },
+      {
+        "line": 127,
+        "text": "        .catch(() => {"
+      },
+      {
+        "line": 128,
+        "text": "          if (!cancelled) setFiles([]);"
+      },
+      {
+        "line": 129,
+        "text": "        });"
+      },
+      {
+        "line": 130,
+        "text": "    }, 60);"
+      },
+      {
+        "line": 131,
+        "text": "    return () => {"
+      },
+      {
+        "line": 132,
+        "text": "      cancelled = true;"
+      },
+      {
+        "line": 133,
+        "text": "      clearTimeout(handle);"
+      },
+      {
+        "line": 134,
+        "text": "    };"
+      },
+      {
+        "line": 135,
+        "text": "  }, [cwd, projectId, projectRoots, query, rootId]);"
+      },
+      {
+        "line": 136,
+        "text": ""
+      },
+      {
+        "line": 137,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 138,
+        "text": "    let cancelled = false;"
+      },
+      {
+        "line": 139,
+        "text": "    if (!cwd) {"
+      },
+      {
+        "line": 140,
+        "text": "      setRecent([]);"
+      },
+      {
+        "line": 141,
+        "text": "      return;"
+      },
+      {
+        "line": 142,
+        "text": "    }"
+      },
+      {
+        "line": 143,
+        "text": "    void window.codeshell"
+      },
+      {
+        "line": 144,
+        "text": "      .inspectAttachments({ cwd })"
+      },
+      {
+        "line": 145,
+        "text": "      .then((items) => {"
+      },
+      {
+        "line": 146,
+        "text": "        if (!cancelled) setRecent(items);"
+      },
+      {
+        "line": 147,
+        "text": "      })"
+      },
+      {
+        "line": 148,
+        "text": "      .catch(() => {"
+      },
+      {
+        "line": 149,
+        "text": "        if (!cancelled) setRecent([]);"
+      },
+      {
+        "line": 150,
+        "text": "      });"
+      },
+      {
+        "line": 151,
+        "text": "    return () => {"
+      },
+      {
+        "line": 152,
+        "text": "      cancelled = true;"
+      },
+      {
+        "line": 153,
+        "text": "    };"
+      },
+      {
+        "line": 154,
+        "text": "  }, [cwd]);"
+      },
+      {
+        "line": 155,
+        "text": ""
+      },
+      {
+        "line": 156,
+        "text": "  // Filter skills client-side by insertable identity, not description text."
+      },
+      {
+        "line": 157,
+        "text": "  // Limit to the first 8 so long lists don't push files off-screen."
+      },
+      {
+        "line": 158,
+        "text": "  const filteredSkills = useMemo(() => {"
+      },
+      {
+        "line": 159,
+        "text": "    return filterMentionSkills(skills, query, 8);"
+      },
+      {
+        "line": 160,
+        "text": "  }, [skills, query]);"
+      },
+      {
+        "line": 161,
+        "text": ""
+      },
+      {
+        "line": 162,
+        "text": "  // Files: search service already capped + sorted; show top 12 here."
+      },
+      {
+        "line": 163,
+        "text": "  const visibleFolders = useMemo(() => files.filter((f) => f.kind === \"dir\").slice(0, 8), [files]);"
+      },
+      {
+        "line": 164,
+        "text": "  const visibleFiles = useMemo(() => files.filter((f) => f.kind === \"file\").slice(0, 12), [files]);"
+      },
+      {
+        "line": 165,
+        "text": "  const visibleRecent = useMemo(() => {"
+      },
+      {
+        "line": 166,
+        "text": "    const q = query.trim().toLowerCase();"
+      },
+      {
+        "line": 167,
+        "text": "    const filtered = q"
+      },
+      {
+        "line": 168,
+        "text": "      ? recent.filter((item) =>"
+      },
+      {
+        "line": 169,
+        "text": "          `${item.path} ${item.originalName ?? \"\"} ${item.mime ?? \"\"}`.toLowerCase().includes(q),"
+      },
+      {
+        "line": 170,
+        "text": "        )"
+      },
+      {
+        "line": 171,
+        "text": "      : recent;"
+      },
+      {
+        "line": 172,
+        "text": "    return filtered.slice(0, 8);"
+      },
+      {
+        "line": 173,
+        "text": "  }, [query, recent]);"
+      },
+      {
+        "line": 174,
+        "text": ""
+      },
+      {
+        "line": 175,
+        "text": "  // Build the flat list (used for keyboard cursor + onPick lookups)."
+      },
+      {
+        "line": 176,
+        "text": "  const items: MentionItem[] = useMemo("
+      },
+      {
+        "line": 177,
+        "text": "    () => ["
+      },
+      {
+        "line": 178,
+        "text": "      ...filteredSkills.map((s) => ({ kind: \"skill\" as const, skill: s })),"
+      },
+      {
+        "line": 179,
+        "text": "      ...visibleFolders.map((f) => ({ kind: \"file\" as const, file: f })),"
+      },
+      {
+        "line": 180,
+        "text": "      ...visibleFiles.map((f) => ({ kind: \"file\" as const, file: f })),"
+      },
+      {
+        "line": 181,
+        "text": "      ...visibleRecent.map((a) => ({ kind: \"recent\" as const, attachment: a })),"
+      },
+      {
+        "line": 182,
+        "text": "    ],"
+      },
+      {
+        "line": 183,
+        "text": "    [filteredSkills, visibleFiles, visibleFolders, visibleRecent],"
+      },
+      {
+        "line": 184,
+        "text": "  );"
+      },
+      {
+        "line": 185,
+        "text": ""
+      },
+      {
+        "line": 186,
+        "text": "  // Notify parent whenever the flat list changes so the cursor stays in range."
+      },
+      {
+        "line": 187,
+        "text": "  const lastSentRef = useRef<MentionItem[] | null>(null);"
+      },
+      {
+        "line": 188,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 189,
+        "text": "    // Cheap identity check — if the list is the same reference, skip."
+      },
+      {
+        "line": 190,
+        "text": "    if (lastSentRef.current === items) return;"
+      },
+      {
+        "line": 191,
+        "text": "    lastSentRef.current = items;"
+      },
+      {
+        "line": 192,
+        "text": "    onItemsChange(items);"
+      },
+      {
+        "line": 193,
+        "text": "  }, [items, onItemsChange]);"
+      },
+      {
+        "line": 194,
+        "text": ""
+      },
+      {
+        "line": 195,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 196,
+        "text": "    activeOptionRef.current?.scrollIntoView({ block: \"nearest\" });"
+      },
+      {
+        "line": 197,
+        "text": "  }, [selected, items]);"
+      },
+      {
+        "line": 198,
+        "text": ""
+      },
+      {
+        "line": 199,
+        "text": "  const isEmpty = items.length === 0;"
+      },
+      {
+        "line": 200,
+        "text": ""
+      },
+      {
+        "line": 201,
+        "text": "  return ("
+      },
+      {
+        "line": 202,
+        "text": "    <ComposerSuggestions"
+      },
+      {
+        "line": 203,
+        "text": "      id={listboxId}"
+      },
+      {
+        "line": 204,
+        "text": "      anchorRef={anchorRef}"
+      },
+      {
+        "line": 205,
+        "text": "      label={t(\"chat.mention.ariaLabel\")}"
+      },
+      {
+        "line": 206,
+        "text": "      selected={selected}"
+      },
+      {
+        "line": 207,
+        "text": "      items={items}"
+      },
+      {
+        "line": 208,
+        "text": "    >"
+      },
+      {
+        "line": 209,
+        "text": "      {filteredSkills.length > 0 && ("
+      },
+      {
+        "line": 210,
+        "text": "        <div className=\"py-1\">"
+      },
+      {
+        "line": 211,
+        "text": "          <div className=\"px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground\">"
+      },
+      {
+        "line": 212,
+        "text": "            {t(\"chat.mention.skills\")}"
+      },
+      {
+        "line": 213,
+        "text": "          </div>"
+      },
+      {
+        "line": 214,
+        "text": "          <ul role=\"presentation\" className=\"space-y-0.5\">"
+      },
+      {
+        "line": 215,
+        "text": "            {filteredSkills.map((s, idx) => {"
+      },
+      {
+        "line": 216,
+        "text": "              const flatIndex = idx;"
+      },
+      {
+        "line": 217,
+        "text": "              const active = flatIndex === selected;"
+      },
+      {
+        "line": 218,
+        "text": "              return ("
+      },
+      {
+        "line": 219,
+        "text": "                <li"
+      },
+      {
+        "line": 220,
+        "text": "                  key={s.filePath}"
+      },
+      {
+        "line": 221,
+        "text": "                  id={suggestionOptionId(listboxId, JSON.stringify([\"skill\", s.filePath]))}"
+      },
+      {
+        "line": 222,
+        "text": "                  ref={active ? activeOptionRef : undefined}"
+      },
+      {
+        "line": 223,
+        "text": "                  className={cn("
+      },
+      {
+        "line": 224,
+        "text": "                    \"grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm\","
+      },
+      {
+        "line": 225,
+        "text": "                    active && \"bg-accent text-accent-foreground\","
+      },
+      {
+        "line": 226,
+        "text": "                  )}"
+      },
+      {
+        "line": 227,
+        "text": "                  role=\"option\""
+      },
+      {
+        "line": 228,
+        "text": "                  aria-selected={active}"
+      },
+      {
+        "line": 229,
+        "text": "                  onMouseDown={(e) => {"
+      },
+      {
+        "line": 230,
+        "text": "                    // mousedown (not click) so the textarea keeps focus."
+      },
+      {
+        "line": 231,
+        "text": "                    e.preventDefault();"
+      },
+      {
+        "line": 232,
+        "text": "                    onPick({ kind: \"skill\", skill: s });"
+      },
+      {
+        "line": 233,
+        "text": "                  }}"
+      },
+      {
+        "line": 234,
+        "text": "                >"
+      },
+      {
+        "line": 235,
+        "text": "                  <Puzzle size={14} className=\"mt-0.5 text-muted-foreground\" />"
+      },
+      {
+        "line": 236,
+        "text": "                  <span className=\"min-w-0 truncate font-medium\">{s.name}</span>"
+      },
+      {
+        "line": 237,
+        "text": "                  <span className=\"col-start-2 min-w-0 truncate text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 238,
+        "text": "                    {s.description}"
+      },
+      {
+        "line": 239,
+        "text": "                  </span>"
+      },
+      {
+        "line": 240,
+        "text": "                </li>"
+      },
+      {
+        "line": 241,
+        "text": "              );"
+      },
+      {
+        "line": 242,
+        "text": "            })}"
+      },
+      {
+        "line": 243,
+        "text": "          </ul>"
+      },
+      {
+        "line": 244,
+        "text": "        </div>"
+      },
+      {
+        "line": 245,
+        "text": "      )}"
+      },
+      {
+        "line": 246,
+        "text": ""
+      },
+      {
+        "line": 247,
+        "text": "      {visibleFolders.length > 0 && ("
+      },
+      {
+        "line": 248,
+        "text": "        <div className=\"py-1\">"
+      },
+      {
+        "line": 249,
+        "text": "          <div className=\"px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground\">"
+      },
+      {
+        "line": 250,
+        "text": "            {t(\"chat.mention.folders\")}"
+      },
+      {
+        "line": 251,
+        "text": "          </div>"
+      },
+      {
+        "line": 252,
+        "text": "          <ul role=\"presentation\" className=\"space-y-0.5\">"
+      },
+      {
+        "line": 253,
+        "text": "            {visibleFolders.map((f, idx) => {"
+      },
+      {
+        "line": 254,
+        "text": "              const flatIndex = filteredSkills.length + idx;"
+      },
+      {
+        "line": 255,
+        "text": "              const active = flatIndex === selected;"
+      },
+      {
+        "line": 256,
+        "text": "              return ("
+      },
+      {
+        "line": 257,
+        "text": "                <li"
+      },
+      {
+        "line": 258,
+        "text": "                  key={f.path}"
+      },
+      {
+        "line": 259,
+        "text": "                  id={suggestionOptionId(listboxId, JSON.stringify([\"file\", rootId, f.path]))}"
+      },
+      {
+        "line": 260,
+        "text": "                  ref={active ? activeOptionRef : undefined}"
+      },
+      {
+        "line": 261,
+        "text": "                  className={cn("
+      },
+      {
+        "line": 262,
+        "text": "                    \"grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm\","
+      },
+      {
+        "line": 263,
+        "text": "                    active && \"bg-accent text-accent-foreground\","
+      },
+      {
+        "line": 264,
+        "text": "                  )}"
+      },
+      {
+        "line": 265,
+        "text": "                  role=\"option\""
+      },
+      {
+        "line": 266,
+        "text": "                  aria-selected={active}"
+      },
+      {
+        "line": 267,
+        "text": "                  onMouseDown={(e) => {"
+      },
+      {
+        "line": 268,
+        "text": "                    e.preventDefault();"
+      },
+      {
+        "line": 269,
+        "text": "                    onPick({ kind: \"file\", file: f });"
+      },
+      {
+        "line": 270,
+        "text": "                  }}"
+      },
+      {
+        "line": 271,
+        "text": "                >"
+      },
+      {
+        "line": 272,
+        "text": "                  <Folder size={14} className=\"mt-0.5 text-muted-foreground\" />"
+      },
+      {
+        "line": 273,
+        "text": "                  <span className=\"min-w-0 truncate font-medium\">{f.name}</span>"
+      },
+      {
+        "line": 274,
+        "text": "                  <span className=\"col-start-2 min-w-0 truncate text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 275,
+        "text": "                    {f.path}"
+      },
+      {
+        "line": 276,
+        "text": "                  </span>"
+      },
+      {
+        "line": 277,
+        "text": "                </li>"
+      },
+      {
+        "line": 278,
+        "text": "              );"
+      },
+      {
+        "line": 279,
+        "text": "            })}"
+      },
+      {
+        "line": 280,
+        "text": "          </ul>"
+      },
+      {
+        "line": 281,
+        "text": "        </div>"
+      },
+      {
+        "line": 282,
+        "text": "      )}"
+      },
+      {
+        "line": 283,
+        "text": ""
+      },
+      {
+        "line": 284,
+        "text": "      {visibleFiles.length > 0 && ("
+      },
+      {
+        "line": 285,
+        "text": "        <div className=\"py-1\">"
+      },
+      {
+        "line": 286,
+        "text": "          <div className=\"px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground\">"
+      },
+      {
+        "line": 287,
+        "text": "            {t(\"chat.mention.files\")}"
+      },
+      {
+        "line": 288,
+        "text": "          </div>"
+      },
+      {
+        "line": 289,
+        "text": "          <ul role=\"presentation\" className=\"space-y-0.5\">"
+      },
+      {
+        "line": 290,
+        "text": "            {visibleFiles.map((f, idx) => {"
+      },
+      {
+        "line": 291,
+        "text": "              const flatIndex = filteredSkills.length + visibleFolders.length + idx;"
+      },
+      {
+        "line": 292,
+        "text": "              const active = flatIndex === selected;"
+      },
+      {
+        "line": 293,
+        "text": "              return ("
+      },
+      {
+        "line": 294,
+        "text": "                <li"
+      },
+      {
+        "line": 295,
+        "text": "                  key={f.path}"
+      },
+      {
+        "line": 296,
+        "text": "                  id={suggestionOptionId(listboxId, JSON.stringify([\"file\", rootId, f.path]))}"
+      },
+      {
+        "line": 297,
+        "text": "                  ref={active ? activeOptionRef : undefined}"
+      },
+      {
+        "line": 298,
+        "text": "                  className={cn("
+      },
+      {
+        "line": 299,
+        "text": "                    \"grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm\","
+      },
+      {
+        "line": 300,
+        "text": "                    active && \"bg-accent text-accent-foreground\","
+      },
+      {
+        "line": 301,
+        "text": "                  )}"
+      },
+      {
+        "line": 302,
+        "text": "                  role=\"option\""
+      },
+      {
+        "line": 303,
+        "text": "                  aria-selected={active}"
+      },
+      {
+        "line": 304,
+        "text": "                  onMouseDown={(e) => {"
+      },
+      {
+        "line": 305,
+        "text": "                    e.preventDefault();"
+      },
+      {
+        "line": 306,
+        "text": "                    onPick({ kind: \"file\", file: f });"
+      },
+      {
+        "line": 307,
+        "text": "                  }}"
+      },
+      {
+        "line": 308,
+        "text": "                >"
+      },
+      {
+        "line": 309,
+        "text": "                  <FileText size={14} className=\"mt-0.5 text-muted-foreground\" />"
+      },
+      {
+        "line": 310,
+        "text": "                  <span className=\"min-w-0 truncate font-medium\">{f.name}</span>"
+      },
+      {
+        "line": 311,
+        "text": "                  <span className=\"col-start-2 min-w-0 truncate text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 312,
+        "text": "                    {f.path}"
+      },
+      {
+        "line": 313,
+        "text": "                  </span>"
+      },
+      {
+        "line": 314,
+        "text": "                </li>"
+      },
+      {
+        "line": 315,
+        "text": "              );"
+      },
+      {
+        "line": 316,
+        "text": "            })}"
+      },
+      {
+        "line": 317,
+        "text": "          </ul>"
+      },
+      {
+        "line": 318,
+        "text": "        </div>"
+      },
+      {
+        "line": 319,
+        "text": "      )}"
+      },
+      {
+        "line": 320,
+        "text": ""
+      },
+      {
+        "line": 321,
+        "text": "      {visibleRecent.length > 0 && ("
+      },
+      {
+        "line": 322,
+        "text": "        <div className=\"py-1\">"
+      },
+      {
+        "line": 323,
+        "text": "          <div className=\"px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground\">"
+      },
+      {
+        "line": 324,
+        "text": "            {t(\"chat.mention.recentAttachments\")}"
+      },
+      {
+        "line": 325,
+        "text": "          </div>"
+      },
+      {
+        "line": 326,
+        "text": "          <ul role=\"presentation\" className=\"space-y-0.5\">"
+      },
+      {
+        "line": 327,
+        "text": "            {visibleRecent.map((attachment, idx) => {"
+      },
+      {
+        "line": 328,
+        "text": "              const flatIndex ="
+      },
+      {
+        "line": 329,
+        "text": "                filteredSkills.length + visibleFolders.length + visibleFiles.length + idx;"
+      },
+      {
+        "line": 330,
+        "text": "              const active = flatIndex === selected;"
+      },
+      {
+        "line": 331,
+        "text": "              const name ="
+      },
+      {
+        "line": 332,
+        "text": "                attachment.originalName ||"
+      },
+      {
+        "line": 333,
+        "text": "                nativeBasename(attachment.path, window.codeshell?.platform);"
+      },
+      {
+        "line": 334,
+        "text": "              return ("
+      },
+      {
+        "line": 335,
+        "text": "                <li"
+      },
+      {
+        "line": 336,
+        "text": "                  key={attachment.id}"
+      },
+      {
+        "line": 337,
+        "text": "                  id={suggestionOptionId(listboxId, JSON.stringify([\"recent\", attachment.id]))}"
+      },
+      {
+        "line": 338,
+        "text": "                  ref={active ? activeOptionRef : undefined}"
+      },
+      {
+        "line": 339,
+        "text": "                  className={cn("
+      },
+      {
+        "line": 340,
+        "text": "                    \"grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm\","
+      },
+      {
+        "line": 341,
+        "text": "                    active && \"bg-accent text-accent-foreground\","
+      },
+      {
+        "line": 342,
+        "text": "                  )}"
+      },
+      {
+        "line": 343,
+        "text": "                  role=\"option\""
+      },
+      {
+        "line": 344,
+        "text": "                  aria-selected={active}"
+      },
+      {
+        "line": 345,
+        "text": "                  onMouseDown={(e) => {"
+      },
+      {
+        "line": 346,
+        "text": "                    e.preventDefault();"
+      },
+      {
+        "line": 347,
+        "text": "                    onPick({ kind: \"recent\", attachment });"
+      },
+      {
+        "line": 348,
+        "text": "                  }}"
+      },
+      {
+        "line": 349,
+        "text": "                >"
+      },
+      {
+        "line": 350,
+        "text": "                  <Clock size={14} className=\"mt-0.5 text-muted-foreground\" />"
+      },
+      {
+        "line": 351,
+        "text": "                  <span className=\"min-w-0 truncate font-medium\">{name}</span>"
+      },
+      {
+        "line": 352,
+        "text": "                  <span className=\"col-start-2 min-w-0 truncate text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 353,
+        "text": "                    {attachment.path}"
+      },
+      {
+        "line": 354,
+        "text": "                  </span>"
+      },
+      {
+        "line": 355,
+        "text": "                </li>"
+      },
+      {
+        "line": 356,
+        "text": "              );"
+      },
+      {
+        "line": 357,
+        "text": "            })}"
+      },
+      {
+        "line": 358,
+        "text": "          </ul>"
+      },
+      {
+        "line": 359,
+        "text": "        </div>"
+      },
+      {
+        "line": 360,
+        "text": "      )}"
+      },
+      {
+        "line": 361,
+        "text": ""
+      },
+      {
+        "line": 362,
+        "text": "      {isEmpty && ("
+      },
+      {
+        "line": 363,
+        "text": "        <div className=\"flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground\">"
+      },
+      {
+        "line": 364,
+        "text": "          <Search size={14} />"
+      },
+      {
+        "line": 365,
+        "text": "          <span>{cwd ? t(\"chat.mention.noMatch\") : t(\"chat.mention.selectProjectFirst\")}</span>"
+      },
+      {
+        "line": 366,
+        "text": "        </div>"
+      },
+      {
+        "line": 367,
+        "text": "      )}"
+      },
+      {
+        "line": 368,
+        "text": "    </ComposerSuggestions>"
+      },
+      {
+        "line": 369,
+        "text": "  );"
+      },
+      {
+        "line": 370,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "captureTiming": "After actual tool displays d20b5a/d601f7/22e623/e1e63b/826d17. Not a pre-read pin. Contains only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 16,
+        "text": "  ArrowUp,"
+      },
+      {
+        "line": 70,
+        "text": "import { ComposerSuggestions, suggestionOptionId } from \"./chat/ComposerSuggestions\";"
+      },
+      {
+        "line": 74,
+        "text": "  completedSlashCommandDraft,"
+      },
+      {
+        "line": 75,
+        "text": "  filterSlashCommandItems,"
+      },
+      {
+        "line": 76,
+        "text": "  parseLoopSlashInvocation,"
+      },
+      {
+        "line": 77,
+        "text": "  parsePluginSlashInvocation,"
+      },
+      {
+        "line": 78,
+        "text": "  toPluginSlashCommandItems,"
+      },
+      {
+        "line": 79,
+        "text": "  type SlashCommandItem,"
+      },
+      {
+        "line": 80,
+        "text": "} from \"./chat/pluginSlashCommands\";"
+      },
+      {
+        "line": 271,
+        "text": "function detectSlashCommand(value: string, caret: number): { query: string } | null {"
+      },
+      {
+        "line": 272,
+        "text": "  if (!value.startsWith(\"/\")) return null;"
+      },
+      {
+        "line": 273,
+        "text": "  const beforeCaret = value.slice(0, caret);"
+      },
+      {
+        "line": 274,
+        "text": "  if (!beforeCaret.startsWith(\"/\") || /\\s/.test(beforeCaret)) return null;"
+      },
+      {
+        "line": 275,
+        "text": "  const firstWhitespace = value.search(/\\s/);"
+      },
+      {
+        "line": 276,
+        "text": "  if (firstWhitespace !== -1 && caret > firstWhitespace) return null;"
+      },
+      {
+        "line": 277,
+        "text": "  return { query: beforeCaret.slice(1).toLowerCase() };"
+      },
+      {
+        "line": 278,
+        "text": "}"
+      },
+      {
+        "line": 279,
+        "text": ""
+      },
+      {
+        "line": 280,
+        "text": "function toRunAttachments(images: ImageAttachment[]): InputAttachmentMeta[] {"
+      },
+      {
+        "line": 281,
+        "text": "  return images"
+      },
+      {
+        "line": 282,
+        "text": "    .filter((img) => !!img.path && !!img.absPath)"
+      },
+      {
+        "line": 492,
+        "text": "  const [mentionReferences, setMentionReferences] = useState<MentionReferences>({"
+      },
+      {
+        "line": 496,
+        "text": "  const mentionEditSelection = useRef<{ draft: string; start: number; end: number } | null>(null);"
+      },
+      {
+        "line": 497,
+        "text": "  const captureMentionEditSelection = (target = textareaRef.current) => {"
+      },
+      {
+        "line": 779,
+        "text": "  // clamped by `mentionItems` (the popover bubbles its list back up)."
+      },
+      {
+        "line": 780,
+        "text": "  const [mention, setMention] = useState<{ start: number; query: string } | null>(null);"
+      },
+      {
+        "line": 781,
+        "text": "  const [mentionItems, setMentionItems] = useState<MentionItem[]>([]);"
+      },
+      {
+        "line": 782,
+        "text": "  const [mentionSelected, setMentionSelected] = useState(0);"
+      },
+      {
+        "line": 783,
+        "text": "  const [slash, setSlash] = useState<{ query: string } | null>(null);"
+      },
+      {
+        "line": 784,
+        "text": "  const [slashSelected, setSlashSelected] = useState(0);"
+      },
+      {
+        "line": 842,
+        "text": "  const slashCommands = useMemo<SlashCommandItem[]>(() => {"
+      },
+      {
+        "line": 843,
+        "text": "    const commands: SlashCommandItem[] = [];"
+      },
+      {
+        "line": 844,
+        "text": "    if (onCompactCommand) {"
+      },
+      {
+        "line": 845,
+        "text": "      commands.push({"
+      },
+      {
+        "line": 846,
+        "text": "        kind: \"builtin\","
+      },
+      {
+        "line": 847,
+        "text": "        name: \"/compact\","
+      },
+      {
+        "line": 848,
+        "text": "        title: t(\"chat.slash.compactTitle\"),"
+      },
+      {
+        "line": 849,
+        "text": "        description: t(\"chat.slash.compactDescription\"),"
+      },
+      {
+        "line": 850,
+        "text": "      });"
+      },
+      {
+        "line": 851,
+        "text": "    }"
+      },
+      {
+        "line": 852,
+        "text": "    if (localRuntime && variant === \"main\") {"
+      },
+      {
+        "line": 853,
+        "text": "      commands.push({"
+      },
+      {
+        "line": 854,
+        "text": "        kind: \"builtin\","
+      },
+      {
+        "line": 855,
+        "text": "        name: \"/loop\","
+      },
+      {
+        "line": 856,
+        "text": "        title: t(\"chat.slash.loopTitle\"),"
+      },
+      {
+        "line": 857,
+        "text": "        description: t(\"chat.slash.loopDescription\"),"
+      },
+      {
+        "line": 858,
+        "text": "        argumentHint: \"<objective>\","
+      },
+      {
+        "line": 859,
+        "text": "      });"
+      },
+      {
+        "line": 860,
+        "text": "    }"
+      },
+      {
+        "line": 861,
+        "text": "    commands.push("
+      },
+      {
+        "line": 862,
+        "text": "      ...toPluginSlashCommandItems(pluginCommands, (pluginName) =>"
+      },
+      {
+        "line": 863,
+        "text": "        t(\"chat.slash.pluginProvidedBy\", { plugin: pluginName }),"
+      },
+      {
+        "line": 864,
+        "text": "      ),"
+      },
+      {
+        "line": 865,
+        "text": "    );"
+      },
+      {
+        "line": 866,
+        "text": "    return commands;"
+      },
+      {
+        "line": 867,
+        "text": "  }, [onCompactCommand, pluginCommands, t, variant, localRuntime]);"
+      },
+      {
+        "line": 868,
+        "text": "  const slashItems = useMemo(() => {"
+      },
+      {
+        "line": 869,
+        "text": "    if (!slash) return [];"
+      },
+      {
+        "line": 870,
+        "text": "    return filterSlashCommandItems(slashCommands, slash.query);"
+      },
+      {
+        "line": 871,
+        "text": "  }, [slash, slashCommands]);"
+      },
+      {
+        "line": 872,
+        "text": ""
+      },
+      {
+        "line": 953,
+        "text": "  const closeMention = (): void => {"
+      },
+      {
+        "line": 954,
+        "text": "    setMention(null);"
+      },
+      {
+        "line": 955,
+        "text": "    setMentionSelected(0);"
+      },
+      {
+        "line": 956,
+        "text": "  };"
+      },
+      {
+        "line": 957,
+        "text": ""
+      },
+      {
+        "line": 958,
+        "text": "  const closeSlash = (): void => {"
+      },
+      {
+        "line": 959,
+        "text": "    setSlash(null);"
+      },
+      {
+        "line": 960,
+        "text": "    setSlashSelected(0);"
+      },
+      {
+        "line": 961,
+        "text": "  };"
+      },
+      {
+        "line": 962,
+        "text": ""
+      },
+      {
+        "line": 963,
+        "text": "  const updateInlinePickers = (value: string, caret: number): void => {"
+      },
+      {
+        "line": 964,
+        "text": "    const nextMention = localRuntime ? detectMention(value, caret) : null;"
+      },
+      {
+        "line": 965,
+        "text": "    if (nextMention) {"
+      },
+      {
+        "line": 966,
+        "text": "      if (!mention || mention.query !== nextMention.query) setMentionSelected(0);"
+      },
+      {
+        "line": 967,
+        "text": "      setMention(nextMention);"
+      },
+      {
+        "line": 968,
+        "text": "      if (slash) closeSlash();"
+      },
+      {
+        "line": 969,
+        "text": "      return;"
+      },
+      {
+        "line": 970,
+        "text": "    }"
+      },
+      {
+        "line": 971,
+        "text": ""
+      },
+      {
+        "line": 972,
+        "text": "    if (mention) closeMention();"
+      },
+      {
+        "line": 973,
+        "text": ""
+      },
+      {
+        "line": 974,
+        "text": "    const nextSlash = slashCommands.length > 0 ? detectSlashCommand(value, caret) : null;"
+      },
+      {
+        "line": 975,
+        "text": "    if (nextSlash) {"
+      },
+      {
+        "line": 976,
+        "text": "      if (!slash || slash.query !== nextSlash.query) setSlashSelected(0);"
+      },
+      {
+        "line": 977,
+        "text": "      setSlash(nextSlash);"
+      },
+      {
+        "line": 978,
+        "text": "    } else if (slash) {"
+      },
+      {
+        "line": 979,
+        "text": "      closeSlash();"
+      },
+      {
+        "line": 980,
+        "text": "    }"
+      },
+      {
+        "line": 981,
+        "text": "  };"
+      },
+      {
+        "line": 982,
+        "text": ""
+      },
+      {
+        "line": 983,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 984,
+        "text": "    setSlashSelected((s) => (slashItems.length === 0 ? 0 : Math.min(s, slashItems.length - 1)));"
+      },
+      {
+        "line": 985,
+        "text": "  }, [slashItems]);"
+      },
+      {
+        "line": 1024,
+        "text": "  const applyMentionPick = (item: MentionItem): void => {"
+      },
+      {
+        "line": 1028,
+        "text": "    const before = draft.slice(0, mention.start);"
+      },
+      {
+        "line": 1070,
+        "text": "  const completeSlashCommand = (item: SlashCommandItem): void => {"
+      },
+      {
+        "line": 1071,
+        "text": "    const nextDraft = completedSlashCommandDraft(item);"
+      },
+      {
+        "line": 1073,
+        "text": "    closeSlash();"
+      },
+      {
+        "line": 1077,
+        "text": "  const expandPluginSlashCommand = async ("
+      },
+      {
+        "line": 1078,
+        "text": "    item: Extract<SlashCommandItem, { kind: \"plugin\" }>,"
+      },
+      {
+        "line": 1083,
+        "text": "      toast({ message: t(\"chat.slash.pluginExpandUnavailable\"), variant: \"error\" });"
+      },
+      {
+        "line": 1087,
+        "text": "    closeSlash();"
+      },
+      {
+        "line": 1098,
+        "text": "      toast({ message: t(\"chat.slash.pluginExpanded\"), variant: \"success\" });"
+      },
+      {
+        "line": 1103,
+        "text": "        message: t(\"chat.slash.pluginExpandFailed\", {"
+      },
+      {
+        "line": 1113,
+        "text": "  const executeSlashCommand = (item: SlashCommandItem, rawArguments = \"\"): void => {"
+      },
+      {
+        "line": 1116,
+        "text": "      void expandPluginSlashCommand(item, rawArguments);"
+      },
+      {
+        "line": 1129,
+        "text": "      closeSlash();"
+      },
+      {
+        "line": 1135,
+        "text": "    const pluginInvocation = parsePluginSlashInvocation(draft, slashCommands);"
+      },
+      {
+        "line": 1137,
+        "text": "      executeSlashCommand(pluginInvocation.command, pluginInvocation.rawArguments);"
+      },
+      {
+        "line": 1140,
+        "text": "    const loopInvocation = parseLoopSlashInvocation(draft, slashCommands);"
+      },
+      {
+        "line": 1142,
+        "text": "      toast({ message: t(\"chat.slash.loopBusy\"), variant: \"error\" });"
+      },
+      {
+        "line": 1153,
+        "text": "    const compactCommand = slashCommands.find("
+      },
+      {
+        "line": 1154,
+        "text": "      (command): command is Extract<SlashCommandItem, { kind: \"builtin\" }> =>"
+      },
+      {
+        "line": 1158,
+        "text": "      executeSlashCommand(compactCommand);"
+      },
+      {
+        "line": 1214,
+        "text": "    closeSlash();"
+      },
+      {
+        "line": 1341,
+        "text": "  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {"
+      },
+      {
+        "line": 1342,
+        "text": "    if (isComposing || e.nativeEvent.isComposing) return;"
+      },
+      {
+        "line": 1343,
+        "text": "    if (e.key === \"Backspace\" || e.key === \"Delete\") captureMentionEditSelection(e.currentTarget);"
+      },
+      {
+        "line": 1344,
+        "text": ""
+      },
+      {
+        "line": 1345,
+        "text": "    if (slash) {"
+      },
+      {
+        "line": 1346,
+        "text": "      if (e.key === \"Escape\") {"
+      },
+      {
+        "line": 1347,
+        "text": "        e.preventDefault();"
+      },
+      {
+        "line": 1348,
+        "text": "        closeSlash();"
+      },
+      {
+        "line": 1349,
+        "text": "        return;"
+      },
+      {
+        "line": 1350,
+        "text": "      }"
+      },
+      {
+        "line": 1351,
+        "text": "      if (slashItems.length > 0) {"
+      },
+      {
+        "line": 1352,
+        "text": "        if (e.key === \"ArrowDown\") {"
+      },
+      {
+        "line": 1353,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1354,
+        "text": "          setSlashSelected((s) => (s + 1) % slashItems.length);"
+      },
+      {
+        "line": 1355,
+        "text": "          return;"
+      },
+      {
+        "line": 1356,
+        "text": "        }"
+      },
+      {
+        "line": 1357,
+        "text": "        if (e.key === \"ArrowUp\") {"
+      },
+      {
+        "line": 1358,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1359,
+        "text": "          setSlashSelected((s) => (s - 1 + slashItems.length) % slashItems.length);"
+      },
+      {
+        "line": 1360,
+        "text": "          return;"
+      },
+      {
+        "line": 1361,
+        "text": "        }"
+      },
+      {
+        "line": 1362,
+        "text": "        if (e.key === \"Tab\") {"
+      },
+      {
+        "line": 1363,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1364,
+        "text": "          const pick = slashItems[Math.min(slashSelected, slashItems.length - 1)];"
+      },
+      {
+        "line": 1365,
+        "text": "          if (pick) completeSlashCommand(pick);"
+      },
+      {
+        "line": 1366,
+        "text": "          return;"
+      },
+      {
+        "line": 1367,
+        "text": "        }"
+      },
+      {
+        "line": 1368,
+        "text": "        if (e.key === \"Enter\") {"
+      },
+      {
+        "line": 1369,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1370,
+        "text": "          const pick = slashItems[Math.min(slashSelected, slashItems.length - 1)];"
+      },
+      {
+        "line": 1371,
+        "text": "          if (!pick) return;"
+      },
+      {
+        "line": 1372,
+        "text": "          if (draft.trim() === pick.name) executeSlashCommand(pick);"
+      },
+      {
+        "line": 1373,
+        "text": "          else completeSlashCommand(pick);"
+      },
+      {
+        "line": 1374,
+        "text": "          return;"
+      },
+      {
+        "line": 1375,
+        "text": "        }"
+      },
+      {
+        "line": 1376,
+        "text": "      }"
+      },
+      {
+        "line": 1377,
+        "text": "    }"
+      },
+      {
+        "line": 1378,
+        "text": ""
+      },
+      {
+        "line": 1379,
+        "text": "    // While the @-mention popover is open, intercept navigation keys."
+      },
+      {
+        "line": 1380,
+        "text": "    // Backspace falls through so the user can edit the query naturally;"
+      },
+      {
+        "line": 1381,
+        "text": "    // detectMention runs in onChange and will close the popover if the"
+      },
+      {
+        "line": 1382,
+        "text": "    // edit kills the @-token."
+      },
+      {
+        "line": 1383,
+        "text": "    if (mention) {"
+      },
+      {
+        "line": 1384,
+        "text": "      if (e.key === \"Escape\") {"
+      },
+      {
+        "line": 1385,
+        "text": "        e.preventDefault();"
+      },
+      {
+        "line": 1386,
+        "text": "        closeMention();"
+      },
+      {
+        "line": 1387,
+        "text": "        return;"
+      },
+      {
+        "line": 1388,
+        "text": "      }"
+      },
+      {
+        "line": 1389,
+        "text": "      if (mentionItems.length > 0) {"
+      },
+      {
+        "line": 1390,
+        "text": "        if (e.key === \"ArrowDown\") {"
+      },
+      {
+        "line": 1391,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1392,
+        "text": "          setMentionSelected((s) => (s + 1) % mentionItems.length);"
+      },
+      {
+        "line": 1393,
+        "text": "          return;"
+      },
+      {
+        "line": 1394,
+        "text": "        }"
+      },
+      {
+        "line": 1395,
+        "text": "        if (e.key === \"ArrowUp\") {"
+      },
+      {
+        "line": 1396,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1397,
+        "text": "          setMentionSelected((s) => (s - 1 + mentionItems.length) % mentionItems.length);"
+      },
+      {
+        "line": 1398,
+        "text": "          return;"
+      },
+      {
+        "line": 1399,
+        "text": "        }"
+      },
+      {
+        "line": 1400,
+        "text": "        if (e.key === \"Enter\" || e.key === \"Tab\") {"
+      },
+      {
+        "line": 1401,
+        "text": "          e.preventDefault();"
+      },
+      {
+        "line": 1402,
+        "text": "          const pick = mentionItems[Math.min(mentionSelected, mentionItems.length - 1)];"
+      },
+      {
+        "line": 1403,
+        "text": "          if (pick) applyMentionPick(pick);"
+      },
+      {
+        "line": 1404,
+        "text": "          return;"
+      },
+      {
+        "line": 1405,
+        "text": "        }"
+      },
+      {
+        "line": 1406,
+        "text": "      }"
+      },
+      {
+        "line": 1407,
+        "text": "    }"
+      },
+      {
+        "line": 1408,
+        "text": ""
+      },
+      {
+        "line": 1409,
+        "text": "    if (e.key === \"Enter\" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {"
+      },
+      {
+        "line": 1410,
+        "text": "      e.preventDefault();"
+      },
+      {
+        "line": 1411,
+        "text": "      submit();"
+      },
+      {
+        "line": 1412,
+        "text": "      return;"
+      },
+      {
+        "line": 1413,
+        "text": "    }"
+      },
+      {
+        "line": 1417,
+        "text": "      (e.key === \"ArrowUp\" || e.key === \"ArrowDown\") && (draft.length === 0 || browsingHistory);"
+      },
+      {
+        "line": 1421,
+        "text": "    if (e.key === \"ArrowUp\") {"
+      },
+      {
+        "line": 1428,
+        "text": "    } else if (e.key === \"ArrowDown\") {"
+      },
+      {
+        "line": 2128,
+        "text": "                    : t(\"chat.composer.visionUnsupportedUnknown\")}"
+      },
+      {
+        "line": 2129,
+        "text": "                </span>"
+      },
+      {
+        "line": 2130,
+        "text": "                <Button"
+      },
+      {
+        "line": 2131,
+        "text": "                  type=\"button\""
+      },
+      {
+        "line": 2132,
+        "text": "                  variant=\"link\""
+      },
+      {
+        "line": 2133,
+        "text": "                  size=\"sm\""
+      },
+      {
+        "line": 2134,
+        "text": "                  className=\"h-auto self-start p-0 text-status-warn\""
+      },
+      {
+        "line": 2135,
+        "text": "                  onClick={() => {"
+      },
+      {
+        "line": 2136,
+        "text": "                    setAttachments([]);"
+      },
+      {
+        "line": 2137,
+        "text": "                    setAttachmentError(null);"
+      },
+      {
+        "line": 2138,
+        "text": "                  }}"
+      },
+      {
+        "line": 2139,
+        "text": "                >"
+      },
+      {
+        "line": 2140,
+        "text": "                  {t(\"chat.composer.removeAllImages\")}"
+      },
+      {
+        "line": 2141,
+        "text": "                </Button>"
+      },
+      {
+        "line": 2142,
+        "text": "              </div>"
+      },
+      {
+        "line": 2143,
+        "text": "            )}"
+      },
+      {
+        "line": 2144,
+        "text": "            {attachmentError && ("
+      },
+      {
+        "line": 2145,
+        "text": "              <div className=\"mb-2 text-xs text-status-err\">{attachmentError}</div>"
+      },
+      {
+        "line": 2146,
+        "text": "            )}"
+      },
+      {
+        "line": 2147,
+        "text": ""
+      },
+      {
+        "line": 2148,
+        "text": "            <div className=\"relative\">"
+      },
+      {
+        "line": 2149,
+        "text": "              {mention && ("
+      },
+      {
+        "line": 2150,
+        "text": "                <MentionPopover"
+      },
+      {
+        "line": 2151,
+        "text": "                  listboxId={suggestionListboxId}"
+      },
+      {
+        "line": 2152,
+        "text": "                  anchorRef={textareaRef}"
+      },
+      {
+        "line": 2153,
+        "text": "                  cwd={configurationAvailable ? conversationRoot : null}"
+      },
+      {
+        "line": 2154,
+        "text": "                  rootId={configurationAvailable ? conversationRootId : null}"
+      },
+      {
+        "line": 2155,
+        "text": "                  configurationTarget={pluginCommandTarget}"
+      },
+      {
+        "line": 2156,
+        "text": "                  projectId={activeProjectId}"
+      },
+      {
+        "line": 2157,
+        "text": "                  projectRoots={projects.find((project) => project.id === activeProjectId)?.roots}"
+      },
+      {
+        "line": 2158,
+        "text": "                  query={mention.query}"
+      },
+      {
+        "line": 2159,
+        "text": "                  selected={mentionSelected}"
+      },
+      {
+        "line": 2160,
+        "text": "                  onPick={applyMentionPick}"
+      },
+      {
+        "line": 2161,
+        "text": "                  onItemsChange={(items) => {"
+      },
+      {
+        "line": 2162,
+        "text": "                    setMentionItems(items);"
+      },
+      {
+        "line": 2163,
+        "text": "                    // Clamp selection if the list shrank under us."
+      },
+      {
+        "line": 2164,
+        "text": "                    setMentionSelected((s) =>"
+      },
+      {
+        "line": 2165,
+        "text": "                      items.length === 0 ? 0 : Math.min(s, items.length - 1),"
+      },
+      {
+        "line": 2166,
+        "text": "                    );"
+      },
+      {
+        "line": 2167,
+        "text": "                  }}"
+      },
+      {
+        "line": 2168,
+        "text": "                />"
+      },
+      {
+        "line": 2169,
+        "text": "              )}"
+      },
+      {
+        "line": 2170,
+        "text": "              {slash && ("
+      },
+      {
+        "line": 2171,
+        "text": "                <ComposerSuggestions"
+      },
+      {
+        "line": 2172,
+        "text": "                  id={suggestionListboxId}"
+      },
+      {
+        "line": 2173,
+        "text": "                  anchorRef={textareaRef}"
+      },
+      {
+        "line": 2174,
+        "text": "                  label={t(\"chat.slash.ariaLabel\")}"
+      },
+      {
+        "line": 2175,
+        "text": "                  selected={slashSelected}"
+      },
+      {
+        "line": 2176,
+        "text": "                  items={slashItems}"
+      },
+      {
+        "line": 2177,
+        "text": "                >"
+      },
+      {
+        "line": 2178,
+        "text": "                  <div className=\"px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground\">"
+      },
+      {
+        "line": 2179,
+        "text": "                    {t(\"chat.slash.commands\")}"
+      },
+      {
+        "line": 2180,
+        "text": "                  </div>"
+      },
+      {
+        "line": 2181,
+        "text": "                  {slashItems.length > 0 ? ("
+      },
+      {
+        "line": 2182,
+        "text": "                    <ul role=\"presentation\" className=\"space-y-0.5\">"
+      },
+      {
+        "line": 2183,
+        "text": "                      {slashItems.map((item, idx) => {"
+      },
+      {
+        "line": 2184,
+        "text": "                        const active = idx === slashSelected;"
+      },
+      {
+        "line": 2185,
+        "text": "                        return ("
+      },
+      {
+        "line": 2186,
+        "text": "                          <li"
+      },
+      {
+        "line": 2187,
+        "text": "                            key={item.name}"
+      },
+      {
+        "line": 2188,
+        "text": "                            id={suggestionOptionId(suggestionListboxId, `slash:${item.name}`)}"
+      },
+      {
+        "line": 2189,
+        "text": "                            className={cn("
+      },
+      {
+        "line": 2190,
+        "text": "                              \"grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm\","
+      },
+      {
+        "line": 2191,
+        "text": "                              active && \"bg-accent text-accent-foreground\","
+      },
+      {
+        "line": 2192,
+        "text": "                            )}"
+      },
+      {
+        "line": 2193,
+        "text": "                            role=\"option\""
+      },
+      {
+        "line": 2194,
+        "text": "                            aria-selected={active}"
+      },
+      {
+        "line": 2195,
+        "text": "                            onMouseDown={(e) => {"
+      },
+      {
+        "line": 2196,
+        "text": "                              e.preventDefault();"
+      },
+      {
+        "line": 2197,
+        "text": "                              if (item.kind === \"plugin\") completeSlashCommand(item);"
+      },
+      {
+        "line": 2198,
+        "text": "                              else executeSlashCommand(item);"
+      },
+      {
+        "line": 2199,
+        "text": "                            }}"
+      },
+      {
+        "line": 2200,
+        "text": "                          >"
+      },
+      {
+        "line": 2201,
+        "text": "                            {item.kind === \"plugin\" ? ("
+      },
+      {
+        "line": 2202,
+        "text": "                              <Plug size={14} className=\"mt-0.5 text-muted-foreground\" />"
+      },
+      {
+        "line": 2203,
+        "text": "                            ) : ("
+      },
+      {
+        "line": 2204,
+        "text": "                              <Archive size={14} className=\"mt-0.5 text-muted-foreground\" />"
+      },
+      {
+        "line": 2205,
+        "text": "                            )}"
+      },
+      {
+        "line": 2206,
+        "text": "                            <span className=\"min-w-0 truncate font-medium\">"
+      },
+      {
+        "line": 2207,
+        "text": "                              {item.name}"
+      },
+      {
+        "line": 2208,
+        "text": "                              {item.kind === \"plugin\" && item.argumentHint && ("
+      },
+      {
+        "line": 2209,
+        "text": "                                <span className=\"ml-1 font-normal text-muted-foreground\">"
+      },
+      {
+        "line": 2210,
+        "text": "                                  {item.argumentHint}"
+      },
+      {
+        "line": 2211,
+        "text": "                                </span>"
+      },
+      {
+        "line": 2212,
+        "text": "                              )}"
+      },
+      {
+        "line": 2213,
+        "text": "                            </span>"
+      },
+      {
+        "line": 2214,
+        "text": "                            <span className=\"col-start-2 min-w-0 truncate text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 2215,
+        "text": "                              {item.description}"
+      },
+      {
+        "line": 2216,
+        "text": "                            </span>"
+      },
+      {
+        "line": 2217,
+        "text": "                          </li>"
+      },
+      {
+        "line": 2218,
+        "text": "                        );"
+      },
+      {
+        "line": 2219,
+        "text": "                      })}"
+      },
+      {
+        "line": 2220,
+        "text": "                    </ul>"
+      },
+      {
+        "line": 2221,
+        "text": "                  ) : ("
+      },
+      {
+        "line": 2222,
+        "text": "                    <div className=\"px-2 py-3 text-sm text-muted-foreground\">"
+      },
+      {
+        "line": 2223,
+        "text": "                      {t(\"chat.slash.noMatch\")}"
+      },
+      {
+        "line": 2224,
+        "text": "                    </div>"
+      },
+      {
+        "line": 2225,
+        "text": "                  )}"
+      },
+      {
+        "line": 2226,
+        "text": "                </ComposerSuggestions>"
+      },
+      {
+        "line": 2227,
+        "text": "              )}"
+      },
+      {
+        "line": 2228,
+        "text": "              <Textarea"
+      },
+      {
+        "line": 2230,
+        "text": "                aria-label={t(\"chat.composer.inputLabel\")}"
+      },
+      {
+        "line": 2231,
+        "text": "                aria-autocomplete=\"list\""
+      },
+      {
+        "line": 2232,
+        "text": "                aria-haspopup=\"listbox\""
+      },
+      {
+        "line": 2233,
+        "text": "                value={draft}"
+      },
+      {
+        "line": 2234,
+        "text": "                onBeforeInput={(e) => captureMentionEditSelection(e.currentTarget)}"
+      },
+      {
+        "line": 2235,
+        "text": "                onCut={(e) => captureMentionEditSelection(e.currentTarget)}"
+      },
+      {
+        "line": 2236,
+        "text": "                onChange={(e) => {"
+      },
+      {
+        "line": 2237,
+        "text": "                  const value = e.target.value;"
+      },
+      {
+        "line": 2238,
+        "text": "                  const selection = mentionEditSelection.current;"
+      },
+      {
+        "line": 2239,
+        "text": "                  mentionEditSelection.current = null;"
+      },
+      {
+        "line": 2240,
+        "text": "                  setMentionReferences((current) =>"
+      },
+      {
+        "line": 2241,
+        "text": "                    reconcileMentionReferences("
+      },
+      {
+        "line": 2242,
+        "text": "                      reconcileMentionReferences(current, draft),"
+      },
+      {
+        "line": 2243,
+        "text": "                      value,"
+      },
+      {
+        "line": 2244,
+        "text": "                      selection?.draft === draft"
+      },
+      {
+        "line": 2245,
+        "text": "                        ? {"
+      },
+      {
+        "line": 2246,
+        "text": "                            start: selection.start,"
+      },
+      {
+        "line": 2247,
+        "text": "                            end: selection.end,"
+      },
+      {
+        "line": 2248,
+        "text": "                            caret: e.target.selectionStart ?? value.length,"
+      },
+      {
+        "line": 2249,
+        "text": "                          }"
+      },
+      {
+        "line": 2250,
+        "text": "                        : undefined,"
+      },
+      {
+        "line": 2251,
+        "text": "                    ),"
+      },
+      {
+        "line": 2252,
+        "text": "                  );"
+      },
+      {
+        "line": 2253,
+        "text": "                  setDraft(value);"
+      },
+      {
+        "line": 2254,
+        "text": "                  if (historyCursor !== -1) setHistoryCursor(-1);"
+      },
+      {
+        "line": 2255,
+        "text": "                  const caret = e.target.selectionStart ?? value.length;"
+      },
+      {
+        "line": 2256,
+        "text": "                  updateInlinePickers(value, caret);"
+      },
+      {
+        "line": 2257,
+        "text": "                }}"
+      },
+      {
+        "line": 2258,
+        "text": "                onKeyDown={handleKeyDown}"
+      },
+      {
+        "line": 2259,
+        "text": "                onKeyUp={(e) => {"
+      },
+      {
+        "line": 2260,
+        "text": "                  // Arrow / click moves can shift the caret without changing"
+      },
+      {
+        "line": 2285,
+        "text": "                    closeSlash();"
+      },
+      {
+        "line": 2456,
+        "text": "                      onMouseDown={(e) => e.preventDefault()}"
+      },
+      {
+        "line": 2513,
+        "text": "                          closeSlash();"
+      },
+      {
+        "line": 2560,
+        "text": "                      <ArrowUp size={16} />"
+      },
+      {
+        "line": 2603,
+        "text": "                closeSlash();"
+      }
+    ]
+  }
+]

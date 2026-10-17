@@ -1,0 +1,1231 @@
+{
+  "role": "Independent targeted source reviewer; parent supplied initial latch hypothesis and later grouped callback hypothesis, not blind. Root91 mutable/final materials not read.",
+  "rootReportedBaselineOnly": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "bytes": 4978,
+      "lines": 130,
+      "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "semanticLines": 130,
+      "displayedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 130,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Entire ordinary goal status/extension-options/render source. No React/DOM/product execution.",
+      "initialSemanticReadSha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lines": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          427,
+          439
+        ],
+        [
+          451,
+          461
+        ],
+        [
+          596,
+          597
+        ]
+      ],
+      "semanticLines": 26,
+      "displayedLineRanges": [
+        [
+          579,
+          606
+        ],
+        [
+          412,
+          474
+        ],
+        [
+          120,
+          132
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        13,
+        15,
+        18,
+        19,
+        20,
+        84,
+        116,
+        149,
+        154,
+        221,
+        289,
+        309,
+        820
+      ],
+      "uniqueDisplayedLines": 117,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          13,
+          13
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          18,
+          20
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          116,
+          116
+        ],
+        [
+          120,
+          132
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          154,
+          154
+        ],
+        [
+          221,
+          221
+        ],
+        [
+          289,
+          289
+        ],
+        [
+          309,
+          309
+        ],
+        [
+          412,
+          426
+        ],
+        [
+          440,
+          450
+        ],
+        [
+          462,
+          474
+        ],
+        [
+          579,
+          595
+        ],
+        [
+          598,
+          606
+        ],
+        [
+          820,
+          820
+        ]
+      ],
+      "purpose": "Actual group builder/agent-fold chain, group branch callback omission and flat leaf callback. Adjacent authority/scroll/UI lifecycle display not reviewed.",
+      "initialSemanticReadSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lines": 1247,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1114,
+          1126
+        ]
+      ],
+      "semanticLines": 13,
+      "displayedLineRanges": [
+        [
+          1107,
+          1130
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 24,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1107,
+          1113
+        ],
+        [
+          1127,
+          1130
+        ]
+      ],
+      "purpose": "Original false-success hypothesis: void GoalExtend callback and catch logging only. Session-resolution helper opaque; not a separate promoted defect.",
+      "initialSemanticReadSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          907,
+          911
+        ],
+        [
+          2580,
+          2580
+        ],
+        [
+          2657,
+          2657
+        ]
+      ],
+      "semanticLines": 7,
+      "displayedLineRanges": [
+        [
+          2648,
+          2662
+        ],
+        [
+          899,
+          916
+        ],
+        [
+          2573,
+          2584
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 45,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          899,
+          906
+        ],
+        [
+          912,
+          916
+        ],
+        [
+          2573,
+          2579
+        ],
+        [
+          2581,
+          2584
+        ],
+        [
+          2648,
+          2656
+        ],
+        [
+          2658,
+          2662
+        ]
+      ],
+      "purpose": "Actual busy/stream-pointer live Boolean and forwarding of live flag/extension callback. No background/all-frame claim or run/authority mechanism certification.",
+      "initialSemanticReadSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lines": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          609,
+          626
+        ]
+      ],
+      "semanticLines": 18,
+      "displayedLineRanges": [
+        [
+          609,
+          626
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 18,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Ordinary goalExtend RPC string/DTO and declared Promise result. No RPC, IPC or transport execution.",
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "lines": 2984,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1120,
+          1140
+        ]
+      ],
+      "semanticLines": 21,
+      "displayedLineRanges": [
+        [
+          1120,
+          1141
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 22,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1141,
+          1141
+        ]
+      ],
+      "purpose": "Declared extension limits Promise and no-active-run rejection contract; not proof of runtime execution.",
+      "initialSemanticReadSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2231,
+          2295
+        ]
+      ],
+      "semanticLines": 65,
+      "displayedLineRanges": [
+        [
+          2231,
+          2295
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        633,
+        2561
+      ],
+      "uniqueDisplayedLines": 67,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          633,
+          633
+        ],
+        [
+          2561,
+          2561
+        ]
+      ],
+      "purpose": "Ordinary extension result/error shape: known path success ok:true, no active result InvalidParams. Session lookup/Engine are opaque boundaries; identity/authority/validation mechanisms not certified.",
+      "initialSemanticReadSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          534,
+          610
+        ],
+        [
+          1097,
+          1098
+        ],
+        [
+          1258,
+          1278
+        ],
+        [
+          1350,
+          1374
+        ],
+        [
+          1778,
+          1818
+        ],
+        [
+          1821,
+          1867
+        ]
+      ],
+      "semanticLines": 213,
+      "displayedLineRanges": [
+        [
+          1774,
+          1818
+        ],
+        [
+          1821,
+          1867
+        ],
+        [
+          534,
+          610
+        ],
+        [
+          1080,
+          1112
+        ],
+        [
+          1235,
+          1278
+        ],
+        [
+          1350,
+          1374
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        59,
+        70,
+        125,
+        128,
+        140,
+        190,
+        193,
+        196,
+        198,
+        200,
+        219,
+        308,
+        355,
+        393,
+        400,
+        401,
+        402,
+        424,
+        1330,
+        1384,
+        1452,
+        1603,
+        1616,
+        1674,
+        1691,
+        1738,
+        1997,
+        2002,
+        2034,
+        2050,
+        2051,
+        2054,
+        2068,
+        2102,
+        2116,
+        2133,
+        2142,
+        2150,
+        2167,
+        2381,
+        2392,
+        2411,
+        2418,
+        2419,
+        2421,
+        2431,
+        2446,
+        2455,
+        2474
+      ],
+      "uniqueDisplayedLines": 320,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          59,
+          59
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          125,
+          125
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          190,
+          190
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          196,
+          196
+        ],
+        [
+          198,
+          198
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          219,
+          219
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          355,
+          355
+        ],
+        [
+          393,
+          393
+        ],
+        [
+          400,
+          402
+        ],
+        [
+          424,
+          424
+        ],
+        [
+          1080,
+          1096
+        ],
+        [
+          1099,
+          1112
+        ],
+        [
+          1235,
+          1257
+        ],
+        [
+          1330,
+          1330
+        ],
+        [
+          1384,
+          1384
+        ],
+        [
+          1452,
+          1452
+        ],
+        [
+          1603,
+          1603
+        ],
+        [
+          1616,
+          1616
+        ],
+        [
+          1674,
+          1674
+        ],
+        [
+          1691,
+          1691
+        ],
+        [
+          1738,
+          1738
+        ],
+        [
+          1774,
+          1777
+        ],
+        [
+          1997,
+          1997
+        ],
+        [
+          2002,
+          2002
+        ],
+        [
+          2034,
+          2034
+        ],
+        [
+          2050,
+          2051
+        ],
+        [
+          2054,
+          2054
+        ],
+        [
+          2068,
+          2068
+        ],
+        [
+          2102,
+          2102
+        ],
+        [
+          2116,
+          2116
+        ],
+        [
+          2133,
+          2133
+        ],
+        [
+          2142,
+          2142
+        ],
+        [
+          2150,
+          2150
+        ],
+        [
+          2167,
+          2167
+        ],
+        [
+          2381,
+          2381
+        ],
+        [
+          2392,
+          2392
+        ],
+        [
+          2411,
+          2411
+        ],
+        [
+          2418,
+          2419
+        ],
+        [
+          2421,
+          2421
+        ],
+        [
+          2431,
+          2431
+        ],
+        [
+          2446,
+          2446
+        ],
+        [
+          2455,
+          2455
+        ],
+        [
+          2474,
+          2474
+        ]
+      ],
+      "purpose": "Ordinary marker retention/projection, stream pointer and authoritative user turn timing; stale Goal/run-ownership helpers remain opaque boundary, not identity-mechanism review.",
+      "initialSemanticReadSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "bytes": 29998,
+      "lines": 733,
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          219,
+          226
+        ],
+        [
+          413,
+          517
+        ],
+        [
+          519,
+          546
+        ]
+      ],
+      "semanticLines": 141,
+      "displayedLineRanges": [
+        [
+          219,
+          226
+        ],
+        [
+          413,
+          517
+        ],
+        [
+          519,
+          548
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        6,
+        7,
+        13,
+        14,
+        16,
+        18,
+        45,
+        63,
+        81,
+        166,
+        199,
+        215,
+        230,
+        317,
+        318,
+        352,
+        384,
+        387,
+        394,
+        396,
+        402,
+        404,
+        411,
+        549,
+        553,
+        609
+      ],
+      "uniqueDisplayedLines": 169,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          6,
+          7
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          45,
+          45
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          81,
+          81
+        ],
+        [
+          166,
+          166
+        ],
+        [
+          199,
+          199
+        ],
+        [
+          215,
+          215
+        ],
+        [
+          230,
+          230
+        ],
+        [
+          317,
+          318
+        ],
+        [
+          352,
+          352
+        ],
+        [
+          384,
+          384
+        ],
+        [
+          387,
+          387
+        ],
+        [
+          394,
+          394
+        ],
+        [
+          396,
+          396
+        ],
+        [
+          402,
+          402
+        ],
+        [
+          404,
+          404
+        ],
+        [
+          411,
+          411
+        ],
+        [
+          547,
+          549
+        ],
+        [
+          553,
+          553
+        ],
+        [
+          609,
+          609
+        ]
+      ],
+      "purpose": "Normal user-turn boundaries, live tool-bearing group innerEnd=end, no-tool flat and closed-tail countercases; authoritative completion fallback distinction. Concrete hypothesis reread, no first-frontier claim.",
+      "initialSemanticReadSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "bytes": 10530,
+      "lines": 279,
+      "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          19,
+          28
+        ],
+        [
+          56,
+          64
+        ],
+        [
+          190,
+          191
+        ]
+      ],
+      "semanticLines": 21,
+      "displayedLineRanges": [
+        [
+          1,
+          64
+        ],
+        [
+          173,
+          197
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 89,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          18
+        ],
+        [
+          29,
+          55
+        ],
+        [
+          173,
+          189
+        ],
+        [
+          192,
+          197
+        ]
+      ],
+      "purpose": "Actual Props and live initial open; goal render passes only message, no onExtend. Other tool/Markdown/native/scroll behavior not reviewed.",
+      "initialSemanticReadSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1764,
+          1765
+        ],
+        [
+          1801,
+          1803
+        ]
+      ],
+      "semanticLines": 5,
+      "displayedLineRanges": [
+        [
+          1789,
+          1807
+        ],
+        [
+          1760,
+          1768
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        23,
+        125,
+        183,
+        397,
+        419,
+        481,
+        1484
+      ],
+      "uniqueDisplayedLines": 35,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          23,
+          23
+        ],
+        [
+          125,
+          125
+        ],
+        [
+          183,
+          183
+        ],
+        [
+          397,
+          397
+        ],
+        [
+          419,
+          419
+        ],
+        [
+          481,
+          481
+        ],
+        [
+          1484,
+          1484
+        ],
+        [
+          1760,
+          1763
+        ],
+        [
+          1766,
+          1768
+        ],
+        [
+          1789,
+          1800
+        ],
+        [
+          1804,
+          1807
+        ]
+      ],
+      "purpose": "Actual MessageStream and live/goal callback forwarding only; other ChatView behavior unreviewed.",
+      "initialSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          454,
+          478
+        ],
+        [
+          1054,
+          1056
+        ],
+        [
+          1547,
+          1562
+        ]
+      ],
+      "semanticLines": 44,
+      "displayedLineRanges": [
+        [
+          449,
+          480
+        ],
+        [
+          1019,
+          1060
+        ],
+        [
+          1546,
+          1575
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        315,
+        1454,
+        1606,
+        1825
+      ],
+      "uniqueDisplayedLines": 108,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          315,
+          315
+        ],
+        [
+          449,
+          453
+        ],
+        [
+          479,
+          480
+        ],
+        [
+          1019,
+          1053
+        ],
+        [
+          1057,
+          1060
+        ],
+        [
+          1454,
+          1454
+        ],
+        [
+          1546,
+          1546
+        ],
+        [
+          1563,
+          1575
+        ],
+        [
+          1606,
+          1606
+        ],
+        [
+          1825,
+          1825
+        ]
+      ],
+      "purpose": "Only ordinary approaching marker emitter and actual top-loop/post-not_met calls. No model, Goal judge, usage billing, locks, permissions or sensitive-tool mechanism review/execution.",
+      "initialSemanticReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "bytes": 4292,
+      "lines": 133,
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          85,
+          132
+        ]
+      ],
+      "semanticLines": 48,
+      "displayedLineRanges": [
+        [
+          85,
+          132
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        14,
+        15,
+        16,
+        36,
+        40
+      ],
+      "uniqueDisplayedLines": 53,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          14,
+          16
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          40,
+          40
+        ]
+      ],
+      "purpose": "Post-pass keeps process-group structure and non-agent goal markers; no hoist restoring parent callback.",
+      "initialSemanticReadSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "firstEverSemanticReadClaim": false,
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "finishMatchesInitial": true
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "bytes": 8824,
+      "lines": 228,
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "additionalNavigationSnippetLines": [
+        34
+      ],
+      "semanticLines": 0,
+      "purpose": "One dispatch/method-name navigation line only; not full protocol/mechanism reading."
+    },
+    {
+      "path": "packages/core/src/protocol/types.ts",
+      "bytes": 26529,
+      "lines": 730,
+      "sha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "additionalNavigationSnippetLines": [
+        653
+      ],
+      "semanticLines": 0,
+      "purpose": "One dispatch/method-name navigation line only; not full protocol/mechanism reading."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "hash-only",
+      "semanticLines": 0,
+      "purpose": "Approaching marker filename inventory and hash only; no body/line read."
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Prior current CODESHELL217/AGENTS5 reading carried, not newly counted.",
+  "counts": {
+    "semanticFiles": 13,
+    "full": 1,
+    "selected": 12,
+    "semanticLines": 752,
+    "productSemanticLines": 752,
+    "testSemanticLines": 0,
+    "uniqueDisplayedLines": 1199,
+    "navigationOnlyFiles": 2,
+    "hashOnlySourceFiles": 1,
+    "sourceAndInstructionPins": 18,
+    "testsExecuted": 0,
+    "testDeclarationsRead": 0
+  },
+  "coverageCaveat": "Reading counts are this review, not repository-wide new unique coverage. Old selected/full is not a correctness guarantee; no source row asserts first frontier. Goal target gate found only inventories; necessary consumers re-read for concrete hypothesis.",
+  "sourceExcerptTiming": "Post actual source display, not before. Initial pins precede every body/line navigation.",
+  "capturedUTC": "2026-10-17T17:08:50.515481+00:00"
+}

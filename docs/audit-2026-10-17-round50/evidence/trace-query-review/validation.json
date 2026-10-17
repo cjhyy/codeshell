@@ -1,0 +1,41 @@
+{
+  "role": "Independent static ordinary source/data reviewer; not runtime validator",
+  "checks": {
+    "productFunctionsExecuted": 0,
+    "productHelpersExecuted": 0,
+    "productImports": 0,
+    "fixturesConstructedOrExecuted": 0,
+    "testsExecuted": 0,
+    "ReactOrUI": 0,
+    "models": 0,
+    "native": 0,
+    "network": 0,
+    "Git": 0,
+    "realTraceConfigSessionAccountDataReads": 0
+  },
+  "metadataProcessing": "Executed own standard-library MD/JSON scalar search, hashes, range accounting and receipt checks only. No product modules executed.",
+  "ordinaryTestDeclarationsSelected": 2,
+  "testTitlesNavigated": 17,
+  "initialPinsBeforeBodyAndLineNavigation": true,
+  "lateInitialPins": [],
+  "failures": [],
+  "truncations": [],
+  "firstToolChunk": "9848b0 (initial pin+filename inventory); source body first38d9de; Store declaration navigation70a617",
+  "metadataGateToolChunks": [
+    "c8c763",
+    "1832b1",
+    "26ddff",
+    "70a617"
+  ],
+  "sourceToolChunks": [
+    "70a617",
+    "38d9de",
+    "b21382",
+    "331e7b",
+    "58dc5f",
+    "35977a"
+  ],
+  "sourceExcerptCapture": "d7cea7 after actual displays, not a pre-read pin",
+  "endingToolChunk": "72ee48",
+  "capturedUTC": "2026-10-17T16:51:48.524095+00:00"
+}

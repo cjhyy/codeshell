@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.953924+00:00",
+      "semanticRead": false,
+      "readBeforeBodyPinConfirmedUTC": "2026-10-17T16:46:51.750828+00:00",
+      "currentReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "displayedLineRanges": [
+        [
+          66,
+          173
+        ]
+      ]
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.956010+00:00",
+      "semanticRead": false,
+      "readBeforeBodyPinConfirmedUTC": "2026-10-17T16:46:51.752356+00:00",
+      "currentReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "displayedLineRanges": [
+        [
+          757,
+          782
+        ],
+        [
+          863,
+          894
+        ]
+      ]
+    },
+    {
+      "path": "packages/web/app/app.css",
+      "bytes": 21770,
+      "lines": 1177,
+      "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:47:51.532173+00:00",
+      "displayedLineRanges": [
+        [
+          440,
+          516
+        ],
+        [
+          1085,
+          1101
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:48:05.856620+00:00",
+      "additionalSha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11"
+    }
+  ]
+}

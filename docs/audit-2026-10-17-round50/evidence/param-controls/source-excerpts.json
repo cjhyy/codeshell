@@ -1,0 +1,228 @@
+{
+  "captures": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "ranges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "text": "1: /**\n2:  * Data-driven param controls — renders a model's params[] (from the unified\n3:  * catalog) into widgets. The connection page never branches on provider; it\n4:  * switches on ParamSpec.control. One declaration → both the UI control here and\n5:  * the tool-description doc on the core side.\n6:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §5.\n7:  */\n8: import React from \"react\";\n9: import { SimpleSelect } from \"@/components/ui/simple-select\";\n10: import { Input } from \"@/components/ui/input\";\n11: import { Switch } from \"@/components/ui/switch\";\n12: import type { ParamSpec } from \"../../preload/types\";\n13: import { ConnField } from \"./connUi\";\n14: \n15: export function ParamControls({\n16:   params,\n17:   values,\n18:   onChange,\n19: }: {\n20:   params: ParamSpec[];\n21:   values: Record<string, unknown>;\n22:   onChange: (name: string, value: unknown) => void;\n23: }) {\n24:   if (!params || params.length === 0) return null;\n25:   return (\n26:     <div className=\"flex flex-col gap-2.5\">\n27:       {params.map((p) => (\n28:         <ParamControl key={p.name} spec={p} value={values[p.name]} onChange={onChange} />\n29:       ))}\n30:     </div>\n31:   );\n32: }\n33: \n34: function ParamControl({\n35:   spec,\n36:   value,\n37:   onChange,\n38: }: {\n39:   spec: ParamSpec;\n40:   value: unknown;\n41:   onChange: (name: string, value: unknown) => void;\n42: }) {\n43:   const label = spec.label ?? spec.name;\n44: \n45:   switch (spec.control) {\n46:     case \"enum\": {\n47:       const options = (spec.options ?? []).map((o) => ({ value: o, label: o }));\n48:       const current =\n49:         typeof value === \"string\" ? value : ((spec.default as string | undefined) ?? \"\");\n50:       return (\n51:         <ConnField label={label} hint={spec.doc}>\n52:           <SimpleSelect\n53:             value={current}\n54:             onChange={(v) => onChange(spec.name, v)}\n55:             options={options}\n56:             placeholder={spec.name}\n57:           />\n58:         </ConnField>\n59:       );\n60:     }\n61:     case \"number\": {\n62:       const current =\n63:         typeof value === \"number\" ? String(value) : value != null ? String(value) : \"\";\n64:       return (\n65:         <ConnField label={label} hint={spec.doc}>\n66:           <Input\n67:             type=\"number\"\n68:             value={current}\n69:             min={spec.min}\n70:             max={spec.max}\n71:             placeholder={spec.name}\n72:             onChange={(e) =>\n73:               onChange(spec.name, e.target.value === \"\" ? undefined : Number(e.target.value))\n74:             }\n75:           />\n76:         </ConnField>\n77:       );\n78:     }\n79:     case \"toggle\": {\n80:       const current = typeof value === \"boolean\" ? value : Boolean(spec.default);\n81:       return (\n82:         <label className=\"flex items-center gap-2 text-sm text-foreground\" aria-label={spec.name}>\n83:           <Switch checked={current} onCheckedChange={(c) => onChange(spec.name, c)} />\n84:           <span>{label}</span>\n85:           {spec.doc && <span className=\"text-xs text-muted-foreground\">{spec.doc}</span>}\n86:         </label>\n87:       );\n88:     }\n89:     case \"text\": {\n90:       const current = typeof value === \"string\" ? value : \"\";\n91:       return (\n92:         <ConnField label={label} hint={spec.doc}>\n93:           <Input\n94:             value={current}\n95:             placeholder={spec.name}\n96:             maxLength={spec.max}\n97:             onChange={(e) => onChange(spec.name, e.target.value)}\n98:           />\n99:         </ConnField>\n100:       );\n101:     }\n102:   }\n103: }",
+      "readUTC": "2026-10-17T16:55:30.519962+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "ranges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "text": "1: import { describe, expect, test } from \"bun:test\";\n2: import React from \"react\";\n3: import { renderToStaticMarkup } from \"react-dom/server\";\n4: import type { ParamSpec } from \"../../preload/types\";\n5: import { ParamControls } from \"./ParamControls\";\n6: \n7: // Data-driven param rendering: the connection page never branches on provider,\n8: // it switches on ParamSpec.control. Given a model's params[] + current values,\n9: // ParamControls emits the matching widget per param. Pure render (no window),\n10: // mirrors ModelSection.reasoning.test.tsx.\n11: function html(params: ParamSpec[], values: Record<string, unknown> = {}): string {\n12:   return renderToStaticMarkup(\n13:     <ParamControls params={params} values={values} onChange={() => {}} />,\n14:   );\n15: }\n16: \n17: describe(\"ParamControls\", () => {\n18:   test(\"no params → renders nothing\", () => {\n19:     expect(html([])).toBe(\"\");\n20:   });\n21: \n22:   test(\"enum control → a combobox select labelled by the param\", () => {\n23:     const out = html([\n24:       { name: \"reasoning\", label: \"思考强度\", control: \"enum\", options: [\"low\", \"high\"] },\n25:     ]);\n26:     expect(out).toContain(\"思考强度\");\n27:     // Radix Select renders a combobox button; options are lazily mounted on open\n28:     // so they're absent from static markup — assert the control type instead.\n29:     expect(out).toContain('role=\"combobox\"');\n30:   });\n31: \n32:   test(\"number control → a number input\", () => {\n33:     const out = html([{ name: \"reasoning\", control: \"number\", min: 1024 }]);\n34:     expect(out).toContain('type=\"number\"');\n35:   });\n36: \n37:   test(\"toggle control → a switch/checkbox\", () => {\n38:     const out = html([{ name: \"thinking\", control: \"toggle\", default: true }]);\n39:     // a toggle renders some interactive control (switch button or checkbox)\n40:     expect(out.length).toBeGreaterThan(0);\n41:     expect(out).toContain(\"thinking\");\n42:   });\n43: \n44:   test(\"text control → a text input\", () => {\n45:     const out = html([{ name: \"system\", control: \"text\" }]);\n46:     expect(out).toContain(\"system\");\n47:   });\n48: \n49:   test(\"reflects the current value for an enum param\", () => {\n50:     const out = html(\n51:       [{ name: \"reasoning\", control: \"enum\", options: [\"low\", \"high\"] }],\n52:       { reasoning: \"high\" },\n53:     );\n54:     // selected option marked\n55:     expect(out).toContain(\"high\");\n56:   });\n57: \n58:   test(\"falls back to param name as label when label absent\", () => {\n59:     const out = html([{ name: \"verbosity\", control: \"enum\", options: [\"low\"] }]);\n60:     expect(out).toContain(\"verbosity\");\n61:   });\n62: });",
+      "readUTC": "2026-10-17T16:55:30.520440+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "ranges": [
+        [
+          1,
+          55
+        ],
+        [
+          154,
+          183
+        ]
+      ],
+      "text": "1: import React from \"react\";\n2: import { Trash2 } from \"lucide-react\";\n3: import type { CatalogEntry } from \"../../preload/types\";\n4: import { Badge } from \"@/components/ui/badge\";\n5: import { Button } from \"@/components/ui/button\";\n6: import { SimpleSelect } from \"@/components/ui/simple-select\";\n7: import { useT } from \"../i18n/I18nProvider\";\n8: import { ConnCard, ConnCardFooter, ConnField, ConnFooterRight, SecretKeyInput } from \"./connUi\";\n9: import { formatTok } from \"./connFormat\";\n10: import { ParamControls } from \"./ParamControls\";\n11: import { SignupLink } from \"./SignupLink\";\n12: import type { SetConnectionKeyResult } from \"./useModelConnections\";\n13: import {\n14:   credentialCandidates,\n15:   credentialLabel,\n16:   modelSelectionPatch,\n17:   type Credential,\n18:   type ModelInstance,\n19: } from \"./textConnections\";\n20: \n21: export interface ConnectionInstanceCardProps {\n22:   inst: ModelInstance;\n23:   entry: CatalogEntry | undefined;\n24:   catalog: CatalogEntry[];\n25:   credentials: Credential[];\n26:   credentialCommitRevision: number;\n27:   isDefault: boolean;\n28:   showKey: boolean;\n29:   onPatch: (id: string, p: Partial<ModelInstance>) => void;\n30:   onSetConnectionKey: (inst: ModelInstance, apiKey: string) => SetConnectionKeyResult;\n31:   onToggleShowKey: (id: string) => void;\n32:   onSaveInstance: (id: string) => Promise<void>;\n33:   onRemoveInstance: (id: string) => Promise<void>;\n34:   onRemoveCredential: (id: string) => Promise<void>;\n35:   onSetDefault: (id: string) => void;\n36: }\n37: \n38: export function ConnectionInstanceCard({\n39:   inst,\n40:   entry,\n41:   catalog,\n42:   credentials,\n43:   credentialCommitRevision,\n44:   isDefault,\n45:   showKey,\n46:   onPatch,\n47:   onSetConnectionKey,\n48:   onToggleShowKey,\n49:   onSaveInstance,\n50:   onRemoveInstance,\n51:   onRemoveCredential,\n52:   onSetDefault,\n53: }: ConnectionInstanceCardProps) {\n54:   const { t } = useT();\n55:   // A newly typed key is immediately assigned a credential id. Keep its\n154:             </ConnField>\n155:           )}\n156:         </>\n157:       )}\n158: \n159:       {preset?.params && preset.params.length > 0 && (\n160:         <ParamControls\n161:           params={preset.params}\n162:           values={inst.paramValues ?? {}}\n163:           onChange={(name, value) =>\n164:             onPatch(inst.id, { paramValues: { ...(inst.paramValues ?? {}), [name]: value } })\n165:           }\n166:         />\n167:       )}\n168: \n169:       <ConnCardFooter>\n170:         <Button\n171:           variant={isDefault ? \"secondary\" : \"default\"}\n172:           size=\"sm\"\n173:           disabled={isDefault}\n174:           onClick={() => onSetDefault(inst.id)}\n175:         >\n176:           {isDefault ? t(\"settingsX.textConn.current\") : t(\"settingsX.textConn.setCurrent\")}\n177:         </Button>\n178:         <Button variant=\"ghost\" size=\"sm\" onClick={() => void onSaveInstance(inst.id)}>\n179:           {t(\"settingsX.textConn.save\")}\n180:         </Button>\n181:         <ConnFooterRight>\n182:           <Button\n183:             variant=\"ghost\"",
+      "readUTC": "2026-10-17T16:56:00.589456+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "ranges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "text": "1: /**\n2:  * Model接入 Catalog — declarative provider templates (design doc:\n3:  * docs/superpowers/specs/2026-06-11-model-catalog-design.md).\n4:  *\n5:  * A {@link CatalogEntry} is a *template* the user can pick in the 连接 page to\n6:  * create a configured instance (stored in settings.imageGen/videoGen.providers[]).\n7:  * Catalog = \"能配哪些\"; providers[] = \"配了哪些\". The two are decoupled.\n8:  *\n9:  * For text entries, `adapterKind` is the provider/gateway capability identity\n10:  * (\"openai\"/\"openrouter\"/\"deepseek\"/…), while `protocol` selects the wire\n11:  * client. For image/video it remains the concrete runtime adapter selector\n12:  * (\"openai\"/\"google\"/\"fal\"). `shape` is documentation/future only.\n13:  */\n14: \n15: import { z } from \"zod\";\n16: \n17: const id = z.string().min(1).max(128);\n18: const shortText = z.string().max(256);\n19: const longText = z.string().max(32_768);\n20: const boundedNumber = z.number().finite().min(0).max(1_000_000_000);\n21: \n22: /**\n23:  * How the param maps onto the outgoing request body. `field` is the request\n24:  * field this param lands on — same param name can land differently per\n25:  * adapter (reasoning → `reasoning_effort` on OpenAI vs\n26:  * `thinking.budget_tokens` on Anthropic), so the divergence lives in data, not\n27:  * in `if (kind === ...)` branches in the engine. Minimal v1: field only.\n28:  */\n29: export const wireSpecSchema = z.object({\n30:   field: id,\n31: });\n32: \n33: /**\n34:  * One **generic** declarative param — no special-casing per param. reasoning\n35:  * is not its own variant: it's `control: \"enum\"` (OpenAI effort levels) or\n36:  * `control: \"number\"` (Anthropic token budget), decided by the entry's data.\n37:  * The connection page renders by `switch(control)`; `doc` is woven into the\n38:  * tool description so the agent knows what a configured model accepts.\n39:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §3.2.\n40:  */\n41: export const paramSpecSchema = z.object({\n42:   /** Logical name, e.g. \"reasoning\" / \"size\" / \"quality\" / \"temperature\". */\n43:   name: id,\n44:   /** UI control label (falls back to `name`). */\n45:   label: shortText.optional(),\n46:   control: z.enum([\"enum\", \"number\", \"toggle\", \"text\"]),\n47:   /** control=enum allowed values, e.g. [\"low\",\"medium\",\"high\",\"xhigh\"]. */\n48:   options: z.array(shortText).max(64).optional(),\n49:   /** control=number bounds. */\n50:   min: boundedNumber.optional(),\n51:   max: boundedNumber.optional(),\n52:   default: z.union([shortText, boundedNumber, z.boolean()]).optional(),\n53:   /** Natural-language usage note → injected into the tool description. */\n54:   doc: z.string().max(4_096).optional(),\n55:   /** How this param lands on the request body. */\n56:   wire: wireSpecSchema.optional(),\n57: });\n58: \n59: export type ParamSpec = z.infer<typeof paramSpecSchema>;\n60: \n61: /**\n62:  * A known model under an entry, carrying its own param schema\n63:  * (per-entry-per-model — the same modelId via OpenRouter vs the official API\n64:  * can expose different params, since gateways normalize differently).\n65:  */\n66: export const modelPresetSchema = z.object({\n67:   value: id,\n68:   label: shortText.optional(),\n69:   maxContextTokens: boundedNumber.optional(),\n70:   maxOutputTokens: boundedNumber.optional(),\n71:   supportsVision: z.boolean().optional(),\n72:   /** Params this model supports; absent → no adjustable knobs. */\n73:   params: z.array(paramSpecSchema).max(64).optional(),\n74: });\n75: \n76: export type ModelPreset = z.infer<typeof modelPresetSchema>;",
+      "readUTC": "2026-10-17T16:56:22.286217+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.ts",
+      "sha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391",
+      "ranges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "text": "1: /**\n2:  * Param projection — the two halves of the \"one declaration drives both\" goal:\n3:  *  - applyParams: user's chosen values → request-body fields (via wire.field).\n4:  *  - buildParamsDoc: the param specs → a natural-language note injected into the\n5:  *    tool description so the agent knows what a configured model accepts.\n6:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §4/§6.\n7:  */\n8: import type { ParamSpec } from \"./types.js\";\n9: \n10: /**\n11:  * Project `values` onto a request-body fragment using each spec's wire.field\n12:  * (falling back to the param name). A dotted field (\"thinking.budget_tokens\")\n13:  * nests. Values with no matching spec, and specs the user didn't set, are\n14:  * skipped.\n15:  */\n16: export function applyParams(\n17:   values: Record<string, unknown>,\n18:   params: ParamSpec[],\n19: ): Record<string, unknown> {\n20:   const body: Record<string, unknown> = {};\n21:   for (const spec of params) {\n22:     if (!(spec.name in values)) continue;\n23:     const value = values[spec.name];\n24:     if (value === undefined) continue;\n25:     const field = spec.wire?.field ?? spec.name;\n26:     setDeep(body, field, value);\n27:   }\n28:   return body;\n29: }\n30: \n31: /** Set a (possibly dotted) path on an object, creating intermediate objects. */\n32: function setDeep(obj: Record<string, unknown>, path: string, value: unknown): void {\n33:   const parts = path.split(\".\");\n34:   let cur = obj;\n35:   for (let i = 0; i < parts.length - 1; i++) {\n36:     const key = parts[i]!;\n37:     if (typeof cur[key] !== \"object\" || cur[key] === null) cur[key] = {};\n38:     cur = cur[key] as Record<string, unknown>;\n39:   }\n40:   cur[parts[parts.length - 1]!] = value;\n41: }\n42: \n43: /**\n44:  * Build a natural-language note describing the params a model accepts, for\n45:  * injection into the tool description. Empty string when there are no params.\n46:  */\n47: export function buildParamsDoc(params: ParamSpec[] | undefined): string {\n48:   if (!params || params.length === 0) return \"\";\n49:   const lines = params.map((p) => {\n50:     const opts = p.options && p.options.length > 0 ? ` (${p.options.join(\" | \")})` : \"\";\n51:     const doc = p.doc ? ` — ${p.doc}` : \"\";\n52:     return `${p.name}${opts}${doc}`;\n53:   });\n54:   return lines.join(\"; \");\n55: }",
+      "readUTC": "2026-10-17T16:56:22.286681+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/builtin.ts",
+      "sha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35",
+      "ranges": [
+        [
+          40,
+          109
+        ]
+      ],
+      "text": "40:  * OpenRouter normalizes reasoning to a unified effort enum across providers\n41:  * (xhigh|high|medium|low|minimal|none). We write OpenRouter presets' params\n42:  * EXPLICITLY (not via paramSpecsFromCapability) because the capability layer's\n43:  * OpenRouter catch-all would slap reasoning onto *every* model — including ones\n44:  * that don't support it. A reasoning OpenRouter preset opts in by listing this.\n45:  */\n46: const OPENROUTER_REASONING: ParamSpec = {\n47:   name: \"reasoning\",\n48:   label: \"思考强度\",\n49:   control: \"enum\",\n50:   options: [\"minimal\", \"low\", \"medium\", \"high\", \"xhigh\"],\n51:   default: \"medium\",\n52:   doc: \"Reasoning effort — how hard the model thinks before answering.\",\n53:   wire: { field: \"reasoning.effort\" },\n54: };\n55: \n56: /**\n57:  * Zhipu GLM params (OpenAI-compatible endpoint, but with GLM-specific wire\n58:  * fields). Promoted from the user catalog after live-verifying glm-5.2 / 5.1 /\n59:  * 5 / 5-turbo / 4.7 / 4.6 against open.bigmodel.cn (2026-06-23). Written\n60:  * explicitly because the capability layer has no GLM rules.\n61:  */\n62: const ZHIPU_PARAMS: ParamSpec[] = [\n63:   {\n64:     name: \"reasoning_effort\",\n65:     label: \"推理强度\",\n66:     control: \"enum\",\n67:     options: [\"max\", \"xhigh\", \"high\", \"medium\", \"low\", \"minimal\", \"none\"],\n68:     default: \"max\",\n69:     doc: \"控制模型推理程度；thinking 开启时生效。GLM-5.2 支持，none/minimal 放弃思考，low/medium 映射为 high，xhigh 映射为 max。\",\n70:     wire: { field: \"reasoning_effort\" },\n71:   },\n72:   {\n73:     name: \"thinking_type\",\n74:     label: \"思维链\",\n75:     control: \"enum\",\n76:     options: [\"enabled\", \"disabled\"],\n77:     default: \"enabled\",\n78:     doc: \"控制是否开启思维链；GLM-5.2 开启后为强制思考。\",\n79:     wire: { field: \"thinking.type\" },\n80:   },\n81:   {\n82:     name: \"temperature\",\n83:     label: \"Temperature\",\n84:     control: \"number\",\n85:     min: 0,\n86:     max: 1,\n87:     default: 1,\n88:     doc: \"采样温度，控制输出随机性，范围 0.0 到 1.0。\",\n89:     wire: { field: \"temperature\" },\n90:   },\n91:   {\n92:     name: \"top_p\",\n93:     label: \"Top P\",\n94:     control: \"number\",\n95:     min: 0.01,\n96:     max: 1,\n97:     default: 0.95,\n98:     doc: \"核采样参数，范围 0.01 到 1.0；官方建议不要与 temperature 同时调整。\",\n99:     wire: { field: \"top_p\" },\n100:   },\n101:   {\n102:     name: \"max_tokens\",\n103:     label: \"最大输出 Tokens\",\n104:     control: \"number\",\n105:     min: 1,\n106:     max: 131072,\n107:     default: 4096,\n108:     doc: \"模型输出最大 token 数量，GLM-5.2 最大 131072。\",\n109:     wire: { field: \"max_tokens\" },",
+      "readUTC": "2026-10-17T16:56:22.287287+00:00"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "ranges": [
+        [
+          2649,
+          2671
+        ]
+      ],
+      "text": "2649: /** One generic declarative param (mirror of core ParamSpec). */\n2650: export interface ParamSpec {\n2651:   name: string;\n2652:   label?: string;\n2653:   control: \"enum\" | \"number\" | \"toggle\" | \"text\";\n2654:   options?: string[];\n2655:   min?: number;\n2656:   max?: number;\n2657:   default?: string | number | boolean;\n2658:   doc?: string;\n2659:   wire?: WireSpec;\n2660: }\n2661: \n2662: /** A known model under an entry (mirror of core ModelPreset). */\n2663: export interface ModelPreset {\n2664:   value: string;\n2665:   label?: string;\n2666:   maxContextTokens?: number;\n2667:   maxOutputTokens?: number;\n2668:   supportsVision?: boolean;\n2669:   params?: ParamSpec[];\n2670: }\n2671: ",
+      "readUTC": "2026-10-17T16:56:22.288184+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "ranges": [
+        [
+          148,
+          178
+        ],
+        [
+          231,
+          237
+        ],
+        [
+          256,
+          280
+        ]
+      ],
+      "text": "148: \n149:   const persist = useCallback(\n150:     async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {\n151:       const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<string, unknown>;\n152:       const all = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];\n153:       const others = all.filter((c) => c.tag !== tag);\n154:       const defaults = (s.defaults ?? {}) as Record<string, unknown>;\n155:       await writeSettings(\n156:         scope,\n157:         {\n158:           credentials: nextCreds,\n159:           modelConnections: [...others, ...next],\n160:           defaults: { ...defaults, [tag]: nextDefault || undefined },\n161:         },\n162:         projectPath,\n163:       );\n164:       // Every connection write commits the whole credential collection, even\n165:       // when initiated from another card. End draft editing across the panel.\n166:       setCredentialCommitRevision((revision) => revision + 1);\n167:     },\n168:     [scope, projectPath, tag],\n169:   );\n170: \n171:   const runMutation = useCallback(\n172:     async (operation: () => Promise<string | false | undefined>, failureMessage: string) => {\n173:       if (mutationLock.current) return;\n174:       mutationLock.current = true;\n175:       // Reads begun before this action must not overwrite its retained draft.\n176:       loadGeneration.current += 1;\n177:       setLoadingKey(null);\n178:       setPending(true);\n231: \n232:   const patch = useCallback(\n233:     (id: string, p: Partial<ModelInstance>) =>\n234:       setInstances((cur) => cur.map((i) => (i.id === id ? { ...i, ...p } : i))),\n235:     [],\n236:   );\n237: \n256:   const saveInstance = useCallback(\n257:     async (id: string) => {\n258:       if (mutationLock.current) return;\n259:       mutationLock.current = true;\n260:       setPending(true);\n261:       try {\n262:         await persist(instances, credentials, defaultId || id);\n263:         if (!defaultId) setDefaultId(id);\n264:         // The write broadcasts a refresh. Complete a newer read while the\n265:         // form is locked so that delayed readbacks cannot erase later edits.\n266:         await load().catch(() => {});\n267:         toast({ message: t(\"settingsX.textConn.toastSaved\"), variant: \"success\" });\n268:       } catch {\n269:         // Persistence errors may include credential data. Keep the editable\n270:         // draft and report a safe message without echoing the backend error.\n271:         toast({ message: t(\"settingsX.textConn.toastSaveFailed\"), variant: \"error\" });\n272:       } finally {\n273:         mutationLock.current = false;\n274:         setPending(false);\n275:       }\n276:     },\n277:     [credentials, defaultId, instances, load, persist, t, toast],\n278:   );\n279: \n280:   const removeInstance = useCallback(",
+      "readUTC": "2026-10-17T16:56:22.288936+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/TextConnectionsPanel.tsx",
+      "sha256": "05229ff4405261230ca97076d60588e9adb8a458dcdd96d49a041954a5388356",
+      "ranges": [
+        [
+          229,
+          245
+        ]
+      ],
+      "text": "229:             <ConnectionInstanceCard\n230:               key={inst.id}\n231:               inst={inst}\n232:               entry={entryById(inst.catalogId)}\n233:               catalog={catalog}\n234:               credentials={credentials}\n235:               credentialCommitRevision={credentialCommitRevision}\n236:               isDefault={inst.id === defaultId}\n237:               showKey={Boolean(showKey[inst.id])}\n238:               onPatch={patch}\n239:               onSetConnectionKey={setConnectionKey}\n240:               onToggleShowKey={toggleShowKey}\n241:               onSaveInstance={(id) => withFocusRestore(() => saveInstance(id))}\n242:               onRemoveInstance={(id) => withFocusRestore(() => removeInstance(id))}\n243:               onRemoveCredential={(id) => withFocusRestore(() => removeCredential(id))}\n244:               onSetDefault={(id) => void withFocusRestore(() => setDefaultInstance(id))}\n245:             />",
+      "readUTC": "2026-10-17T16:56:22.289415+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "ranges": [
+        [
+          19,
+          29
+        ],
+        [
+          84,
+          105
+        ],
+        [
+          116,
+          141
+        ]
+      ],
+      "text": "19: export interface ModelInstance {\n20:   id: string;\n21:   catalogId: string;\n22:   tag: \"text\" | \"image\" | \"video\" | \"audio\" | \"speech\";\n23:   model: string;\n24:   baseUrl?: string;\n25:   /** Which credential supplies this connection's key. */\n26:   credentialId?: string;\n27:   paramValues?: Record<string, unknown>;\n28: }\n29: \n84: \n85: /** Build a connection from a template + picked model, seeding param defaults. */\n86: export function buildInstance(\n87:   entry: CatalogEntry,\n88:   model: string | undefined,\n89:   taken: Set<string>,\n90:   tag: \"text\" | \"image\" | \"video\" | \"audio\" | \"speech\",\n91: ): ModelInstance {\n92:   const chosen = model ?? entry.defaultModel ?? entry.modelPresets?.[0]?.value ?? \"\";\n93:   const preset = entry.modelPresets?.find((p) => p.value === chosen);\n94:   const paramValues: Record<string, unknown> = {};\n95:   for (const p of preset?.params ?? []) {\n96:     if (p.default !== undefined) paramValues[p.name] = p.default;\n97:   }\n98:   const inst: ModelInstance = {\n99:     id: uniqueInstanceId(instanceIdBase(entry, chosen, taken), taken),\n100:     catalogId: entry.id,\n101:     tag,\n102:     model: chosen,\n103:   };\n104:   if (Object.keys(paramValues).length > 0) inst.paramValues = paramValues;\n105:   return inst;\n116: \n117: /** Keep only values supported by the newly selected model, seeding its defaults. */\n118: export function modelSelectionPatch(\n119:   instance: ModelInstance,\n120:   entry: CatalogEntry | undefined,\n121:   model: string,\n122: ): Pick<ModelInstance, \"model\" | \"paramValues\"> {\n123:   const paramValues: Record<string, unknown> = {};\n124:   for (const param of entry?.modelPresets?.find((preset) => preset.value === model)?.params ?? []) {\n125:     const value = instance.paramValues?.[param.name];\n126:     const compatible =\n127:       param.control === \"enum\"\n128:         ? typeof value === \"string\" && Boolean(param.options?.includes(value))\n129:         : param.control === \"toggle\"\n130:           ? typeof value === \"boolean\"\n131:           : param.control === \"number\"\n132:             ? typeof value === \"number\" &&\n133:               Number.isFinite(value) &&\n134:               (param.min === undefined || value >= param.min) &&\n135:               (param.max === undefined || value <= param.max)\n136:             : typeof value === \"string\" && (param.max === undefined || value.length <= param.max);\n137:     if (compatible) paramValues[param.name] = value;\n138:     else if (param.default !== undefined) paramValues[param.name] = param.default;\n139:   }\n140:   return { model, paramValues };\n141: }",
+      "readUTC": "2026-10-17T16:56:53.219251+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "ranges": [
+        [
+          63,
+          63
+        ]
+      ],
+      "text": "63:   const preset = entry?.modelPresets?.find((p) => p.value === inst.model);",
+      "readUTC": "2026-10-17T16:56:53.221562+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.test.ts",
+      "sha256": "9bff9fc073f4101adf59ca651c57a4b8566aa154be4ca42028ab54d841081495",
+      "ranges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "text": "1: /**\n2:  * Param projection — applyParams (paramValues → request body via wire.field)\n3:  * and buildParamsDoc (params[] → natural-language note injected into tools).\n4:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §4/§6.\n5:  */\n6: import { describe, test, expect } from \"bun:test\";\n7: import { applyParams, buildParamsDoc } from \"./params.js\";\n8: import type { ParamSpec } from \"./types.js\";\n9: \n10: describe(\"applyParams\", () => {\n11:   test(\"lands an enum value on its wire.field\", () => {\n12:     const params: ParamSpec[] = [\n13:       { name: \"reasoning\", control: \"enum\", options: [\"low\", \"high\"], wire: { field: \"reasoning_effort\" } },\n14:     ];\n15:     expect(applyParams({ reasoning: \"high\" }, params)).toEqual({ reasoning_effort: \"high\" });\n16:   });\n17: \n18:   test(\"lands a nested wire.field as a deep object\", () => {\n19:     const params: ParamSpec[] = [\n20:       { name: \"reasoning\", control: \"number\", min: 1024, wire: { field: \"thinking.budget_tokens\" } },\n21:     ];\n22:     expect(applyParams({ reasoning: 8192 }, params)).toEqual({\n23:       thinking: { budget_tokens: 8192 },\n24:     });\n25:   });\n26: \n27:   test(\"falls back to param name when no wire is given\", () => {\n28:     const params: ParamSpec[] = [{ name: \"temperature\", control: \"number\" }];\n29:     expect(applyParams({ temperature: 0.7 }, params)).toEqual({ temperature: 0.7 });\n30:   });\n31: \n32:   test(\"omits params the user didn't set\", () => {\n33:     const params: ParamSpec[] = [\n34:       { name: \"reasoning\", control: \"enum\", options: [\"low\"], wire: { field: \"reasoning_effort\" } },\n35:       { name: \"verbosity\", control: \"enum\", options: [\"low\"], wire: { field: \"verbosity\" } },\n36:     ];\n37:     expect(applyParams({ reasoning: \"low\" }, params)).toEqual({ reasoning_effort: \"low\" });\n38:   });\n39: \n40:   test(\"ignores paramValues with no matching spec\", () => {\n41:     const params: ParamSpec[] = [{ name: \"reasoning\", control: \"enum\", options: [\"low\"] }];\n42:     expect(applyParams({ ghost: \"x\" }, params)).toEqual({});\n43:   });\n44: \n45:   test(\"empty params or values → empty body\", () => {\n46:     expect(applyParams({}, [])).toEqual({});\n47:     expect(applyParams({ a: 1 }, [])).toEqual({});\n48:   });\n49: });\n50: \n51: describe(\"buildParamsDoc\", () => {\n52:   test(\"joins each param's doc into a note\", () => {\n53:     const params: ParamSpec[] = [\n54:       { name: \"size\", control: \"enum\", options: [\"1024x1024\"], doc: \"Output dimensions.\" },\n55:       { name: \"quality\", control: \"enum\", options: [\"high\"], doc: \"Render quality.\" },\n56:     ];\n57:     const doc = buildParamsDoc(params);\n58:     expect(doc).toContain(\"Output dimensions.\");\n59:     expect(doc).toContain(\"Render quality.\");\n60:   });\n61: \n62:   test(\"includes the enum options so the agent knows allowed values\", () => {\n63:     const params: ParamSpec[] = [\n64:       { name: \"reasoning\", control: \"enum\", options: [\"low\", \"medium\", \"high\"], doc: \"Thinking depth.\" },\n65:     ];\n66:     const doc = buildParamsDoc(params);\n67:     expect(doc).toContain(\"reasoning\");\n68:     expect(doc).toContain(\"low\");\n69:     expect(doc).toContain(\"high\");\n70:   });\n71: \n72:   test(\"returns empty string for no params\", () => {\n73:     expect(buildParamsDoc([])).toBe(\"\");\n74:     expect(buildParamsDoc(undefined)).toBe(\"\");\n75:   });\n76: });",
+      "readUTC": "2026-10-17T16:56:53.222297+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/input.tsx",
+      "sha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394",
+      "ranges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "text": "1: import * as React from \"react\";\n2: import { cn } from \"@/lib/utils\";\n3: \n4: const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<\"input\">>(\n5:   ({ className, type, ...props }, ref) => {\n6:     return (\n7:       <input\n8:         type={type}\n9:         className={cn(\n10:           \"cs-control flex h-9 w-full rounded-md px-3 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-status-err\",\n11:           className,\n12:         )}\n13:         ref={ref}\n14:         {...props}\n15:       />\n16:     );\n17:   },\n18: );\n19: Input.displayName = \"Input\";\n20: \n21: export { Input };",
+      "readUTC": "2026-10-17T16:58:13.971182+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connUi.tsx",
+      "sha256": "7239fdbb620eba31a00ac410b5bd07a4dc9ab1e9f05adf05e5560a9d4d2417e5",
+      "ranges": [
+        [
+          23,
+          45
+        ]
+      ],
+      "text": "23: export function ConnCard({\n24:   isDefault,\n25:   className,\n26:   children,\n27: }: {\n28:   isDefault?: boolean;\n29:   className?: string;\n30:   children: React.ReactNode;\n31: }) {\n32:   return (\n33:     <article\n34:       className={cn(\n35:         \"flex min-w-0 flex-col gap-2.5 rounded-lg border border-border bg-card p-4\",\n36:         isDefault && \"border-primary/50 ring-1 ring-primary/30\",\n37:         className,\n38:       )}\n39:     >\n40:       {children}\n41:     </article>\n42:   );\n43: }\n44: \n45: /** Labelled field (label on top, optional hint below) for card forms. */",
+      "readUTC": "2026-10-17T16:58:30.244473+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/button.tsx",
+      "sha256": "c49a019df145d3a28aa938095cd3a83970e61dc473230336beaf75f2b60bbfff",
+      "ranges": [
+        [
+          38,
+          56
+        ]
+      ],
+      "text": "38: \n39: export interface ButtonProps\n40:   extends React.ButtonHTMLAttributes<HTMLButtonElement>,\n41:     VariantProps<typeof buttonVariants> {}\n42: \n43: const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(\n44:   ({ className, variant, size, ...props }, ref) => {\n45:     return (\n46:       <button\n47:         className={cn(buttonVariants({ variant, size, className }))}\n48:         ref={ref}\n49:         {...props}\n50:       />\n51:     );\n52:   },\n53: );\n54: Button.displayName = \"Button\";\n55: \n56: export { Button, buttonVariants };",
+      "readUTC": "2026-10-17T16:58:30.245627+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "ranges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "text": "1: import { updateScopedSettings } from \"./settingsAuthority\";\n2: \n3: /**\n4:  * Settings change broadcast.\n5:  *\n6:  * The worker (agent-server-stdio) keeps its own SettingsManager\n7:  * instance; without an explicit reload it ignores edits the user\n8:  * makes through the settings page. The \"codeshell:settings-changed\"\n9:  * event is App.tsx's signal to dispatch configure({reloadModels:\n10:  * true}) at the worker. Every successful settings write must fire\n11:  * the event — historically callers forgot, which is exactly the\n12:  * \"project-level settings 不生效\" bug from TODO-week.md #3.\n13:  *\n14:  * This helper centralises the dispatch so call sites just go through\n15:  * `writeSettings(...)` and don't have to remember.\n16:  */\n17: \n18: export function notifySettingsChanged(): void {\n19:   window.dispatchEvent(new Event(\"codeshell:settings-changed\"));\n20: }\n21: \n22: export async function writeSettings(\n23:   scope: \"user\" | \"project\",\n24:   patch: Record<string, unknown>,\n25:   projectPath?: string,\n26: ): Promise<void> {\n27:   await updateScopedSettings(scope, patch, projectPath);\n28:   notifySettingsChanged();\n29: }",
+      "readUTC": "2026-10-17T16:59:03.323896+00:00"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "ranges": [
+        [
+          248,
+          263
+        ]
+      ],
+      "text": "248:           id: z.string(),\n249:           /** Catalog template this instance was created from. */\n250:           catalogId: z.string(),\n251:           tag: z.enum([\"text\", \"image\", \"video\", \"audio\", \"speech\"]),\n252:           /** Selected modelId (from the entry's modelPresets). */\n253:           model: z.string(),\n254:           /** Per-connection baseUrl override (else the credential's / catalog's). */\n255:           baseUrl: z.string().optional(),\n256:           /** Which credential supplies this connection's key. */\n257:           credentialId: z.string().optional(),\n258:           /** Values the user picked for the model's params, e.g. { reasoning: \"high\" }. */\n259:           paramValues: z.record(z.string(), z.unknown()).optional(),\n260:         }),\n261:       )\n262:       .default([]),\n263: ",
+      "readUTC": "2026-10-17T16:59:03.325452+00:00"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "rows": [
+    {
+      "candidate": "plugin-presentation",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2710/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+        "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+        "lines": 114
+      }
+    },
+    {
+      "candidate": "plugin-presentation",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10796/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "plugin-presentation",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10797/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "plugin-presentation",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3030/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+        "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+        "lines": 114
+      }
+    },
+    {
+      "candidate": "plugin-presentation",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3030/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+        "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+        "lines": 114
+      }
+    },
+    {
+      "candidate": "plugin-presentation",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3031/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+        "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+        "lines": 114
+      }
+    }
+  ],
+  "count": 6,
+  "interpretationRequired": true
+}

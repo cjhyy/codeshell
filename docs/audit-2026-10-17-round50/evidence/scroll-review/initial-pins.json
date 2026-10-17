@@ -1,0 +1,41 @@
+{
+  "rootReportedCurrentOwnedContext": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "contextVerification": "Parent reported formal49 integration; ownGit0",
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.953924+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.956010+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.956862+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.957415+00:00",
+      "semanticRead": false
+    }
+  ],
+  "priorPartialContext": "prep83 ordinary97 semantic lines in same target; this complements previously excluded scrolling/DOM static scope, not unread-frontier assertion.",
+  "instructionsReuse": "Current hashes56d9…/29806470… match prior full CODESHELL/AGENTS reading; no new instruction-body claim.",
+  "excludedInput": "Root84 mutable and other task mutable output not read."
+}

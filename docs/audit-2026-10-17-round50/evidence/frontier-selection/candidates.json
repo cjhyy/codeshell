@@ -1,0 +1,1290 @@
+{
+  "finiteSelection": 30,
+  "rankingIsSemanticCoverageClaim": false,
+  "globalCountsChanged": false,
+  "counts": {
+    "semantic-scope-not-confirmed": 18,
+    "same-SHA-explicit-hash-only": 3,
+    "same-SHA-explicit-selected": 5,
+    "old-hash-different-SHA": 1,
+    "ambiguous-over-EOF-selected-qualifier": 1,
+    "ambiguous-bounded-full-qualifier": 1,
+    "old-full-different-SHA": 1
+  },
+  "activatedSameShaUnrestrictedOldFull": 0,
+  "reviewModeCompleteAliasesActivated": 0,
+  "reviewModeRule": "Only prep78 two canonicalagent-definition rows are permitted aliases; neither is selected here. No generic complete/complete-in-scope/readMode alias activated.",
+  "files": [
+    {
+      "rank": 1,
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "bytes": 4452,
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "lines": 114,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 15,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 2,
+      "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "bytes": 3310,
+      "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "lines": 101,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 15,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 3,
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "bytes": 3183,
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "lines": 103,
+      "status": "same-SHA-explicit-hash-only",
+      "decisionReason": "Original canonical record explicitly hash-only; not evidence of semantic absence elsewhere.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+          "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+          "jsonPointer": "/hashOnlyFiles/161",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+          "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+          "jsonPointer": "/hashOnlyChecks/163",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 15,
+      "locatorCount": 40,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 4,
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "bytes": 4978,
+      "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "lines": 130,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 16,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 5,
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "bytes": 5293,
+      "sha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "lines": 103,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 19,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 6,
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "bytes": 9089,
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "lines": 247,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 8,
+      "locatorCount": 22,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 7,
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "bytes": 3874,
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "lines": 107,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+          "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+          "jsonPointer": "/files/11",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+          "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+          "jsonPointer": "/workerSourceChecks/29",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {
+            "manifest": "groups-source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 11,
+      "locatorCount": 29,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 8,
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "bytes": 4292,
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "lines": 133,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+          "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+          "jsonPointer": "/files/4",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+          "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+          "jsonPointer": "/workerSourceChecks/22",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {
+            "manifest": "groups-source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+          "documentSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+          "jsonPointer": "/hashOnlyFiles/9",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only; no product body semantic reading"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+          "documentSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d",
+          "jsonPointer": "/hashOnlyChecks/9",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only; no product body semantic reading"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "dataset-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 34,
+      "locatorCount": 81,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 9,
+      "path": "packages/desktop/src/renderer/app/panelResize.ts",
+      "bytes": 4944,
+      "sha256": "5b675510d786e7ff066a37d640a82b81e7a424625b71356dbbf42c2231cea1eb",
+      "lines": 138,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 15,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 10,
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "lines": 121,
+      "status": "same-SHA-explicit-hash-only",
+      "decisionReason": "Original canonical record explicitly hash-only; not evidence of semantic absence elsewhere.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+          "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+          "jsonPointer": "/hashOnlyFiles/127",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+          "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+          "jsonPointer": "/hashOnlyChecks/129",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/hashOnlyFiles/0",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only; no source body read"
+          },
+          "additionalOriginalMetadataFields": {
+            "reason": "Preview component not followed beyond leaf prop boundary"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38"
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+          "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+          "jsonPointer": "/hashOnlyChecks/4",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only; no source body read"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "appearance-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 29,
+      "locatorCount": 62,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 11,
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "bytes": 4521,
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "lines": 110,
+      "status": "same-SHA-explicit-hash-only",
+      "decisionReason": "Original canonical record explicitly hash-only; not evidence of semantic absence elsewhere.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+          "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+          "jsonPointer": "/hashOnlyFiles/114",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+          "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+          "jsonPointer": "/hashOnlyChecks/116",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 15,
+      "locatorCount": 40,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 12,
+      "path": "packages/desktop/src/renderer/components/ui/select.tsx",
+      "bytes": 5824,
+      "sha256": "2ccde9d04ba947ebbc836787ff7f4a4de93417fc2b5a1b3b9c88d3f9b21d06dd",
+      "lines": 157,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 15,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 13,
+      "path": "packages/desktop/src/renderer/components/ui/dialog.tsx",
+      "bytes": 3796,
+      "sha256": "0976fd006b5a53f9f9d757b3f29db5b70398574206c57979561368014d6aeb9b",
+      "lines": 106,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 16,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 14,
+      "path": "packages/desktop/src/renderer/chat/InlineMedia.tsx",
+      "bytes": 7496,
+      "sha256": "e524441cab42116d22f65d92cd5426f1208443f8e5b10e9baefef60b551a00fd",
+      "lines": 217,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 16,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 15,
+      "path": "packages/desktop/src/renderer/chat/Lightbox.tsx",
+      "bytes": 10637,
+      "sha256": "121cf951006b6fccb3480b434f138f5c6da31f38411a8697b9f332961595ca2f",
+      "lines": 277,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 17,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 16,
+      "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+      "bytes": 13960,
+      "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+      "lines": 370,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 12,
+      "locatorCount": 29,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 17,
+      "path": "packages/desktop/src/renderer/chat/useAnchoredPopover.ts",
+      "bytes": 5982,
+      "sha256": "4e65c1ce50d43e503cb08a0996f278d5a5517274f4b6dbb0eca818d92ac3094d",
+      "lines": 178,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 15,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 18,
+      "path": "packages/desktop/src/renderer/messages/AgentMessageView.tsx",
+      "bytes": 5654,
+      "sha256": "a4c449c3edd5ba7aedd0c8a7a97e61edcecf4c46a4ca541079510ef1ad680f3b",
+      "lines": 132,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 25,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 19,
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "bytes": 5792,
+      "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+      "lines": 132,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 8,
+      "locatorCount": 20,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 20,
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "bytes": 6976,
+      "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "lines": 183,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 15,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 21,
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "lines": 218,
+      "status": "semantic-scope-not-confirmed",
+      "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [],
+      "machineClaimCount": 6,
+      "locatorCount": 19,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 22,
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "bytes": 4377,
+      "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b",
+      "lines": 133,
+      "status": "same-SHA-explicit-selected",
+      "decisionReason": "Original selected qualifier/ranges retained; no full promotion.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round17/evidence/root-source-manifest.json",
+          "documentSha256": "29f2cf28e68063c1b4c95dd8891d7fbb7de2d03620556327542a13c5c1435656",
+          "jsonPointer": "/files/3",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "scope": "static selected1-100; one source-body comparison only, Desktop module not imported/compiled"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Selected source pins and scope only, not full consumer/transitive/renderer/storage/identity runtime coverage."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round17/source-manifest.json",
+          "documentSha256": "2b0f46b69bdbbf5cc919c3fa5cb731dc190e56e27cd8483ea59517f27db3c5a1",
+          "jsonPointer": "/workerSourceChecks/57",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {
+            "manifest": "root-source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Selected frozen source/contract pins and current/main equality, not full-file/transitive/all-repository coverage. New fixture/extraction artifacts are in evidence-index."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 13,
+      "locatorCount": 40,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 23,
+      "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+      "bytes": 12043,
+      "sha256": "76035097cf49fd084e37b40af41083399abccdb9fb8001a3e794f9c0ae006606",
+      "lines": 321,
+      "status": "same-SHA-explicit-selected",
+      "decisionReason": "Original selected qualifier/ranges retained; no full promotion.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+          "documentSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b",
+          "jsonPointer": "/sources/20",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected lines 1-260; grouping and option identity caller; not rendered this round"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 10,
+      "locatorCount": 27,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 24,
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "bytes": 6806,
+      "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+      "lines": 206,
+      "status": "same-SHA-explicit-selected",
+      "decisionReason": "Original selected qualifier/ranges retained; no full promotion.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+          "documentSha256": "d4055279c739d9eac94419c1648fb3fe0187c178b6fd479311a2d8aad5a59d1f",
+          "jsonPointer": "/files/3",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected",
+            "selectedLineRanges": [
+              [
+                117,
+                118
+              ],
+              [
+                164,
+                174
+              ],
+              [
+                178,
+                186
+              ]
+            ],
+            "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+            "firstEverReadClaim": false
+          },
+          "additionalOriginalMetadataFields": {
+            "sourceKind": "product",
+            "coveredLineCount": 22
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "coverageLimits": "Inclusive1-based audited ranges. Sidebar1514–1522/1533–1537 and CommandPalette140–163/175–177/187–192 were printed adjacent source but actual actions, native menu/window behavior, time formatting and unrelated navigation entries not audited or invoked. Locator imports Sidebar58/CommandPalette10 are navigation only, not additional full-module claims. Do not add duplicated priorR12 or other author lines as globally new coverage."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+          "documentSha256": "d4055279c739d9eac94419c1648fb3fe0187c178b6fd479311a2d8aad5a59d1f",
+          "jsonPointer": "/files/3/prepRow",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "pinBeforeSelectedBodyOrLocatorRead": true,
+            "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "coverageLimits": "Inclusive1-based audited ranges. Sidebar1514–1522/1533–1537 and CommandPalette140–163/175–177/187–192 were printed adjacent source but actual actions, native menu/window behavior, time formatting and unrelated navigation entries not audited or invoked. Locator imports Sidebar58/CommandPalette10 are navigation only, not additional full-module claims. Do not add duplicated priorR12 or other author lines as globally new coverage."
+            },
+            {
+              "coverage": "selected",
+              "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+              "firstEverReadClaim": false
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+          "documentSha256": "8084f04522f1db3d4d0d3cd54a16608b0b62c0a76bc399be73620c35e6fac18a",
+          "jsonPointer": "/workerSourceChecks/26",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "files",
+            "manifest": "shortcut-hints-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 23,
+      "locatorCount": 76,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 25,
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "bytes": 6626,
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "lines": 155,
+      "status": "same-SHA-explicit-selected",
+      "decisionReason": "Original selected qualifier/ranges retained; no full promotion.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/1",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected",
+            "selectedLineRanges": [
+              [
+                5,
+                20
+              ],
+              [
+                33,
+                49
+              ]
+            ],
+            "displayedLineRanges": [
+              [
+                1,
+                22
+              ],
+              [
+                33,
+                64
+              ],
+              [
+                128,
+                128
+              ],
+              [
+                140,
+                140
+              ]
+            ],
+            "displayedLineCount": 56,
+            "additionalNavigationSnippetLines": [
+              1,
+              5,
+              12,
+              13,
+              18,
+              19,
+              22,
+              33,
+              37,
+              43,
+              47,
+              48,
+              64,
+              128,
+              140
+            ],
+            "firstDisplayToolChunks": "4c3572",
+            "exactFirstDisplayWallClockUTC": null,
+            "scope": "LocalStorage key/type/load/save only. applyTheme/applyThemePack/initTheme entry names are navigation, system/DOM/surface machinery not followed."
+          },
+          "additionalOriginalMetadataFields": {
+            "coveredLineCount": 33
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38"
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+          "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+          "jsonPointer": "/workerSourceChecks/25",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "files",
+            "manifest": "appearance-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 27,
+      "locatorCount": 62,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 26,
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "lines": 245,
+      "status": "same-SHA-explicit-selected",
+      "decisionReason": "Original selected qualifier/ranges retained; no full promotion.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/3",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected",
+            "selectedLineRanges": [
+              [
+                118,
+                128
+              ],
+              [
+                141,
+                142
+              ],
+              [
+                165,
+                180
+              ],
+              [
+                243,
+                245
+              ]
+            ],
+            "displayedLineRanges": [
+              [
+                16,
+                16
+              ],
+              [
+                53,
+                54
+              ],
+              [
+                61,
+                61
+              ],
+              [
+                76,
+                76
+              ],
+              [
+                91,
+                91
+              ],
+              [
+                100,
+                100
+              ],
+              [
+                116,
+                142
+              ],
+              [
+                151,
+                151
+              ],
+              [
+                165,
+                191
+              ],
+              [
+                243,
+                245
+              ]
+            ],
+            "displayedLineCount": 65,
+            "additionalNavigationSnippetLines": [
+              16,
+              53,
+              54,
+              61,
+              76,
+              91,
+              100,
+              119,
+              151,
+              165,
+              174,
+              243,
+              244
+            ],
+            "firstDisplayToolChunks": "4c3572",
+            "exactFirstDisplayWallClockUTC": null,
+            "scope": "Stable ID/plain-or-i18n name/source and builtin/default lookup. Audio/frame/surface definitions only display/navigation, not mechanism audit."
+          },
+          "additionalOriginalMetadataFields": {
+            "coveredLineCount": 32
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38"
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+          "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+          "jsonPointer": "/workerSourceChecks/27",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "files",
+            "manifest": "appearance-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 27,
+      "locatorCount": 62,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 27,
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "bytes": 7507,
+      "sha256": "7a72942d0501c35855369da74d054e521f7ee894c300b69e8e07503138f84d9a",
+      "lines": 175,
+      "status": "old-hash-different-SHA",
+      "decisionReason": "Legacy validation source inventory SHA6183840d... differs from current. Hash inventory is not semantic review.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+          "documentSha256": "e810f083973c5cc5e38116502951dce3403ef6159ca8e73fd3d50b721c4e1d88",
+          "jsonPointer": "/45",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+          "documentSha256": "861321b5ca84234cfc4b0fb5f4f3e5fd1219d10895ca269e9e7658cd1a7c0977",
+          "jsonPointer": "/60",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+          "documentSha256": "861321b5ca84234cfc4b0fb5f4f3e5fd1219d10895ca269e9e7658cd1a7c0977",
+          "jsonPointer": "/60",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        }
+      ],
+      "machineClaimCount": 29,
+      "locatorCount": 42,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 28,
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "bytes": 10856,
+      "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b",
+      "lines": 294,
+      "status": "ambiguous-over-EOF-selected-qualifier",
+      "decisionReason": "R6 /sources/8 says selected1-300 against294 lines, navigation ownership only/account actions excluded. Do not silently clamp or promote to full.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+          "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+          "jsonPointer": "/hashOnlyFiles/137",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+          "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+          "jsonPointer": "/hashOnlyChecks/139",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+          "documentSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b",
+          "jsonPointer": "/sources/8",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "selected lines 1-300; navigation ownership only; account/actions excluded"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 19,
+      "locatorCount": 52,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 29,
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "bytes": 6201,
+      "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae",
+      "lines": 141,
+      "status": "ambiguous-bounded-full-qualifier",
+      "decisionReason": "R6 /sources/7 literally full; static responsive navigation focus contract only. Preserve bounded qualifier; not activated as unrestricted old-full or global full.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+          "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+          "jsonPointer": "/hashOnlyFiles/81",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+          "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+          "jsonPointer": "/hashOnlyChecks/83",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "hash-only-before-any-current-semantic-read"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+            "collection": "hashOnlyFiles",
+            "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+          "documentSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b",
+          "jsonPointer": "/sources/7",
+          "sameCurrentSourceSha": true,
+          "originalMetadataFields": {
+            "coverage": "full; static responsive navigation focus contract only"
+          },
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 19,
+      "locatorCount": 51,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    },
+    {
+      "rank": 30,
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 5946,
+      "sha256": "72ed464af77d98bb613c179ee3fab5e46e41f946ec448cbb9ee517b09933ab58",
+      "lines": 165,
+      "status": "old-full-different-SHA",
+      "decisionReason": "R28 full1-173 binds0266a93f..., not current165-line SHA. No automatic current full; prior known cause/family still needs exclusion. Deferred.",
+      "activatedOldFull": false,
+      "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+      "canonicalSupportPointers": [
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/review-streaming-independent-source-manifest.json",
+          "documentSha256": "db1c9770339affc02997b2d8b18eb1f3c24941f1961b786a8822d7dbc9000778",
+          "jsonPointer": "/files/1",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "coverage": "full",
+            "selectedLineRanges": [
+              [
+                1,
+                173
+              ]
+            ],
+            "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+          },
+          "additionalOriginalMetadataFields": {
+            "coveredLineCount": 173
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "First byte capture only at initial write; finish/status updated after exact declared review reading. No product/parser/test/helper invoked.",
+              "declaredProductReadLines": 835,
+              "declaredHistoryReadLines": 91
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/review-streaming-root-source-manifest.first.json",
+          "documentSha256": "eda8ff3ac719fcb6f498421aa375bb265640d297fba8f8e02f0b87a3e311797e",
+          "jsonPointer": "/files/1",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "coverage": "full",
+            "selectedLineRanges": [
+              [
+                1,
+                173
+              ]
+            ]
+          },
+          "additionalOriginalMetadataFields": {
+            "coveredLineCount": 173
+          },
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/review-streaming-root-source-manifest.json",
+          "documentSha256": "6e028198ef2c956fea5177395c90d4feceb4879a2a47a6e188d35a7af68e5e3c",
+          "jsonPointer": "/files/1",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "coverage": "full",
+            "selectedLineRanges": [
+              [
+                1,
+                173
+              ]
+            ]
+          },
+          "additionalOriginalMetadataFields": {
+            "coveredLineCount": 173
+          },
+          "ancestorScalarQualifiers": []
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/streaming-source-manifest.json",
+          "documentSha256": "e215126d8d5a159a0447ec07b131f0f9c12c2bb33576c2ebc4b64ba1e7e521a7",
+          "jsonPointer": "/files/3",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "firstSemanticReadSha256": null,
+            "coverage": "full",
+            "selectedLineRanges": [
+              [
+                1,
+                173
+              ]
+            ]
+          },
+          "additionalOriginalMetadataFields": {
+            "role": "product-or-contract",
+            "coveredLineCount": 173
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "productContractReadLines": 756,
+              "instructionReadLines": 217,
+              "historyReadLines": 103,
+              "note": "Whole-byte hash and source coverage kept separate. Five product/test files124+151+173+83+98 read full; types91 and MarkdownProps/classes36 selected only. Dedicated initial hashes for already-read files were captured after source reading; earlier coverage-prep byte pins do not prove read-time semantics. No source/test/helper was executed."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+          "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+          "jsonPointer": "/files/16",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {},
+          "additionalOriginalMetadataFields": {},
+          "ancestorScalarQualifiers": [
+            {
+              "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+          "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+          "jsonPointer": "/workerSourceChecks/37",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "coverage": "full"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading.",
+            "manifest": "streaming-source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+          "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+          "jsonPointer": "/workerSourceChecks/48",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "coverage": "full"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading.",
+            "manifest": "review-streaming-root-source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+            }
+          ]
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+          "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+          "jsonPointer": "/workerSourceChecks/55",
+          "sameCurrentSourceSha": false,
+          "originalMetadataFields": {
+            "coverage": "full"
+          },
+          "additionalOriginalMetadataFields": {
+            "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading.",
+            "manifest": "review-streaming-independent-source-manifest.json"
+          },
+          "ancestorScalarQualifiers": [
+            {
+              "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+            }
+          ]
+        }
+      ],
+      "machineClaimCount": 30,
+      "locatorCount": 57,
+      "noCanonicalQualifiedRowProofOfUnread": false
+    }
+  ]
+}

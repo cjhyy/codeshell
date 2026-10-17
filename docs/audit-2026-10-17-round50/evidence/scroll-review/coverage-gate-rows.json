@@ -1,0 +1,491 @@
+{
+  "rows": [
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/4029/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16067/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16068/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4352/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4352/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4353/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json",
+      "pointer": "/files/2/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+      "pointer": "/sourceChecks/6/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "pointer": "/files/4/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": [],
+        "lineCount": 173,
+        "kind": "unread-adjacent-hook"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "pointer": "/files/4/prepPinRow/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "pointer": "/files/5/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "pointer": "/hashOnlyChecks/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "pointer": "/rows/0/object/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": [],
+        "lineCount": 173,
+        "kind": "unread-adjacent-hook"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "pointer": "/rows/0/object/prepPinRow/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "pointer": "/rows/1/object/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/0/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/1/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/2/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/3/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/4/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/5/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/6/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/7/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/8/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": [],
+        "lineCount": 173,
+        "kind": "unread-adjacent-hook"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/9/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/10/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/11/row/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/ending-checks.json",
+      "pointer": "/sourceChecks/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/0/text",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/3/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/25/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/26/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/27/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/28/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/29/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/30/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/31/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/32/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/33/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/34/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/75/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/76/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/77/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round47/source-manifest.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/history-contexts.json",
+      "pointer": "/latest-messages/78/text",
+      "row": {
+        "path": "docs/audit-2026-10-17-round47/source-manifest.json"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/initial-pins.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "semanticRead": false,
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-display-pins.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "semanticRead": "pending manual scope interpretation",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            4,
+            46
+          ],
+          [
+            48,
+            65
+          ],
+          [
+            71,
+            79
+          ],
+          [
+            126,
+            150
+          ],
+          [
+            172,
+            173
+          ]
+        ],
+        "lines": 173,
+        "semanticLineCount": 97
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/files/39/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+      }
+    },
+    {
+      "candidate": "latest-scroll",
+      "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/workerSourceChecks/30/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "selected"
+      }
+    }
+  ],
+  "count": 49,
+  "interpretationRequired": true
+}

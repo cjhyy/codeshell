@@ -1,0 +1,55 @@
+{
+  "role": "Independent targeted static ordinary source/data reader, parent supplied hypotheses.",
+  "root91ArtifactsRead": false,
+  "checks": {
+    "productFunctions": 0,
+    "productHelpers": 0,
+    "productImports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "UI": 0,
+    "timers": 0,
+    "network": 0,
+    "native": 0,
+    "model": 0,
+    "Git": 0,
+    "realConfigSessionAccountOrLedgerDataReads": 0
+  },
+  "metadataProcessing": "Executed own standard-library history scalar searches, hashes, range accounting and receipt checks only.",
+  "initialPinsBeforeAllBodiesAndLineNavigation": true,
+  "lateInitialPins": [],
+  "metadataDiagnostics": [
+    {
+      "toolChunk": "2f7ff0",
+      "exitCode": 0,
+      "kind": "truncated metadata display; original18240/max8000",
+      "preserved": "first-diagnostic.json and original37 selected input JSON"
+    },
+    {
+      "toolChunk": "d20eb3",
+      "exitCode": 1,
+      "kind": "own inline metadata reader SyntaxError before JSON/product body",
+      "preserved": "metadata-reader-syntax-error.json"
+    }
+  ],
+  "productRuntimeFailures": [],
+  "testDeclarationsRead": 0,
+  "testFilenameOnly": "server.goalcontrols.test.ts identified; no test source opened",
+  "sourceExcerptTiming": "Post display, not pre-read pin",
+  "sourceDisplayToolChunks": [
+    "91b17f",
+    "9368ec",
+    "8b1133",
+    "03fe83",
+    "7eb489",
+    "82d5f2",
+    "53dc7b",
+    "c77232",
+    "783624",
+    "c3eb47",
+    "ad675b"
+  ],
+  "capturedUTC": "2026-10-17T17:10:40.240783+00:00"
+}

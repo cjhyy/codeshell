@@ -1,0 +1,99 @@
+{
+  "rows": [
+    {
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "pointer": "/files/0",
+      "documentBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+        "bytes": 15665,
+        "sha256": "4eae37fb4100651da55d4673cbc84cce95f33683078d3f27a7bd73b8aba75532"
+      },
+      "currentDocumentSha256": "4eae37fb4100651da55d4673cbc84cce95f33683078d3f27a7bd73b8aba75532",
+      "matchesHistoryBeforeReadPin": true,
+      "readUTC": "2026-10-17T16:49:20.673060+00:00",
+      "sourcePath": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          46
+        ],
+        [
+          48,
+          65
+        ],
+        [
+          71,
+          79
+        ],
+        [
+          126,
+          150
+        ],
+        [
+          172,
+          173
+        ]
+      ],
+      "semanticLineCount": 97,
+      "purpose": "Ordinary visibleOutput/outputChanged, DTO fields, previous/unread map/set and scope/reset notices only. Whole173 displayed, only selected data semantics. Scroll positions, layout effects scheduling, resize observer, focus/DOM/client/connection mechanisms not certified."
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "pointer": "/files/1",
+      "documentBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+        "bytes": 15665,
+        "sha256": "4eae37fb4100651da55d4673cbc84cce95f33683078d3f27a7bd73b8aba75532"
+      },
+      "currentDocumentSha256": "4eae37fb4100651da55d4673cbc84cce95f33683078d3f27a7bd73b8aba75532",
+      "matchesHistoryBeforeReadPin": true,
+      "readUTC": "2026-10-17T16:49:20.675134+00:00",
+      "sourcePath": "packages/web/app/Workbench.tsx",
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          74,
+          78
+        ],
+        [
+          157,
+          164
+        ],
+        [
+          783,
+          788
+        ],
+        [
+          806,
+          813
+        ],
+        [
+          818,
+          841
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          868,
+          871
+        ],
+        [
+          876,
+          881
+        ],
+        [
+          890,
+          892
+        ]
+      ],
+      "semanticLineCount": 65,
+      "purpose": "Actual hook items/scope/loading/active DTO, matching hidden empty-done assistant, normal text/status fields and unread count labels. Attachment/open-file callbacks, DOM/focus/accessibility timing, approvals mechanism and auth are excluded."
+    }
+  ],
+  "scope": "Prior83 same physical read as formal49 copy; not new source reading. This task complements its excluded static DOM/scroll scope without changing old index/counts."
+}

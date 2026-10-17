@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T17:01:06.654470+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "bytes": 195050,
+      "lines": 4949,
+      "beforeCurrentLineNavigationAndBody": true
+    },
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "bytes": 8824,
+      "lines": 228,
+      "beforeCurrentLineNavigationAndBody": true
+    }
+  ]
+}

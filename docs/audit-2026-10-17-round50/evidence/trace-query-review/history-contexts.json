@@ -1,0 +1,858 @@
+{
+  "storePath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/378",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+      "pointer": "/files/11/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/presentation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1302,
+      "context": "从 purpose/source 推断，也不调用对象的 `toString`；request 逻辑快照与 attempt 的 provider wire 分离；speech/transcription/audio 的 media 边界；external coverage 的入口边界；三种 event kind 均优先保持事件边界；输入对象与数组身份未被修改。未知对象只是防御性控制，不当作普通生产输入缺陷。\n\n## 合同与静态消费者\n\n- `docs/model-observability.md:20` 明确 Host 按原始 purpose/source/parent 元数据派生类别，默认输入是运行时逻辑快照；`:33` 区分 provider-wire、media 与 external 入口。`packages/core/src/model-traces/types.ts:6` 的 14 个类别、`:48` 的三种 coverage 与 Web 显式列表一致。\n- `packages/core/src/model-traces/classification.ts:48` 派生类别，`packages/core/src/model-traces/store.ts:456` 在读取时覆盖存储类别。这里只读源码，没有执行分类函数、存储、Host 或旧 backend 测试。\n- `packages/core/src/model-traces/context.ts:358,387` 生成 logical-input fallback，`:497` 根据可观测 JSON 请求选 wire/logical，`:869` 生成 external 默认边界；`packages/core/src/model-traces/native-process.ts:135` 也显式记录 logical-input。这些是窄范围静态 producer 证据，未启动进程、网络或任何采集函数。纯 fixture 使用自己构造的合法 record/attempt/event，并未证明整条 producer 链实际运行。\n- `packages/web/src/components/ModelTraceExplorer.tsx:439` 统一 badge；`:447` 调用边界 helper，`:448–477` 选择两语言提示并仅在 logical 输入时展开消息/工具；`:519,708,796` 用相同显式类别渲染筛选和详情。它在 `:371–385` 从当前 record 中选择 attempt/event。上述 React 消费者只静态阅读，未挂载、点击、渲染或请求 API。\n\n`callType: external` 且实际 coverage 为 logical-input 的自有记录仍返回 logical，符合类型与可观测输入边界分离；没有把类别本身强制当作 transport coverage。没有以任意混合 wire/external 数组、错误 lang、超大 record 或可变导出被外部篡改制造新缺陷。UI 筛选、分页、状态生命周期与绘制正确性不由本次叶子测试证明。\n\n## 去重、跳过与边界\n\n[完整历史去重](evidence/presentation-dedup.json) 覆盖 prior docs/bugs 的全部 Markdo",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/files/15/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/workerSourceChecks/11/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/1139",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/295/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/759/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3202/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3211/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3245/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3245/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3247/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3247/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3248/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3248/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3249/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3249/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3250/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3250/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/1071/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/1071/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/996",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/1071/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/source-pin-adapter-notes.json",
+      "pointer": "/unboundNavigationReferences/4/row",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/navigationOnlyUnreviewed/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/542/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/545/from",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/621/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/624/from",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    }
+  ],
+  "storeSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+      "pointer": "/files/11/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+      "pointer": "/files/11/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/files/15/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/files/15/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/files/15/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/workerSourceChecks/11/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/295/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/295/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/759/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/sourceHashFields/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3247/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3250/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3250/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/1071/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/1071/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/1071/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "completeScalar": true
+    }
+  ],
+  "storeFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/378",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+      "pointer": "/files/11/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/presentation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1261,
+      "context": "没有修复或重跑。\n\n实际控制涵盖 14 个显式类别与两种语言标签；未知/缺失类别不从 purpose/source 推断，也不调用对象的 `toString`；request 逻辑快照与 attempt 的 provider wire 分离；speech/transcription/audio 的 media 边界；external coverage 的入口边界；三种 event kind 均优先保持事件边界；输入对象与数组身份未被修改。未知对象只是防御性控制，不当作普通生产输入缺陷。\n\n## 合同与静态消费者\n\n- `docs/model-observability.md:20` 明确 Host 按原始 purpose/source/parent 元数据派生类别，默认输入是运行时逻辑快照；`:33` 区分 provider-wire、media 与 external 入口。`packages/core/src/model-traces/types.ts:6` 的 14 个类别、`:48` 的三种 coverage 与 Web 显式列表一致。\n- `packages/core/src/model-traces/classification.ts:48` 派生类别，`packages/core/src/model-traces/store.ts:456` 在读取时覆盖存储类别。这里只读源码，没有执行分类函数、存储、Host 或旧 backend 测试。\n- `packages/core/src/model-traces/context.ts:358,387` 生成 logical-input fallback，`:497` 根据可观测 JSON 请求选 wire/logical，`:869` 生成 external 默认边界；`packages/core/src/model-traces/native-process.ts:135` 也显式记录 logical-input。这些是窄范围静态 producer 证据，未启动进程、网络或任何采集函数。纯 fixture 使用自己构造的合法 record/attempt/event，并未证明整条 producer 链实际运行。\n- `packages/web/src/components/ModelTraceExplorer.tsx:439` 统一 badge；`:447` 调用边界 helper，`:448–477` 选择两语言提示并仅在 logical 输入时展开消息/工具；`:519,708,796` 用相同显式类别渲染筛选和详情。它在 `:371–385` 从当前 record 中选择 attempt/event。上述 React 消费者只静态阅读，未挂载、点击、渲染或请求 API。\n\n`callType: external` 且实际 coverage 为 logical-input 的自有记录仍返回 logical，符合类型与可观测输入边界分离；没有把类别本身强制当作 transport coverage。没有以任意混合 wire/external 数组、错误 lang、超大 record 或可变导出被外部篡改制造新缺陷。UI 筛选、分页、状态生命周期与绘制正确性不由本次叶子测试证明。\n\n## 去重、跳过与边界\n\n[完整历史去重](evidence/presentation-dedup.json) 覆盖 prior docs/bugs 的全部 Markdo",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/files/15/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/source-manifest.json",
+      "pointer": "/workerSourceChecks/11/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/1139",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/1154",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/295/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/758/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/759/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1232,
+      "context": "r/状态/ledger/adjudication、summary/iterate/planner/provider普通数据选择性阅读；实际model-free早退 | 私有源码非默认Host；真实评审/共识模型、完整会话，失败reviewer-cap方向不重试 |\n| optimization-lab | correction/grading/reflection、plan/dataset/report/candidate/ledger/store普通数据选择性阅读；纯grading/reflection | feature未开启、完整实验/真实付费provider/采纳/崩溃/锁与真实并发 |\n| Server | room metadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3202/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3211/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3243/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3243/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3244/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3244/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3245/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3245/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3246/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3247/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3247/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3248/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3248/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3249/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3249/directSourcePathsInObject/1",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3250/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3250/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/1070/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/1071/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/1070/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/1071/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/995",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/996",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/1070/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/1071/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/review.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1293,
+      "context": "nScope相关字段。R9 evidence/root-source-manifest.json /files/16仅“Selected implementation/excerpt read”而非sameSHA full；R28/R44派生pin/unknown不构成未读证明。未发现sameSHA旧full门槛，所以进入正文，见[gate decision](gate-decision.json)。\n\n旧COST-R9-01是未绑定standalone CostTracker丢完整model identifier并估价错误；本轮不重报、不借旧执行结果。历史79命中均保留，不声称语义读尽所有历史文档/机器scalar；实际用于判断的是全部精确path/SHA object的压缩元数据、11个SHA窗口、canonical旧finding及其原scope。预算/429/真实重试方向未重开。\n\n[源码清单](source-manifest.json)：7个selected文件、329语义行=295产品+34测试；8个产品/测试文件累计唯一显示523行（含1个navigation-only model-traces文件），0 full。context全167行显示，普通语义162行；crypto import/hash/random生成2/134–136与store type import4只作导航，不认证这些机制。[后捕获片段](source-excerpts.json)诚实记录在实际显示之后保存，初始与结束SHA相同，不冒称片段先于阅读捕获。[caller初始pins](consumer-initial-pins.json)均在正文或line-navigation显示前，先前rg只列文件名。\n\n普通链的源码反证足以收口：\n\n- LLMBase 90–149将createMessage包装到withUsageAccounting；usageIdentity保留provider/model/providerKind。billingEnabled控制attempt和record路径，requestVisible只控制前台计数；usagePurpose通过withUsagePurpose覆盖owner的普通purpose值。没有把旧standalone估价问题扩成当前上下文新问题。\n- context 61–98可见owner/purpose到attempt对象的传递、enabled/no-owner分支，以及operation成功/失败时的receipt finish回调；101–126区分当前attempt settle与无attempt的单次receipt路径。account仅包含可见同步ledger调用异常并记录失败，未推断异步ledger或平台调度的额外保证。\n- currentUsageAttempt 49–58只投影声明的字段并冻结返回值；wrapper137–151在ledger.begin前设置latestIdentity。选定accounting.test.ts声明表达begin同步失败时仍能观察attempt字段的意图；不是本轮运行结果，也不认证requestId crypto实现。\n- Engine 1957–1961/1966–1968是实际主流程owner-returning边界和包装调用，UsageReceipt/TokenUsage类型给出正常字段合同。ledger.test.ts 257–270表达禁",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-cost-review/history.json",
+      "pointer": "/hits/old-cost/33/context",
+      "kind": "json-value-scalar",
+      "offset": 475,
+      "context": "ot-source-manifest.json /files/16仅“Selected implementation/excerpt read”而非sameSHA full；R28/R44派生pin/unknown不构成未读证明。未发现sameSHA旧full门槛，所以进入正文，见[gate decision](gate-decision.json)。\n\n旧COST-R9-01是未绑定standalone CostTracker丢完整model identifier并估价错误；本轮不重报、不借旧执行结果。历史79命中均保留，不声称语义读尽所有历史文档/机器scalar；实际用于判断的是全部精确path/SHA object的压缩元数据、11个SHA窗口、canonical旧finding及其原scope。预算/429/真实重试方向未重开。\n\n[源码清单](source-manifest.json)：7个selected文件、329语义行=295产品+34测试；8个产品/测试文件累计唯一显示523行（含1个navigation-only model-traces文件），0 full。context全167行显示，普通语义162行；crypto import/hash/random生成2/134–136与store type import4只作导航，不认证这些机制。[后捕获片段](source-excerpts.json)诚实记录在实际显示之后保存，初始与结束SHA相同，不冒称片段先于阅读捕获。[caller初始pins](consumer-initial-pi",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/21/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "tadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/source-pin-adapter-notes.json",
+      "pointer": "/unboundNavigationReferences/4/row",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/navigationOnlyUnreviewed/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/542/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/545/from",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/621/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/624/from",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/model-traces/store.ts",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/audit-2026-10-17-round18/traceapi.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 806,
+      "context": "eateRemoteModelTraceApi`，通过注入的内存 `request(path)` 记录路径、返回测试自有对象。模块的 Core 引用全部是 type-only；没有导入 Core barrel/runtime，也没有 mock Core 或 i18n。\n- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/traceapi.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1002,
+      "context": "ions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四次调用，实际检查的 pathname 是这两个。 |\n| 全部普通 list 字段 | `limit`、`cursor`、`search`、`traceId`、`sessionId`、`withoutSession`、`model`、`provider`、`purpose`、`callType`、`source`、`status`、`since`、`until` 经 URL 查询解码后与原值逐项相同；覆盖 Unicod",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1232,
+      "context": "r/状态/ledger/adjudication、summary/iterate/planner/provider普通数据选择性阅读；实际model-free早退 | 私有源码非默认Host；真实评审/共识模型、完整会话，失败reviewer-cap方向不重试 |\n| optimization-lab | correction/grading/reflection、plan/dataset/report/candidate/ledger/store普通数据选择性阅读；纯grading/reflection | feature未开启、完整实验/真实付费provider/采纳/崩溃/锁与真实并发 |\n| Server | room metadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/root.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4881,
+      "context": "显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢 FoldItem 的 injected/clientMessageId/timestamp 等字段；其附件/内部路径投影已有旧 `docs/review-2026-10-12/legacy-history-round24.md` R84 详细确认。本轮只读核对该已知家族，没有另做附件复现或重复计入。额外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、renderer/messages/types.ts，rg报ENOENT。它们不属于运行实验，也不作产品问题证据；未重跑失败动态 fixture。\n- ModelTraceStore 普通summary/search/分类/排序/paging/retention链路作选择性静态阅读；list和sessions当前都复用localeCompare做cursor后继，没有把旧catalog comparator问题套用到这里。搜索是metadata字段而非JSON正文，不将Pet全文预筛问题误报到此模块。未增加动态测试或确认项。不存在的model-traces/capture.ts辅助读取已跳过。\n\n本分审5个完整成功首次shard共 **37 pass /110 expect /10 filtered /0 fail**。实际新缺陷观察/正常对照共8个测试，其余29个为当前选择性既有基线；没有把filtered选中数量当作已执行测试。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round41/evidence/process-state-review/source-manifest.json",
+      "pointer": "/files/2/role",
+      "kind": "json-value-scalar",
+      "offset": 110,
+      "context": "Only ordinary DTO constants/init/emit/chunk slice, once-close header, terminal assignment/add call, validated cursor limit and get data projection, stopping flags. Native close/termination/modelTrace/input authorization/owner+epoch predicate correctness remains outside conclusion, including where adjacent source was printed.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14378/roleBoundaryFields/role",
+      "kind": "json-value-scalar",
+      "offset": 110,
+      "context": "Only ordinary DTO constants/init/emit/chunk slice, once-close header, terminal assignment/add call, validated cursor limit and get data projection, stopping flags. Native close/termination/modelTrace/input authorization/owner+epoch predicate correctness remains outside conclusion, including where adjacent source was printed.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/21/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "tadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/24/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、renderer/messages/types.ts，rg报ENOENT。它们不属于运行实验，也不作产品问题证据；未重跑失败动态 fixture。\n- ModelTraceStore 普通summary/search/分类/排序/paging/retention链路作选择性静态阅读；list和sessions当前都复用localeCompare做cursor后继，没有把旧catalog comparator问题套用到这里。搜索是metadata字段而非JSON正文，不将Pet全文预筛问题误报到此模块。未增加动态测试或确认项。不存在的model-traces/capture.ts辅助读取已跳过。\n\n本分审5个完整成功首次shard共 **37 pass /110 expect /10 filtered /0 fail**。实际新缺陷观察/正常对照共8个测试，其余29个为当前选择性既有基线；没有把filtered选中数量当作已执行测试。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1031,
+      "context": "e-rows.json)，均为库存/派生incidental记录，未建立同SHA明确full。unknown/no-row不当从未读过。Root74原说法与其更正另在[parent上下文](parent-context-notes.json)，Root的机器14/5命中不冒充其读全19窗口。\n\n## 普通合同与反证\n\n目标所读query字段/校验把正常limit1–200、withoutSession布尔、有限非负且顺序正确的since/until和有界字符串保留到新DTO；list/sessions在validated spread后转交store，session cursor错误有400映射。未用任意坏DTO、NaN或真实文件造反例。HTTP20–38仅普通query值解码，73–74直接调history list/sessions；Web API普通querySuffix以String编码、跳undefined并转交注入requester。false与正常0时间值未被truthy条件丢弃。这里只是静态值流，未构造或执行语言fixture/URL/网络请求。\n\n真实Desktop ModelTracesView250–258请求sessions limit50并用page，299–306请求list limit100并消费items/nextCursor，372–382把cursor传回并合并返回DTO。Desktop trace-history-service6–9/11–13构造同server adapter。未展开IPC注册/Host/native机制，因此不假装读完全部生产闭环。Web远程factory在所搜web/mobile/renderer路径只命中definition和test导航，未建立生产调用，不把公开接口当作实际Web UI已接入。\n\n没有从这些正常DTO建立新反例。真正排序、分页实现和裁剪在未读ModelTraceStore中；目标118–201 workspace scope/visibility完全未打开，不能作为负向证明。实际HTTP授权、真实追踪文件、fs/锁、模型下载/调用和权限/身份/custody边界均停，不作认证；永久失败运行方向不重启。\n\n## 范围、诊断与结束\n\n[所读范围](source-manifest.json)5份产品源均selected，原[显示前pin](source-display-pins.json)与[摘录](source-excerpts.txt)保留；target97行display仅78行ordinary语义，不称242全文。HTTP workspace边界行23、Web Host guard41–42、Desktop native说明/目录行5/10等只是相邻显示，排除语义。四个producer文件首次rg导航先于dedicated pin，initialSemanticReadSha256=null如实保留；随后selected块在dedicated pin之后显示。没有打开任何测试正文，声明计数0。\n\n首次metadata reader将datetime类误写成datetime.datetime，exit1；原[stderr](metadata-first-error.txt)/[阶段说明](metadata-first-error.json)保存。失败在新增producer pin落盘和正文显示前，只修metadata timestamp再读同选段，非产品或fixture重",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/files/0/purpose",
+      "kind": "json-value-scalar",
+      "offset": 114,
+      "context": "Only ordinary query DTO declaration/validation and forwarding/error mapping. 118–201 scope/visibility/store-event filtering not opened; displayed53 and207–211/219–223 mechanism-adjacent lines excluded. ModelTraceStore sorting/trimming/files not read.",
+      "completeScalar": true
+    }
+  ]
+}

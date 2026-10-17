@@ -1,0 +1,218 @@
+{
+  "queriedUTC": "2026-10-17T16:56:35.311198+00:00",
+  "scope": "Same original4693 machine members, simple literal/AND queries after source-derived helper names known; no universal history semantic exhaustion. Cap20 windows.",
+  "queries": {
+    "helper-names": {
+      "hits": 0,
+      "cap": 20,
+      "retained": 0
+    },
+    "plugin-logo-fallback": {
+      "hits": 24,
+      "cap": 20,
+      "retained": 20
+    },
+    "plugin-screenshot-cap": {
+      "hits": 1,
+      "cap": 20,
+      "retained": 1
+    }
+  },
+  "drift": [],
+  "contexts": {
+    "helper-names": [],
+    "plugin-logo-fallback": [
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "pointer": "markdown-text",
+        "valueChars": 41296,
+        "contextStart": 29434,
+        "contextEnd": 30534,
+        "text": "/builtin/extra-commands.ts:198`，`packages/tui/src/ui/components/ModelManager.tsx:83` | `/models` |\n| `/login` | 带 key 直接保存并热加载；不带参数进入 onboarding | `packages/tui/src/cli/commands/builtin/extra-commands.ts:52`，`packages/tui/src/ui/components/OnboardingPrompt.tsx:40` | `/login sk-...` / `/login` |\n| `/logout` | 清空模型和凭证相关设置 | `packages/tui/src/cli/commands/builtin/extra-commands.ts:118` | `/logout` |\n| `/effort` | 设/查推理 effort | `packages/tui/src/cli/commands/builtin/core-commands.ts:75` | `/effort high` |\n| `/permissions` · `/perm` | 查/切权限模式，`rules` 列生效规则 | `packages/tui/src/cli/commands/builtin/permissions-command.ts:17` | `/permissions auto` / `/permissions rules` |\n| `/config` | show/get/set 设置，set 尝试 JSON 解析 | `packages/tui/src/cli/commands/builtin/core-commands.ts:695` | `/config show` / `/config set model.temperature 0.5` |\n| `/features` | 列引擎解析后的 feature flags | `packages/tui/src/cli/commands/builtin/features-command.ts:11` | `/features` |\n\n**状态 / 工具 / 用量**\n\n| 命令 | 做什么 | 入口 | 用法 |\n|------|--------|------|------|\n| `/cost` | 显示 token 用量和成本，支持 stats/detail | `packages/tui/src/cli/c",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "pointer": "markdown-text",
+        "valueChars": 27379,
+        "contextStart": 10828,
+        "contextEnd": 11928,
+        "text": "nal/repo marketplace auto-discovery remain missing. |\n| Install metadata/assets               | **Full for local UI metadata**  | Codex display text, developer/category/capabilities, HTTPS website/privacy/terms links, brand color, up to three 128-character starter prompts, composer icon, light/dark logos, and up to three screenshots survive normalization. Starter prompts can be appended to the current composer draft but never auto-send or discard unsent text. Raster assets are containment-, format-, dimension-, and size-checked before bounded data-URL serving to Desktop.                                                                                                                                                                                                    |\n| Sharing and publication               | **Missing**                     | No workspace sharing links, public directory submission, review pipeline, or organization-managed install policy.                                                                                                                                        ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/151/excerpt",
+        "valueChars": 138898,
+        "contextStart": 27172,
+        "contextEnd": 28272,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/155/excerpt",
+        "valueChars": 138898,
+        "contextStart": 27172,
+        "contextEnd": 28272,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "pointer": "/objects/19/object/excerpt",
+        "valueChars": 138898,
+        "contextStart": 27172,
+        "contextEnd": 28272,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "pointer": "/objects/23/object/excerpt",
+        "valueChars": 138898,
+        "contextStart": 27172,
+        "contextEnd": 28272,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "pointer": "/objects/52/object/text",
+        "valueChars": 169230,
+        "contextStart": 52516,
+        "contextEnd": 53616,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "pointer": "/objects/56/object/text",
+        "valueChars": 169230,
+        "contextStart": 52516,
+        "contextEnd": 53616,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+        "pointer": "/contexts/draft-plugin-race/1/text",
+        "valueChars": 1378,
+        "contextStart": 718,
+        "contextEnd": 1378,
+        "text": "ation time instead of\n   leaving `$1` and named values inert.\n8. records the installed hook definition digest and refuses to execute hooks\n   that changed outside an explicit install/update; pre-digest installs remain\n   visible as `legacy` for compatibility.\n9. validates `interface.composerIcon`, `logo`, `logoDark`, and `screenshots`\n   against their real paths, rejects escaping symlinks, missing files, format\n   spoofing, oversized/dimension-bomb images, and non-`assets/*.png`\n   screenshots, then copies accepted bytes into an installer-owned canonical\n   asset directory. `composerIcon` additionally accepts a validated static SVG\n   shape subset: nam",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "pointer": "/hits/settings-navigation/1/text",
+        "valueChars": 169230,
+        "contextStart": 52516,
+        "contextEnd": 53616,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "pointer": "/hits/sidebar-projection/9/text",
+        "valueChars": 169230,
+        "contextStart": 52516,
+        "contextEnd": 53616,
+        "text": "sole.warn('Failed to parse settings:', err); }` to inform the user of potential data loss.\", \"verify_note\": \"Real defect, but impact is limited to corrupted files. Data loss occurs silently without user notification, which is a usability issue. Consider adding error logging/warning similar to the `/logout` command pattern already established in this file at line 107.\", \"verify_reason\": \"The silent catch block (line 29) allows JSON.parse errors to be completely suppressed when reading settings.json. When parsing fails, the empty object initialized on line 25 becomes the effective settings, and line 33 writes this empty object back to the file. This silently overwrites corrupted settings with just the new API key, losing all other configuration without user notification. The `/logout` command in the same file (line 106-108) demonstrates proper error handling with user feedback (`ctx.addStatus`), showing this is an inconsistent pattern. No feedback is given to the user that data was lost, only that the API key was saved (line 38).\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/cli/input/nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/nightly-2026-07-10/codeshell-capability-gap.md",
+        "pointer": "markdown-text",
+        "valueChars": 17346,
+        "contextStart": 7111,
+        "contextEnd": 8211,
+        "text": "通用优先级**：ChatGPT OAuth、Codex Fast credits、Bedrock Codex 专用内置 provider。这些与特定商业账户绑定，不应压过协议能力。\n- **对标结论**：模型名不构成能力差距；Responses API adapter 才是值得排期的协议差距。\n\n### 10. Slash 命令与交互面（C1 `SLASH` 52 条）— 部分有，常用操作覆盖充分\n\n- **已有**：`/clear /compact /copy /diff /exit /features /feedback /goal /hooks /image /init /login /logout /mcp /memory /model /permissions /plugin /resume /review /skills /status /tools /undo /update` 等，并有 CodeShell 自己的 `/tasks /cost /voice /security-review`。\n- **缺失且值得做**：`/fork`、统一 `/debug-config`；`/side` 可作为 fork 的第二阶段。\n- **不建议追平**：pet/theme/title/keymap 等 TUI 个性化命令不是 harness 能力差距。\n- **对标结论**：按底层能力补入口，不按 Codex 的 52 个命令逐名复刻。\n\n### 11. 多 agent、长任务与可编程控制（C1 `AGT` 23 条）— 部分有，是 CodeShell 另一强项\n\n- **已有**：同步/并行/后台子 agent、自动后台化、status/cancel/send-input、持久 child session、custom agent role、model/tool/skill/max-turn 约束、禁止嵌套、并发上限、Goal/Cron/Sleep/DriveAgent、AgentServer run/cancel/configure/query。锚点：`packages/core/src/tool-system/builtin/agent.ts`、`packages/core/src/agent/agent-definition.ts`、`packages/core/src/protocol/`、`packages/core/src/cron/`。\n- **部分有**：子 agent 继承父 sandbox/MCP，role schema 不能声明更窄的",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/nightly-2026-07-10/codex-capability-catalog.md",
+        "pointer": "markdown-text",
+        "valueChars": 52699,
+        "contextStart": 3527,
+        "contextEnd": 4627,
+        "text": "e。 | <https://developers.openai.com/codex/developer-commands?surface=cli#cli-codex-remote-control> |\n| `codex mcp-server` | 将 Codex CLI 暴露成 MCP server，供其它 agent 或 MCP client 调用。 | <https://developers.openai.com/codex/guides/agents-sdk> |\n| `codex mcp` | 管理 MCP server 配置，包括 list/get/add/remove/login/logout。 | <https://developers.openai.com/codex/extend/mcp> |\n| `codex plugin` | 安装、列出、移除插件；`--json` 输出可用于自动化。 | <https://developers.openai.com/codex/plugins> |\n| `codex plugin marketplace` | 添加、列出、升级、移除 Git 或本地 marketplace source。 | <https://developers.openai.com/codex/developer-commands?surface=cli#cli-codex-plugin-marketplace> |\n| `codex features` | 列出并持久启用/禁用 feature flags。 | <https://developers.openai.com/codex/developer-commands?surface=cli#cli-codex-features> |\n| `codex execpolicy` | 实验性检查 `.rules` 规则文件对命令的 allow/prompt/forbidden 决策。 | <https://developers.openai.com/codex/agent-configuration/rules> |\n| `codex sandbox` | 用 Codex 的 macOS/Linux/Windows sandbox 运行任意命令，便于本地测试边界。 | <https://developers.openai.com/codex/agent-approvals-security#test-the-sandbox-locally> |\n| `codex completion",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/nightly-2026-07-10/connector-capability-plan.md",
+        "pointer": "markdown-text",
+        "valueChars": 30351,
+        "contextStart": 5747,
+        "contextEnd": 6847,
+        "text": "provider 以 virtual connection 表达；\n- OAuth token 到期时在取 credential 的执行边界自动 refresh 并回写。\n\n同一 Provider 可以有 `default`、`work`、`personal` 等多个 named connection。HTTP 执行可用 `x-oo-connector-alias` 或 query `alias` 逐请求选账号。\n\n#### Runtime Action status\n\nCatalog 可见不等于本地可执行。runtime 会补充：\n\n- `locallyExecutable`\n- `catalogOnly`\n- `requiredAuthTypes`\n- `needsCredential`\n- `noAuthRunnable`\n\n这个区分很重要：UI/Agent 可以先发现完整契约，但必须在执行前知道本 runtime 是否真的装有 executor、是否缺 connection。\n\n#### Policy 与 Run\n\n执行前经过 Action policy：exact action id 或 `service.*` allow/block；provider proxy 有单独 allow/block，且配置了 Action policy 后 proxy 默认拒绝，必须显式 allow。\n\n执行后记录 Run：caller、action、时间、耗时、成功/失败、connection profile、脱敏且有深度/长度上限的 input summary、错误码/错误信息。\n\n### 2.3 协议与 schema\n\n#### MCP\n\nopen-connector 的 MCP 不是“一 Action 一 MCP tool”，而是固定的 4 个发现型元工具：\n\n1. `list_apps`\n2. `search_actions`\n3. `get_action_guide`\n4. `execute_action`\n\n这样可以承载数千 Action，而不会把所有 tool schema 一次塞进模型上下文。服务端是 stateless Streamable HTTP：`POST` JSON-RPC + JSON response，不维持 `GET` SSE stream。\n\nMCP discovery 返回的 capability 会同时带 execution status、auth types、required scopes、provider permissions",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/panel-native-tools.md",
+        "pointer": "markdown-text",
+        "valueChars": 39804,
+        "contextStart": 22915,
+        "contextEnd": 24015,
+        "text": "e revision;\nHTTP callers cannot choose that scope or substitute their Web catalog revision.\nBoth interfaces use the same IDs, request-key deduplication and resources.\n\n`capabilities.tasks` reports `ownership`, `executionRevision`,\n`sharedAcrossDevices`, `continuesAfterDisconnect` and `continuesAfterLogout`.\nFor Desktop and its paired Web interface ownership is `project`: after admission,\nclosing the page, logout, device revocation, remote-server stop or HTTP-handler\neviction detaches the viewer without cancelling the project task. Logout aborts\npending input preparation; a request whose reply was lost may already have been\nadmitted, so reconnect and inspect task snapshots first. Any explicit resubmission\nmust retain the same request key and input to deduplicate. Explicit task\ncancellation, project/app authorization revocation and Desktop shutdown keep their\nrespective cancellation/interruption semantics. Standalone Hub and Docker project\nruntimes now also report project ownership: admitted native jobs survive login\nrevocation and publish summaries to all authorized pages of the same ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/README.md",
+        "pointer": "markdown-text",
+        "valueChars": 40812,
+        "contextStart": 8629,
+        "contextEnd": 9729,
+        "text": "ion，无法继续保存                  | [Web W8，第二轮](web-round2.md) |\n| R27  | P3   | MCP 配置已更新，迟到的旧 probe 响应却给新配置显示旧的成功结果与工具列表               | [Web W9，第二轮](web-round2.md) |\n| R29  | P3   | 启动迁移旧会话时，旧项目初始快照覆盖已到达的新项目广播；新项目从界面消失              | [Desktop D12，第三轮](desktop-round3.md) |\n| R38  | P3   | 退出设备必须等 HTTP logout 请求结束，响应卡住时本地界面和连接也不退出                 | [Web W14，第三轮](web-round3.md) |\n| R39  | P3   | 恢复归档会话已成功，却被自身 busy 守卫误判为未保存修改，需额外确认才能打开            | [Files/History F1，第四轮](files-round4.md) |\n| R43  | P3   | Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因                 | [Credentials C2，第五轮](credentials-round5.md) |\n| R48  | P3   | 自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停                            | [Automation A5，第五轮；底层原因仍持久保留](automation-round5.md) |\n| R49  | P3   | 共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件              | [Collection，第六轮；0.9.33 新可达路径](collections-round6.md) |\n| R54 | P3 | Quick Chat 收到文件面板 PNG 的内部拖放数据后静默丢弃，不产生图片或路径引用 | [Quick Chat Q1，第八轮；系统图片拖入可用](quickchat-round8.md) |\n| R55 | P3 | 较早的磁盘会话打开迟到完成，覆盖后来已成功的全局搜索导航；重选可恢复 | [搜索与导航 W21](search-routing-round11.md)，第十一轮 |\n| R56 | P3 | 全文搜索仅扫描最近50",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/progress.md",
+        "pointer": "markdown-text",
+        "valueChars": 29667,
+        "contextStart": 10586,
+        "contextEnd": 11686,
+        "text": "，不称所有设置/旧成功数据删除，与R43显式Save保稿独立。\n\nLink实际组件/controller/native manager/server service/store在取消startup迟到、begin失败显式重试、commit回包丢失authorizationGet状态查询、cwd key重挂取消validation、迟到内存OAuth句柄关闭5控制正常；没有实际OAuth/window/provider。Server MCP真实HubAuth、actualauth callbacks+owned HTTP协议控制注册前body abort、同/异owner取消、429、断线重试、logout撤权正常。人工ownerGate候选因为production auth为同步read/store只返回已完成Promise，注入长异步不能证明可达，明确剔除。正式新增2，当前70=1P1/47P2/22P3。\n\n新增4文件10测试104个Bun expect在84740/a66f分别guarded通过，累计72文件221测试0最终fail/skip；Settings owned Bun helper另27手工assert、MCP wrapped Node另22断言/基线，不增加Bun测试。原始诊断/harness失败单独归档、不进collector。报告与metadata已整合，等待最终机械和只读语义核验。04:23fetch仍a66f，下次05:10–05:20，不重复拉取；heartbeat保持ACTIVE至11:00，不提前complete。\n\n04:48机械核验70个编号连续唯一、1/47/22分级一致，594个顶层Markdown本地链接与381个源码行号有效；两份72/221metadata和所有guarded完成日志一致，4个新文件10测试104个Bun expect及helper27/Node22分别核对。两个产品tracked diff为空，staged diff --check通过。04:48 get_goal仍blocked（主审未请求且无实际阻塞），继续用户heartbeat；TOML只读仍ACTIVE/整点半点，11:00交付后才停用/complete。原始诊断完整归档，未清理或改动其它任务。\n\n04:49第十六轮最终只读语义核验通过，无实质冲突；Link恢复叙述进一步明确authorizationGet是本地桥状态查询，未做HTTP GET/原生IPC实验。新增执行0。报告只改本任务docs，准备保存阶段检查点。下一轮优先反证现有严重",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/todo/README.md",
+        "pointer": "markdown-text",
+        "valueChars": 8830,
+        "contextStart": 6040,
+        "contextEnd": 7140,
+        "text": "k-local-first-tech-design.md)                                                       | PAT/CLI、读操作、逐次写审批和断开机制已实现；旧 WorkspaceLinkGrant/ActionSpec 架构未照搬，真账号验证另计 |\n| [MCP HTTP Auth / OAuth](mcp-http-auth-oauth-link-tech-design.md)                                                     | 认证配置、login/refresh/logout 与 host 服务已实现；不再以早期“未动手”作状态结论                          |\n| [IM Gateway](im-gateway-remote-orchestration.md)                                                                     | Phase 1–3 代码闭环、通道、inbox/outbox 与运维入口已实现；真实平台 canary 要显式提供测试条件              |\n| [Prompt cache](prompt-cache-optimization.md) / [09-06 实现验证](gpt-cache-optimization-2026-09-06.md)                | 通用缓存与 GPT hybrid 已实现并有短样本真实证据；Responses/20+轮基线与长期成本仍待评估                    |\n| [Session 累计 cache usage](session-cumulative-cache-usage-plan.md)                                                   | 累计、落盘、恢复与切模型处理已实现；旧“方案未动手”过期                                                   |\n| [会话 notes 策略](context-notes-strategy.md)                                                                         | 原生 notes/save/new-context/hi",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/todo/mcp-http-auth-oauth-link-tech-design.md",
+        "pointer": "markdown-text",
+        "valueChars": 10516,
+        "contextStart": 4306,
+        "contextEnd": 5406,
+        "text": "nk 里面\"的产品直觉, 又避免数据模型混乱。\n\n### 5.4 MCP OAuth 服务\n\n新增 main/core 服务:\n\n```text\npackages/desktop/src/main/mcp-oauth-service.ts\npackages/core/src/services/mcp-oauth.ts\n```\n\n职责:\n\n- `getStatus(serverName)`: 未配置 / 未登录 / 已登录 / 已过期 / 刷新失败\n- `login(serverName, opts)`: 打开浏览器授权, 接收 callback, 保存 oauth credential\n- `logout(serverName)`: 删除或解绑 oauth credential\n- `refreshIfNeeded(oauthCredentialRef)`: 过期前刷新\n- `resolveOAuthHeaders(oauthCredentialRef)`: 返回 `Authorization: Bearer <access_token>`\n\n桌面端通过 Electron 打开系统浏览器:\n\n```ts\nshell.openExternal(authorizationUrl)\n```\n\ncallback:\n\n- 默认绑定 ephemeral localhost port。\n- 未来支持用户设置固定 callback URL/port, 对齐 Codex 的 `mcp_oauth_callback_port` / `mcp_oauth_callback_url`。\n\n### 5.5 Header 构建路径\n\n当前:\n\n```ts\nbuildHttpHeaders(serverName, config, resolveCredential)\n```\n\n问题:\n\n- 同步函数, 不适合 OAuth refresh。\n- `credentialRef` 固定等于 Bearer token。\n\n建议:\n\n```ts\nasync function resolveMcpHttpHeaders(\n  serverName: string,\n  config: MCPServerConfig,\n  deps: {\n    resolveCredential(id: string): Credential | undefined;\n    refreshOAuthIfNeeded(id: string): Promise<OAuthCredentialSecretV1>;\n  },",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/todo/p0-p1-release-2026-10-12.md",
+        "pointer": "markdown-text",
+        "valueChars": 81731,
+        "contextStart": 13505,
+        "contextEnd": 14605,
+        "text": " 原生 ps birth 观测覆盖同四个 Electron PID。\n  单个实际 Electron 正常 code 0 close，四个 start/close/owned-close/handoff 集合一致；\n  peer 独立核 22 refs、亲看实际 PNG，并 fresh 核 42 个捕获 PID 和两个 owned group missing。\n  新 PS 行以 `nativePsPid` 保存原生 PID，`pid/ppid` 保留 driver 外壳身份；不推断原生 ps 的 OS PPID/PGID。\n  首败仍是 Settings locator 等待 30 秒超时。截图与有界 DOM 均显示真实 “Trust this project?”\n  dialog 遮住 Settings，只有 “View only (deny write tools)”／“Trust and continue” 可见。\n  Main snapshot 同时记录 `networkAttempts=2`、`processAttempts=4`、`rendererNetworkAttempts=0`；\n  前两项来源尚未归因，保留原零计数门槛，不据负探针或退出正常忽略拒绝。\n  phase/diagnostic/adapter/outer 各层 cleanup 均为空，仍不代表整个 UI 或安全 gate 通过。\n  DTO/IMG/source/painted geometry、PNG 优先级、第二 phase 与最终零计数验收未到达；\n  after 两次真实查询仍只证明 Keychain metadata，不算正式 safeStorage/Keychain 验收。\n  后续仅获准准备真实 View only／deny-write 处理与有界、无参数 stack 归因，尚未重试；\n  v6 及更早失败和 mutable fixture 的 quarantine 映射保留。[证据 5][证据 7]\n\n当前剩余顺序：**P0** 先收口真实插件自动 Hook/startup/cold 与 SVG 实际图片验收、完整 Linux\n业务失败，再完成五 Panel 正式资产/生产更新链、正式安装包 Pet/Keychain/微信及最终\ntag/安装包/更新清单/九个公开包。**P1** 继续原二十四项业务矩阵、真实旧数据迁移/升级/回滚、\n三仓兼容与账号/设备 authority、准确目标部署/备份恢复/跨版本回滚、实体手机弱网/审批/通知，\n以及输出恢复/轮转/修复的",
+        "wholeValueIncluded": false
+      }
+    ],
+    "plugin-screenshot-cap": [
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "pointer": "markdown-text",
+        "valueChars": 27379,
+        "contextStart": 10828,
+        "contextEnd": 11928,
+        "text": "nal/repo marketplace auto-discovery remain missing. |\n| Install metadata/assets               | **Full for local UI metadata**  | Codex display text, developer/category/capabilities, HTTPS website/privacy/terms links, brand color, up to three 128-character starter prompts, composer icon, light/dark logos, and up to three screenshots survive normalization. Starter prompts can be appended to the current composer draft but never auto-send or discard unsent text. Raster assets are containment-, format-, dimension-, and size-checked before bounded data-URL serving to Desktop.                                                                                                                                                                                                    |\n| Sharing and publication               | **Missing**                     | No workspace sharing links, public directory submission, review pipeline, or organization-managed install policy.                                                                                                                                        ",
+        "wholeValueIncluded": false
+      }
+    ]
+  }
+}

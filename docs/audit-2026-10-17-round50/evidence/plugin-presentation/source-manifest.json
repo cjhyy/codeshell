@@ -1,0 +1,335 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedContextOnly": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b; no independent Git authentication",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "bytes": 4452,
+      "lines": 114,
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "pinnedBeforeBodyDisplayUTC": "2026-10-17T16:54:25.502500+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          114
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          34,
+          58
+        ]
+      ],
+      "semanticLineCount": 25,
+      "bodyDisplayedLineCount": 114,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 114,
+      "purpose": "Only ordinary logo fallback/source selection, first-three screenshots projection and list-media availability OR. Image/URL security validation4–32, approval state/bridges60–89 and legal URL policy91–114 merely displayed/excluded; no safety or permission certification, no module-full claim.",
+      "initialSemanticReadSha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "endingBytes": 4452,
+      "endingSha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:59:55.710363+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "lines": 530,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:55:02.440141+00:00",
+      "displayedLineRanges": [
+        [
+          84,
+          103
+        ],
+        [
+          509,
+          530
+        ]
+      ],
+      "additionalBeforeBodyUTC": "2026-10-17T16:55:38.610293+00:00",
+      "additionalSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          84,
+          97
+        ],
+        [
+          99,
+          103
+        ],
+        [
+          511,
+          530
+        ]
+      ],
+      "semanticLineCount": 39,
+      "bodyDisplayedLineCount": 42,
+      "navigationLineRanges": [
+        [
+          33,
+          33
+        ],
+        [
+          88,
+          88
+        ],
+        [
+          511,
+          511
+        ],
+        [
+          512,
+          512
+        ],
+        [
+          513,
+          513
+        ],
+        [
+          517,
+          517
+        ],
+        [
+          523,
+          523
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 43,
+      "purpose": "Actual availability predicate and returned-media dictionary mapping, followed by logo light/dark/fallback JSX fields. Native getPluginMedia call is the boundary; implementation, ownership/install keys, lifecycle races/React timing and installation actions not reviewed.",
+      "initialSemanticReadSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "endingBytes": 18987,
+      "endingSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:59:55.710363+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+      "bytes": 26214,
+      "lines": 711,
+      "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:55:02.440939+00:00",
+      "displayedLineRanges": [
+        [
+          100,
+          107
+        ],
+        [
+          229,
+          249
+        ],
+        [
+          509,
+          527
+        ],
+        [
+          52,
+          73
+        ]
+      ],
+      "additionalBeforeBodyUTC": "2026-10-17T16:57:39.359941+00:00",
+      "additionalSha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          52,
+          52
+        ],
+        [
+          63,
+          64
+        ],
+        [
+          66,
+          69
+        ],
+        [
+          71,
+          73
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          229,
+          249
+        ],
+        [
+          509,
+          527
+        ]
+      ],
+      "semanticLineCount": 52,
+      "bodyDisplayedLineCount": 70,
+      "navigationLineRanges": [
+        [
+          24,
+          24
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          28,
+          28
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          71,
+          71
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          232,
+          232
+        ],
+        [
+          235,
+          235
+        ],
+        [
+          238,
+          238
+        ],
+        [
+          240,
+          240
+        ],
+        [
+          509,
+          509
+        ],
+        [
+          513,
+          513
+        ],
+        [
+          516,
+          516
+        ],
+        [
+          528,
+          528
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 74,
+      "purpose": "Independent media request/state data and actual logo/screenshot list consumption. Approval action declarations53–58, legal/approval106–107 and detail/native mechanisms merely adjacent display/excluded. No getPluginDetail/native or filesystem correctness audit.",
+      "initialSemanticReadSha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "endingBytes": 26214,
+      "endingSha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:59:55.710363+00:00"
+    },
+    {
+      "path": "packages/desktop/src/shared/plugin-media.ts",
+      "bytes": 372,
+      "lines": 14,
+      "sha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:55:02.441233+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "additionalBeforeBodyUTC": "2026-10-17T16:55:38.609272+00:00",
+      "additionalSha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          6
+        ],
+        [
+          9,
+          14
+        ]
+      ],
+      "semanticLineCount": 12,
+      "bodyDisplayedLineCount": 14,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 14,
+      "purpose": "Ordinary availability and media DTO fields only. Security/path-containment comment8 is displayed but not used as certification; no host producer implementation reviewed.",
+      "initialSemanticReadSha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+      "endingBytes": 372,
+      "endingSha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:59:55.710363+00:00"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.test.ts",
+      "bytes": 5754,
+      "lines": 165,
+      "sha256": "0f627ad0be787380498392a40c92be1b8971410a758abd607aa0a9f6639b96c6",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:55:02.441494+00:00",
+      "displayedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "hash-only unused existing test pin",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "testDeclarationLines": 0,
+      "endingBytes": 5754,
+      "endingSha256": "0f627ad0be787380498392a40c92be1b8971410a758abd607aa0a9f6639b96c6",
+      "unchanged": true
+    }
+  ],
+  "counts": {
+    "selectedProductRows": 4,
+    "fullProductModuleRows": 0,
+    "productSemanticLines": 128,
+    "bodyDisplayedLines": 240,
+    "displayedUnionIncludingNavigationLines": 245,
+    "hashOnlyExistingTests": 1,
+    "testDeclarationLines": 0,
+    "notAllHistoryUniqueFirstReadClaim": true
+  },
+  "historyGate": {
+    "freshMembers": 4693,
+    "includeFrozenThrough": 49,
+    "excludeNumericRoundAtLeast": 50,
+    "pathWindowsActuallyRead": 10,
+    "shaWindowsActuallyRead": 5,
+    "compactMetadataRowsActuallyRead": 6,
+    "originalCanonicalMetadataObjectsActuallyRead": 1,
+    "sameShaModuleFullEstablished": false,
+    "neverReadAssurance": false
+  },
+  "causeQueryScope": {
+    "helperNamesHits": 0,
+    "logoBroadAndHits": 24,
+    "logoCap": 20,
+    "screenshotBroadAndHits": 1,
+    "actualWindowsRead": 3,
+    "queryLimitation": "Literal logo can match logout; broad AND terms may be separated within one largeMD. Architecture11 window irrelevant; architecture13 window supports ordinary up-to-three description only, not exact-cause novelty or safety certification."
+  },
+  "mechanismBoundary": "No security/image bytes/URL policy/approval/native/install/identity mechanisms certified. Only ordinary media DTO projection and actual renderer usage. Mutable87 not read.",
+  "instructions": "Current hashes checked, prior sameSHA CODESHELL/AGENTS full reading reused; no repeated instruction full read counted."
+}

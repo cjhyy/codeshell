@@ -1,0 +1,211 @@
+{
+  "machineObjects": 75,
+  "actualProjectedScopeRows": 12,
+  "rows": [
+    {
+      "index": 24,
+      "document": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "at": "$[\"files\"][1]",
+      "row": {
+        "path": "packages/web/app/Workbench.tsx",
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+        "lineCount": 1404,
+        "coverage": "selected-static-ordinary-data; not-full semantic review",
+        "selectedLineRanges": [
+          [
+            61,
+            98
+          ],
+          [
+            783,
+            788
+          ],
+          [
+            806,
+            845
+          ]
+        ],
+        "scope": "Controller DTO destructuring and actual message dispatch. Navigation to auth/approval/file callback names and viewport/history hooks does not review their mechanisms."
+      }
+    },
+    {
+      "index": 26,
+      "document": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "at": "$[\"files\"][4]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173,
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": []
+      }
+    },
+    {
+      "index": 30,
+      "document": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][1]",
+      "row": {
+        "path": "packages/web/app/Workbench.tsx",
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+        "coverage": "selected-static-ordinary-data; not-full semantic review"
+      }
+    },
+    {
+      "index": 31,
+      "document": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "at": "$[\"hashOnlyChecks\"][0]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "index": 32,
+      "document": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "at": "$[\"rows\"][0][\"object\"]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173,
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": []
+      }
+    },
+    {
+      "index": 34,
+      "document": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+      "at": "$[\"rows\"][1][\"object\"]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "index": 43,
+      "document": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "at": "$[\"rows\"][8][\"row\"]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": [],
+        "lineCount": 173
+      }
+    },
+    {
+      "index": 46,
+      "document": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+      "at": "$[\"rows\"][11][\"row\"]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "index": 52,
+      "document": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "at": "$[\"files\"][0]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "lines": 173,
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            4,
+            46
+          ],
+          [
+            48,
+            65
+          ],
+          [
+            71,
+            79
+          ],
+          [
+            126,
+            150
+          ],
+          [
+            172,
+            173
+          ]
+        ]
+      }
+    },
+    {
+      "index": 53,
+      "document": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "at": "$[\"files\"][1]",
+      "row": {
+        "path": "packages/web/app/Workbench.tsx",
+        "lines": 1404,
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            74,
+            78
+          ],
+          [
+            157,
+            164
+          ],
+          [
+            783,
+            788
+          ],
+          [
+            806,
+            813
+          ],
+          [
+            818,
+            841
+          ],
+          [
+            863,
+            863
+          ],
+          [
+            868,
+            871
+          ],
+          [
+            876,
+            881
+          ],
+          [
+            890,
+            892
+          ]
+        ]
+      }
+    },
+    {
+      "index": 56,
+      "document": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][30]",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "selected"
+      }
+    },
+    {
+      "index": 57,
+      "document": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][31]",
+      "row": {
+        "path": "packages/web/app/Workbench.tsx",
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+        "coverage": "selected"
+      }
+    }
+  ],
+  "limits": "Only these scope-labelled projections actually printed/read; raw objects retained in coverage-rows. Not all path/SHA query contexts read."
+}

@@ -1,0 +1,36 @@
+{
+  "checkedUTC": "2026-10-17T17:03:39.884835+00:00",
+  "totals": {
+    "productFiles": 14,
+    "testDeclarationFiles": 2,
+    "productFull": 3,
+    "productSelected": 11,
+    "productSemanticLines": 436,
+    "testDeclarationLines": 138,
+    "semanticPlusTestLines": 574,
+    "productDisplayLines": 721,
+    "testDisplayLines": 138,
+    "totalProductAndTestDisplayLines": 859,
+    "testExecutions": 0
+  },
+  "sourcePins": 18,
+  "productAndTestRows": 16,
+  "canonicalRangeUnionsValid": true,
+  "displayCountsAreBodyPlusNavUnion": true,
+  "sourceEndAllSame": true,
+  "historyEndingChangeCount": 0,
+  "historyEndingAddedIncludedCount": 0,
+  "historyEndingRemovedIncludedCount": 0,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "productValidationRuns": 0,
+  "globalCountsModified": false,
+  "receiptWillExcludeSelf": true,
+  "localReportLinks": {
+    "count": 18,
+    "allValidAfterReceiptCreation": true
+  }
+}

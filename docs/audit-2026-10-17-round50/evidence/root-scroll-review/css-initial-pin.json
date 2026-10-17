@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:49:18.948925+00:00",
+  "files": [
+    {
+      "path": "packages/web/app/app.css",
+      "bytes": 21770,
+      "lines": 1177,
+      "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "beforeRootCurrentNavigationAndBody": true
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "plugin-presentation": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/1505",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/2710/path",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/10796/path",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/10796/directSourcePathsInObject/0",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/10797/path",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/10797/directSourcePathsInObject/0",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/3030/path",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/3030/path",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "locator": "/unknownPaths/2778",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/3031/path",
+      "valueChars": 62,
+      "contextStart": 0,
+      "contextEnd": 62,
+      "text": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "wholeValueIncluded": true
+    }
+  ],
+  "plugin-presentation-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/2710/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/10797/sourceHashFields/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/3030/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/3030/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/3031/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "wholeValueIncluded": true
+    }
+  ]
+}

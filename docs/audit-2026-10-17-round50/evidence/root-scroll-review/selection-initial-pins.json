@@ -1,0 +1,24 @@
+{
+  "atUTC": "2026-10-17T16:47:00.807883+00:00",
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173,
+      "beforeRootCurrentScrollBodyAndNavigation": true,
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lines": 1404,
+      "beforeRootCurrentScrollBodyAndNavigation": true,
+      "firstEverSemanticReadPin": null
+    }
+  ],
+  "baseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "role": "Root independent source inspection of prior83-excluded scroll/DOM logic; known prior partial and displayed source, not blind/first-ever/unread claim. No reading85mutable.",
+  "previousGoalTurnClassification": "progress: formal49 integrated237 evidence files, actual scoped source and rejected cost hypothesis."
+}

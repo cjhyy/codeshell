@@ -1,0 +1,163 @@
+{
+  "frozenUTC": "2026-10-17T17:10:40.304901+00:00",
+  "directory": "/tmp/codeshell-audit-round92-goal-extend-review",
+  "role": "Independent targeted ordinary source reviewer, self metadata freeze; no Root91 package read and no runtime certification.",
+  "files": [
+    {
+      "path": "agent-fold-initial-pin.json",
+      "bytes": 322,
+      "sha256": "9291beb8da5b6132d5344c0e9fb8f9005db7c3977588841e278bd03eb657f9e8"
+    },
+    {
+      "path": "chat-consumer-initial-pin.json",
+      "bytes": 315,
+      "sha256": "67352ad3cc69b32e14657fabc0896da83c32d85c878496467720842472c30453"
+    },
+    {
+      "path": "coverage-focused-objects.json",
+      "bytes": 4365,
+      "sha256": "27346b4f2ed01382e3c84a472649e24dc3b9d370b365cd1136e5d418830a9a26"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 4365,
+      "sha256": "27346b4f2ed01382e3c84a472649e24dc3b9d370b365cd1136e5d418830a9a26"
+    },
+    {
+      "path": "coverage-group-objects.json",
+      "bytes": 4365,
+      "sha256": "27346b4f2ed01382e3c84a472649e24dc3b9d370b365cd1136e5d418830a9a26"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 6034,
+      "sha256": "7def7bef1d5046f2e2aa2821b704d42d1dc508cda1d7fe5d730de9b2a6486df2"
+    },
+    {
+      "path": "finding-opinion.json",
+      "bytes": 1641,
+      "sha256": "ba1c8d5dabdaf081bf39fcd1d5c63190498095f3e15a488cc0dfd9e0f59adaec"
+    },
+    {
+      "path": "first-diagnostic.json",
+      "bytes": 585,
+      "sha256": "fe52e5c761448736f98b9ff2695c585277f74624ccc1fb71a536e87f9ab45f01"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1020,
+      "sha256": "eaed90f874b94c3b4eb8c61207f6728d18c1d6a00f66f2d50ab24514c2130a5c"
+    },
+    {
+      "path": "goal-event-initial-pins.json",
+      "bytes": 535,
+      "sha256": "ed5cbbc56f965d29eda9d85d55f25e18158cf9ff113f05e1ddd698b0913fbaf0"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 199098,
+      "sha256": "0aa51654d646b0c16ebc0039721f43f93d90b53e4c297d52071f22982b9537d5"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 1612,
+      "sha256": "f60568c9725f72bc3d22fbc3fc31a38bcc4f60f70af919d3adaa872e307195a8"
+    },
+    {
+      "path": "history-focused-contexts.json",
+      "bytes": 88167,
+      "sha256": "d40ca4b25cd956c66b0679efd399bbe59f502e2a40492c1b8cf9d303448bf729"
+    },
+    {
+      "path": "history-focused-method.py",
+      "bytes": 3721,
+      "sha256": "23c4a88a138c821e76a041e37d7f97cee41aaebf82c03a545efdc07423f1c0e8"
+    },
+    {
+      "path": "history-focused.json",
+      "bytes": 1041081,
+      "sha256": "f712133a9984cf1eecf9ac7417be9b3d6c112709fc155948fcb8dd31d7dbc002"
+    },
+    {
+      "path": "history-group-contexts.json",
+      "bytes": 9816,
+      "sha256": "2cfb006cc3415e0f33d045f428b2208bd8c5c915caac471694d5425a55463010"
+    },
+    {
+      "path": "history-group-method.py",
+      "bytes": 3883,
+      "sha256": "623bef9486bcfec9ca0f7a6f20ed6a30e11050ad0c166498d9aad05ee456fb9d"
+    },
+    {
+      "path": "history-group.json",
+      "bytes": 1041061,
+      "sha256": "cc7b5b94250ea64e278ab908650ffd173a731cc21e466c24eba7eac3cb1f6c3d"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3828,
+      "sha256": "afc4967683553b50c3614887178f93ffb522f9eeba0f035eae53c818538e9f85"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1041145,
+      "sha256": "f8c2d4dbf8b819cd4b29c5881af2bba44684a98b6990aa04ccb1732136618fd6"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 2317,
+      "sha256": "8275e7d176c5b8d52973abb566811bf2ea06e4c62e2ec527388dab8c594d95cf"
+    },
+    {
+      "path": "metadata-reader-syntax-error.json",
+      "bytes": 500,
+      "sha256": "2b1016b4999890a1556a0a4bfd4e2ace88bbdfbf060b85576c42b5d12c4916b1"
+    },
+    {
+      "path": "old-cause-focused-windows.json",
+      "bytes": 60278,
+      "sha256": "72c9f75435c82dd512ad459baf2507de7e12939e3a206e2acccac06833375f4c"
+    },
+    {
+      "path": "producer-initial-pins.json",
+      "bytes": 1014,
+      "sha256": "b9f539451d23821f321a8db62acb4da8a52270342c2ca50b2d5907f1c1b71fb6"
+    },
+    {
+      "path": "render-initial-pins.json",
+      "bytes": 586,
+      "sha256": "1fb055849abf791fdfdf183ab6a8167bfb378da4740c1e036a53bb77d3658c6d"
+    },
+    {
+      "path": "review.md",
+      "bytes": 7601,
+      "sha256": "11341acfd0d219ae92631cbfc2511247d988f708e4da0aac13db3f287a8815ce"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 122749,
+      "sha256": "79ba6e631d1c445218c6df8335b99797ea669242e3cbc08bbcab41df0561b31a"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 26771,
+      "sha256": "3462523cdd33523f6b70a3ebf285df90db153a4e2310ec34a4b1e0150fbe5b00"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1539,
+      "sha256": "1031cc276c6cf7e52f2f193b170db798442ea625be321d3a60d37e85e9f4b9cc"
+    }
+  ],
+  "fileCountExcludingReceipt": 29,
+  "selfExcluded": true,
+  "reportMarkdownLinks": 23,
+  "allRelativeLinksExistIncludingReceiptByConstruction": true,
+  "sourceAndInstructionPins": 18,
+  "allInitialEndingSourcePinsSame": true,
+  "historyMemberByteDrift": 0,
+  "supportedParentProposal": "DESKTOP-R50-01/P3 static opinion only",
+  "additionalFormalIDs": 0,
+  "productExecutions": 0,
+  "ownGitOperations": 0
+}

@@ -1,0 +1,39 @@
+{
+  "metadataUniverse": {
+    "files": 4693,
+    "md": 1457,
+    "json": 3236,
+    "strings": 2129441,
+    "scalars": 3168045,
+    "archiveExactDirectories": 169,
+    "parseErrors": 0,
+    "includeFrozenThrough": 49,
+    "excludeFormalNumericRounds": "50+"
+  },
+  "initialBroadCause": {
+    "matches": 111,
+    "retained": 100,
+    "cap": 100,
+    "actualAllWindowsRead": false
+  },
+  "focused": {
+    "exactGoalExtend": 22,
+    "goalUIFalseSuccess": 33,
+    "actualRead": "All55 locators + bounded240-character text in9877b2; not entire historical docs/scalars."
+  },
+  "group": {
+    "groupGoalExtend": 4,
+    "goalButton": 3,
+    "actualRead": "All7 retained bounded contexts in c77232, cap100 not hit."
+  },
+  "canonicalChecks": [
+    "Seven exact target path/SHA objects are inventory/derived metadata, no full qualifier",
+    "Two overnight TODO path references do not assert semantic full reading",
+    "Protocol test-gap doc discusses goalExtend error/routing tests, not missing callback in live process group",
+    "Existing R13 coverage and derived copies are not new semantic evidence or a correctness guarantee",
+    "B2 reducer not_met pruning differs: marker survives now but grouped leaf lacks callback",
+    "GCTRL-F14 old Goal identity/revision optimistic update/delete issue differs from callback propagation"
+  ],
+  "noveltyLimit": "No exact old same-cause confirmation established within searched and actually reviewed bounded evidence; not a semantic reading of every historical scalar.",
+  "oldFailedDirections": "Permanent skipped execution directions not reopened; no old passes used."
+}

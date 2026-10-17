@@ -1,0 +1,33 @@
+{
+  "role": "Independent targeted source opinion, not blind or runtime verifier; no Root91 artifacts read.",
+  "supportsParentProposedFinding": "DESKTOP-R50-01",
+  "priority": "P3",
+  "title": "Live tool-bearing goal process groups drop the extension callback and omit the approaching-limit button",
+  "classification": "One supported static source defect opinion; parent assigns/counts the sole formal finding.",
+  "counts": {
+    "supportedStaticDefectOpinions": 1,
+    "additionalIndependentFormalIDs": 0,
+    "additionalCandidates": 0,
+    "newRelated": 0
+  },
+  "ordinaryTrigger": [
+    "Goal produced an approaching_limit marker that remains in messages",
+    "Same unfinished user turn already contains a non-bookkeeping tool",
+    "A subsequent top-level model stream makes busy/stream-pointer live flag true and UI renders this state",
+    "Turn group retains marker and internal GoalProgressView receives no onExtend"
+  ],
+  "countercases": [
+    "No-tools turn remains flat with callback",
+    "Warning/request gap can temporarily be flat",
+    "Closed turn tail after last tool may be flat",
+    "No statement that all frames or all extension controls fail"
+  ],
+  "runtimeValidated": false,
+  "failureFeedbackHypothesis": {
+    "promoted": false,
+    "resolvedOkFalseProducerEstablished": false,
+    "knownReadServerPath": "Success ok:true or ordinary error No active run to extend",
+    "limitation": "Do not upgrade arbitrary rejection or fill unreviewed lifecycle timing; no second candidate/ID."
+  },
+  "proposedFix": "Thread existing onExtendGoal into TurnProcessGroupCard and GoalProgressView; no product changes made."
+}

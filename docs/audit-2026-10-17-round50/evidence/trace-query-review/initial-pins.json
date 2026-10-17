@@ -1,0 +1,33 @@
+{
+  "capturedUTC": "2026-10-17T16:45:33.299108+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBody": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBody": true
+    },
+    {
+      "path": "packages/core/src/model-traces/store.ts",
+      "bytes": 23181,
+      "lines": 624,
+      "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "beforeBody": true
+    }
+  ],
+  "actualFilenameInventory": [
+    "packages/core/src/model-traces/store.test.ts",
+    "packages/core/src/model-traces/store.ts"
+  ],
+  "rootReportedContextOnly": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b supplied;ownGit0",
+  "instructionStatus": "CODESHELL217 current read71, unchanged hash carried; repeatpins not new semantic reading.",
+  "bodyReadAtPin": false
+}

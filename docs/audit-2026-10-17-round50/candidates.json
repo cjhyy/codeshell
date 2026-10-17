@@ -1,0 +1,6 @@
+{
+  "baseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "count": 0,
+  "candidates": [],
+  "note": "GOAL-R91-C1 is promoted exactly once asDESKTOP-R50-01 after independent92. Original failure-feedback and numeric-range leads remain unproven/not promoted, not extra formal or retained candidate records. Old permanent failed directions unchanged."
+}

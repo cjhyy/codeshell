@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:58:27.715696+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "bytes": 55140,
+      "lines": 1247,
+      "beforeCurrentLineNavigationAndBody": true
+    }
+  ]
+}

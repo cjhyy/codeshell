@@ -1,0 +1,14 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [],
+  "unboundNavigationReferences": [
+    {
+      "manifest": "scroll-review/source-manifest.json",
+      "collection": "navigationOnlyUnopened",
+      "row": "packages/web/app/main.tsx",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    }
+  ],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows.",
+  "productRuns": 0
+}

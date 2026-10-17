@@ -1,0 +1,269 @@
+packages/web/app/useLatestMessages.ts [66,173]
+66:   const listRef = useRef<HTMLDivElement>(null);
+67:   const contentRef = useRef<HTMLDivElement>(null);
+68:   const following = useRef(true);
+69:   const programmaticTop = useRef<number | null>(null);
+70:   const snappedSize = useRef<{ width: number; height: number } | null>(null);
+71:   const previous = useRef(new Map<string, ChatItem>());
+72:   const unread = useRef(new Set<string>());
+73:   const identity = useRef({ scope, connection, loading, active });
+74:   const [showJump, setShowJump] = useState(false);
+75:   const [newOutputCount, setNewOutputCount] = useState(0);
+76:   const clearNotices = useCallback(() => {
+77:     unread.current.clear();
+78:     setNewOutputCount(0);
+79:   }, []);
+80:   const snap = useCallback(() => {
+81:     const list = listRef.current;
+82:     if (!list) return;
+83:     list.scrollTop = list.scrollHeight;
+84:     programmaticTop.current = list.scrollTop;
+85:     snappedSize.current = { width: list.clientWidth, height: list.clientHeight };
+86:   }, []);
+87:   const resume = useCallback(() => {
+88:     following.current = true;
+89:     clearNotices();
+90:     setShowJump(false);
+91:     snap();
+92:   }, [clearNotices, snap]);
+93: 
+94:   const onScroll = useCallback(() => {
+95:     const list = listRef.current;
+96:     if (!list || !active) return;
+97:     const size = snappedSize.current;
+98:     // Viewport/composer reflow can dispatch scroll before ResizeObserver. Keep
+99:     // an existing follow decision through that layout event, then measure anew.
+100:     if (
+101:       following.current &&
+102:       size &&
+103:       (size.width !== list.clientWidth || size.height !== list.clientHeight)
+104:     ) {
+105:       snap();
+106:       setShowJump(false);
+107:       return;
+108:     }
+109:     const near = list.scrollHeight - list.scrollTop - list.clientHeight <= 100;
+110:     // A bottom snap dispatches its scroll event after more content may arrive.
+111:     // Do not mistake that delayed event for the reader leaving the live tail.
+112:     if (
+113:       programmaticTop.current !== null &&
+114:       Math.abs(list.scrollTop - programmaticTop.current) <= 2
+115:     ) {
+116:       programmaticTop.current = null;
+117:       setShowJump(!near && !following.current);
+118:       return;
+119:     }
+120:     programmaticTop.current = null;
+121:     following.current = near;
+122:     setShowJump(!near);
+123:     if (near) clearNotices();
+124:   }, [active, clearNotices, snap]);
+125: 
+126:   useLayoutEffect(() => {
+127:     const before = identity.current;
+128:     const changedScope = before.scope !== scope;
+129:     const reset =
+130:       changedScope ||
+131:       before.connection !== connection ||
+132:       before.loading !== loading ||
+133:       before.active !== active;
+134:     identity.current = { scope, connection, loading, active };
+135:     const next = new Map(items.filter(visibleOutput).map((item) => [item.id, item]));
+136:     if (reset) {
+137:       clearNotices();
+138:       if (changedScope) {
+139:         following.current = true;
+140:         programmaticTop.current = null;
+141:         setShowJump(false);
+142:       }
+143:     } else if (active && connection === "open" && !loading && !following.current) {
+144:       for (const item of items) {
+145:         if (outputChanged(previous.current.get(item.id), item)) unread.current.add(item.id);
+146:       }
+147:       for (const id of unread.current) if (!next.has(id)) unread.current.delete(id);
+148:       setNewOutputCount(unread.current.size);
+149:     }
+150:     previous.current = next;
+151:     if (active && following.current) snap();
+152:   }, [items, scope, connection, loading, active, approvalCount, clearNotices, snap]);
+153: 
+154:   useEffect(() => {
+155:     const list = listRef.current;
+156:     const content = contentRef.current;
+157:     if (!active || !list || !content || typeof ResizeObserver === "undefined") return;
+158:     const observer = new ResizeObserver(() => {
+159:       if (following.current) snap();
+160:       else if (list.scrollHeight - list.scrollTop - list.clientHeight <= 100) resume();
+161:       else setShowJump(true);
+162:     });
+163:     observer.observe(list);
+164:     observer.observe(content);
+165:     return () => observer.disconnect();
+166:   }, [active, resume, snap]);
+167: 
+168:   const jumpToLatest = useCallback(() => {
+169:     resume();
+170:     listRef.current?.focus({ preventScroll: true });
+171:   }, [resume]);
+172:   return { listRef, contentRef, onScroll, showJump, newOutputCount, jumpToLatest, resume };
+173: }
+
+packages/web/app/Workbench.tsx [757,782]
+757:           hidden={view !== "chat"}
+758:           aria-label="对话"
+759:         >
+760:           <div className="message-viewport">
+761:             <div
+762:               className="messages"
+763:               id={messageListId}
+764:               role="region"
+765:               aria-label="消息列表"
+766:               tabIndex={0}
+767:               ref={latest.listRef}
+768:               onScroll={latest.onScroll}
+769:             >
+770:               <div className="transcript" ref={latest.contentRef}>
+771:                 {controller.chatControls}
+772:                 {controller.loading ? (
+773:                   <div className="banner" role="status">
+774:                     正在恢复会话记录…
+775:                   </div>
+776:                 ) : null}
+777:                 {chat.goal ? (
+778:                   <div className="banner goal">
+779:                     <span>{chat.goal}</span>
+780:                     {controller.goalActions}
+781:                   </div>
+782:                 ) : null}
+
+packages/web/app/Workbench.tsx [863,894]
+863:             {latest.showJump && (
+864:               <button
+865:                 type="button"
+866:                 className="latest-messages"
+867:                 aria-controls={messageListId}
+868:                 aria-label={
+869:                   latest.newOutputCount
+870:                     ? `回到最新消息，${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出`
+871:                     : "回到最新消息"
+872:                 }
+873:                 onClick={latest.jumpToLatest}
+874:               >
+875:                 <span aria-hidden="true">↓</span>
+876:                 回到最新消息
+877:                 {latest.newOutputCount > 0 && (
+878:                   <span className="latest-count" aria-hidden="true">
+879:                     {latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出
+880:                   </span>
+881:                 )}
+882:               </button>
+883:             )}
+884:             <span
+885:               className="latest-announcement"
+886:               role="status"
+887:               aria-live="polite"
+888:               aria-atomic="true"
+889:             >
+890:               {latest.newOutputCount > 0
+891:                 ? `${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出，可回到最新消息。`
+892:                 : ""}
+893:             </span>
+894:           </div>
+
+packages/web/app/app.css [440,516]
+440: .banner .ghost {
+441:   margin-left: 8px;
+442:   padding: 2px 8px;
+443: }
+444: .message-viewport {
+445:   position: relative;
+446:   display: flex;
+447:   flex: 1;
+448:   min-width: 0;
+449:   min-height: 0;
+450: }
+451: .latest-messages {
+452:   position: absolute;
+453:   z-index: 2;
+454:   bottom: 12px;
+455:   left: 50%;
+456:   transform: translateX(-50%);
+457:   display: flex;
+458:   align-items: center;
+459:   justify-content: center;
+460:   gap: 8px;
+461:   max-width: calc(100% - 24px);
+462:   min-height: 36px;
+463:   padding: 8px 14px;
+464:   border: 1px solid var(--border);
+465:   border-radius: 24px;
+466:   background: var(--surface);
+467:   color: var(--text);
+468:   box-shadow: var(--shadow);
+469:   font-size: 12px;
+470:   cursor: pointer;
+471:   white-space: nowrap;
+472: }
+473: .latest-messages:hover {
+474:   background: var(--hover);
+475: }
+476: .latest-count {
+477:   color: var(--muted);
+478:   font-size: 11px;
+479: }
+480: .latest-announcement {
+481:   position: absolute;
+482:   width: 1px;
+483:   height: 1px;
+484:   padding: 0;
+485:   margin: -1px;
+486:   overflow: hidden;
+487:   clip-path: inset(50%);
+488:   white-space: nowrap;
+489:   border: 0;
+490: }
+491: .messages {
+492:   flex: 1;
+493:   min-height: 0;
+494:   overflow-y: auto;
+495:   overscroll-behavior: contain;
+496:   padding: 28px 24px 16px;
+497: }
+498: .transcript {
+499:   max-width: 736px;
+500:   width: 100%;
+501:   display: flex;
+502:   flex-direction: column;
+503:   gap: 18px;
+504:   margin: 0 auto;
+505: }
+506: .chat-empty .messages {
+507:   display: flex;
+508:   padding-top: 32px;
+509: }
+510: .chat-empty .transcript {
+511:   justify-content: center;
+512: }
+513: .empty-chat {
+514:   text-align: center;
+515:   padding: 24px 0 32px;
+516: }
+
+packages/web/app/app.css [1085,1101]
+1085:   .workbench-topbar {
+1086:     padding: 0 12px;
+1087:     gap: 8px;
+1088:     height: 50px;
+1089:   }
+1090:   .messages {
+1091:     padding: 24px 18px 12px;
+1092:   }
+1093:   .transcript {
+1094:     gap: 16px;
+1095:   }
+1096:   .msg {
+1097:     font-size: 14px;
+1098:   }
+1099:   .msg.user {
+1100:     max-width: 92%;
+1101:   }

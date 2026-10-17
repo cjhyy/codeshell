@@ -1,0 +1,2149 @@
+{
+  "actualDistinctRows": 59,
+  "scope": "Original row metadata qualifiers/ancestor scalar limitations only. No source body/capture read. Filename is a locator hint, not proof of semantic coverage.",
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+      "jsonPointer": "/files/4",
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "frozenSha256",
+        "sha256",
+        "frozenBytes",
+        "currentEqualsFrozen"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "frozenSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.133068+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+      "jsonPointer": "/files/11",
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "frozenSha256",
+        "sha256",
+        "frozenBytes",
+        "currentEqualsFrozen"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "frozenSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+          "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.134088+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "jsonPointer": "/files/34",
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.135051+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "jsonPointer": "/files/41",
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.135576+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "jsonPointer": "/workerSourceChecks/22",
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "path",
+        "sha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.136005+00:00",
+      "additionalOriginalMetadataFields": {
+        "manifest": "groups-source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "jsonPointer": "/workerSourceChecks/29",
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "path",
+        "sha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.136407+00:00",
+      "additionalOriginalMetadataFields": {
+        "manifest": "groups-source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/root-source-manifest.json",
+      "documentSha256": "29f2cf28e68063c1b4c95dd8891d7fbb7de2d03620556327542a13c5c1435656",
+      "jsonPointer": "/files/3",
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentMatchesFrozen",
+        "scope"
+      ],
+      "originalMetadataFields": {
+        "scope": "static selected1-100; one source-body comparison only, Desktop module not imported/compiled"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected source pins and scope only, not full consumer/transitive/renderer/storage/identity runtime coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.137011+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/source-manifest.json",
+      "documentSha256": "2b0f46b69bdbbf5cc919c3fa5cb731dc190e56e27cd8483ea59517f27db3c5a1",
+      "jsonPointer": "/files/38",
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob",
+        "currentSha256",
+        "mainSha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected frozen source/contract pins and current/main equality, not full-file/transitive/all-repository coverage. New fixture/extraction artifacts are in evidence-index."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b",
+          "currentSha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b",
+          "mainSha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.137924+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/source-manifest.json",
+      "documentSha256": "2b0f46b69bdbbf5cc919c3fa5cb731dc190e56e27cd8483ea59517f27db3c5a1",
+      "jsonPointer": "/workerSourceChecks/57",
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "path",
+        "sha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Selected frozen source/contract pins and current/main equality, not full-file/transitive/all-repository coverage. New fixture/extraction artifacts are in evidence-index."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.138287+00:00",
+      "additionalOriginalMetadataFields": {
+        "manifest": "root-source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/review-streaming-independent-source-manifest.json",
+      "documentSha256": "db1c9770339affc02997b2d8b18eb1f3c24941f1961b786a8822d7dbc9000778",
+      "jsonPointer": "/files/1",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "initialFilesystemSha256",
+        "finishFilesystemSha256",
+        "firstPinTiming",
+        "coverage",
+        "selectedLineRanges",
+        "lineCount",
+        "coveredLineCount",
+        "gitComparisonPerformed",
+        "semanticReadStatus"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            173
+          ]
+        ],
+        "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "First byte capture only at initial write; finish/status updated after exact declared review reading. No product/parser/test/helper invoked.",
+          "declaredProductReadLines": 835,
+          "declaredHistoryReadLines": 91
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "initialFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "finishFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.138879+00:00",
+      "additionalOriginalMetadataFields": {
+        "coveredLineCount": 173
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/review-streaming-root-source-manifest.first.json",
+      "documentSha256": "eda8ff3ac719fcb6f498421aa375bb265640d297fba8f8e02f0b87a3e311797e",
+      "jsonPointer": "/files/1",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "initialFilesystemSha256",
+        "finishFilesystemSha256",
+        "firstPinTiming",
+        "coverage",
+        "selectedLineRanges",
+        "lineCount",
+        "coveredLineCount",
+        "rootFrozenGitBlobBound"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            173
+          ]
+        ]
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "initialFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "finishFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.139598+00:00",
+      "additionalOriginalMetadataFields": {
+        "coveredLineCount": 173
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/review-streaming-root-source-manifest.json",
+      "documentSha256": "6e028198ef2c956fea5177395c90d4feceb4879a2a47a6e188d35a7af68e5e3c",
+      "jsonPointer": "/files/1",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "initialFilesystemSha256",
+        "finishFilesystemSha256",
+        "firstPinTiming",
+        "coverage",
+        "selectedLineRanges",
+        "lineCount",
+        "coveredLineCount",
+        "rootFrozenGitBlobBound"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            173
+          ]
+        ]
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "initialFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "finishFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.139956+00:00",
+      "additionalOriginalMetadataFields": {
+        "coveredLineCount": 173
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/streaming-source-manifest.json",
+      "documentSha256": "e215126d8d5a159a0447ec07b131f0f9c12c2bb33576c2ebc4b64ba1e7e521a7",
+      "jsonPointer": "/files/3",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "finishFilesystemSha256",
+        "initialAuthorFilesystemSha256",
+        "firstSemanticReadSha256",
+        "firstPinTiming",
+        "lineCount",
+        "coverage",
+        "selectedLineRanges",
+        "coveredLineCount",
+        "role",
+        "gitBlobVerifiedByAuthor"
+      ],
+      "originalMetadataFields": {
+        "firstSemanticReadSha256": null,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            173
+          ]
+        ]
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "productContractReadLines": 756,
+          "instructionReadLines": 217,
+          "historyReadLines": 103,
+          "note": "Whole-byte hash and source coverage kept separate. Five product/test files124+151+173+83+98 read full; types91 and MarkdownProps/classes36 selected only. Dedicated initial hashes for already-read files were captured after source reading; earlier coverage-prep byte pins do not prove read-time semantics. No source/test/helper was executed."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "finishFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "initialAuthorFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.140449+00:00",
+      "additionalOriginalMetadataFields": {
+        "role": "product-or-contract",
+        "coveredLineCount": 173
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+      "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+      "jsonPointer": "/files/16",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob",
+        "currentWorkingTreeMatchesMain"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "currentSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+          "mainSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.141300+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+      "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+      "jsonPointer": "/workerSourceChecks/37",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "manifest",
+        "path",
+        "sha256",
+        "coverage",
+        "rootBoundFrozenGitBlob",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.141999+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading.",
+        "manifest": "streaming-source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+      "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+      "jsonPointer": "/workerSourceChecks/48",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "manifest",
+        "path",
+        "sha256",
+        "coverage",
+        "rootBoundFrozenGitBlob",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.142475+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading.",
+        "manifest": "review-streaming-root-source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/source-manifest.json",
+      "documentSha256": "f93b2017bba0858460c52ec2dc0c999c0e0b7173ca3dc0b62f249f14d69c883b",
+      "jsonPointer": "/workerSourceChecks/55",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "manifest",
+        "path",
+        "sha256",
+        "coverage",
+        "rootBoundFrozenGitBlob",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.142975+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading.",
+        "manifest": "review-streaming-independent-source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/81",
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "totalLines",
+        "pinTimeUTC",
+        "coverage"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.144117+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/114",
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "totalLines",
+        "pinTimeUTC",
+        "coverage"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.144566+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/127",
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "totalLines",
+        "pinTimeUTC",
+        "coverage"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.145019+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/137",
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "totalLines",
+        "pinTimeUTC",
+        "coverage"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.145456+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/161",
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "totalLines",
+        "pinTimeUTC",
+        "coverage"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.145995+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/157",
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+          "currentSha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+          "mainSha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.147111+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/175",
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b",
+          "currentSha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b",
+          "mainSha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.147759+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/184",
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+          "currentSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+          "mainSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.148526+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/189",
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+          "currentSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+          "mainSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.149230+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/205",
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae",
+          "currentSha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae",
+          "mainSha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.149888+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/83",
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.150548+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/116",
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.151173+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/129",
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.151767+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/139",
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.152464+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/163",
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.153112+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "documentSha256": "d4055279c739d9eac94419c1648fb3fe0187c178b6fd479311a2d8aad5a59d1f",
+      "jsonPointer": "/files/3",
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "lineCount",
+        "coverage",
+        "selectedLineRanges",
+        "coveredLineCount",
+        "sourceKind",
+        "initialPinArtifact",
+        "initialPinUTC",
+        "initialSemanticReadSha256",
+        "prepRow",
+        "finishBytes",
+        "finishSha256",
+        "matchesInitialPin",
+        "firstEverReadClaim"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            117,
+            118
+          ],
+          [
+            164,
+            174
+          ],
+          [
+            178,
+            186
+          ]
+        ],
+        "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+        "firstEverReadClaim": false
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "coverageLimits": "Inclusive1-based audited ranges. Sidebar1514–1522/1533–1537 and CommandPalette140–163/175–177/187–192 were printed adjacent source but actual actions, native menu/window behavior, time formatting and unrelated navigation entries not audited or invoked. Locator imports Sidebar58/CommandPalette10 are navigation only, not additional full-module claims. Do not add duplicated priorR12 or other author lines as globally new coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "finishSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.153734+00:00",
+      "additionalOriginalMetadataFields": {
+        "sourceKind": "product",
+        "coveredLineCount": 22
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "documentSha256": "d4055279c739d9eac94419c1648fb3fe0187c178b6fd479311a2d8aad5a59d1f",
+      "jsonPointer": "/files/3/prepRow",
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "lineCount",
+        "sha256",
+        "pinBeforeSelectedBodyOrLocatorRead",
+        "initialSemanticReadSha256"
+      ],
+      "originalMetadataFields": {
+        "pinBeforeSelectedBodyOrLocatorRead": true,
+        "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "coverageLimits": "Inclusive1-based audited ranges. Sidebar1514–1522/1533–1537 and CommandPalette140–163/175–177/187–192 were printed adjacent source but actual actions, native menu/window behavior, time formatting and unrelated navigation entries not audited or invoked. Locator imports Sidebar58/CommandPalette10 are navigation only, not additional full-module claims. Do not add duplicated priorR12 or other author lines as globally new coverage."
+        },
+        {
+          "coverage": "selected",
+          "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "firstEverReadClaim": false
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.153973+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "documentSha256": "8084f04522f1db3d4d0d3cd54a16608b0b62c0a76bc399be73620c35e6fac18a",
+      "jsonPointer": "/files/22",
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "currentSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+          "mainSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.154879+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "documentSha256": "8084f04522f1db3d4d0d3cd54a16608b0b62c0a76bc399be73620c35e6fac18a",
+      "jsonPointer": "/workerSourceChecks/26",
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.155182+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "files",
+        "manifest": "shortcut-hints-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "documentSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+      "jsonPointer": "/hashOnlyFiles/9",
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "firstSha256",
+        "matchesFirstPin",
+        "firstPinArtifact",
+        "coverage",
+        "firstPinCapturedAtUTC"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only; no product body semantic reading"
+      },
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+          "firstSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.155897+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "documentSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d",
+      "jsonPointer": "/files/32",
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+          "currentSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+          "mainSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.156459+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "documentSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d",
+      "jsonPointer": "/hashOnlyChecks/9",
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only; no product body semantic reading"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.156780+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "dataset-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+      "jsonPointer": "/files/1",
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "lineCount",
+        "coverage",
+        "selectedLineRanges",
+        "coveredLineCount",
+        "displayedLineRanges",
+        "displayedLineCount",
+        "additionalNavigationSnippetLines",
+        "firstPinArtifact",
+        "firstPinUTC",
+        "firstDisplayToolChunks",
+        "exactFirstDisplayWallClockUTC",
+        "snapshotCapturedAtUTC",
+        "snapshotTiming",
+        "scope"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            5,
+            20
+          ],
+          [
+            33,
+            49
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            22
+          ],
+          [
+            33,
+            64
+          ],
+          [
+            128,
+            128
+          ],
+          [
+            140,
+            140
+          ]
+        ],
+        "displayedLineCount": 56,
+        "additionalNavigationSnippetLines": [
+          1,
+          5,
+          12,
+          13,
+          18,
+          19,
+          22,
+          33,
+          37,
+          43,
+          47,
+          48,
+          64,
+          128,
+          140
+        ],
+        "firstDisplayToolChunks": "4c3572",
+        "exactFirstDisplayWallClockUTC": null,
+        "scope": "LocalStorage key/type/load/save only. applyTheme/applyThemePack/initTheme entry names are navigation, system/DOM/surface machinery not followed."
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38"
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.157263+00:00",
+      "additionalOriginalMetadataFields": {
+        "coveredLineCount": 33
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+      "jsonPointer": "/files/3",
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "lineCount",
+        "coverage",
+        "selectedLineRanges",
+        "coveredLineCount",
+        "displayedLineRanges",
+        "displayedLineCount",
+        "additionalNavigationSnippetLines",
+        "firstPinArtifact",
+        "firstPinUTC",
+        "firstDisplayToolChunks",
+        "exactFirstDisplayWallClockUTC",
+        "snapshotCapturedAtUTC",
+        "snapshotTiming",
+        "scope"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            118,
+            128
+          ],
+          [
+            141,
+            142
+          ],
+          [
+            165,
+            180
+          ],
+          [
+            243,
+            245
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            16,
+            16
+          ],
+          [
+            53,
+            54
+          ],
+          [
+            61,
+            61
+          ],
+          [
+            76,
+            76
+          ],
+          [
+            91,
+            91
+          ],
+          [
+            100,
+            100
+          ],
+          [
+            116,
+            142
+          ],
+          [
+            151,
+            151
+          ],
+          [
+            165,
+            191
+          ],
+          [
+            243,
+            245
+          ]
+        ],
+        "displayedLineCount": 65,
+        "additionalNavigationSnippetLines": [
+          16,
+          53,
+          54,
+          61,
+          76,
+          91,
+          100,
+          119,
+          151,
+          165,
+          174,
+          243,
+          244
+        ],
+        "firstDisplayToolChunks": "4c3572",
+        "exactFirstDisplayWallClockUTC": null,
+        "scope": "Stable ID/plain-or-i18n name/source and builtin/default lookup. Audio/frame/surface definitions only display/navigation, not mechanism audit."
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38"
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.157577+00:00",
+      "additionalOriginalMetadataFields": {
+        "coveredLineCount": 32
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+      "jsonPointer": "/hashOnlyFiles/0",
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "unchanged",
+        "firstPinArtifact",
+        "coverage",
+        "reason"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only; no source body read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38"
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.157849+00:00",
+      "additionalOriginalMetadataFields": {
+        "reason": "Preview component not followed beyond leaf prop boundary"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+      "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+      "jsonPointer": "/files/21",
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+          "currentSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+          "mainSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.158391+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+      "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+      "jsonPointer": "/files/24",
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+          "currentSha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+          "mainSha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.158712+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+      "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+      "jsonPointer": "/files/25",
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+          "currentSha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+          "mainSha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.159123+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+      "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+      "jsonPointer": "/workerSourceChecks/25",
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.159435+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "files",
+        "manifest": "appearance-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+      "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+      "jsonPointer": "/workerSourceChecks/27",
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.159748+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "files",
+        "manifest": "appearance-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/source-manifest.json",
+      "documentSha256": "3524e68119f0717849a05fe0c792d7d57d45b2cff6bcd861ea2b1d159e2e6609",
+      "jsonPointer": "/hashOnlyChecks/4",
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "originalMetadataFields": {
+        "coverage": "hash-only; no source body read"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.160057+00:00",
+      "additionalOriginalMetadataFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read.",
+        "collection": "hashOnlyFiles",
+        "manifest": "appearance-frontier/source-manifest.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "documentSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b",
+      "jsonPointer": "/sources/7",
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "coverage",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "originalMetadataFields": {
+        "coverage": "full; static responsive navigation focus contract only"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.160412+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "documentSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b",
+      "jsonPointer": "/sources/8",
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "coverage",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected lines 1-300; navigation ownership only; account/actions excluded"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.160666+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "documentSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b",
+      "jsonPointer": "/sources/20",
+      "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "coverage",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "originalMetadataFields": {
+        "coverage": "selected lines 1-260; grouping and option identity caller; not rendered this round"
+      },
+      "ancestorScalarQualifiers": [
+        {
+          "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "76035097cf49fd084e37b40af41083399abccdb9fb8001a3e794f9c0ae006606"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.160891+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "documentSha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "jsonPointer": "/files/53",
+      "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "SHA refers to frozen Git blobs. Current equality is separate. Source inventory is selected evidence, not a full-depth review coverage claim."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "76035097cf49fd084e37b40af41083399abccdb9fb8001a3e794f9c0ae006606"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.161650+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "documentSha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "jsonPointer": "/files/62",
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "SHA refers to frozen Git blobs. Current equality is separate. Source inventory is selected evidence, not a full-depth review coverage claim."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.161915+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "documentSha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "jsonPointer": "/files/72",
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "SHA refers to frozen Git blobs. Current equality is separate. Source inventory is selected evidence, not a full-depth review coverage claim."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.162158+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "jsonPointer": "/files/48",
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "SHAs refer to frozen Git blobs. Installed SDK snapshot separately recorded, not claimed as Git-tracked source. Selected inventory/hash is not full-depth review coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.162497+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "jsonPointer": "/files/54",
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sameCurrentSourceSha": true,
+      "allRowFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [
+        {
+          "note": "SHAs refer to frozen Git blobs. Installed SDK snapshot separately recorded, not claimed as Git-tracked source. Selected inventory/hash is not full-depth review coverage."
+        }
+      ],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.162727+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+      "documentSha256": "e810f083973c5cc5e38116502951dce3403ef6159ca8e73fd3d50b721c4e1d88",
+      "jsonPointer": "/45",
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "sha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "6183840d34bdaff2f06abb954c55eb39f6419d3077240b0c224a4b322211ad59"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.163310+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+      "documentSha256": "861321b5ca84234cfc4b0fb5f4f3e5fd1219d10895ca269e9e7658cd1a7c0977",
+      "jsonPointer": "/60",
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "sha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "6183840d34bdaff2f06abb954c55eb39f6419d3077240b0c224a4b322211ad59"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.163750+00:00",
+      "additionalOriginalMetadataFields": {}
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+      "documentSha256": "861321b5ca84234cfc4b0fb5f4f3e5fd1219d10895ca269e9e7658cd1a7c0977",
+      "jsonPointer": "/60",
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "sameCurrentSourceSha": false,
+      "allRowFieldNames": [
+        "path",
+        "sha256"
+      ],
+      "originalMetadataFields": {},
+      "ancestorScalarQualifiers": [],
+      "association": {
+        "sameObjectUniqueSourcePath": true,
+        "sameObjectUniqueHash": true,
+        "hashFields": {
+          "sha256": "6183840d34bdaff2f06abb954c55eb39f6419d3077240b0c224a4b322211ad59"
+        }
+      },
+      "reviewedUTC": "2026-10-17T16:49:45.164144+00:00",
+      "additionalOriginalMetadataFields": {}
+    }
+  ]
+}
