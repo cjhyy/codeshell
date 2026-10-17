@@ -48,6 +48,7 @@ export function watchElectronTestProcess(child, options = {}) {
     clearInterval: cancelInterval = clearInterval,
     reportFailure: fail = reportFailure,
     now = Date.now,
+    onOwnedSnapshot,
   } = options;
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)
     throw new Error("Electron test timeoutMs must be an integer between 1 and 2147483647");
@@ -78,6 +79,22 @@ export function watchElectronTestProcess(child, options = {}) {
   const owned = new Map([[root.pid, root]]);
   rememberOwnedProcesses(owned, initial);
   let state = "watching";
+  const notifyOwnedSnapshot = (current, phase) => {
+    if (typeof onOwnedSnapshot !== "function") return;
+    try {
+      // Copies only: observers cannot alter the authority snapshot or remembered map.
+      const ownedCurrent = current
+        .filter((item) => {
+          const pinned = owned.get(item.pid);
+          return pinned?.ppid === item.ppid && pinned?.birth === item.birth;
+        })
+        .map(({ pid, ppid, birth }) => ({ pid, ppid, birth }));
+      onOwnedSnapshot({ phase, ownedCurrent });
+    } catch {
+      /* Advisory observers never interrupt identity checks or cleanup. */
+    }
+  };
+  notifyOwnedSnapshot(initial, "initial");
   let snapshotFailureReported = false;
   let resolveCompleted;
   const completed = new Promise((resolve) => {
@@ -92,6 +109,7 @@ export function watchElectronTestProcess(child, options = {}) {
     try {
       const current = snapshot();
       rememberOwnedProcesses(owned, current);
+      notifyOwnedSnapshot(current, state);
       return new Map(current.map((item) => [item.pid, item]));
     } catch (error) {
       if (!snapshotFailureReported) {

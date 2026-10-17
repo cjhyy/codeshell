@@ -27,6 +27,7 @@ import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.
 import { createNsisCheckpointDiagnostics } from "./windows-nsis-checkpoint-diagnostics.mjs";
 import { collectNsisCrashEvidence } from "./windows-nsis-crash-evidence.mjs";
 import { observeNsisUninstallLeftovers } from "./windows-nsis-leftover-metadata.mjs";
+import { createNsisReplacementRoleObserver } from "./windows-nsis-process-roles.mjs";
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
 import {
@@ -147,6 +148,7 @@ export async function runNsisOwnedProcess({
   spawnProcess = spawn,
   watch = watchElectronTestProcess,
   takeSnapshot = snapshotElectronTestProcesses,
+  replacementRoles,
 }) {
   const operation = {
     label,
@@ -160,6 +162,11 @@ export async function runNsisOwnedProcess({
   };
   report.processes.push(operation);
   let child, monitor;
+  const roleObserver =
+    label === "replace" && replacementRoles
+      ? createNsisReplacementRoleObserver({ ...replacementRoles, environment })
+      : null;
+  if (roleObserver) operation.roleObservation = roleObserver.receipt;
   const tails = { stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
   let closeTimer;
   const recordError = (message) => {
@@ -213,7 +220,7 @@ export async function runNsisOwnedProcess({
     const candidate = watch(child, {
       timeoutMs,
       snapshotProcesses: () => {
-        const rows = takeSnapshot();
+        const rows = roleObserver ? roleObserver.snapshot() : takeSnapshot();
         const pinned = rows.find(
           (row) => row.pid === child.pid && row.ppid === process.pid && row.birth,
         );
@@ -223,6 +230,7 @@ export async function runNsisOwnedProcess({
       reportFailure: (message) => {
         recordError(message);
         checkpoint("custody-error", { label });
+        roleObserver?.markFailure(); // Original error is recorded before advisory metadata.
       },
       signalProcess: (pid, signal) => {
         // Called only after the unchanged watchdog has freshly authorized this birth.
@@ -231,6 +239,7 @@ export async function runNsisOwnedProcess({
         checkpoint("cleanup-signal-request", { label });
         process.kill(pid, signal);
       },
+      ...(roleObserver ? { onOwnedSnapshot: roleObserver.onOwnedSnapshot } : {}),
     });
     assert.ok(
       typeof candidate === "function" &&
@@ -422,7 +431,7 @@ export async function runWindowsNsisAcceptance(args) {
   const privateBuild = join(root, "private-build");
   const temporary = join(privateBuild, "tmp");
   let environment;
-  const processStep = (label, executable, argv, env, timeoutMs) =>
+  const processStep = (label, executable, argv, env, timeoutMs, replacementRoles) =>
     runNsisOwnedProcess({
       label,
       executable,
@@ -432,6 +441,7 @@ export async function runWindowsNsisAcceptance(args) {
       timeoutMs,
       report,
       checkpoint,
+      ...(replacementRoles ? { replacementRoles } : {}),
     });
   let baselineInventory;
   let postUninstallAbsenceFailed = false;
@@ -500,6 +510,7 @@ export async function runWindowsNsisAcceptance(args) {
             "windows-nsis-crash-evidence.mjs",
             "windows-nsis-crash-evidence.ps1",
             "windows-nsis-leftover-metadata.mjs",
+            "windows-nsis-process-roles.mjs",
           ].map(async (file) => [file, sha256(await readFile(join(here, file)))]),
         ),
       ),
@@ -643,6 +654,14 @@ export async function runWindowsNsisAcceptance(args) {
         nsisInstallArguments(installation, root),
         environment,
         BUDGETS.installer,
+        label === "replace"
+          ? {
+              root,
+              setup,
+              uninstaller: join(installation, NSIS_IDENTITY.uninstaller),
+              temporary,
+            }
+          : undefined,
       );
     };
     const runUi = async (label, expected) => {
