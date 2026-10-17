@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.test.tsx:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'react-dom/client' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.test.tsx'
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [48.00ms]
+Bun test process failed (1)

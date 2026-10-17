@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts:
+(pass) a filesystem-root project is found at its root but not for its ordinary child cwd [4.11ms]
+(pass) ordinary project descendants and the longest nested project still match [0.16ms]
+(pass) the same filesystem-root descendant boundary also occurs for a V2 secondary root [0.05ms]
+(pass) image/jpg normalization returns a jpeg that exceeds the advertised per-image limit [5.49ms]
+(pass) preparation forwards oversized image/jpg metadata to the injected upload boundary [6.98ms]
+(pass) a small image/jpg stays usable inline and an oversized GIF fails before upload [4.67ms]
+
+ 6 pass
+ 0 fail
+ 21 expect() calls
+Ran 6 tests across 1 file. [185.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

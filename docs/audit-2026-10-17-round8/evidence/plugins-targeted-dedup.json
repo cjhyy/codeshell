@@ -1,0 +1,22 @@
+{
+  "corpusReceipt": "plugins-dedup-corpus.json",
+  "patterns": {
+    "marketplace-windows": "(marketplace|deriveMarketplaceName).{0,130}(windows|backslash|separator|win32)|(?:windows|backslash).{0,100}(marketplace|deriveMarketplaceName)",
+    "component-paths": "(codex|plugin).{0,100}(custom|declared|manifest).{0,70}(skills|agents)|(?:skills|agents).{0,100}(ignored|hardcoded)"
+  },
+  "hits": {
+    "marketplace-windows": [],
+    "component-paths": [
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[1].text",
+        "excerpt": " operational confusion and the tool is exposed to users and agents who might make input mistakes.\", \"verify_reason\": \"The parseSchedule function silently returns a hardcoded 10-minute interval (line 136) when the schedule string doesn't match the expected formats (s/m/h/d suffixes) or a valid millisecond number."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[9].text",
+        "excerpt": " operational confusion and the tool is exposed to users and agents who might make input mistakes.\", \"verify_reason\": \"The parseSchedule function silently returns a hardcoded 10-minute interval (line 136) when the schedule string doesn't match the expected formats (s/m/h/d suffixes) or a valid millisecond number."
+      }
+    ]
+  }
+}

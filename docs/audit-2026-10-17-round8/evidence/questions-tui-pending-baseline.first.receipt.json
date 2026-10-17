@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/tui/src/ui/pending-questions.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.145,
+  "firstRun": true
+}

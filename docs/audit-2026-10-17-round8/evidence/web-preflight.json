@@ -1,0 +1,18 @@
+{
+  "testFile": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts",
+  "checks": [
+    {
+      "relativeImport": "../../../packages/web/src/lib/format.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/format.ts",
+      "exists": true,
+      "withinWorktree": true
+    },
+    {
+      "relativeImport": "../../../packages/web/src/lib/mobileAttachments.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/mobileAttachments.ts",
+      "exists": true,
+      "withinWorktree": true
+    }
+  ],
+  "runtime": "guarded Bun; browser globals, network, upload service and native APIs are not initialized"
+}

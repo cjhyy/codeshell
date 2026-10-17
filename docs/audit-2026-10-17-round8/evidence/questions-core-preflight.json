@@ -1,0 +1,18 @@
+{
+  "fixture": "docs/audit-2026-10-17-round8/evidence/questions-core-options.test.ts",
+  "imports": [
+    {
+      "specifier": "../../../packages/core/src/tool-system/builtin/ask-user.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/ask-user.ts",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../packages/core/src/tool-system/context.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/context.ts",
+      "exists": true,
+      "insideRepo": true
+    }
+  ],
+  "scope": "independent Core tool callbacks, no Mobile/Web mapper import or alternate multiselect reproduction"
+}

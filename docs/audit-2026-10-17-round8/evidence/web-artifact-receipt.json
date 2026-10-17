@@ -1,0 +1,67 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "excludesSelf": true,
+  "method": "Current artifact bytes after adding read-only main source disposition; aggregate final batch index is authoritative. First raw logs and test fixture unchanged; no test rerun.",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+      "bytes": 181769,
+      "sha256": "52291431d84c432fd348b7d5989dc2b9a409240419054477755c8d04ff1c9df9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.first.exit.json",
+      "bytes": 369,
+      "sha256": "5b0d300b3f2475a25e15e6a0e5e6212ee18821f44841d77834545d796fbb6999"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.first.log",
+      "bytes": 800,
+      "sha256": "919901ca6c338f6097b19689d677347876fbd12496c153ee0b98af23c4e022bc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts",
+      "bytes": 4778,
+      "sha256": "ccd9f934ceb3fbb1c047dbdc63f86b599220d0811449e8184aeff2080f9754ec"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-existing-display-baseline.first.exit.json",
+      "bytes": 450,
+      "sha256": "3f1ebad67375feec72d50b7ee3f9059456577ba6867d0cde012ebab00aa8ae51"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-existing-display-baseline.first.log",
+      "bytes": 2259,
+      "sha256": "a3fe37cb7f4cbe2079677b29d0c19633e659cabe73cfaf7c3978270b1ba16ca0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-findings.json",
+      "bytes": 4731,
+      "sha256": "a882381f0958cb40f4d76cc09279ae690253ed70d7fb1e28e8af924f0d2beca7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-main-source-disposition.json",
+      "bytes": 994,
+      "sha256": "f9826ea1f895fe17644e013a69f9bec1a29afef1162eeec64c13e3c3b3c27441"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+      "bytes": 720,
+      "sha256": "5e74348a8f8ec86bd271222742e4f13a438f356f10e0493aac57c3f5a404d3a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "bytes": 11910,
+      "sha256": "c1de0091382dc45f82f9c5424a495bb71374f34423012827a019f98e13e074a9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-validation.json",
+      "bytes": 3682,
+      "sha256": "f14cc8932854f0ff7b7ecd1620a631537011ff10374cd10d00e0b0c9a7625637"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/web.md",
+      "bytes": 8362,
+      "sha256": "3ecb7e29d33ae46a5aa4a30692bbd0245dd82ca6bd628b0cdada44a168ce023e"
+    }
+  ]
+}

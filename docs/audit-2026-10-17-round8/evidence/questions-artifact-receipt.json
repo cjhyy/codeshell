@@ -1,0 +1,144 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "confirmedFindings": 0,
+  "candidates": 2,
+  "testAttempts": 4,
+  "cleanShards": 2,
+  "cleanPass": 10,
+  "cleanAssertions": 30,
+  "failedShards": 2,
+  "artifactCount": 26,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round8/questions.md",
+      "bytes": 6205,
+      "sha256": "b5403533d5c678029c315e0ec48125a72e0381b9bce132802dd7b78d9fb69537"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+      "bytes": 78061,
+      "sha256": "b8bf7612968474cf492206e8479e0735e7f83836183a28ec0e9039a815d3f2db"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-candidates.json",
+      "bytes": 2515,
+      "sha256": "b89e6b2e3ee0768ce8f2a17a079aa3561fedec6c28d991cc9ea28cb05b95f495"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-core-options.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-core-options.first.log",
+      "bytes": 623,
+      "sha256": "d9234cd0473f29babc0b56ef3fb721078d3fcf2caf1fbb8411084af9f8adbd64"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-core-options.first.receipt.json",
+      "bytes": 242,
+      "sha256": "d7f5d3ecffa5f98766d56ebc5751b3fd71e9174f6e34df3630b7fdf072dd18fc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-core-options.test.ts",
+      "bytes": 2442,
+      "sha256": "db47b64822f7c755ddbb0ba7753f6e927a8529308966b400ea4ae7aeea4dc016"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-core-preflight.json",
+      "bytes": 746,
+      "sha256": "9cdb2f721361025e08a4ab0328f34aba2ddddc87f5524e1bf6d5a59aa0147efb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+      "bytes": 202629,
+      "sha256": "4e00602657fdaea167746dbf7b8e60866b5903f1385d87cb3ca934a44f61e374"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-findings.json",
+      "bytes": 238,
+      "sha256": "6c7db3b19813770b28e2a7f06f1ded2f9e5d6599ada1d70afc669108ccd1077a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.first.exit.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.first.log",
+      "bytes": 482,
+      "sha256": "d4b0190059925e78909e0019aa0714b3811a1dd1cc901d9a9062715b88e4080d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.first.receipt.json",
+      "bytes": 338,
+      "sha256": "45d45d1be680981e14ff85a65d8cc98dbe02592c2ea3af68bc84b7d2d581a819"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.test.tsx",
+      "bytes": 5728,
+      "sha256": "b14ca60b8ad0790c99da586cdb3f781db2a08b8c6ac3011d866766d78a25dd27"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-mobile-preflight.json",
+      "bytes": 1626,
+      "sha256": "a24d91ef9f450e738fcd3e523f6de32457566d7863f84f75cb16c92ebd0ab254"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-source-manifest.json",
+      "bytes": 14670,
+      "sha256": "0e35c8d8b04da2b93742743b80cb0ed239245012c056ed037cc4b3bf722cdbdc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.first.exit.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.first.log",
+      "bytes": 1773,
+      "sha256": "0e251a401b64d9a9954bc7e04d903d36c6884dc84b301ac0c87a9dfefd4c2b1f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.first.receipt.json",
+      "bytes": 249,
+      "sha256": "d181dad311bcd697e802c67c04a6609793b728e965549009e44d1f9f42219232"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx",
+      "bytes": 2414,
+      "sha256": "56cc9e1dded8067d371d202c23885c1295bd72564a36ede40ed7675071ed1c56"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-pending-baseline.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-pending-baseline.first.log",
+      "bytes": 782,
+      "sha256": "862ff1bb23a5fea9e0f2bbd05bd60ee381840088dac4fb70660125434283cb8c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-pending-baseline.first.receipt.json",
+      "bytes": 219,
+      "sha256": "bdc605d40ad33e42cbd09b5de998ff5c9648f3d61c3ee47330e1bb674990f2c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-tui-preflight.json",
+      "bytes": 1050,
+      "sha256": "ec197ac1be2d037535ca6ec3f2b2aa5845de4b6767ca57a212e277d3828a0500"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-validation.json",
+      "bytes": 3720,
+      "sha256": "527a4eddf5b04531127fdc6f7c5b981446170a5ef8a3b73455a53f32b47f0c4d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+      "bytes": 3901,
+      "sha256": "e08e84917d22eae541af05805ac65e7f87e8b26dc3541525d2979db297e7f542"
+    }
+  ],
+  "crossReview": "evidence/cross-review-questions.md"
+}

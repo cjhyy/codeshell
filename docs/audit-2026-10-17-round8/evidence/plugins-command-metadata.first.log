@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.test.ts:
+{"id":"PLUGIN-R8-01","case":"double-quoted-empty-first","raw":"\"\" next last","actual":"one=<next> two=<last> three=<> raw=<\"\" next last>"}
+(pass) round8 plugin command metadata > PLUGIN-R8-01: double-quoted empty first argument is dropped and later arguments shift [3.14ms]
+{"id":"PLUGIN-R8-01","case":"single-quoted-empty-middle","raw":"left '' right","actual":"<left>|<right>|<>"}
+(pass) round8 plugin command metadata > PLUGIN-R8-01: single-quoted empty middle argument is dropped [0.06ms]
+(pass) round8 plugin command metadata > control: nonempty quoting, named empty value, missing position and raw arguments [0.04ms]
+{"id":"PLUGIN-R8-02","raw":"ARGUMENTS_FILE=src/example.ts","body":"file=$ARGUMENTS_FILE untouched=$ARGUMENTS_UNKNOWN raw=$ARGUMENTS","actual":"file=ARGUMENTS_FILE=src/example.ts_FILE untouched=ARGUMENTS_FILE=src/example.ts_UNKNOWN raw=ARGUMENTS_FILE=src/example.ts"}
+(pass) round8 plugin command metadata > PLUGIN-R8-02: all-arguments prefix consumes complete named placeholders and unknown names [0.19ms]
+(pass) round8 plugin command metadata > control: unrelated named placeholders and ordinary all-arguments aliases work [0.04ms]
+{"case":"converter-to-expander","body":"first=$1 file=$ARGUMENTS_FILE","raw":"\"\" next ARGUMENTS_FILE=src/example.ts","actual":"first=next file=\"\" next ARGUMENTS_FILE=src/example.ts_FILE"}
+(pass) round8 plugin command metadata > real converter preserves prompt metadata and both defects reach the expansion output [22.93ms]
+
+ 6 pass
+ 0 fail
+ 13 expect() calls
+Ran 6 tests across 1 file. [298.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

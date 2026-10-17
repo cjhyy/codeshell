@@ -1,0 +1,51 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "fixture": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.test.ts",
+  "fixtureSha256": "f5a00d46869728567e7bf41a3869b8a2d85ace9547437858ddb0887d152be732",
+  "importsVerifiedAsSourceOnly": true,
+  "executionScope": "actual pure expansion plus copyCodexCommands with own temporary source/destination only; no installed registry calls, installation, hooks, MCP, models or network",
+  "source": [
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "frozenSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.expand.test.ts",
+      "sha256": "fefed6531d5a1ae5748181e424230c2f3a09f2f975f0fe5f28296ca6e025033d",
+      "frozenSha256": "fefed6531d5a1ae5748181e424230c2f3a09f2f975f0fe5f28296ca6e025033d",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "frozenSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "frozenSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "frozenSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "frozenSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/skills/frontmatter.ts",
+      "sha256": "f763ead39c22dfadfb616139f87ab2b3ec5561921b491c0123d8b2ba435af784",
+      "frozenSha256": "f763ead39c22dfadfb616139f87ab2b3ec5561921b491c0123d8b2ba435af784",
+      "matchesFrozen": true
+    }
+  ]
+}

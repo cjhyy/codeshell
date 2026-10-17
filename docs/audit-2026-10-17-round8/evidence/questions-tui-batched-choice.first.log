@@ -1,0 +1,43 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx:
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;41 |     }
+42 |     expect(draft?.cursor).toBe(1);
+43 |     const selected = [...(draft?.selected ?? [])];
+44 |     harness.stdin.write("\u001b[13u");
+45 |     await flush();
+46 |     expect(draft?.phase).toBe("review");
+                              ^
+error: expect(received).toBe(expected)
+
+Expected: "review"
+Received: "pick"
+
+      at selectSecondOption (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx:46:26)
+      at async <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx:57:24)
+(fail) Down + Space in one input chunk toggles the previous row and submits that row [37.99ms]
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;60 |   expect(outboundAttempts).toBe(0);
+61 | });
+62 | 
+63 | test("the same keys separated by a render toggle and submit the intended second row", async () => {
+64 |   const result = await selectSecondOption(false);
+65 |   expect(result.selected).toEqual([1]);
+                               ^
+error: expect(received).toEqual(expected)
+
+  [
+-   1,
++   0,
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx:65:27)
+(fail) the same keys separated by a render toggle and submit the intended second row [139.16ms]
+
+ 0 pass
+ 2 fail
+ 6 expect() calls
+Ran 2 tests across 1 file. [888.00ms]
+Bun test process failed (1)

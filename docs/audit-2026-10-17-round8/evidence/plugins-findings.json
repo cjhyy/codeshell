@@ -1,0 +1,78 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "confirmed": [
+    {
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "status": "confirmed",
+      "priority": "P3",
+      "id": "PLUGIN-R8-01",
+      "title": "Quoted empty plugin command arguments disappear and shift later positional placeholders",
+      "sourceFile": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "line": 230,
+      "relatedLines": [
+        245,
+        250,
+        255,
+        261,
+        300,
+        339
+      ],
+      "contract": "Module advertises quoted positional/named argument expansion; its tokenizer explicitly recognizes single/double quoted tokens. Preserving an explicitly empty quoted token is inferred from this supported token grammar, rather than from a separately executed upstream Codex implementation.",
+      "trigger": "A command body uses $1/$2/$3 and the user supplies an empty quoted argument before a later nonempty positional token, e.g. \"\" next last or left '' right.",
+      "observed": "The empty token is discarded: the first example produces one=<next> two=<last> three=<> while $ARGUMENTS still contains the original raw input.",
+      "control": "Nonempty quoted token with spaces, named empty FILE=\"\", absent positional token, ordinary named placeholders and raw argument alias remain supported.",
+      "evidenceLevel": "real pure production expander; real Codex command copier with owned temporary input/output; host propagation inspected statically",
+      "fixture": "evidence/plugins-command-metadata.test.ts",
+      "log": "evidence/plugins-command-metadata.first.log",
+      "limits": "No installed plugin scan, command host/IPC/UI, Engine/model, shell, plugin installation or upstream Codex runtime executed. Both single/double quoted manifestations are one tokenizer root cause."
+    },
+    {
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "status": "confirmed",
+      "priority": "P3",
+      "id": "PLUGIN-R8-02",
+      "title": "All-arguments placeholder consumes prefixes of complete named plugin placeholders",
+      "sourceFile": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "line": 289,
+      "relatedLines": [
+        266,
+        299,
+        301,
+        304,
+        339,
+        350
+      ],
+      "contract": "Named argument assignments and named placeholders use [A-Z][A-Z0-9_]*. Existing tests explicitly require unknown environment-like placeholders to remain unchanged. ARGUMENTS_FILE is a named key accepted by this module grammar; ARGUMENTS_UNKNOWN tests the independent unknown-literal preservation contract.",
+      "trigger": "Command body contains $ARGUMENTS_FILE with raw ARGUMENTS_FILE=src/example.ts, or contains an unassigned $ARGUMENTS_UNKNOWN.",
+      "observed": "The earlier $ARGUMENTS alternative matches a prefix: file=ARGUMENTS_FILE=src/example.ts_FILE and untouched=ARGUMENTS_FILE=src/example.ts_UNKNOWN. Neither a complete named value substitution nor preservation of the unknown token occurs.",
+      "control": "$FILE substitutes, $UNKNOWN stays literal, exact $ARGUMENTS/{args} receive raw input, and placeholder-like text in a named argument is not re-expanded.",
+      "evidenceLevel": "real pure production expander and real temporary command conversion; static host propagation only",
+      "fixture": "evidence/plugins-command-metadata.test.ts",
+      "log": "evidence/plugins-command-metadata.first.log",
+      "limits": "No model prompt submission or host command execution. Known-name and unknown-name manifestations share the same missing token boundary and count once. No external Codex compatibility assertion is required."
+    },
+    {
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "status": "confirmed",
+      "priority": "P3",
+      "id": "PLUGIN-R8-03",
+      "title": "Accepted Windows marketplace paths derive names that the next metadata guard rejects",
+      "sourceFile": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "line": 86,
+      "relatedLines": [
+        27,
+        85,
+        87
+      ],
+      "contract": "parseMarketplaceInput explicitly supports drive-prefixed paths with either slash style, and deriveMarketplaceName takes the last repository path segment for the persisted marketplace name.",
+      "trigger": "User supplies C:\\work\\skills.git through ordinary marketplace add input.",
+      "observed": "Parsing accepts the source but derives \\work\\skills instead of skills. The real assertSafePluginName used by marketplaceDir rejects that name.",
+      "control": "C:/work/skills.git, /tmp/skills.git, owner/Skills and HTTPS Skills.git all derive skills and pass the same guard.",
+      "evidenceLevel": "real pure parser→deriver→same production name validator, run on macOS; add callers inspected statically",
+      "fixture": "evidence/plugins-parser-metadata.test.ts",
+      "log": "evidence/plugins-parser-metadata.first.log",
+      "limits": "No Windows-native filesystem or Git/clone/install/addMarketplace execution. Source shows Desktop/TUI pass the derived name unchanged to addMarketplace, whose first statement obtains marketplaceDir and calls this guard before clone. Forward slashes provide a workaround."
+    }
+  ],
+  "candidates": []
+}
