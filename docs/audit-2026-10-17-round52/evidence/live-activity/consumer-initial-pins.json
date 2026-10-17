@@ -1,0 +1,47 @@
+{
+  "capturedUTC": "2026-10-17T17:31:57.255239+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/TopBar.tsx",
+      "bytes": 19103,
+      "lines": 482,
+      "sha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/StatusPopover.tsx",
+      "bytes": 9048,
+      "lines": 268,
+      "sha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lines": 1247,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "bytes": 3299,
+      "lines": 94,
+      "sha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

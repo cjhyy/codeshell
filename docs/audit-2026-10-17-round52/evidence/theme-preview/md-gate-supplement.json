@@ -1,0 +1,30 @@
+{
+  "scope": "Bounded literal ThemePackPreview windows in original fresh MD members only; no newinventory orJSONscan; not exhaustive semantic reading.",
+  "totalMdLiteralMatches": 3,
+  "windows": [
+    {
+      "document": "docs/audit-2026-10-17-round45/README.md",
+      "documentSha256": "0e64d48076651e58d4548a5500cb9edd58680328db95fc35fcfefa71196a06d0",
+      "matchesFreshSha256": true,
+      "windowStart": 441,
+      "text": "der名称修复均作为旧反证，不另立ID。\n\nAppearance仅做普通mode/pack枚举、state/save与pressed/name回显的选段审查，不称362行全文。模式与包各用独立键，installed描述保留id/name和来源。安装导入/删除、焦点恢复、音频、系统主题应用与Host机制不在本次语义范围。ThemePackPreview保持hash-only；LogsView在正文前发现同SHA旧完整审查，故排除重复正文。现有测试只阅读声明，没有执行。\n\n两个方向的原始3979文件旧因gate纳入冻结43、排当时未冻结44；Root归档44新增的仅市场列表、三旧项源码状态及覆盖元数据，没有新的Context/Appearance发现。归档45开始时main已并发前进至0b174967；相对上一审查commit仅[两个路径](evidence/incoming-before-begin-main-paths.json)，不相交普通表单源码。原3979清单不倒写，release TODO的字节变化由ending检查单列。原始初稿/metadata错误与诊断按原件保留，不作为产品失败或运行结果。\n\n[作者](evidence/context-frontier/report.md)、[独立Context复核](evidence/context-review/review.md)、[Appearance作者](evi",
+      "wholeMdNotClaimedRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/report.md",
+      "documentSha256": "208db21a308667bc81dcc0e91830aabc36045ef270b47a07d47cf7d457f6b0bd",
+      "matchesFreshSha256": true,
+      "windowStart": 1356,
+      "text": "证明。\n\n`applyTheme`/`applyThemePack`仅追到调用/入口导航；不跟进系统主题解析、DOM/CSS渲染机制。Appearance127起导入/删除、96–110焦点、329起删除按钮、359音频入口及ThemePack复杂媒体字段的相邻显示均不提升为语义覆盖；未追Host安装、权限或实际媒体。ThemePackPreview本体保持hash-only。正常installed cache的入库/ID唯一性、导入来源/custody以及异步失败时序没有被此有限negative覆盖。\n\n## 范围与时点\n\n[source manifest](source-manifest.json) 共6 selected rows，**336语义行=265产品+71测试**，713显示行（含更宽邻接与完整导航union），0全文语义claim。Appearance本体只166语义/333显示，不是362full；2 hash-only产品路径、2 instruction哈希另列。读前pin在正文/导航前；[excerpts](source-excerpts.json)是读后同SHA快照，不重复算新阅读，未独立采集的精确display wall-clock为null。10个source/instruction结束bytes/SHA全同。\n\n[history](history.json) 的原时点 **3979=139",
+      "wholeMdNotClaimedRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "documentSha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+      "matchesFreshSha256": true,
+      "windowStart": 3717,
+      "text": " | 107 | scope unconfirmed |\n| 8 | `messages/agentGroup.ts` | 133 | scope unconfirmed |\n| 9 | `app/panelResize.ts` | 138 | scope unconfirmed |\n| 10 | `settings/ThemePackPreview.tsx` | 121 | hash only |\n| 11 | `settings/ShortcutsSection.tsx` | 110 | hash only |\n| 12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed",
+      "wholeMdNotClaimedRead": true
+    }
+  ]
+}

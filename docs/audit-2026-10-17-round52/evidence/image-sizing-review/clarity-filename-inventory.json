@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "imageDetail|ImageDetail",
+    "packages/desktop/src/renderer"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "packages/desktop/src/renderer/App.tsx",
+    "packages/desktop/src/renderer/app/SessionPanelDock.subagent.browser.fixture.mjs",
+    "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+    "packages/desktop/src/renderer/panels/QuickChatPanel.tsx",
+    "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+    "packages/desktop/src/renderer/ChatView.tsx",
+    "packages/desktop/src/renderer/AppCompactSession.test.tsx",
+    "packages/desktop/src/renderer/chat/compress.ts",
+    "packages/desktop/src/renderer/chat/compress.test.ts"
+  ],
+  "filenameOnly": true
+}

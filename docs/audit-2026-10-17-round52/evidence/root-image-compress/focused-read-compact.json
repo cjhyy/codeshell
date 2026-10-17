@@ -1,0 +1,730 @@
+[
+  {
+    "pattern": "thin-image-cause",
+    "index": 0,
+    "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+    "at": "$",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 1,
+    "path": "docs/archive/core-modules/logging.md",
+    "at": "$",
+    "match": "thing else); (2) redaction of secrets and image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 2,
+    "path": "docs/audit-2026-10-16/root.md",
+    "at": "$",
+    "match": "thing 的调用依然改变原始资源。二进制图片"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 3,
+    "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"run_store\"][21][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 4,
+    "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"schedule_model\"][2][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 5,
+    "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"schedule_model\"][13][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 6,
+    "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"schedule_model\"][39][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 7,
+    "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"interval_conversion\"][9][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 8,
+    "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"interval_conversion\"][35][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 9,
+    "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "at": "$[\"hits\"][\"interval_conversion\"][64][\"context\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 10,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+    "at": "$[\"hits\"][\"inline_image_grammar\"][11][\"context\"]",
+    "match": "thing else); (2) redaction of secrets and image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 11,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+    "at": "$[\"hits\"][\"inline_image_grammar\"][133][\"context\"]",
+    "match": "thing else); (2) redaction of secrets and image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 12,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+    "at": "$[\"hits\"][\"inline_image_grammar\"][155][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 13,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+    "at": "$[\"hits\"][\"inline_image_grammar\"][158][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 14,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+    "at": "$[\"hits\"][\"inline_image_grammar\"][162][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 15,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+    "at": "$[\"hits\"][\"balanced_wrong_order\"][0][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 16,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+    "at": "$[\"hits\"][\"balanced_wrong_order\"][1][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 17,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+    "at": "$[\"hits\"][\"balanced_wrong_order\"][2][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 18,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+    "at": "$[\"hits\"][\"balanced_wrong_order\"][3][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 19,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+    "at": "$[\"hits\"][\"balanced_wrong_order\"][4][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 20,
+    "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+    "at": "$[\"hits\"][\"balanced_wrong_order\"][5][\"context\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 21,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][5][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 22,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][39][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 23,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][46][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 24,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][56][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 25,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][82][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 26,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][86][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 27,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][96][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 28,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][121][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 29,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "at": "$[\"matches\"][\"exact\"][152][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 30,
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-history-selected.json",
+    "at": "$[\"selected\"][5][\"excerpt\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 31,
+    "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+    "at": "$[\"hits\"][\"retention_context\"][34][\"context\"]",
+    "match": "thing 的调用依然改变原始资源。二进制图片"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 32,
+    "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+    "at": "$[\"hits\"][\"image-text-order\"][1][\"context\"]",
+    "match": "thing else); (2) redaction of secrets and image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 33,
+    "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+    "at": "$[\"hits\"][\"image-text-order\"][1][\"context\"]",
+    "match": "thing else); (2) redaction of secrets and image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 34,
+    "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/history.json",
+    "at": "$[\"hits\"][\"stream-utf8\"][11][\"context\"]",
+    "match": "thing 的调用依然改变原始资源。二进制图片"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 35,
+    "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/selected-history-contexts.json",
+    "at": "$[\"matches\"][38][\"context\"]",
+    "match": "thing 的调用依然改变原始资源。二进制图片"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 36,
+    "path": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-excerpts.json",
+    "at": "$[\"files\"][0][\"display\"][6][\"text\"]",
+    "match": "image> and drop anythin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 37,
+    "path": "docs/audit-2026-10-17-round49/evidence/cost-review/coverage-gate-objects.json",
+    "at": "$[\"rows\"][442][\"row\"][\"display\"][6][\"text\"]",
+    "match": "image> and drop anythin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 38,
+    "path": "docs/audit-2026-10-17-round7/providers.md",
+    "at": "$",
+    "match": "图片转换、usage/stop 读取与相关直接消费者；baseline 覆盖已有 thin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 39,
+    "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+    "at": "$[\"hits\"][21][\"matches\"][2][\"text\"]",
+    "match": "Image/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 40,
+    "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+    "at": "$[\"hits\"][28][\"matches\"][0][\"text\"]",
+    "match": "thing else); (2) redaction of secrets and image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 41,
+    "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+    "at": "$[\"hits\"][271][\"matches\"][0][\"text\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 42,
+    "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+    "at": "$[\"hits\"][272][\"matches\"][0][\"text\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 43,
+    "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+    "at": "$[\"hits\"][284][\"matches\"][0][\"text\"]",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 44,
+    "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/PLAN.md",
+    "at": "$",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 45,
+    "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/PLAN.md",
+    "at": "$",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 46,
+    "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-integration-quality.raw.md",
+    "at": "$",
+    "match": "image user bubble. This is distinct from R84's never-published legacy projection failure. Nothin"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 47,
+    "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/PLAN.md",
+    "at": "$",
+    "match": "image bytes and journal input remain intact. Proposed narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 48,
+    "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+    "at": "$",
+    "match": "thing arrives via the args object (run-setup.ts / run-image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 49,
+    "path": "docs/todo/release-real-operations-2026-10-16.md",
+    "at": "$",
+    "match": "narrow annotation and reauthenticated Workbench image"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 50,
+    "path": "docs/todo/release-real-operations-2026-10-16.md",
+    "at": "$",
+    "match": "image paths and contained narrow"
+  },
+  {
+    "pattern": "thin-image-cause",
+    "index": 51,
+    "path": "docs/todo/release-real-operations-2026-10-16.md",
+    "at": "$",
+    "match": "image, narrow"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 0,
+    "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+    "at": "$[\"files\"][10][\"frozenSha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 1,
+    "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+    "at": "$[\"files\"][10][\"currentSha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 2,
+    "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+    "at": "$[\"files\"][31][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 3,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][288][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 4,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][288][\"claims\"][0][\"sourceSha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 5,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+    "at": "$[\"rankedCandidates\"][96][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 6,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][374][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 7,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][581][\"sha256\"]",
+    "match": "1d4000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 8,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][732][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 9,
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][1707][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 10,
+    "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+    "at": "$[\"rootFormalArtifactInitialPins\"][7][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 11,
+    "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+    "at": "$[\"finalCurrent31ArtifactInitialPins\"][19][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 12,
+    "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+    "at": "$[\"finalCurrent31ArtifactInitialPins\"][19][\"finishSha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 13,
+    "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+    "at": "$[\"activeReceiptChecks\"][0][\"files\"][6][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 14,
+    "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.first.json",
+    "at": "$[\"files\"][6][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 15,
+    "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+    "at": "$[\"files\"][6][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 16,
+    "path": "docs/audit-2026-10-17-round31/evidence/root-receipt-checks.json",
+    "at": "$[\"checks\"][6][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 17,
+    "path": "docs/audit-2026-10-17-round31/evidence-index.json",
+    "at": "$[\"files\"][34][\"sha256\"]",
+    "match": "11d34096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 18,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][1678][\"sourceHashFields\"][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 19,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2422][\"sourceHashFields\"][\"sha256\"]",
+    "match": "1d4000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 20,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][3156][\"sourceHashFields\"][\"frozenSha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 21,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][3156][\"sourceHashFields\"][\"currentSha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 22,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][3157][\"sourceHashFields\"][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 23,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7568][\"sourceHashFields\"][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 24,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13999][\"claimId\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 25,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14095][\"claimId\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 26,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][16051][\"sourceHashFields\"][\"sha256\"]",
+    "match": "1594000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 27,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][684][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 28,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][893][\"sha256\"]",
+    "match": "1d4000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 29,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][1044][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 30,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][2025][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 31,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][3793][\"claimIds\"][3]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 32,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][3824][\"claimIds\"][3]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 33,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][684][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 34,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][893][\"sha256\"]",
+    "match": "1d4000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 35,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][1044][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 36,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][2025][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 37,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][684][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 38,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][893][\"sha256\"]",
+    "match": "1d4000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 39,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][1044][\"sha256\"]",
+    "match": "13554096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 40,
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][2025][\"sha256\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 41,
+    "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+    "at": "$[\"sessionsearch\"][32][\"contextEnd\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 42,
+    "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+    "at": "$[\"sessionsearch\"][34][\"contextEnd\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 43,
+    "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+    "at": "$[\"sessionsearch\"][36][\"contextEnd\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 44,
+    "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+    "at": "$[\"sessionsearch\"][80][\"contextEnd\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 45,
+    "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+    "at": "$[\"sessionsearch\"][82][\"contextEnd\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 46,
+    "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+    "at": "$[\"sessionsearch\"][84][\"contextEnd\"]",
+    "match": "14096"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 47,
+    "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/native__file-mutex-round19__native-observations.json",
+    "at": "$[\"observations\"][2][\"elapsedMs\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 48,
+    "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+    "at": "$[\"groups\"][0][\"rawLogs\"][123][\"sha256\"]",
+    "match": "1594000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 49,
+    "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+    "at": "$[\"logs\"][123][\"sha256\"]",
+    "match": "1594000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 50,
+    "path": "docs/review-2026-10-12/validation/round19-native-results.json",
+    "at": "$[1][\"observations\"][2][\"elapsedMs\"]",
+    "match": "14000"
+  },
+  {
+    "pattern": "thin-exact-input",
+    "index": 51,
+    "path": "docs/review-2026-10-12/validation/workspace-quality-round11/r22-round6-secondary-root-observed.json",
+    "at": "$[\"registryRootStatus\"][\"addedAt\"]",
+    "match": "174096"
+  }
+]

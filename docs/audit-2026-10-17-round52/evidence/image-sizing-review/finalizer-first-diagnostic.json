@@ -1,0 +1,11 @@
+{
+  "toolChunk": "846c50",
+  "observedExitCode": 1,
+  "stage": "Own metadata finalizer parsed inlinePython before any code ran",
+  "errorType": "SyntaxError",
+  "observedStderrTranscribedVerbatim": "  File \"<stdin>\", line 25\n    navmap.setdefault(cmd['command'][-1],[]).extend([[int(t.split(':',1)[0]),int(t.split(':',1)[0])] for t in cmd['stdout'].splitlines() if re.match(r'^\\d+:',t))\n                                                                                                                                                                ^\nSyntaxError: closing parenthesis ')' does not match opening parenthesis '['\n",
+  "rawFullCommandNotSeparatelyCaptured": "Original inline command remains in tool chunk846c50; this is diagnostic transcription, not regeneratedrawstdin.",
+  "productFailure": false,
+  "sourceSemanticReadsDuringFailure": 0,
+  "correction": "Fix only the auditmetadata finalizer parentheses; no product/test or newsemantic rerun."
+}

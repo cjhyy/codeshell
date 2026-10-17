@@ -1,0 +1,101 @@
+{
+  "capturedUTC": "2026-10-17T17:38:28.820655+00:00",
+  "sourcePins": [
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "initialSha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "endingBytes": 6976,
+      "endingSha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "initialSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingBytes": 122863,
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/TopBar.tsx",
+      "initialSha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "endingBytes": 19103,
+      "endingSha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/StatusPopover.tsx",
+      "initialSha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "endingBytes": 9048,
+      "endingSha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "initialSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "endingBytes": 93752,
+      "endingSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "initialSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "endingBytes": 55140,
+      "endingSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "initialSha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "endingBytes": 3299,
+      "endingSha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "initialSha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "endingBytes": 910,
+      "endingSha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "initialSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "endingBytes": 37921,
+      "endingSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "initialSha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "endingBytes": 2633,
+      "endingSha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "matchesInitial": true
+    }
+  ],
+  "allSourcePinsMatch": true,
+  "history": {
+    "originalCount": 5017,
+    "endingCount": 5017,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "(^|/)audit-2026-10-17-round(?:5[2-9]|[6-9][0-9]|[1-9][0-9]{2,})(/|$)",
+    "originalInventoryUnmodified": true
+  },
+  "scope": "Source/history hashes only, not repeated semantic reading or product execution.",
+  "ownGitOperations": 0
+}

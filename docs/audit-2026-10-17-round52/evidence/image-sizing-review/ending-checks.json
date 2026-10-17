@@ -1,0 +1,67 @@
+{
+  "checkedUTC": "2026-10-17T17:41:58.730563+00:00",
+  "sourceInstructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "lines": 218,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "lines": 391,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "bytes": 3144,
+      "lines": 82,
+      "sha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesInitial": true
+    }
+  ],
+  "all7PinsUnchanged": true,
+  "history": {
+    "initialCount": 5017,
+    "endingCount": 5017,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "docs/bugsMDJSONincludefrozen51/exclude52+",
+    "inventoryExitCode": 0,
+    "stderr": ""
+  },
+  "newSemanticReadDuringEnding": 0,
+  "Git": 0
+}

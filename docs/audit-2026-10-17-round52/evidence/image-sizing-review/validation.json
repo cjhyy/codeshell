@@ -1,0 +1,24 @@
+{
+  "sameRootLeadStaticP3Support": true,
+  "newStandaloneId": null,
+  "productHelperFunctionImportRun": 0,
+  "imageFileOrLanguageFixturesCreatedOrRun": 0,
+  "testsExecuted": 0,
+  "ReactDOMBrowserClockTimerRun": 0,
+  "nativeModelGitRun": 0,
+  "productBusinessNetworkRun": 0,
+  "externalOfficialDocumentationWebCalls": 3,
+  "realUserFilesSettingsRead": 0,
+  "productWrites": 0,
+  "mutableRoot103PacketRead": false,
+  "metadataFinalizerFailures": 1,
+  "metadataWarningCount": 1,
+  "metadataOutputTruncations": 2,
+  "firstDiagnostics": [
+    "first-reader-diagnostic.json",
+    "finalizer-first-diagnostic.json"
+  ],
+  "repairs": "Onlysavedboundedmetadatawindows and ownfinalizerbookkeeping; no source semantic/product/test rerun.",
+  "metadataOnlyExecution": "Own stdPythonhash/scalar/range/JSONprocess/historymethod;rgpathsnavigation;officialWHATWGdocumentationweb.",
+  "noFullRawStdoutCaptureClaim": true
+}

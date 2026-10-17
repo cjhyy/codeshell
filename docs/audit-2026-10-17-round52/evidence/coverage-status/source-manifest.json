@@ -1,0 +1,181 @@
+{
+  "capturedUTC": "2026-10-17T17:42:43.476396+00:00",
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "reviewType": "User coverage-status metadata check, not independent whole-repository review",
+  "files": [],
+  "hashOnlyProductFiles": [],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/report.md",
+      "bytes": 3940,
+      "sha256": "99f4356ec1ad48f9671c9dcfbdb9651bfdf40aecbbe73613dc696dd6ab9a41cb",
+      "lines": 23,
+      "pinnedUTC": "2026-10-17T17:40:37.919744+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source",
+      "metadataReadLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "metadataDisplayedLineCount": 23,
+      "endingSha256": "99f4356ec1ad48f9671c9dcfbdb9651bfdf40aecbbe73613dc696dd6ab9a41cb",
+      "endingSameAsInitial": true,
+      "readPurpose": "Frozen coverage denominator/category/cutoff/limits or later overall declaration only; no product source",
+      "bodyIsProductCode": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000",
+      "lines": 132,
+      "pinnedUTC": "2026-10-17T17:40:37.922119+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source",
+      "metadataReadLineRanges": [
+        [
+          1,
+          132
+        ]
+      ],
+      "metadataDisplayedLineCount": 132,
+      "endingSha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000",
+      "endingSameAsInitial": true,
+      "readPurpose": "Frozen coverage denominator/category/cutoff/limits or later overall declaration only; no product source",
+      "bodyIsProductCode": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/README.md",
+      "bytes": 3797,
+      "sha256": "a1a3f9c88b4f7b238d85c170b47da4e284085801920321a466438e631e337f24",
+      "lines": 22,
+      "pinnedUTC": "2026-10-17T17:40:37.923183+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source",
+      "metadataReadLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "metadataDisplayedLineCount": 22,
+      "endingSha256": "a1a3f9c88b4f7b238d85c170b47da4e284085801920321a466438e631e337f24",
+      "endingSameAsInitial": true,
+      "readPurpose": "Frozen coverage denominator/category/cutoff/limits or later overall declaration only; no product source",
+      "bodyIsProductCode": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/README.md",
+      "bytes": 4197,
+      "sha256": "cb3a2f310abda3f82b77387ea80aa9a30eed5facaa3ab052eb6529e340697fe4",
+      "lines": 17,
+      "pinnedUTC": "2026-10-17T17:40:37.924430+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source",
+      "metadataReadLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "metadataDisplayedLineCount": 17,
+      "endingSha256": "cb3a2f310abda3f82b77387ea80aa9a30eed5facaa3ab052eb6529e340697fe4",
+      "endingSameAsInitial": true,
+      "readPurpose": "Frozen coverage denominator/category/cutoff/limits or later overall declaration only; no product source",
+      "bodyIsProductCode": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/README.md",
+      "bytes": 2740,
+      "sha256": "6aad67b1e5180a91aa8cfbdb659413e6fa86d15fc2347f51f910402ac63826cb",
+      "lines": 13,
+      "pinnedUTC": "2026-10-17T17:40:37.925241+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source",
+      "metadataReadLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "metadataDisplayedLineCount": 13,
+      "endingSha256": "6aad67b1e5180a91aa8cfbdb659413e6fa86d15fc2347f51f910402ac63826cb",
+      "endingSameAsInitial": true,
+      "readPurpose": "Frozen coverage denominator/category/cutoff/limits or later overall declaration only; no product source",
+      "bodyIsProductCode": false
+    }
+  ],
+  "metadataFilesRead": 5,
+  "metadataLinesDisplayed": 207,
+  "actualReadToolChunks": [
+    "0667ce",
+    "30de51"
+  ],
+  "summaryStagePointer": "/currentStages/plusFrozen45",
+  "sourceUniversePointer": "/sourceFiles",
+  "adapterFrozenUTC": {
+    "started": "2026-10-17T15:37:08.827054+00:00",
+    "finished": "2026-10-17T15:37:15.502476+00:00"
+  },
+  "snapshotCounts": {
+    "sourcePaths": 4643,
+    "explicitFullRecords": 304,
+    "selectedNoFullRecords": 169,
+    "indexCannotConfirm": 4170,
+    "cannotMarkFullInThisDatedIndex": 4339,
+    "definition": "4643TS/TSXpaths includingtests/helpers; evidencecohortthroughfrozen45, later46+notbackfilled. Counts are recordedmetadata, not measured currentunread."
+  },
+  "sourceEvidenceLines": {
+    "R47README": [
+      5,
+      12,
+      14,
+      16,
+      18,
+      22
+    ],
+    "R47AdapterReport": [
+      5,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23
+    ],
+    "R47Summary": [
+      [
+        2,
+        5
+      ],
+      [
+        38,
+        59
+      ],
+      [
+        127,
+        132
+      ]
+    ],
+    "R50README": [
+      3,
+      13,
+      15,
+      17
+    ],
+    "R51README": [
+      3,
+      7,
+      11,
+      13
+    ]
+  },
+  "currentProductShaChecks": 0,
+  "currentProductBodyReadLines": 0,
+  "wholeRepositoryOrHistoryRescan": false,
+  "authorMethodsExecuted": 0,
+  "productRuns": 0,
+  "GitOperations": 0,
+  "oldReportsModified": false,
+  "globalCoverageRefreshed": false,
+  "preciseUnreadClaim": false,
+  "currentUnfixedCountClaim": false,
+  "metadataErrors": [],
+  "metadataTruncations": 0
+}

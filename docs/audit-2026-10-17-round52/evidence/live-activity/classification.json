@@ -1,0 +1,14 @@
+{
+  "newFormal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "newFormal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "boundedConclusion": "No ordinary counterexample established in reviewed activity DTO/label/presentation source. No all-consumer, whole UI, clock or scheduling assurance.",
+  "runtimeValidated": false,
+  "firstEverReadingClaimed": false,
+  "oldFailedDirections": "Remain skipped; no old passes used."
+}

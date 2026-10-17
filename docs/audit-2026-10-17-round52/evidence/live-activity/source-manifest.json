@@ -1,0 +1,825 @@
+{
+  "role": "Independent bounded ordinary activity DTO/summary/label/presentation static reviewer, not runtime verifier.",
+  "rootReportedBaselineOnly": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "bytes": 6976,
+      "lines": 183,
+      "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          183
+        ]
+      ],
+      "semanticLines": 183,
+      "displayedLineRanges": [
+        [
+          1,
+          183
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 183,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Entire ordinary activity summary/agent summary/label/elapsed formatter source. Imported language/preferences and runtime helpers not invoked; no performance or clock guarantee.",
+      "initialSemanticReadSha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "bytes": 910,
+      "lines": 26,
+      "sha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "semanticLines": 26,
+      "displayedLineRanges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 26,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Actual pure presentation consumes summarize+describe text only, not toolCount or turnStartedAt.",
+      "initialSemanticReadSha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1819,
+          1822
+        ],
+        [
+          2230,
+          2230
+        ]
+      ],
+      "semanticLines": 5,
+      "displayedLineRanges": [
+        [
+          1816,
+          1827
+        ],
+        [
+          2218,
+          2236
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        29,
+        1048
+      ],
+      "uniqueDisplayedLines": 33,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          29,
+          29
+        ],
+        [
+          1048,
+          1048
+        ],
+        [
+          1816,
+          1818
+        ],
+        [
+          1823,
+          1827
+        ],
+        [
+          2218,
+          2229
+        ],
+        [
+          2231,
+          2236
+        ]
+      ],
+      "purpose": "Actual whole state.messages input and TopBar prop forwarding; adjacent busy/background/control details not certified.",
+      "initialSemanticReadSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/TopBar.tsx",
+      "bytes": 19103,
+      "lines": 482,
+      "sha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          232,
+          232
+        ],
+        [
+          402,
+          413
+        ]
+      ],
+      "semanticLines": 13,
+      "displayedLineRanges": [
+        [
+          212,
+          242
+        ],
+        [
+          388,
+          416
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        9,
+        49,
+        101,
+        267,
+        276,
+        427,
+        434,
+        435,
+        462,
+        463,
+        464,
+        465,
+        466
+      ],
+      "uniqueDisplayedLines": 73,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          101,
+          101
+        ],
+        [
+          212,
+          231
+        ],
+        [
+          233,
+          242
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          276,
+          276
+        ],
+        [
+          388,
+          401
+        ],
+        [
+          414,
+          416
+        ],
+        [
+          427,
+          427
+        ],
+        [
+          434,
+          435
+        ],
+        [
+          462,
+          466
+        ]
+      ],
+      "purpose": "Compatibility activity forwarding/fallback only; no activity KPI render established. Memo comparator/nav and goal controls not certified.",
+      "initialSemanticReadSha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/StatusPopover.tsx",
+      "bytes": 9048,
+      "lines": 268,
+      "sha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          6,
+          10
+        ],
+        [
+          22,
+          40
+        ],
+        [
+          70,
+          76
+        ]
+      ],
+      "semanticLines": 31,
+      "displayedLineRanges": [
+        [
+          1,
+          85
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        148
+      ],
+      "uniqueDisplayedLines": 86,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          5
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          41,
+          69
+        ],
+        [
+          77,
+          85
+        ],
+        [
+          148,
+          148
+        ]
+      ],
+      "purpose": "Explicit compatibility-only activity prop, removed status summary, destructuring and idle/busy placeholder. Goal block/task actions merely adjacent displayed.",
+      "initialSemanticReadSha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          35,
+          51
+        ],
+        [
+          1290,
+          1302
+        ],
+        [
+          1305,
+          1324
+        ],
+        [
+          82,
+          94
+        ],
+        [
+          1398,
+          1416
+        ],
+        [
+          1483,
+          1491
+        ],
+        [
+          1509,
+          1523
+        ]
+      ],
+      "semanticLines": 106,
+      "displayedLineRanges": [
+        [
+          31,
+          52
+        ],
+        [
+          1279,
+          1324
+        ],
+        [
+          58,
+          106
+        ],
+        [
+          1398,
+          1420
+        ],
+        [
+          1468,
+          1491
+        ],
+        [
+          1507,
+          1525
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        269,
+        555,
+        563,
+        564,
+        646,
+        653,
+        731,
+        737,
+        794,
+        802,
+        942,
+        951,
+        952,
+        972,
+        988,
+        1019,
+        1139,
+        1172,
+        1201,
+        1203,
+        2070,
+        2071,
+        2074,
+        2079,
+        2245,
+        2276,
+        2277,
+        2278,
+        2279,
+        2280,
+        2295,
+        2296,
+        2297,
+        2309,
+        2324,
+        2325,
+        2326,
+        2338,
+        2363,
+        2365,
+        2369,
+        2403,
+        2464
+      ],
+      "uniqueDisplayedLines": 226,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          31,
+          34
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          58,
+          81
+        ],
+        [
+          95,
+          106
+        ],
+        [
+          269,
+          269
+        ],
+        [
+          555,
+          555
+        ],
+        [
+          563,
+          564
+        ],
+        [
+          646,
+          646
+        ],
+        [
+          653,
+          653
+        ],
+        [
+          731,
+          731
+        ],
+        [
+          737,
+          737
+        ],
+        [
+          794,
+          794
+        ],
+        [
+          802,
+          802
+        ],
+        [
+          942,
+          942
+        ],
+        [
+          951,
+          952
+        ],
+        [
+          972,
+          972
+        ],
+        [
+          988,
+          988
+        ],
+        [
+          1019,
+          1019
+        ],
+        [
+          1139,
+          1139
+        ],
+        [
+          1172,
+          1172
+        ],
+        [
+          1201,
+          1201
+        ],
+        [
+          1203,
+          1203
+        ],
+        [
+          1279,
+          1289
+        ],
+        [
+          1303,
+          1304
+        ],
+        [
+          1417,
+          1420
+        ],
+        [
+          1468,
+          1482
+        ],
+        [
+          1507,
+          1508
+        ],
+        [
+          1524,
+          1525
+        ],
+        [
+          2070,
+          2071
+        ],
+        [
+          2074,
+          2074
+        ],
+        [
+          2079,
+          2079
+        ],
+        [
+          2245,
+          2245
+        ],
+        [
+          2276,
+          2280
+        ],
+        [
+          2295,
+          2297
+        ],
+        [
+          2309,
+          2309
+        ],
+        [
+          2324,
+          2326
+        ],
+        [
+          2338,
+          2338
+        ],
+        [
+          2363,
+          2363
+        ],
+        [
+          2365,
+          2365
+        ],
+        [
+          2369,
+          2369
+        ],
+        [
+          2403,
+          2403
+        ],
+        [
+          2464,
+          2464
+        ]
+      ],
+      "purpose": "Ordinary user injected/pending DTO, accepted steer message projection, tool start/argsLive/result status data. Session lookup/matching, auth/identity, sandbox and clock behavior remain opaque boundaries or navigation only.",
+      "initialSemanticReadSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lines": 1247,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          700,
+          700
+        ],
+        [
+          709,
+          714
+        ],
+        [
+          731,
+          733
+        ]
+      ],
+      "semanticLines": 10,
+      "displayedLineRanges": [
+        [
+          670,
+          774
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        787,
+        818,
+        916,
+        928
+      ],
+      "uniqueDisplayedLines": 109,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          670,
+          699
+        ],
+        [
+          701,
+          708
+        ],
+        [
+          715,
+          730
+        ],
+        [
+          734,
+          774
+        ],
+        [
+          787,
+          787
+        ],
+        [
+          818,
+          818
+        ],
+        [
+          916,
+          916
+        ],
+        [
+          928,
+          928
+        ]
+      ],
+      "purpose": "Normal busy queue-to-steer call/data intent; no optimistic user bubble in documented path. RPC/native execution, session resolution/authority, relay/lock/model mechanisms not reviewed.",
+      "initialSemanticReadSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "bytes": 3299,
+      "lines": 94,
+      "sha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          21,
+          94
+        ]
+      ],
+      "semanticLines": 74,
+      "displayedLineRanges": [
+        [
+          21,
+          44
+        ],
+        [
+          46,
+          94
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        45
+      ],
+      "uniqueDisplayedLines": 74,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Eight existing ordinary summary/label assertions as intended contract only; test setup1–20 not read, no execution.",
+      "initialSemanticReadSha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lines": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          820,
+          820
+        ]
+      ],
+      "semanticLines": 1,
+      "displayedLineRanges": [
+        [
+          814,
+          824
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 11,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          814,
+          819
+        ],
+        [
+          821,
+          824
+        ]
+      ],
+      "purpose": "Actual live flag branch renders inline activity with messages; no full stream/group lifecycle claim.",
+      "initialSemanticReadSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "bytes": 2633,
+      "lines": 72,
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          11,
+          19
+        ],
+        [
+          27,
+          42
+        ]
+      ],
+      "semanticLines": 25,
+      "displayedLineRanges": [
+        [
+          11,
+          22
+        ],
+        [
+          27,
+          44
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 30,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          20,
+          22
+        ],
+        [
+          43,
+          44
+        ]
+      ],
+      "purpose": "Only truncation pair-boundary guard, path basename, argsLive-before-JSON fallback for normal labels. No product parsing call executed or entire utilities module certified.",
+      "initialSemanticReadSha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "finishMatchesInitial": true
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Unchanged earlier CODESHELL217/AGENTS5 reading carried, not newly counted.",
+  "counts": {
+    "semanticFiles": 10,
+    "full": 2,
+    "selected": 8,
+    "semanticLines": 474,
+    "productSemanticLines": 400,
+    "testDeclarationSemanticLines": 74,
+    "uniqueDisplayedLines": 851,
+    "testDeclarationsRead": 8,
+    "testsExecuted": 0,
+    "sourceAndInstructionPins": 12
+  },
+  "filenameOnlyUnreviewed": [
+    "packages/desktop/src/renderer/pet/petChatActivity.ts",
+    "packages/desktop/src/renderer/messages/streamGroups.ts"
+  ],
+  "coverageLimit": "Target fresh sameSHA full gate not established. Necessary dependency excerpts may overlap older reading; no first-ever or repository-new-unique coverage claim, prior dependency overlaps not exhaustively quantified.",
+  "sourceExcerptTiming": "Post actual display; every initial source pin preceded body/line navigation."
+}

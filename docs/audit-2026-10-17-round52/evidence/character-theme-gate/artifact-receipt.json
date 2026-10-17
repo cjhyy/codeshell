@@ -1,0 +1,104 @@
+{
+  "frozenUTC": "2026-10-17T17:34:05.598714+00:00",
+  "root": "/tmp/codeshell-audit-round102-character-themes",
+  "kind": "Author receipt for old-full-source exclusion before current body",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "files": [
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 9390,
+      "sha256": "dd58495158fc17a719474a38935a99d25ee81a41e82adff5f48de578418c10cd"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 670,
+      "sha256": "f116afff591009bb78181530471f07aa3b502ec57eaa08d6c1b2c6026558b4f0"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 390,
+      "sha256": "26772267e49f7f827f65d0cdc5df8cd1ad6d0163e6dff31007a010cfbd539c62"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1393,
+      "sha256": "d8c95f5d420680966fcd47e13197456f083d590a4d9dd9afc86fec0477c65427"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 10724,
+      "sha256": "09c77593249c91b5ae026a7405951113a7221c1dd91e4842dca4643622c130ea"
+    },
+    {
+      "path": "history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 53428,
+      "sha256": "4a7b85c84736b3eb0868da7d0a0dd2d05ec6b192c66aee8dd0b1992725f1761b"
+    },
+    {
+      "path": "history-initial-inventory.json",
+      "bytes": 1007679,
+      "sha256": "abfccc7e06061f50bd275a6dfb1b53a176b865427b982e6e13493825fc15672b"
+    },
+    {
+      "path": "history-source-rows.json",
+      "bytes": 25945,
+      "sha256": "2ebdca9722ffe24a30369c635ca09ce3ae98541a0085e35c194d178c55ccdc16"
+    },
+    {
+      "path": "history-summary.json",
+      "bytes": 747,
+      "sha256": "85073c2df0eadc6471aaccc106e37498a7bcb59e072a39014def0cea2868bec5"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1066,
+      "sha256": "b97cc93cabe9006acca8882751c5b3cf09e725058bff4a8f7f9900d972a285dd"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3889,
+      "sha256": "b56928771c190f5a8792c0df41831ee5f2aad0b2491cbe07ba7b5f5b954e338f"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 4829,
+      "sha256": "951ef39fa1d50458e0115682b0b836a6b2768ee3c8da3e4336f5d9adf111da23"
+    },
+    {
+      "path": "scope-decision.json",
+      "bytes": 3188,
+      "sha256": "ac36568c65e6d5c515bb3780919f022a4977826d3cb9a3591efe1bf8fe0911a8"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4510,
+      "sha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1415,
+      "sha256": "dfb80144887af28e99ff37902fdf4821a3fc73ec978504484c51dbb33e74b329"
+    }
+  ],
+  "fileCountExcludingSelf": 16,
+  "selfExcluded": true,
+  "currentProductBodyLines": 0,
+  "currentTestDeclarationLines": 0,
+  "productHelperOrRuntimeRuns": 0,
+  "GitOperations": 0,
+  "metadataCommandFailures": 0,
+  "metadataTruncations": 0,
+  "oldFrozenPacketsChanged": false,
+  "globalCoverageCountsUpdated": false,
+  "authorDisclosure": "Same author wrote prep87/formal50JSON-only selection; current102 reads originalR7Markdown full-source qualifier and only changes this finite target exclusion, not old packet/status/global counts."
+}

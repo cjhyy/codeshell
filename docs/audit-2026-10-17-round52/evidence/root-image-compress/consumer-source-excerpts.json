@@ -1,0 +1,62 @@
+{
+  "atUTC": "2026-10-17T17:35:58.961746+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "displayedLineRanges": [
+        [
+          1230,
+          1295
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1230,
+          "end": 1295,
+          "text": "1230:       return;\n1231:     }\n1232:     setAttachmentError(null);\n1233:     const { accepted, errors } = await buildAttachments(files, attachments);\n1234:     if (!mountedRef.current) return;\n1235:     if (accepted.length > 0) {\n1236:       // Compress before staging so the chip thumbnail and the wire\n1237:       // payload share the same bytes — keeps the UI honest about what\n1238:       // will actually be sent. compressBatch never throws; it falls\n1239:       // back to the original if encoding fails (engine policy still\n1240:       // gates oversize bytes downstream).\n1241:       const compressed = await compressBatch(accepted, imageDetail);\n1242:       if (!mountedRef.current) return;\n1243:       const context = onPrepareAttachmentSession?.();\n1244:       if (!context) {\n1245:         errors.push({\n1246:           kind: \"staging-failed\",\n1247:           message: t(\"chat.attachment.stagingUnavailable\"),\n1248:         });\n1249:       } else {\n1250:         try {\n1251:           const staged = await Promise.all(\n1252:             compressed.map(async (att) => {\n1253:               const meta = await window.codeshell.stageAttachmentImageDataUrl({\n1254:                 cwd: context.cwd,\n1255:                 sessionId: context.sessionId,\n1256:                 name: att.name,\n1257:                 mime: att.mime,\n1258:                 dataUrl: att.dataUrl,\n1259:                 origin,\n1260:                 quickChatClaimId: context.quickChatClaimId,\n1261:               });\n1262:               return {\n1263:                 ...att,\n1264:                 id: meta.id,\n1265:                 path: meta.path,\n1266:                 relPath: meta.relPath,\n1267:                 absPath: meta.absPath,\n1268:                 sha256: meta.sha256,\n1269:                 origin: meta.origin,\n1270:                 sessionId: meta.sessionId,\n1271:                 createdAt: meta.createdAt,\n1272:                 size: meta.size,\n1273:                 mime: meta.mime ?? att.mime,\n1274:               };\n1275:             }),\n1276:           );\n1277:           if (!mountedRef.current) return;\n1278:           setAttachments((cur) => [...cur, ...staged]);\n1279:         } catch (e) {\n1280:           if (!mountedRef.current) return;\n1281:           errors.push({\n1282:             kind: \"staging-failed\",\n1283:             message: t(\"chat.attachment.stagingFailed\", {\n1284:               message: (e as Error).message,\n1285:             }),\n1286:           });\n1287:         }\n1288:       }\n1289:     }\n1290:     if (mountedRef.current && errors.length > 0) {\n1291:       setAttachmentError(errors.map((e) => e.message).join(\"；\"));\n1292:     }\n1293:   };\n1294: \n1295:   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "displayedLineRanges": [
+        [
+          18,
+          73
+        ],
+        [
+          98,
+          151
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 18,
+          "end": 73,
+          "text": "18: export interface ImageAttachment {\n19:   /** Local id for keying/removing in the UI. */\n20:   id: string;\n21:   /** Original file name when available. Used for the chip tooltip. */\n22:   name: string;\n23:   /** MIME type as reported by the browser. */\n24:   mime: string;\n25:   /** Base64 data URL — what the model wire format wants. */\n26:   dataUrl: string;\n27:   /** Size in bytes (best-effort; useful for the \"太大\" warning). */\n28:   size: number;\n29:   /** Path shown to the model; prefers cwd-relative paths. */\n30:   path?: string;\n31:   /** Absolute path for main/core/tool handoff; not shown unless needed. */\n32:   absPath?: string;\n33:   /** cwd-relative path when the attachment was copied into the workspace. */\n34:   relPath?: string;\n35:   /** Hex sha256 of the staged/sourced bytes, without a `sha256:` prefix. */\n36:   sha256?: string;\n37:   /** Where the user supplied this attachment from. */\n38:   origin?:\n39:     | \"paste\"\n40:     | \"os-drop\"\n41:     | \"file-panel\"\n42:     | \"picker\"\n43:     | \"mention\"\n44:     | \"generated\"\n45:     | \"mobile\"\n46:     | \"tool\";\n47:   /** Session directory that owns staged attachments. */\n48:   sessionId?: string;\n49:   /** When this attachment was staged/selected. */\n50:   createdAt?: number;\n51:   /** Original source path when user explicitly selected a file. */\n52:   sourcePath?: string;\n53: }\n54: \n55: /**\n56:  * DataTransfer MIME for an internal file-panel → composer image drag (TODO\n57:  * 2.1). The payload is the absolute path. Custom type so the composer can tell\n58:  * an internal drag (a path string) from an OS file drop (a browser File).\n59:  */\n60: export const CODESHELL_PATH_DND_MIME = \"application/x-codeshell-path\";\n61: \n62: export const ATTACHMENT_LIMITS = {\n63:   /** Single-file ceiling. Most providers cap at 20 MB; stay conservative. */\n64:   maxBytesPerImage: 10 * 1024 * 1024,\n65:   maxImagesPerMessage: 6,\n66:   /** Anything outside this set is rejected before reading. */\n67:   allowedMimes: new Set([\"image/png\", \"image/jpeg\", \"image/jpg\", \"image/webp\", \"image/gif\"]),\n68: } as const;\n69: \n70: export interface AttachmentError {\n71:   kind: \"too-large\" | \"wrong-type\" | \"too-many\" | \"read-failed\" | \"staging-failed\";\n72:   message: string;\n73: }"
+        },
+        {
+          "start": 98,
+          "end": 151,
+          "text": "98:   existing: ImageAttachment[],\n99: ): Promise<{ accepted: ImageAttachment[]; errors: AttachmentError[] }> {\n100:   const errors: AttachmentError[] = [];\n101:   const accepted: ImageAttachment[] = [];\n102: \n103:   for (const file of files) {\n104:     if (accepted.length + existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {\n105:       errors.push({\n106:         kind: \"too-many\",\n107:         message: tr(\"chat.attachment.tooMany\", {\n108:           max: ATTACHMENT_LIMITS.maxImagesPerMessage,\n109:           name: file.name || tr(\"chat.attachment.unnamed\"),\n110:         }),\n111:       });\n112:       continue;\n113:     }\n114:     if (!ATTACHMENT_LIMITS.allowedMimes.has(file.type)) {\n115:       errors.push({\n116:         kind: \"wrong-type\",\n117:         message: tr(\"chat.attachment.wrongType\", {\n118:           type: file.type || tr(\"chat.attachment.unknownType\"),\n119:           name: file.name || tr(\"chat.attachment.unnamed\"),\n120:         }),\n121:       });\n122:       continue;\n123:     }\n124:     if (file.size > ATTACHMENT_LIMITS.maxBytesPerImage) {\n125:       errors.push({\n126:         kind: \"too-large\",\n127:         message: tr(\"chat.attachment.tooLarge\", {\n128:           name: file.name || tr(\"chat.attachment.unnamed\"),\n129:           mb: ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024,\n130:         }),\n131:       });\n132:       continue;\n133:     }\n134:     try {\n135:       const dataUrl = await readFileAsDataUrl(file);\n136:       accepted.push({\n137:         id: nextId(),\n138:         name: file.name || \"image\",\n139:         mime: file.type,\n140:         dataUrl,\n141:         size: file.size,\n142:       });\n143:     } catch (e) {\n144:       errors.push({\n145:         kind: \"read-failed\",\n146:         message: tr(\"chat.attachment.readFailed\", {\n147:           name: file.name || tr(\"chat.attachment.unnamed\"),\n148:           message: (e as Error).message,\n149:         }),\n150:       });\n151:     }"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "displayedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1,
+          "end": 69,
+          "text": "1: import { describe, expect, test } from \"bun:test\";\n2: import {\n3:   scaledDimensions,\n4:   MAX_DIMENSION,\n5:   TARGET_BYTES,\n6:   capForDetail,\n7:   alwaysDownsample,\n8:   type ImageDetail,\n9: } from \"./compress\";\n10: \n11: /**\n12:  * Only `scaledDimensions` is unit-testable in pure Node — the rest of\n13:  * compress.ts depends on `document.createElement(\"canvas\")` which we\n14:  * don't fake here. The interesting bug surface is the aspect-ratio math\n15:  * (off-by-one rounding for landscape vs portrait), so that's what we\n16:  * pin down.\n17:  */\n18: \n19: describe(\"scaledDimensions\", () => {\n20:   test(\"passes through when both sides fit under the cap\", () => {\n21:     expect(scaledDimensions(1024, 768, 2048)).toEqual({ width: 1024, height: 768 });\n22:     expect(scaledDimensions(2048, 2048, 2048)).toEqual({ width: 2048, height: 2048 });\n23:   });\n24: \n25:   test(\"clamps landscape on the long edge\", () => {\n26:     // 4000×2000 → cap 2048: long edge → 2048, short edge → 1024.\n27:     expect(scaledDimensions(4000, 2000, 2048)).toEqual({ width: 2048, height: 1024 });\n28:   });\n29: \n30:   test(\"clamps portrait on the long edge\", () => {\n31:     // 2000×4000 → cap 2048: long edge → 2048, short edge → 1024.\n32:     expect(scaledDimensions(2000, 4000, 2048)).toEqual({ width: 1024, height: 2048 });\n33:   });\n34: \n35:   test(\"clamps square correctly\", () => {\n36:     expect(scaledDimensions(4096, 4096, 2048)).toEqual({ width: 2048, height: 2048 });\n37:   });\n38: \n39:   test(\"preserves aspect ratio within one pixel (rounding-tolerant)\", () => {\n40:     // A weird ratio that rounds to a non-integer.\n41:     const { width, height } = scaledDimensions(5123, 2718, 2048);\n42:     expect(width).toBe(2048);\n43:     // 2048 * 2718/5123 ≈ 1086.6 → 1087.\n44:     expect(height).toBe(1087);\n45:     expect(Math.abs(width / height - 5123 / 2718)).toBeLessThan(0.01);\n46:   });\n47: });\n48: \n49: describe(\"constants are sane defaults\", () => {\n50:   test(\"TARGET_BYTES matches the engine's per-image cap\", () => {\n51:     expect(TARGET_BYTES).toBe(2 * 1024 * 1024);\n52:   });\n53:   test(\"MAX_DIMENSION is the documented 2048\", () => {\n54:     expect(MAX_DIMENSION).toBe(2048);\n55:   });\n56: });\n57: \n58: describe(\"capForDetail — per-clarity-level long-edge cap\", () => {\n59:   test(\"low/标准/高清 map to 1024 / 1568 / 2576\", () => {\n60:     expect(capForDetail(\"low\")).toBe(1024);\n61:     expect(capForDetail(\"standard\")).toBe(1568);\n62:     expect(capForDetail(\"high\")).toBe(2576);\n63:   });\n64:   test(\"unknown / undefined falls back to high (no surprise downscale)\", () => {\n65:     expect(capForDetail(undefined)).toBe(2576);\n66:     expect(capForDetail(\"garbage\" as ImageDetail)).toBe(2576);\n67:   });\n68: });\n69: "
+        }
+      ]
+    }
+  ]
+}

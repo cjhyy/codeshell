@@ -1,0 +1,27 @@
+{
+  "scopeProjectionIndicesActuallyRead": [
+    28,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    56,
+    57,
+    59
+  ],
+  "allObjectLocatorsRead": 60,
+  "canonicalRawObjectsRead": 1,
+  "initialOldCauseWindowsRead": 23,
+  "focusedWindowsRead": 11,
+  "repairs": [
+    "b5a630 reread23querywindows5–8",
+    "1963c6 rereadfocusedwindow5"
+  ],
+  "limits": "Only compactmetadata/boundedwindows, notwholelargeMD/scalars or semanticexhaustion. Broadcanvas/zero terms canbe unrelated; saved0exacthelper/strip hitsnot guarantee novelty.",
+  "firstDiagnosticsIn": [
+    "first-reader-diagnostic.json",
+    "finalizer-first-diagnostic.json"
+  ]
+}

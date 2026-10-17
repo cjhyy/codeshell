@@ -1,0 +1,15 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "ThemePackPreview",
+    "packages/desktop/src/renderer"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+    "packages/desktop/src/renderer/settings/ThemePackPreview.tsx"
+  ],
+  "filenameOnly": true
+}

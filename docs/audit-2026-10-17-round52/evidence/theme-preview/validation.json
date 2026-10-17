@@ -1,0 +1,18 @@
+{
+  "formal": 0,
+  "candidate": 0,
+  "newRelated": 0,
+  "productHelpersFunctionsImportsExecuted": 0,
+  "testsFixturesRun": 0,
+  "ReactDOMTimerClockRun": 0,
+  "nativeNetworkModelGitRun": 0,
+  "realThemeFilesOrSettingsUserDataRead": 0,
+  "sourceWrites": 0,
+  "testsBodyOrDeclarationRead": 0,
+  "metadataErrors": [],
+  "toolOutputTruncations": [],
+  "allObservedCompletedCommandExits": 0,
+  "metadataOnly": "OwnstdPython hash/JSON/string/range processing and own history-method; rg filename/navigation. No product/repo script executed.",
+  "oldFailedDirectionsRemainSkip": true,
+  "lateSourcePins": []
+}

@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T17:35:23.520691+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "beforeCurrentLineNavigationAndBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "lines": 391,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "beforeCurrentLineNavigationAndBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "bytes": 3144,
+      "lines": 82,
+      "sha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "beforeCurrentLineNavigationAndBody": true
+    }
+  ]
+}

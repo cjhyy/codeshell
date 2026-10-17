@@ -1,0 +1,445 @@
+{
+  "checkedUTC": "2026-10-17T17:38:53.897786+00:00",
+  "authorRelationship": {
+    "sameAuthorAs102": true,
+    "independentAuthor": false,
+    "independentProductSourceReview": false,
+    "activeTaskClarification": "Root corrected initial independent wording to same-author metadata cross-check/self-check; external Root accepts based on original evidence, not a second-author title."
+  },
+  "result": "supports target-only old-full-source exclusion at frozen102snapshot",
+  "allMetadataChecksPass": true,
+  "files": [],
+  "hashOnlyFiles": [],
+  "metadataInputCount": 19,
+  "frozen102ArtifactReceiptRows": 16,
+  "frozen102ActualFiles": 17,
+  "frozen102FileSetMatchesReceiptPlusSelf": true,
+  "receiptArtifactChecks": [
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 9390,
+      "sha256": "dd58495158fc17a719474a38935a99d25ee81a41e82adff5f48de578418c10cd",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "checks.json",
+      "bytes": 670,
+      "sha256": "f116afff591009bb78181530471f07aa3b502ec57eaa08d6c1b2c6026558b4f0",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 390,
+      "sha256": "26772267e49f7f827f65d0cdc5df8cd1ad6d0163e6dff31007a010cfbd539c62",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1393,
+      "sha256": "d8c95f5d420680966fcd47e13197456f083d590a4d9dd9afc86fec0477c65427",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 10724,
+      "sha256": "09c77593249c91b5ae026a7405951113a7221c1dd91e4842dca4643622c130ea",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 53428,
+      "sha256": "4a7b85c84736b3eb0868da7d0a0dd2d05ec6b192c66aee8dd0b1992725f1761b",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "history-initial-inventory.json",
+      "bytes": 1007679,
+      "sha256": "abfccc7e06061f50bd275a6dfb1b53a176b865427b982e6e13493825fc15672b",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "history-source-rows.json",
+      "bytes": 25945,
+      "sha256": "2ebdca9722ffe24a30369c635ca09ce3ae98541a0085e35c194d178c55ccdc16",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "history-summary.json",
+      "bytes": 747,
+      "sha256": "85073c2df0eadc6471aaccc106e37498a7bcb59e072a39014def0cea2868bec5",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1066,
+      "sha256": "b97cc93cabe9006acca8882751c5b3cf09e725058bff4a8f7f9900d972a285dd",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "report.md",
+      "bytes": 3889,
+      "sha256": "b56928771c190f5a8792c0df41831ee5f2aad0b2491cbe07ba7b5f5b954e338f",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 4829,
+      "sha256": "951ef39fa1d50458e0115682b0b836a6b2768ee3c8da3e4336f5d9adf111da23",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "scope-decision.json",
+      "bytes": 3188,
+      "sha256": "ac36568c65e6d5c515bb3780919f022a4977826d3cb9a3591efe1bf8fe0911a8",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4510,
+      "sha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1415,
+      "sha256": "dfb80144887af28e99ff37902fdf4821a3fc73ec978504484c51dbb33e74b329",
+      "matchesReceiptBytes": true,
+      "matchesReceiptSha256": true
+    }
+  ],
+  "knownRootFrozenShaChecks": [
+    {
+      "path": "report.md",
+      "bytes": 3889,
+      "sha256": "b56928771c190f5a8792c0df41831ee5f2aad0b2491cbe07ba7b5f5b954e338f",
+      "matchesRootReportedFrozenSha": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4510,
+      "sha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9",
+      "matchesRootReportedFrozenSha": true
+    },
+    {
+      "path": "checks.json",
+      "bytes": 670,
+      "sha256": "f116afff591009bb78181530471f07aa3b502ec57eaa08d6c1b2c6026558b4f0",
+      "matchesRootReportedFrozenSha": true
+    },
+    {
+      "path": "artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "9457f7b6bbc6d5713cdf265ec89ac109255b67e04ecdf7d4b964577f342fdb47",
+      "matchesRootReportedFrozenSha": true
+    }
+  ],
+  "authorReportLinkChecks": [
+    {
+      "target": "scope-decision.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "canonical-gate-read.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "history-summary.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "history-initial-inventory.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "history-contexts.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "consumer-initial-pins.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "checks.json",
+      "exists": true,
+      "withinPacket": true
+    },
+    {
+      "target": "artifact-receipt.json",
+      "exists": true,
+      "withinPacket": true
+    }
+  ],
+  "originalR7Proof": {
+    "originalManifest": {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/source-manifest.json",
+      "bytes": 26410,
+      "sha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "actualTopFieldNames": [
+        "baseline",
+        "assemblyWorkingTreeHead",
+        "files",
+        "unresolvedReferences",
+        "generatedArtifactReferences",
+        "runtimeDependencyReceipt",
+        "note"
+      ],
+      "baselinePointer": "/baseline",
+      "baseline": "1b04838474bcd57212f80f791d0e268a00d347e3",
+      "assemblyWorkingTreeHeadPointer": "/assemblyWorkingTreeHead",
+      "assemblyWorkingTreeHead": "1b04838474bcd57212f80f791d0e268a00d347e3",
+      "frozenSourceFieldPresentTop": false,
+      "frozenSourceFieldPresentAtRow48": false,
+      "currentSha256FieldPresentAtRow48": false,
+      "row48Pointer": "/files/48",
+      "row48ActualFieldNames": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "row48": {
+        "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "bytes": 5792,
+        "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "note": "SHAs refer to frozen Git blobs. Installed SDK snapshot separately recorded, not claimed as Git-tracked source. Selected inventory/hash is not full-depth review coverage."
+    },
+    "originalMarkdown": {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "displayedLines": [
+        [
+          1,
+          23
+        ]
+      ],
+      "relevantInterpretedLines": [
+        3,
+        9
+      ],
+      "otherLinesIncidental": true,
+      "line3": "冻结源码 `1b04838474bcd57212f80f791d0e268a00d347e3`。本方向新增确认 **0 项**；没有成功执行新的产品测试，也没有把缺失构建产物或导航命令失败算成产品 bug。",
+      "line9": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。"
+    },
+    "baselineEqualsAssemblyHead": true,
+    "mdFrozenSourceTextMatchesActualBaselineField": true,
+    "fullSourceStatementNamesTarget": true,
+    "originalCanonicalTargetIndices": [
+      48
+    ],
+    "oneCanonicalTargetAt48": true,
+    "sameSourceShaAt102DatedPin": true,
+    "sameSourceBytesAt102DatedPin": true,
+    "authorPinPointer": "/files/2",
+    "authorManifestPointer": "/files/0",
+    "authorEndPointer": "/sources/2",
+    "callerGlobFailureBoundaryRetained": true,
+    "noDynamicApplicationProjectionClaim": true,
+    "originalFrozenBlobVerifiedIsAnOldDeclarationNotThisReviewGitCheck": true,
+    "currentProductSourceShaRechecked": false
+  },
+  "authorScopeChecks": {
+    "authorClassification": {
+      "formal": 0,
+      "candidate": 0,
+      "related": 0
+    },
+    "oldFullSourceExclusions": 1,
+    "authorProductBodyZero": true,
+    "authorTestDeclarationZero": true,
+    "authorRowsHashOnly": true,
+    "consumerNotAdditionallyActivated": true,
+    "globalCountsUnchanged": true,
+    "oldPacketsUnchanged": true,
+    "authorRuntimeAllZero": true,
+    "frozen102Hist5017ByteInventoryNotRescanned": true
+  },
+  "inputEnding": [
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "9457f7b6bbc6d5713cdf265ec89ac109255b67e04ecdf7d4b964577f342fdb47",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/canonical-gate-read.json",
+      "bytes": 9390,
+      "sha256": "dd58495158fc17a719474a38935a99d25ee81a41e82adff5f48de578418c10cd",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/checks.json",
+      "bytes": 670,
+      "sha256": "f116afff591009bb78181530471f07aa3b502ec57eaa08d6c1b2c6026558b4f0",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/consumer-initial-pins.json",
+      "bytes": 390,
+      "sha256": "26772267e49f7f827f65d0cdc5df8cd1ad6d0163e6dff31007a010cfbd539c62",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/ending-checks.json",
+      "bytes": 1393,
+      "sha256": "d8c95f5d420680966fcd47e13197456f083d590a4d9dd9afc86fec0477c65427",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/finalize-metadata.py",
+      "bytes": 10724,
+      "sha256": "09c77593249c91b5ae026a7405951113a7221c1dd91e4842dca4643622c130ea",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/history-contexts.json",
+      "bytes": 53428,
+      "sha256": "4a7b85c84736b3eb0868da7d0a0dd2d05ec6b192c66aee8dd0b1992725f1761b",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/history-initial-inventory.json",
+      "bytes": 1007679,
+      "sha256": "abfccc7e06061f50bd275a6dfb1b53a176b865427b982e6e13493825fc15672b",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/history-source-rows.json",
+      "bytes": 25945,
+      "sha256": "2ebdca9722ffe24a30369c635ca09ce3ae98541a0085e35c194d178c55ccdc16",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/history-summary.json",
+      "bytes": 747,
+      "sha256": "85073c2df0eadc6471aaccc106e37498a7bcb59e072a39014def0cea2868bec5",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/initial-pins.json",
+      "bytes": 1066,
+      "sha256": "b97cc93cabe9006acca8882751c5b3cf09e725058bff4a8f7f9900d972a285dd",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/report.md",
+      "bytes": 3889,
+      "sha256": "b56928771c190f5a8792c0df41831ee5f2aad0b2491cbe07ba7b5f5b954e338f",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/scan-history.py",
+      "bytes": 4829,
+      "sha256": "951ef39fa1d50458e0115682b0b836a6b2768ee3c8da3e4336f5d9adf111da23",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/scope-decision.json",
+      "bytes": 3188,
+      "sha256": "ac36568c65e6d5c515bb3780919f022a4977826d3cb9a3591efe1bf8fe0911a8",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/source-manifest.json",
+      "bytes": 4510,
+      "sha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round102-character-themes/validation.json",
+      "bytes": 1415,
+      "sha256": "dfb80144887af28e99ff37902fdf4821a3fc73ec978504484c51dbb33e74b329",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "sameAsBefore": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/source-manifest.json",
+      "bytes": 26410,
+      "sha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "sameAsBefore": true
+    }
+  ],
+  "currentProductSemanticLines": 0,
+  "currentTestDeclarationLines": 0,
+  "currentProductSourceShaRechecks": 0,
+  "newHistoryScans": 0,
+  "productRuns": 0,
+  "authorMethodsExecuted": 0,
+  "GitOperations": 0,
+  "metadataErrors": [
+    {
+      "stage": "ownfirstchecker",
+      "exitCode": 1,
+      "cause": "/tmp vs /private/tmp normalized-root mismatch",
+      "diagnostic": "first-checker-diagnostic.json",
+      "firstPreserved": true
+    }
+  ],
+  "metadataTruncations": 0,
+  "reviewReportLocalLinks": {
+    "count": 8,
+    "allValidWhenReceiptCreated": true
+  }
+}

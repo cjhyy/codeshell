@@ -1,0 +1,15 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "imageDetail|setImageDetail|ImageDetail",
+        "packages/desktop/src/renderer/App.tsx"
+      ],
+      "exitCode": 0,
+      "stdout": "275:  const [imageDetail, setImageDetail] = useState<\"low\" | \"standard\" | \"high\" | undefined>(\n1498:      setImageDetail(undefined);\n1535:        setImageDetail(d === \"low\" || d === \"standard\" || d === \"high\" ? d : undefined);\n2660:                    imageDetail={imageDetail}\n2784:                    imageDetail={imageDetail}\n",
+      "stderr": ""
+    }
+  ]
+}

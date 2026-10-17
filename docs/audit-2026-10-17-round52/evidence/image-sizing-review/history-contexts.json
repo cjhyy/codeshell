@@ -1,0 +1,1826 @@
+{
+  "perQueryCap": 100,
+  "totalHits": {
+    "path": 66,
+    "filename": 71,
+    "oldCause": 23,
+    "sha": 20
+  },
+  "retained": {
+    "path": 66,
+    "sha": 20,
+    "filename": 71,
+    "oldCause": 23
+  },
+  "contexts": {
+    "path": [
+      {
+        "document": "docs/architecture/11-feature-inventory.md",
+        "documentSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8",
+        "pointer": "markdown-text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 41296,
+        "windowStart": 12444,
+        "windowEnd": 13284,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "documentSha256": "8ed0fa1566f7a217e56a7f562a78ca2c13c4a8a2bf1eea167e1c035a170ea456",
+        "pointer": "markdown-text",
+        "text": "不能把 data URL 打到日志。\n- Windows 路径和中文文件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireFor",
+        "valueCharacters": 34733,
+        "windowStart": 21787,
+        "windowEnd": 22627,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+        "pointer": "/source_inventory/1396",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/2557/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+        "documentSha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3",
+        "pointer": "/chatview/0/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1019,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/2/context",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1092,
+        "windowStart": 228,
+        "windowEnd": 1068,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/3/context",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1092,
+        "windowStart": 179,
+        "windowEnd": 1019,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/4/context",
+        "text": "销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 785,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/5/context",
+        "text": "支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 736,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/6/context",
+        "text": "hatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 687,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/31/context",
+        "text": "不能把 data URL 打到日志。\n- Windows 路径和中文文件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireFor",
+        "valueCharacters": 1092,
+        "windowStart": 52,
+        "windowEnd": 892,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/2/context",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1062,
+        "windowStart": 198,
+        "windowEnd": 1038,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/3/context",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1062,
+        "windowStart": 149,
+        "windowEnd": 989,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/4/context",
+        "text": "片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 755,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/5/context",
+        "text": "ktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 706,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/6/context",
+        "text": "ktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 657,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/31/context",
+        "text": "不能把 data URL 打到日志。\n- Windows 路径和中文文件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireFor",
+        "valueCharacters": 1062,
+        "windowStart": 22,
+        "windowEnd": 862,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10250/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10250/directSourcePathsInObject/0",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10251/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10251/directSourcePathsInObject/0",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/2876/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/2876/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+        "pointer": "/unknownPaths/2642",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/2877/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-epoch/0/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "valueCharacters": 1070,
+        "windowStart": 425,
+        "windowEnd": 1070,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-epoch/25/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 706,
+        "windowStart": 425,
+        "windowEnd": 706,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-summary/0/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "valueCharacters": 1070,
+        "windowStart": 425,
+        "windowEnd": 1070,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/0/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/rend",
+        "valueCharacters": 1300,
+        "windowStart": 646,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/6/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 927,
+        "windowStart": 646,
+        "windowEnd": 927,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/9/text",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/deskto",
+        "valueCharacters": 923,
+        "windowStart": 228,
+        "windowEnd": 923,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/path/6/excerpt",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1019,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/filename/6/excerpt",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1019,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/filename/9/excerpt",
+        "text": "sages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 ",
+        "valueCharacters": 1092,
+        "windowStart": 228,
+        "windowEnd": 1068,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+        "pointer": "/files/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "documentSha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+        "pointer": "/files/20/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "documentSha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+        "pointer": "/products/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/41/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/159/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/160/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/247/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/277/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/307/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/1/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/10/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/12/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/13/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/47/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/144/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/145/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/403/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/404/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/405/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/406/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/407/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/639/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/640/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/699/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/700/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/751/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/789/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/790/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+        "pointer": "/files/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "documentSha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560",
+        "pointer": "/packets/3/manifestRangeChecks/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/files/33/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/hashOnlyChecks/13/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      }
+    ],
+    "sha": [
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/2557/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10251/sourceHashFields/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/2876/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/2876/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/2877/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+        "pointer": "/files/9/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+        "pointer": "/files/9/oldInventoryRow/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "documentSha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+        "pointer": "/files/20/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "documentSha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+        "pointer": "/products/9/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/41/hashFields/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/247/hashFields/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/277/hashFields/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/307/hashFields/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+        "pointer": "/files/9/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+        "pointer": "/files/9/endingSha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "documentSha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560",
+        "pointer": "/packets/3/manifestRangeChecks/9/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/files/33/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/files/33/currentSha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/files/33/mainSha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/hashOnlyChecks/13/sha256",
+        "text": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      }
+    ],
+    "filename": [
+      {
+        "document": "docs/architecture/11-feature-inventory.md",
+        "documentSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8",
+        "pointer": "markdown-text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 41296,
+        "windowStart": 12479,
+        "windowEnd": 13319,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "documentSha256": "8ed0fa1566f7a217e56a7f562a78ca2c13c4a8a2bf1eea167e1c035a170ea456",
+        "pointer": "markdown-text",
+        "text": "件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- Chat",
+        "valueCharacters": 34733,
+        "windowStart": 21822,
+        "windowEnd": 22662,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+        "pointer": "/source_inventory/1396",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/2557/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "documentSha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687",
+        "pointer": "/hits/image-text-order/12/context",
+        "text": "bytes；如果原始落盘文件大于 image policy，则生成 `derived/<sha>-vision.jpg` 并让 `vision.mediaPath` 指向派生图。\n- low/standard/high 复用现有 `compress.ts` cap：low 1024、standard 1568、high 2576。\n- `RunParams.attachments` 进入 core 后，core 不信任 metadata size，必须 stat 实际文件。\n- 每轮 image part 仍执行 `IMAGE_LIMITS`，超过 count/total 时返回明确 `image_error` 或降级为 path-only，由 MVP 拍板。\n- `Read` 不自动 vision，避免一次普通文件读取触发昂贵图片 token。\n- 对 `@dir`，默认只给 tree，不内联文件内容；对大文件、二进制、未知类型只给 path/size/hash。\n\n## 7. 需卡密sama拍板的决策点\n\n1. MVP 是否严格限定图片：推荐是。通用 `@file/@dir` 和二进制附件放 Stage 6。\n2. 粘贴/OS drop 图片 staging 失败时怎么办：推荐阻止发送并显示错误；备选是回退到旧 data URL 内联，但会继续没有 path。\n3. 落盘目录是否采用 `<cwd>/.code-shell/attachments/<sessionId>/`：推荐是。备选 `~/.code-shell/sessions/<id>/attachments` 会触发 pathPolicy 和可移植性问题。\n4. no-repo cwd",
+        "valueCharacters": 870,
+        "windowStart": 0,
+        "windowEnd": 736,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "documentSha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+        "pointer": "/hits/image-text-order/12/context",
+        "text": "bytes；如果原始落盘文件大于 image policy，则生成 `derived/<sha>-vision.jpg` 并让 `vision.mediaPath` 指向派生图。\n- low/standard/high 复用现有 `compress.ts` cap：low 1024、standard 1568、high 2576。\n- `RunParams.attachments` 进入 core 后，core 不信任 metadata size，必须 stat 实际文件。\n- 每轮 image part 仍执行 `IMAGE_LIMITS`，超过 count/total 时返回明确 `image_error` 或降级为 path-only，由 MVP 拍板。\n- `Read` 不自动 vision，避免一次普通文件读取触发昂贵图片 token。\n- 对 `@dir`，默认只给 tree，不内联文件内容；对大文件、二进制、未知类型只给 path/size/hash。\n\n## 7. 需卡密sama拍板的决策点\n\n1. MVP 是否严格限定图片：推荐是。通用 `@file/@dir` 和二进制附件放 Stage 6。\n2. 粘贴/OS drop 图片 staging 失败时怎么办：推荐阻止发送并显示错误；备选是回退到旧 data URL 内联，但会继续没有 path。\n3. 落盘目录是否采用 `<cwd>/.code-shell/attachments/<sessionId>/`：推荐是。备选 `~/.code-shell/sessions/<id>/attachments` 会触发 pathPolicy 和可移植性问题。\n4. no-repo cwd",
+        "valueCharacters": 870,
+        "windowStart": 0,
+        "windowEnd": 736,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+        "documentSha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3",
+        "pointer": "/chatview/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1054,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/2/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `",
+        "valueCharacters": 1092,
+        "windowStart": 263,
+        "windowEnd": 1092,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/3/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1092,
+        "windowStart": 214,
+        "windowEnd": 1054,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/4/context",
+        "text": "销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 820,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/5/context",
+        "text": "支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 771,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/6/context",
+        "text": "hatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 722,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/31/context",
+        "text": "件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- Chat",
+        "valueCharacters": 1092,
+        "windowStart": 87,
+        "windowEnd": 927,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/2/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `",
+        "valueCharacters": 1062,
+        "windowStart": 233,
+        "windowEnd": 1062,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/3/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1062,
+        "windowStart": 184,
+        "windowEnd": 1024,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/4/context",
+        "text": "片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 790,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/5/context",
+        "text": "ktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 741,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/6/context",
+        "text": "ktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 692,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/31/context",
+        "text": "件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- Chat",
+        "valueCharacters": 1062,
+        "windowStart": 57,
+        "windowEnd": 897,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10250/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10250/directSourcePathsInObject/0",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10251/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/10251/directSourcePathsInObject/0",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/2876/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/2876/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+        "pointer": "/unknownPaths/2642",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/2877/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-epoch/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "valueCharacters": 1070,
+        "windowStart": 460,
+        "windowEnd": 1070,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-epoch/25/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 706,
+        "windowStart": 460,
+        "windowEnd": 706,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-summary/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "valueCharacters": 1070,
+        "windowStart": 460,
+        "windowEnd": 1070,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/rend",
+        "valueCharacters": 1300,
+        "windowStart": 681,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/6/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 927,
+        "windowStart": 681,
+        "windowEnd": 927,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/9/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/deskto",
+        "valueCharacters": 923,
+        "windowStart": 263,
+        "windowEnd": 923,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/path/6/excerpt",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1054,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/filename/6/excerpt",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1054,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/filename/9/excerpt",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `",
+        "valueCharacters": 1092,
+        "windowStart": 263,
+        "windowEnd": 1092,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+        "pointer": "/files/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "documentSha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+        "pointer": "/files/20/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "documentSha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+        "pointer": "/products/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/41/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/159/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/160/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/247/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/277/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+        "pointer": "/claims/307/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/1/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/10/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/12/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/13/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/47/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/144/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/145/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/403/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/404/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/405/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/406/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/407/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/639/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/640/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/699/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/700/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/751/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/789/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+        "pointer": "/locators/790/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+        "documentSha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+        "pointer": "markdown-text",
+        "text": " unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/dropdown-menu.tsx` | 175 | old hash / different SHA |\n| 28 | `settings/SettingsMenu.tsx` | 294 | ambiguous: over EOF |\n| 29 | `settings/useSettingsNavigationFocus.ts` | 141 | ambiguous: bounded full |\n| 30 | `messages/StreamingMarkdown.tsx` | 165 | old full / different SHA |\n\nExact SHA, original document SHA/JSON pointer, qualifier",
+        "valueCharacters": 6277,
+        "windowStart": 4325,
+        "windowEnd": 5165,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+        "pointer": "/files/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "documentSha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560",
+        "pointer": "/packets/3/manifestRangeChecks/9/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/files/33/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+        "pointer": "/hashOnlyChecks/13/path",
+        "text": "packages/desktop/src/renderer/chat/compress.ts",
+        "valueCharacters": 46,
+        "windowStart": 0,
+        "windowEnd": 46,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/canonical-gate-read.json",
+        "documentSha256": "068f93e7a8bcf906f18d8b7bc2675fd367c4a82e1e09a2d2a64c875fd758c070",
+        "pointer": "/uncappedMarkdownBasenameContexts/0/excerpt",
+        "text": " unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/drop",
+        "valueCharacters": 1080,
+        "windowStart": 569,
+        "windowEnd": 1080,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md",
+        "documentSha256": "147d36e8ea4c85da93ca85c44362f4605cece3933c73d8d061cf170639066b9a",
+        "pointer": "markdown-text",
+        "text": " / referer 校验**，main 进程直接拉会 403。在页面上下文 fetch 才带得上该页 session（与\"独立窗口登录抓 cookie\"一脉相承）。\n   - canvas 转 dataURL 顺带跨域兜底：若图片 CORS 受限导致 canvas 污染（toDataURL 抛错），回退到\"截该 img 元素区域\"（走 vision 路径），保证总能拿到像素。\n3. **过现有图片管道**：dataURL → 复用 `compress.ts` 同款降采样（降到 1568px，Claude 上限）→ 过 `image-policy.ts` 策略门 → `ContentBlock` image 块。\n4. **一次多张**：`refs` 数组。超出策略门（>6 张 / >6MB）自动截断 + 提示 AI 分批（复用 `dropOversizedImages` 的提示机制）。\n\n#### `vision` 模式实现\n\n```jsonc\nbrowser_observe({ mode: \"vision\" })            // 截视口\nbrowser_observe({ mode: \"vision\", ref: \"e5\" }) // 截某元素区域（含 <video> → 截当前帧）\n```\n\n- `Page.captureScreenshot`（`format:jpeg`，省体积）；给 ref 时按 `DOM.getBoxModel` 算 `clip`。\n- 截视频帧 = 截 `<video>` 元素区域（视频流不可直接喂模型，截帧当图看）。\n- 同样过 compress 降采样 + 策略门 + image 块。\n\n#### 默认不自动截图 / 不自动取图（token 纪律）\n\n图片 token 贵（[roboflow](https://blog.roboflow.com/image-token-cost-vlm/)：1024² ≈ ",
+        "valueCharacters": 16811,
+        "windowStart": 12381,
+        "windowEnd": 13221,
+        "boundedWindowNotFullValue": true
+      }
+    ],
+    "oldCause": [
+      {
+        "document": "docs/architecture/11-feature-inventory.md",
+        "documentSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8",
+        "pointer": "markdown-text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 41296,
+        "windowStart": 12479,
+        "windowEnd": 13319,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "documentSha256": "8ed0fa1566f7a217e56a7f562a78ca2c13c4a8a2bf1eea167e1c035a170ea456",
+        "pointer": "markdown-text",
+        "text": "件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- Chat",
+        "valueCharacters": 34733,
+        "windowStart": 21822,
+        "windowEnd": 22662,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "documentSha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687",
+        "pointer": "/hits/image-text-order/12/context",
+        "text": "bytes；如果原始落盘文件大于 image policy，则生成 `derived/<sha>-vision.jpg` 并让 `vision.mediaPath` 指向派生图。\n- low/standard/high 复用现有 `compress.ts` cap：low 1024、standard 1568、high 2576。\n- `RunParams.attachments` 进入 core 后，core 不信任 metadata size，必须 stat 实际文件。\n- 每轮 image part 仍执行 `IMAGE_LIMITS`，超过 count/total 时返回明确 `image_error` 或降级为 path-only，由 MVP 拍板。\n- `Read` 不自动 vision，避免一次普通文件读取触发昂贵图片 token。\n- 对 `@dir`，默认只给 tree，不内联文件内容；对大文件、二进制、未知类型只给 path/size/hash。\n\n## 7. 需卡密sama拍板的决策点\n\n1. MVP 是否严格限定图片：推荐是。通用 `@file/@dir` 和二进制附件放 Stage 6。\n2. 粘贴/OS drop 图片 staging 失败时怎么办：推荐阻止发送并显示错误；备选是回退到旧 data URL 内联，但会继续没有 path。\n3. 落盘目录是否采用 `<cwd>/.code-shell/attachments/<sessionId>/`：推荐是。备选 `~/.code-shell/sessions/<id>/attachments` 会触发 pathPolicy 和可移植性问题。\n4. no-repo cwd",
+        "valueCharacters": 870,
+        "windowStart": 0,
+        "windowEnd": 736,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "documentSha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+        "pointer": "/hits/image-text-order/12/context",
+        "text": "bytes；如果原始落盘文件大于 image policy，则生成 `derived/<sha>-vision.jpg` 并让 `vision.mediaPath` 指向派生图。\n- low/standard/high 复用现有 `compress.ts` cap：low 1024、standard 1568、high 2576。\n- `RunParams.attachments` 进入 core 后，core 不信任 metadata size，必须 stat 实际文件。\n- 每轮 image part 仍执行 `IMAGE_LIMITS`，超过 count/total 时返回明确 `image_error` 或降级为 path-only，由 MVP 拍板。\n- `Read` 不自动 vision，避免一次普通文件读取触发昂贵图片 token。\n- 对 `@dir`，默认只给 tree，不内联文件内容；对大文件、二进制、未知类型只给 path/size/hash。\n\n## 7. 需卡密sama拍板的决策点\n\n1. MVP 是否严格限定图片：推荐是。通用 `@file/@dir` 和二进制附件放 Stage 6。\n2. 粘贴/OS drop 图片 staging 失败时怎么办：推荐阻止发送并显示错误；备选是回退到旧 data URL 内联，但会继续没有 path。\n3. 落盘目录是否采用 `<cwd>/.code-shell/attachments/<sessionId>/`：推荐是。备选 `~/.code-shell/sessions/<id>/attachments` 会触发 pathPolicy 和可移植性问题。\n4. no-repo cwd",
+        "valueCharacters": 870,
+        "windowStart": 0,
+        "windowEnd": 736,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+        "documentSha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3",
+        "pointer": "/chatview/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1054,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/2/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `",
+        "valueCharacters": 1092,
+        "windowStart": 263,
+        "windowEnd": 1092,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/3/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1092,
+        "windowStart": 214,
+        "windowEnd": 1054,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/4/context",
+        "text": "销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1092,
+        "windowStart": 0,
+        "windowEnd": 820,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_path/31/context",
+        "text": "件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- Chat",
+        "valueCharacters": 1092,
+        "windowStart": 87,
+        "windowEnd": 927,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/2/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `",
+        "valueCharacters": 1062,
+        "windowStart": 233,
+        "windowEnd": 1062,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/3/context",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1062,
+        "windowStart": 184,
+        "windowEnd": 1024,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/4/context",
+        "text": "片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/de",
+        "valueCharacters": 1062,
+        "windowStart": 0,
+        "windowEnd": 790,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+        "pointer": "/hits/source_filename/31/context",
+        "text": "件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- Chat",
+        "valueCharacters": 1062,
+        "windowStart": 57,
+        "windowEnd": 897,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-epoch/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "valueCharacters": 1070,
+        "windowStart": 460,
+        "windowEnd": 1070,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-epoch/25/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 706,
+        "windowStart": 460,
+        "windowEnd": 706,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+        "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+        "pointer": "/hits/shell-summary/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "valueCharacters": 1070,
+        "windowStart": 460,
+        "windowEnd": 1070,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/0/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/rend",
+        "valueCharacters": 1300,
+        "windowStart": 681,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/6/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 927,
+        "windowStart": 681,
+        "windowEnd": 927,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+        "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+        "pointer": "/toolcard/9/text",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/deskto",
+        "valueCharacters": 923,
+        "windowStart": 263,
+        "windowEnd": 923,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/path/6/excerpt",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1054,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/filename/6/excerpt",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "valueCharacters": 1300,
+        "windowStart": 1054,
+        "windowEnd": 1300,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+        "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+        "pointer": "/hits/filename/9/excerpt",
+        "text": "| AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `",
+        "valueCharacters": 1092,
+        "windowStart": 263,
+        "windowEnd": 1092,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md",
+        "documentSha256": "147d36e8ea4c85da93ca85c44362f4605cece3933c73d8d061cf170639066b9a",
+        "pointer": "markdown-text",
+        "text": " / referer 校验**，main 进程直接拉会 403。在页面上下文 fetch 才带得上该页 session（与\"独立窗口登录抓 cookie\"一脉相承）。\n   - canvas 转 dataURL 顺带跨域兜底：若图片 CORS 受限导致 canvas 污染（toDataURL 抛错），回退到\"截该 img 元素区域\"（走 vision 路径），保证总能拿到像素。\n3. **过现有图片管道**：dataURL → 复用 `compress.ts` 同款降采样（降到 1568px，Claude 上限）→ 过 `image-policy.ts` 策略门 → `ContentBlock` image 块。\n4. **一次多张**：`refs` 数组。超出策略门（>6 张 / >6MB）自动截断 + 提示 AI 分批（复用 `dropOversizedImages` 的提示机制）。\n\n#### `vision` 模式实现\n\n```jsonc\nbrowser_observe({ mode: \"vision\" })            // 截视口\nbrowser_observe({ mode: \"vision\", ref: \"e5\" }) // 截某元素区域（含 <video> → 截当前帧）\n```\n\n- `Page.captureScreenshot`（`format:jpeg`，省体积）；给 ref 时按 `DOM.getBoxModel` 算 `clip`。\n- 截视频帧 = 截 `<video>` 元素区域（视频流不可直接喂模型，截帧当图看）。\n- 同样过 compress 降采样 + 策略门 + image 块。\n\n#### 默认不自动截图 / 不自动取图（token 纪律）\n\n图片 token 贵（[roboflow](https://blog.roboflow.com/image-token-cost-vlm/)：1024² ≈ ",
+        "valueCharacters": 16811,
+        "windowStart": 12381,
+        "windowEnd": 13221,
+        "boundedWindowNotFullValue": true
+      }
+    ]
+  },
+  "machineOnlyNoWindowsYetClaimedSemanticallyRead": true
+}

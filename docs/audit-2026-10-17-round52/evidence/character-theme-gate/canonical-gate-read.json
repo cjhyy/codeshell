@@ -1,0 +1,219 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/2",
+      "row": {
+        "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "bytes": 5792,
+        "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "lines": 132,
+        "pinnedUTC": "2026-10-17T16:48:11.083247+00:00",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialPinIsSemanticReadProof": false,
+        "endingSha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80"
+      },
+      "ancestorQualifiers": [
+        {
+          "globalSemanticCoverageUpdate": false
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/files/26",
+      "row": {
+        "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "bytes": 5792,
+        "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "currentBytes": 5792,
+        "currentSha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "mainBytes": 5792,
+        "mainSha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/hashOnlyChecks/6",
+      "row": {
+        "manifest": "frontier-selection/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "coverage": "hash-only",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "pointer": "/files/48",
+      "row": {
+        "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "bytes": 5792,
+        "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "SHAs refer to frozen Git blobs. Installed SDK snapshot separately recorded, not claimed as Git-tracked source. Selected inventory/hash is not full-depth review coverage."
+        }
+      ]
+    }
+  ],
+  "uncappedMarkdownCount": 2,
+  "uncappedMarkdownContexts": [
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "documentSha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+      "paragraph": 7,
+      "excerpt": " scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/dropdown-menu.tsx` | 175 | old hash / different SHA |\n| 28 | `settings/SettingsMenu.tsx` | 294 | ambiguous: over EOF |\n| 29 | `settings/useSettingsNavigationFocus.ts` | 141 | ambiguous: bounded full |\n| 30 | `messages/StreamingMarkdown.tsx` | 165 | old full / different SHA |",
+      "excerptStart": 1037,
+      "excerptEnd": 1889,
+      "originalChars": 1889,
+      "excerptTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "documentSha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "paragraph": 4,
+      "excerpt": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "excerptStart": 0,
+      "excerptEnd": 385,
+      "originalChars": 385,
+      "excerptTruncated": false
+    }
+  ],
+  "nonManifestMetadataLocatorSummary": [
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/2",
+      "metadata": {
+        "lines": 132,
+        "coverage": "hash-only; no source body displayed or semantically read"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+      "pointer": "/rows/54",
+      "metadata": {
+        "reviewedUTC": "2026-10-17T16:49:45.162497+00:00"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/23",
+      "metadata": {
+        "ranges": {
+          "lines": 132,
+          "currentSelectedUnionRanges": []
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/34",
+      "metadata": {
+        "ranges": {
+          "lines": 132
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/142",
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/143",
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/240",
+      "metadata": {
+        "ranges": {
+          "lines": 132
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/270",
+      "metadata": {
+        "ranges": {
+          "lines": 132
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/300",
+      "metadata": {
+        "ranges": {
+          "lines": 132
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/386",
+      "metadata": {
+        "ranges": {}
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/3/manifestRangeChecks/2",
+      "metadata": {
+        "coverage": "hash-only",
+        "declaredFileLines": 132,
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "navigationLineRanges": [],
+        "computedSemanticLines": 0,
+        "declaredSemanticLines": 0,
+        "computedBodyDisplayedLines": 0,
+        "declaredBodyDisplayedLines": null,
+        "computedDisplayIncludingNavigationLines": 0,
+        "declaredDisplayIncludingNavigationLines": 0,
+        "allRangesWithinDeclaredFileLength": true,
+        "fullOnlyIfAllDeclaredLinesSelected": true,
+        "purposeOrScope": null
+      }
+    }
+  ],
+  "decision": "Explicit sameSHA original full-source claim closes target before current body; no new specific independent problem established.",
+  "sameShaOriginalMarkdownQualifiedTargetFullActivated": true
+}

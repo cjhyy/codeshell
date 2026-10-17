@@ -1,0 +1,36 @@
+{
+  "toolChunk": "ae550d",
+  "observedExitCode": 0,
+  "outputTruncated": true,
+  "originalTokenCount": 9954,
+  "requestedMaxOutputTokens": 8500,
+  "stage": "Metadata scope projections/locators and old-cause window presenter only",
+  "affectedWindowIndicesToReread": [
+    5,
+    6,
+    7,
+    8
+  ],
+  "rawFullStdoutSeparatelyCaptured": false,
+  "originalObjectsAndWindowsRemainIn": [
+    "coverage-gate-objects.json",
+    "history-contexts.json"
+  ],
+  "notProductFailure": true,
+  "repair": "Read only affected saved bounded metadata windows; no history scan or product retry.",
+  "metadataWarning": {
+    "toolChunk": "34c28b",
+    "observedExitCode": 0,
+    "stderrTranscribedVerbatim": "<stdin>:6: SyntaxWarning: \"\\(\" is an invalid escape sequence. Such sequences will not work in the future. Did you mean \"\\\\(\"? A raw string is also an option.",
+    "scope": "Own inlinePython rg pattern literal warning; command completed, pins/navigation saved. Not a product/test failure; no rerun required."
+  },
+  "secondTruncation": {
+    "toolChunk": "c348e2",
+    "observedExitCode": 0,
+    "originalTokenCount": 4527,
+    "requestedPollMaxTokens": 4500,
+    "affectedFocusedWindowIndex": 5,
+    "rawFullStdoutSeparatelyCaptured": false,
+    "repair": "Reread only saved focused window5; no scan/product rerun."
+  }
+}

@@ -1,0 +1,173 @@
+{
+  "rootReportedReadBaseline": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "lines": 218,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          39,
+          39
+        ],
+        [
+          49,
+          52
+        ],
+        [
+          64,
+          85
+        ],
+        [
+          93,
+          218
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "semanticLineCount": 153,
+      "bodyDisplayedLineCount": 218,
+      "endingSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "endingBytes": 8303,
+      "endingUTC": "2026-10-17T17:41:32.517811+00:00",
+      "scope": "Ordinary attachment image dimensions, positive thin-image branch and actual File→ChatView staging data flow only. Browser/canvas execution, engine policy, provider pricing and complete Host custody/lifecycle not certified. Test declarations only, no execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1232,
+          1278
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1230,
+          1295
+        ]
+      ],
+      "semanticLineCount": 47,
+      "bodyDisplayedLineCount": 66,
+      "endingSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "endingBytes": 106169,
+      "endingUTC": "2026-10-17T17:41:32.517811+00:00",
+      "scope": "Ordinary attachment image dimensions, positive thin-image branch and actual File→ChatView staging data flow only. Browser/canvas execution, engine policy, provider pricing and complete Host custody/lifecycle not certified. Test declarations only, no execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "lines": 391,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          73
+        ],
+        [
+          98,
+          151
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          18,
+          73
+        ],
+        [
+          98,
+          151
+        ]
+      ],
+      "semanticLineCount": 110,
+      "bodyDisplayedLineCount": 110,
+      "endingSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "endingBytes": 13388,
+      "endingUTC": "2026-10-17T17:41:32.517811+00:00",
+      "scope": "Ordinary attachment image dimensions, positive thin-image branch and actual File→ChatView staging data flow only. Browser/canvas execution, engine policy, provider pricing and complete Host custody/lifecycle not certified. Test declarations only, no execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "bytes": 3144,
+      "lines": 82,
+      "sha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "semanticLineCount": 69,
+      "bodyDisplayedLineCount": 69,
+      "endingSha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "endingBytes": 3144,
+      "endingUTC": "2026-10-17T17:41:32.517811+00:00",
+      "scope": "Ordinary attachment image dimensions, positive thin-image branch and actual File→ChatView staging data flow only. Browser/canvas execution, engine policy, provider pricing and complete Host custody/lifecycle not certified. Test declarations only, no execution."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only instruction carry-forward; Root instruction reading recorded separately"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only instruction carry-forward; Root instruction reading recorded separately"
+    }
+  ],
+  "counts": {
+    "full": 0,
+    "selected": 4,
+    "productSemanticLines": 310,
+    "testDeclarationLines": 69,
+    "bodyDisplayedLines": 463,
+    "testsRun": 0
+  },
+  "historyReading": {
+    "machineFiles": 5017,
+    "markdownFiles": 1479,
+    "jsonFiles": 3538,
+    "valueStringLeaves": 2348391,
+    "valueScalars": 3489788,
+    "compactScopeRowsRead": 38,
+    "pathMatches": 77,
+    "shaMatches": 20,
+    "broadCompressCauseMatches": 1227,
+    "retainedContextCap": 60,
+    "focusedThinContexts": 52,
+    "focusedZeroCanvasMatches": 0,
+    "focusedExactInputFalsePositives": 52,
+    "focusedCompactMatchRowsRead": 104,
+    "rawWidePrintTruncated": true,
+    "allRawContextsRead": false,
+    "sameShaOldFullEstablished": false
+  },
+  "globalCoverageUpdated": false,
+  "productRuns": 0
+}

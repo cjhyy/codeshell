@@ -1,0 +1,1300 @@
+{
+  "capPerQuery": 100,
+  "queryPatterns": {
+    "exact-path": "packages/desktop/src/renderer/builtin\\-character\\-themes\\.ts",
+    "basename": "builtin-character-themes",
+    "current-sha": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+    "character-theme-old-cause": "(?:character.themes?|角色主题|builtin.character|内置.{0,10}主题).{0,180}(?:default|默认|lookup|查找|颜色|color|palette|duplicate|重复|ID)"
+  },
+  "totalMatches": {
+    "exact-path": 48,
+    "basename": 53,
+    "current-sha": 26
+  },
+  "retainedCounts": {
+    "exact-path": 48,
+    "basename": 53,
+    "current-sha": 26,
+    "character-theme-old-cause": 0
+  },
+  "actualHumanRead": "pending; machine totals not semantic reads",
+  "contexts": {
+    "exact-path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "locator": "/source_inventory/1361",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/645/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2514/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10095/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10095/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10096/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10096/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/2833/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/2833/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "locator": "/unknownPaths/2607",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/2834/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "locator": "/files/18/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/54/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "locator": "/products/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/23/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/34/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/142/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/143/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/240/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/270/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/300/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/386/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/40/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/98/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/99/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/100/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/130/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/131/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/361/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/362/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/363/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/364/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/365/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/625/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/626/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/685/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/686/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/744/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/775/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/776/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/955/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/956/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "locator": "/packets/3/manifestRangeChecks/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/26/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/hashOnlyChecks/6/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+        "locator": "/files/48/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      }
+    ],
+    "basename": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "locator": "/source_inventory/1361",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/645/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2514/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10095/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10095/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10096/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10096/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/2833/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/2833/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "locator": "/unknownPaths/2607",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/2834/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "locator": "/files/18/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/54/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "locator": "/products/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/23/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/34/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/142/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/143/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/240/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/270/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/300/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/386/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/40/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/98/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/99/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/100/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/130/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/131/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/361/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/362/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/363/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/364/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/365/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/625/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/626/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/685/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/686/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/744/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/775/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/776/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/955/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/956/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+        "locator": "paragraph/7",
+        "kind": "markdown-paragraph",
+        "excerpt": " scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/dropdown-menu.tsx` | 175 | old hash / different SHA |\n| 28 | `settings/SettingsMenu.tsx` | 294 | ambiguous: over EOF |\n| 29 | `settings/useSettingsNavigationFocus.ts` | 141 | ambiguous: bounded full |\n| 30 | `messages/StreamingMarkdown.tsx` | 165 | old full / different SHA |",
+        "excerptStart": 1037,
+        "excerptEnd": 1889,
+        "originalChars": 1889,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "locator": "/packets/3/manifestRangeChecks/2/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/26/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/hashOnlyChecks/6/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round51/evidence/context-boundary/history-contexts.json",
+        "locator": "/targetFilename/74/context",
+        "kind": "json-recursive-value",
+        "excerpt": " scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | ",
+        "excerptStart": 1172,
+        "excerptEnd": 1423,
+        "originalChars": 1423,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round51/evidence/context-boundary/history-contexts.json",
+        "locator": "/oldCause/93/context",
+        "kind": "json-recursive-value",
+        "excerpt": " scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts",
+        "excerptStart": 1172,
+        "excerptEnd": 1419,
+        "originalChars": 1419,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/canonical-gate-read.json",
+        "locator": "/uncappedMarkdownBasenameContexts/0/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/drop",
+        "excerptStart": 499,
+        "excerptEnd": 1080,
+        "originalChars": 1080,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round7/root-metadata.md",
+        "locator": "paragraph/4",
+        "kind": "markdown-paragraph",
+        "excerpt": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+        "excerptStart": 0,
+        "excerptEnd": 385,
+        "originalChars": 385,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+        "locator": "/files/48/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/builtin-character-themes.ts",
+        "excerptStart": 0,
+        "excerptEnd": 57,
+        "originalChars": 57,
+        "excerptTruncated": false
+      }
+    ],
+    "current-sha": [
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/645/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/645/claims/0/sourceSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2514/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/10096/sourceHashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/2833/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/2833/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/2834/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/2/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/2/oldInventoryRow/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "locator": "/files/18/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/54/association/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "locator": "/products/2/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/23/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/34/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/240/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/270/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/300/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/386/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/2/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/2/endingSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "locator": "/packets/3/manifestRangeChecks/2/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/26/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/26/currentSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/26/mainSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/hashOnlyChecks/6/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+        "locator": "/files/48/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      }
+    ],
+    "character-theme-old-cause": []
+  }
+}

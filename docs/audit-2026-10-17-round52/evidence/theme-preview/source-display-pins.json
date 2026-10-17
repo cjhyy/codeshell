@@ -1,0 +1,64 @@
+{
+  "pins": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "beforeDisplayUTC": "2026-10-17T17:31:20.128272+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          121
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "beforeDisplayUTC": "2026-10-17T17:32:07.748472+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          54,
+          180
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-appearance.ts",
+      "bytes": 1412,
+      "sha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "beforeDisplayUTC": "2026-10-17T17:32:07.750286+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "beforeDisplayUTC": "2026-10-17T17:32:07.750924+00:00",
+      "displayedLineRanges": [
+        [
+          24,
+          50
+        ],
+        [
+          207,
+          215
+        ],
+        [
+          283,
+          314
+        ]
+      ]
+    }
+  ]
+}

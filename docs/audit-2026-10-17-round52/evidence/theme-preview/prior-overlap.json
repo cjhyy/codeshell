@@ -1,0 +1,179 @@
+{
+  "readUTC": "2026-10-17T17:32:47.696119+00:00",
+  "canonicalSelectedConsumerRows": [
+    {
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+      "pointer": "/files/0",
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+        "bytes": 14267,
+        "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+        "lineCount": 362,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            24,
+            50
+          ],
+          [
+            53,
+            55
+          ],
+          [
+            64,
+            94
+          ],
+          [
+            112,
+            125
+          ],
+          [
+            211,
+            211
+          ],
+          [
+            214,
+            249
+          ],
+          [
+            281,
+            328
+          ],
+          [
+            356,
+            358
+          ],
+          [
+            360,
+            362
+          ]
+        ],
+        "coveredLineCount": 166,
+        "displayedLineRanges": [
+          [
+            1,
+            180
+          ],
+          [
+            189,
+            189
+          ],
+          [
+            211,
+            362
+          ]
+        ],
+        "displayedLineCount": 333,
+        "additionalNavigationSnippetLines": [
+          189
+        ],
+        "firstPinArtifact": "initial-pins.json",
+        "firstPinUTC": "2026-10-17T15:13:49.362599+00:00",
+        "firstDisplayToolChunks": "08ab25/f4ba57/4c3572",
+        "exactFirstDisplayWallClockUTC": null,
+        "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+        "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+        "scope": "Ordinary names, light/dark/system values, state/load/save and pressed display. Import/remove bodies, focus restoration, ThemeAudio/system implementation are outside semantic ranges."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+      "pointer": "/files/3",
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/theme-packs.ts",
+        "bytes": 7737,
+        "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+        "lineCount": 245,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            118,
+            128
+          ],
+          [
+            141,
+            142
+          ],
+          [
+            165,
+            180
+          ],
+          [
+            243,
+            245
+          ]
+        ],
+        "coveredLineCount": 32,
+        "displayedLineRanges": [
+          [
+            16,
+            16
+          ],
+          [
+            53,
+            54
+          ],
+          [
+            61,
+            61
+          ],
+          [
+            76,
+            76
+          ],
+          [
+            91,
+            91
+          ],
+          [
+            100,
+            100
+          ],
+          [
+            116,
+            142
+          ],
+          [
+            151,
+            151
+          ],
+          [
+            165,
+            191
+          ],
+          [
+            243,
+            245
+          ]
+        ],
+        "displayedLineCount": 65,
+        "additionalNavigationSnippetLines": [
+          16,
+          53,
+          54,
+          61,
+          76,
+          91,
+          100,
+          119,
+          151,
+          165,
+          174,
+          243,
+          244
+        ],
+        "firstPinArtifact": "consumer-initial-pins.json",
+        "firstPinUTC": "2026-10-17T15:16:25.869535+00:00",
+        "firstDisplayToolChunks": "4c3572",
+        "exactFirstDisplayWallClockUTC": null,
+        "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+        "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+        "scope": "Stable ID/plain-or-i18n name/source and builtin/default lookup. Audio/frame/surface definitions only display/navigation, not mechanism audit."
+      }
+    }
+  ],
+  "notWholeConsumerHistoryGate": true,
+  "noFirstEverOrAllHistoryUniqueClaim": true
+}

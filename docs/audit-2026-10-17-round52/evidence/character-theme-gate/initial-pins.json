@@ -1,0 +1,30 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootContextCommitExternal": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedUTC": "2026-10-17T17:30:35.434582+00:00",
+      "timing": "Before current102 body/contentlocator review"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedUTC": "2026-10-17T17:30:35.435429+00:00",
+      "timing": "Before current102 body/contentlocator review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "bytes": 5792,
+      "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+      "lines": 132,
+      "pinnedUTC": "2026-10-17T17:30:35.435749+00:00",
+      "timing": "Before current102 body/contentlocator review"
+    }
+  ]
+}

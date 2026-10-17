@@ -1,0 +1,14 @@
+{
+  "url": "https://html.spec.whatwg.org/multipage/canvas.html#dom-canvas-toblob",
+  "publisher": "WHATWG HTML Standard",
+  "readUTC": "2026-10-17T17:41:32.517811+00:00",
+  "readTool": "web.run open+find in one call; tool render lines336–350",
+  "steps": "toBlob 2–4.2.2",
+  "paraphrase": "Result starts null. Only a bitmap with both dimensions nonzero is copied and serialized; the callback receives the still-null result for a zero dimension.",
+  "shortQuote": "Let result be null.",
+  "rawWebpageSaved": false,
+  "webpageSha256": null,
+  "documentationWebCalls": 1,
+  "productNetworkRuns": 0,
+  "note": "Official public standard consulted; no actual canvas, DOM, image decoder or product network execution. Do not substitute toDataURL or OffscreenCanvas rules."
+}

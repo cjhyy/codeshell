@@ -1,0 +1,38 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "compressBatch|acceptFiles|imageDetail|clarity",
+        "packages/desktop/src/renderer/ChatView.tsx"
+      ],
+      "exitCode": 0,
+      "stdout": "62:import { compressBatch, type ImageDetail } from \"./chat/compress\";\n198:  /** Provider-agnostic image clarity; drives renderer-side downscale before send. */\n199:  imageDetail?: ImageDetail;\n422:  imageDetail,\n1225:  const acceptFiles = async (files: File[], origin: \"paste\" | \"os-drop\" | \"picker\") => {\n1238:      // will actually be sent. compressBatch never throws; it falls\n1241:      const compressed = await compressBatch(accepted, imageDetail);\n1301:    await acceptFiles(imageFiles, \"paste\");\n1333:    if (images.length > 0) await acceptFiles(images, origin);\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "ImageAttachment|imagesFromFiles|fileTo|image/|readAsDataURL|naturalWidth|width|height|MIME",
+        "packages/desktop/src/renderer/chat/attachments.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "18:export interface ImageAttachment {\n23:  /** MIME type as reported by the browser. */\n56: * DataTransfer MIME for an internal file-panel → composer image drag (TODO\n60:export const CODESHELL_PATH_DND_MIME = \"application/x-codeshell-path\";\n67:  allowedMimes: new Set([\"image/png\", \"image/jpeg\", \"image/jpg\", \"image/webp\", \"image/gif\"]),\n86:    reader.readAsDataURL(file);\n91: * Validate + read a batch of files into ImageAttachment. Returns the\n98:  existing: ImageAttachment[],\n99:): Promise<{ accepted: ImageAttachment[]; errors: AttachmentError[] }> {\n101:  const accepted: ImageAttachment[] = [];\n161:  const mime = m[1] || \"image/png\";\n180:  existing: ImageAttachment[],\n182:    Pick<ImageAttachment, \"path\" | \"relPath\" | \"absPath\" | \"sha256\" | \"origin\" | \"sessionId\">\n184:): { attachment?: ImageAttachment; error?: AttachmentError } {\n250:export function encodeAttachmentsForWire(text: string, images: ImageAttachment[]): string {\n258:function imageAttrs(img: ImageAttachment): string {\n302: * instead of 60 chars of `data:image/png;base64,…`.\n335:      const mime = /mime=\"([^\"]*)\"/.exec(attrsRaw)?.[1] ?? \"image/png\";\n359:    if (it.kind === \"file\" && it.type.startsWith(\"image/\")) {\n375:    if (it.kind === \"file\" && it.type.startsWith(\"image/\")) {\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "describe\\(|it\\(|test\\(|scaledDimensions|alwaysDownsample|capForDetail",
+        "packages/desktop/src/renderer/chat/compress.test.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "3:  scaledDimensions,\n6:  capForDetail,\n7:  alwaysDownsample,\n12: * Only `scaledDimensions` is unit-testable in pure Node — the rest of\n19:describe(\"scaledDimensions\", () => {\n20:  test(\"passes through when both sides fit under the cap\", () => {\n21:    expect(scaledDimensions(1024, 768, 2048)).toEqual({ width: 1024, height: 768 });\n22:    expect(scaledDimensions(2048, 2048, 2048)).toEqual({ width: 2048, height: 2048 });\n25:  test(\"clamps landscape on the long edge\", () => {\n27:    expect(scaledDimensions(4000, 2000, 2048)).toEqual({ width: 2048, height: 1024 });\n30:  test(\"clamps portrait on the long edge\", () => {\n32:    expect(scaledDimensions(2000, 4000, 2048)).toEqual({ width: 1024, height: 2048 });\n35:  test(\"clamps square correctly\", () => {\n36:    expect(scaledDimensions(4096, 4096, 2048)).toEqual({ width: 2048, height: 2048 });\n39:  test(\"preserves aspect ratio within one pixel (rounding-tolerant)\", () => {\n41:    const { width, height } = scaledDimensions(5123, 2718, 2048);\n49:describe(\"constants are sane defaults\", () => {\n50:  test(\"TARGET_BYTES matches the engine's per-image cap\", () => {\n53:  test(\"MAX_DIMENSION is the documented 2048\", () => {\n58:describe(\"capForDetail — per-clarity-level long-edge cap\", () => {\n59:  test(\"low/标准/高清 map to 1024 / 1568 / 2576\", () => {\n60:    expect(capForDetail(\"low\")).toBe(1024);\n61:    expect(capForDetail(\"standard\")).toBe(1568);\n62:    expect(capForDetail(\"high\")).toBe(2576);\n64:  test(\"unknown / undefined falls back to high (no surprise downscale)\", () => {\n65:    expect(capForDetail(undefined)).toBe(2576);\n66:    expect(capForDetail(\"garbage\" as ImageDetail)).toBe(2576);\n70:describe(\"alwaysDownsample — whether to re-encode even small images\", () => {\n74:  test(\"low and standard always downsample\", () => {\n75:    expect(alwaysDownsample(\"low\")).toBe(true);\n76:    expect(alwaysDownsample(\"standard\")).toBe(true);\n78:  test(\"high (and default) only compress when oversize\", () => {\n79:    expect(alwaysDownsample(\"high\")).toBe(false);\n80:    expect(alwaysDownsample(undefined)).toBe(false);\n",
+      "stderr": ""
+    }
+  ],
+  "afterPins": true
+}

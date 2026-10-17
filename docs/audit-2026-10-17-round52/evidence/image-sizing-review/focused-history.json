@@ -1,0 +1,125 @@
+{
+  "scope": "Focused literal/AND metadata query over exact original5017 inventory only; not newinventory or product source scan.",
+  "queries": [
+    "casefold literal scaledDimensions",
+    "canvas AND any zero/零/0 pixel/宽度0/高度0/Math.round/长条",
+    "compress AND any1×4096/1x4096/细长/长条/zero-width/zero-height/0宽/0高"
+  ],
+  "counts": {
+    "scaledDimensionsName": 0,
+    "canvasZeroRound": 11,
+    "stripAndCompress": 0
+  },
+  "capEach": 30,
+  "retained": {
+    "scaledDimensionsName": 0,
+    "canvasZeroRound": 11,
+    "stripAndCompress": 0
+  },
+  "errors": [],
+  "contexts": {
+    "scaledDimensionsName": [],
+    "canvasZeroRound": [
+      {
+        "document": "docs/archive/browser-automation-research-2026-06-16.md",
+        "documentSha256": "f309a5724752a4f06a3c07461890e6aba5b0778c858de76f9583e84af3cafff9",
+        "pointer": "markdown-text",
+        "text": "缓存命中)。\n4. **登录态**:直接用 `persist:browser`,遇登录墙/2FA 把面板亮给用户(human handoff)。\n5. **安全**:敏感动作走现有审批;域名白名单;隔离 profile 已有。\n\n### 进阶(P2+)\n6. **视觉兜底 opt-in**:a11y 树覆盖不到的元素(canvas/地图/自定义 widget)→ `capturePage` + SoM 标注 + `browser_click_xy`。默认关。\n7. **Cookie Lease 落地**(TODO 7.5):让 skill 的 CLI(yt-dlp 等)也能用面板登录态。与浏览器自动化是姊妹能力,可并行。\n8. **确定性脚本固化**:高频稳定流程(登录态复用、固定表单)抽成确定性脚本,不每步进模型。\n\n### 工具形态决策\n- **一组细粒度工具(snapshot / click / type / navigate)** 优于「单个 browser_act 大工具」:对 prompt 缓存友好(工具定义稳定)、对 LLM 决策清晰。\n- **暂不做成 MCP server**:MVP 内置工具直连 webview 最简单;若日后要给外部 agent 复用再抽 MCP。\n\n---\n\n## 3. Caveats(落地前复核)\n- 数字的配置依赖:观察占比 84%(SWE-bench 特定配置,76–84% 浮动)、prompt 缓存降本 89%(大静态前缀长会话场景)—— 方向性而非普适常数。\n- 域适配:观察遮蔽硬证据来自**编码 agent**,迁移到浏览器原理可通但**需自测验证**。\n- ven",
+        "valueCharacters": 5740,
+        "windowStart": 4339,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/archive/browser-tool-experience-improvements-2026-06-20.md",
+        "documentSha256": "8efe67503d79c3d034c49772d8bbd27bd004c6391a3833f8c3da7db802c31ce3",
+        "pointer": "markdown-text",
+        "text": "曾卡 27 秒（已修，待验证）\n\n- **证据**：`turn 9 observe mode:vision duration_ms: 27347`。\n- **根因**：`screenshot` 先 `captureScreenshot` 拿大图，再把整张 base64 塞回页面用 `Runtime.evaluate`+canvas 二次缩放——重页面上注入多 MB 字符串+解码巨慢。\n- **已修**：commit `ea016759` 改用 CDP 原生 `clip.scale` 服务端缩放，零页面往返，删 `DOWNSCALE_FN` 死代码。\n- **待办**：真机验证现在是否秒回。\n\n### 🟢 P3-⑥ 工具结果文字信息量低\n\n- **证据**：`[screenshot loaded]` / `Page ready` 这类回显太薄。\n- **修法**：加尺寸 / URL / 截了哪块区域 / 元素数量等。与 P1-① 一起做。\n\n---\n\n## 2. 两个用户明确的方向\n\n### 方向 A：专门写 skill 解决\"真正的问题\"\n\n不靠改底层工具硬扛 SPA，而用 **skill（知识层）** 教 AI 套路。覆盖 ②③ 这类站点特定/SPA 通用知识。\n\n**待拍板：skill 范围**（用户暂未定，本轮先列体验问题）：\n- **选项 1：通用「浏览器操作」skill** —— 对付重 SPA 的通用套路：先 wait 再 observe / 找不到 tab 就截图点坐标或 scroll / 带 userId 导航别裸 `/user/profile` / 实在不行才抓接口。跨站点通用。\n- **选项 2：",
+        "valueCharacters": 4942,
+        "windowStart": 3434,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/archive/electron-ux-optimization-checklist.md",
+        "documentSha256": "6eb3e890a2025bcbf712fc1460ccb5c120677b998a8dca1d6e0403df48381bb4",
+        "pointer": "markdown-text",
+        "text": "正在配置什么搜索能力。\n- 用户知道 key 是否已经配置成功。\n- 用户可以测试搜索是否可用。\n- 配置失败时有可理解的错误信息。\n\n## P1：重要体验优化\n\n### 4. 已安装 Skills 管理体验优化\n\n#### 当前问题\n\n已安装 skill 现在是平铺或不够聚合。例如 `document-skills:canvas-design` 这种 skill 应该按照前缀 / 来源进行聚合。用户希望能点击进入分组内部勾选具体内容，方便整体取消或批量管理。\n\n#### 目标\n\n把已安装 Skills 做成“分组 + 详情 + 批量选择”的管理体验。\n\n#### 优化方向\n\n##### 4.1 按 namespace / plugin 聚合\n\n例如：\n\n```text\ndocument-skills\n  - algorithmic-art\n  - brand-guidelines\n  - canvas-design\n  - docx\n  - pdf\n  - pptx\n\nsuperpowers\n  - brainstorming\n  - systematic-debugging\n  - test-driven-development\n```\n\n##### 4.2 分组级操作\n\n每个分组支持：\n\n- 展开 / 收起\n- 全选 / 全不选\n- 批量卸载\n- 批量禁用\n- 查看来源\n- 查看安装路径\n\n##### 4.3 单个 skill 操作\n\n每个 skill 支持：\n\n- 启用 / 禁用\n- 卸载\n- 查看说明\n- 查看触发条件\n- 查看来源\n- 复制 skill 名称\n- 打开本地文件位置，如果 Electron ",
+        "valueCharacters": 6457,
+        "windowStart": 2291,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/bytes.md",
+        "documentSha256": "afeaf33d0adcb75d3f266f2922ee967867d05b4bea3275bd48eab50fb0a1df01",
+        "pointer": "markdown-text",
+        "text": "be.ts#L314) 复用该 JPEG parser。没有执行 stage、文件上传、真实图像文件、UI 或原生解码器；不能声称真实用户已被阻断。\n- 查重：全历史 docs/bugs 中的 MD 与 parsed JSON string leaves 对 image probe、lossless/DQT、WebP canvas 等关键词未发现相同已登记条目。关键词覆盖不等同于语义穷尽证明。\n\n## 实际覆盖、对照与排除\n\n[首次 fixture](evidence/bytes-image-probe.first.test.ts) 直接导入目标纯函数，不导入 attachment-service。PNG/JPEG/GIF/WebP 正常样本逐项核对 1×1 尺寸、sanitizer 返回原有字节且 trailingBytes=0；另有带非零 byteOffset 的 Uint8Array 子视图控制、jpg MIME 别名，以及无动画简单 GIF 改为 87a header 的控制。样本字节来自当前维护的 attachment-service.test.ts 声明，未执行该服务测试中的文件、上传或存储路径。这不是恢复旧 legacy-native-history 的失败 stage 实验；本批没有调用那个实验或其消费者。\n\n`remote-relay/byte-stream.ts` 全文与 protocol.ts、device-relay.md 相关合同为静态阅读。该实现封装实际 ws/Node stream，并非可独立输入字节的纯帧 decoder；没有为了制造试验而替换其运行时、创建 WebSocket/TCP",
+        "valueCharacters": 3525,
+        "windowStart": 1258,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-06-16-browser-automation-mvp.md",
+        "documentSha256": "18f7360c74c921e2c3318fcaf1bb7feb3c0818579a464f3e81a444ea9c1822d6",
+        "pointer": "markdown-text",
+        "text": "ts,CDP 同样驱动;无人用 DevTools → CDP 随便独占,无共存问题)。这是「用户在场 webview / 无人值守隐藏窗口」双线的进阶线。\n- 视觉兜底:`Page.captureScreenshot` + Set-of-Mark 标注 + `browser_click_xy`(a11y 树覆盖不到的 canvas/地图)。\n- `chrome-devtools-mcp` 作开发者可选增强(不进默认依赖)。\n- Cookie Lease(TODO 7.5,姊妹能力,可并行)。\n- 高频流程固化成确定性脚本,不每步进模型。\n\n## 10. 风险 / 待验证\n- 观察遮蔽硬证据来自编码 agent(SWE-bench),迁到浏览器需自测。\n- a11y 树对复杂 SPA(shadow DOM / iframe / 虚拟列表)的覆盖度 — MVP 先覆盖普通页,shadow/跨域 iframe 留进阶(CDP 对 iframe 比注入 JS 强,但要处理 frame tree)。\n- CDP attach 与圈选 picker 的具体共存细节需真机调(临时 attach 窗口期内禁圈选,或圈选时先 detach)。\n",
+        "valueCharacters": 6758,
+        "windowStart": 6237,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md",
+        "documentSha256": "147d36e8ea4c85da93ca85c44362f4605cece3933c73d8d061cf170639066b9a",
+        "pointer": "markdown-text",
+        "text": "xtract` | 图片 URL + alt + 视频 URL | 已有 `buildExtractLinksScript`，扩展加 `<video>/<source>` src | ❌ 只知道有图，看不到 |\n| **`image`** | **某张图的真实内容**（原始像素喂模型） | **页面内 fetch + canvas → dataURL** | ✅ **主路**：看懂配图/商品图画了什么 |\n| `vision` | 屏幕截图（渲染样子 / canvas / 视频帧） | `Page.captureScreenshot`（视口或 ref 区域） | 看排版 / 图表 / 视频当前帧 |\n\n#### `image` 模式实现（核心，防盗链是关键）\n\n```jsonc\nbrowser_observe({ mode: \"image\", refs: [\"img3\", \"img7\"] })   // 一次多张\n```\n\n1. **图片分配 ref**：`extract`（及 `snapshot` 里的 `img` 元素）给每张图分配 ref（img1/img2…）+ 记录其 src。AI 从列表点名要看哪张。\n2. **页面内 fetch（绕防盗链）**：在**页面自己的上下文**里执行 `fetch(img.src) → blob → canvas → toDataURL`。\n   - **为何不在 main 进程 curl**：小红书等站图片有**防盗链 / 需 cookie / referer 校验**，main 进程直接拉会 403。在页面上下文 fetch 才带得上该页 session（与\"独立窗口登录",
+        "valueCharacters": 16811,
+        "windowStart": 11729,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/todo/agent-reliability-and-context-optimization.md",
+        "documentSha256": "eb13f223a53b835dd8c37c568907da1b607afc79cc4acf143a9eec06dfec9cf1",
+        "pointer": "markdown-text",
+        "text": "独立，模型需要手工推断哪条链路可用；\n3. 截图识别错两个仓库名，执行后才通过搜索纠正；\n4. Shell 使用 zsh 保留变量，命令在可能已产生部分副作用后失败；\n5. GitHub CLI 搜索使用不支持的字段；\n6. 浏览器 Snapshot、Vision、Act 和 Navigate 多次超时；\n7. 飞书 Canvas 表格多次返回“Typed/Clicked”，但第 13 行没有真正落盘；\n8. 未预检 macOS 辅助功能权限就调用 `osascript`，被系统拒绝；\n9. 同一飞书写入目标连续尝试多种键盘策略，没有系统级错误预算和熔断；\n10. 最终通过截图发现未写入，没有虚报完成；这部分验证行为应固化到系统，而不是依赖模型临场判断。\n\n## 三、版本与发布状态\n\nPrompt 缓存优化已经 Commit：\n\n- Commit：`3d24a6d5 perf(core): unify model prompt caching`\n- 当前本地 `main` 比 `origin/main` 超前 14 个提交；\n- 远端分支不包含该缓存提交；\n- 当前安装并运行的版本是 `0.9.3`；\n- 当前 `/Applications/code-shell.app/Contents/Resources/app.asar` 早于该提交。\n\n所以本次日志测试的是旧版，不能用来否定 `3d24a6d5` 的新缓存实现。当前准确状态是：\n\n> 代码已 Commit，但尚未 Push、发布、安装和重启验收。\n\n新缓存实现位置：\n\n- `packages/core/src/llm/prompt-cache.ts`\n- `p",
+        "valueCharacters": 20594,
+        "windowStart": 2303,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/todo/browser-automation-library-reuse.md",
+        "documentSha256": "2fa13492f3ad2d7c2c5f7458c50d844a9e00579f809d9479e03d2dde2ff26f4c",
+        "pointer": "markdown-text",
+        "text": "完成”指仓库中的生产路径、构建集成和隔离验证。此次没有覆盖或重启正在运行的已安装 CodeShell，也没有重载用户的 Chrome 扩展。使用新实现需要正常更新并重启桌面应用，再加载／重新加载配套扩展，重新授权标签页。\n\n## 解决的问题与迁移范围\n\n本轮最初复现了 Retina 截图只在左上角显示内容、嵌套内容区／Canvas 滚动被误判，以及页面滚动后点击坐标错误。问题涉及截图尺寸、输入、节点定位和结果观察，单独替换发送 CDP 命令的连接库不足以解决。\n\n目前日常动作已复用 Puppeteer／Playwright 的 `Page`、`ElementHandle`、键盘、鼠标和截图接口。CodeShell 保留有界 DOM 观察、准确节点引用、少量表单控件适配、滚动区域选择、权限与生命周期。后台子任务提前结案属于另一条任务生命周期修复，与浏览器协议迁移分开验收。\n\n| 浏览器来源                      | 当前生产调用路径                                                                                                        | 目标与登录态                                                                  |\n| ------------------------------- | -------------------------------------------------------------------------",
+        "valueCharacters": 12751,
+        "windowStart": 228,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/todo/project-cloud-panels-delivery.md",
+        "documentSha256": "c3dd568f0820376fe5bc4872837113c18bf348bcd5ef5e9ef6bdbd13dc3d83ea",
+        "pointer": "markdown-text",
+        "text": "captureAssetFrame`（Agent 的\n`inspect_video_frame` 使用入口）仍只等待 seeked，再直接从可变视频表面编码 JPEG。\n这一入口的结果也是该 UI 测试的预期像素来源；旧失败日志不足以断言其全部实际时序。\n\n新回归保留真实解码和 JPEG 编码，只令可变视频表面的直接 Canvas 读取为黑场。\n修复前得到有效格式但无真实像素的黑色 JPEG（1132 bytes、mutableReads=1），\n修复后读取冻结帧并保留原预览时间，日志 `/tmp/video-capture-frozen-before.log`、\n`/tmp/video-capture-frozen-after.log`。`e0fdbbc1bd66e9bb646290a454a9dfebfd94d3b1`\n让独立采样也验证并冻结实际帧，在完成／失败后释放。原图片路径保留，图像大小／\n编码上限不变；粗剪检查保留原像素容差并增加失败诊断（预期／实际中心色、播放头、\n选中片段及提示），不扩大等待时限。\n\n受影响的完整粗剪队列流程通过，`/tmp/video-capture-frozen-roughcut.log`。完整媒体\n190 项通过、零跳过，`/tmp/video-capture-media.log`；完整离线 check、类型、构建\n一致性与 validate 通过，源码／README／生成包同步提交。最终 CI\n36228852034／36228849737 运行中。没有将单项通过作为整体 UI 验收，也没有重跑\n旧失败任务来代替修复。\n\nDesign 用当前恢复模块连接实际已构建 Node H",
+        "valueCharacters": 207493,
+        "windowStart": 93947,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/todo/release-real-operations-2026-10-16.md",
+        "documentSha256": "8d854771a12655c1dc81afc1d70114fa0b55314888a4ed06f48b2c116c0c4415",
+        "pointer": "markdown-text",
+        "text": "es and three normal controls; nine final\ntests/45 assertions pass, including existing inline budgets and upload ordering.\nThese use synthetic bytes, controlled canvas conversion and upload callbacks,\nso they do not establish real JPEG decoding or server upload acceptance. Package\nrelease smoke passes ten tarballs/48 typed entries; Desktop builds and all 14\nworkspace typechecks pass after the clean package build. The next Web CI retains\nthis nine-test shard separately from the 31 browser behavior checks.\n\nThe final updated workflow parses as two jobs, 33 Bash run blocks and five inline\nNode blocks. The first syntax checker treated an existing module heredoc as CJS;\nits original extracted scripts and diagnostic r",
+        "valueCharacters": 241873,
+        "windowStart": 81233,
+        "boundedWindowNotWholeValue": true
+      },
+      {
+        "document": "docs/todo/workspace-upload-document-index-delivery.md",
+        "documentSha256": "dc759b46d580179a282d55b4f523cb15f9463bca095684e6a7c801d1cec6e0c2",
+        "pointer": "markdown-text",
+        "text": "，验证实际 Node 20.18.3 → manifest/hash 验证的 managed Node 24.21.0 → 真 PDF 子进程。CI 增加三个原生 Node 版本烟测及 Electron managed PDF 烟测。\n- 实际执行 Desktop `predist`，可选 PDF 包及 native canvas 闭包保留。用真实 ASAR 归档与相同 unpack 规则验收：Electron 从归档载入生产 worker，Office 走 Electron 子进程，PDF 走物理 unpacked 入口/依赖 + verified managed Node，均读取真实文本。macOS arm64 fixture 的归档为 182,518 字节、unpacked 解析闭包为 63,385,807 字节（约 60.45 MiB）；完整 Core production 闭包约 154.08 MB，没有全部展开。此数据为运行文件体积，不能等同完整安装器压缩体积；其它平台/架构的 native canvas 需各自打包 runner 验收。\n- 发布包门槛覆盖 9 个 tarball / 47 个声明入口，实际打包后的 SDK consumer 执行解析/查询/覆盖/删除，确认派生落盘为零、warm/cold 真实原件解析和 legacy 字节保留；不使用付费模型或第三方账号，不把 fixture 当成真实用户资料覆盖率。\n- 合并成本账本与 Operation Controller main 后的最终组合检查：1,456 项 Source/完整 ToolSystem/Link/Operation/Engi",
+        "valueCharacters": 6125,
+        "windowStart": 4487,
+        "boundedWindowNotWholeValue": true
+      }
+    ],
+    "stripAndCompress": []
+  }
+}

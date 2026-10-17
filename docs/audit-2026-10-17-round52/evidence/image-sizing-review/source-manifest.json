@@ -1,0 +1,727 @@
+{
+  "role": "Independent static review of knownRootlead;notblind,noRoot103packetread,no productruntime",
+  "rootReportedContextOnly": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "GitIndependentlyVerified": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "lines": 218,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:35:24.276172+00:00",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "semanticLineCount": 218,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "bodyDisplayedLineCount": 218,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 218,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Full218 static source: ordinary MIME/detail/bytes gates, size math, canvas-toBlob flow and original fallbacks/batch. No actualimage/DOM/provider/core-policy/billing validation orexecution.",
+      "initialSemanticReadSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "endingBytes": 8303,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:36:20.789670+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1225,
+          1242
+        ],
+        [
+          1251,
+          1253
+        ],
+        [
+          1256,
+          1258
+        ],
+        [
+          1262,
+          1264
+        ],
+        [
+          1272,
+          1274
+        ],
+        [
+          1295,
+          1302
+        ],
+        [
+          1308,
+          1312
+        ],
+        [
+          1317,
+          1318
+        ],
+        [
+          1322,
+          1322
+        ],
+        [
+          1324,
+          1325
+        ],
+        [
+          1331,
+          1334
+        ]
+      ],
+      "semanticLineCount": 52,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1225,
+          1276
+        ],
+        [
+          1284,
+          1303
+        ],
+        [
+          1307,
+          1335
+        ]
+      ],
+      "bodyDisplayedLineCount": 101,
+      "navigationLineRanges": [
+        [
+          62,
+          62
+        ],
+        [
+          198,
+          198
+        ],
+        [
+          199,
+          199
+        ],
+        [
+          422,
+          422
+        ],
+        [
+          1225,
+          1225
+        ],
+        [
+          1238,
+          1238
+        ],
+        [
+          1241,
+          1241
+        ],
+        [
+          1301,
+          1301
+        ],
+        [
+          1333,
+          1333
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 105,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          62,
+          62
+        ],
+        [
+          198,
+          199
+        ],
+        [
+          422,
+          422
+        ],
+        [
+          1243,
+          1250
+        ],
+        [
+          1254,
+          1255
+        ],
+        [
+          1259,
+          1261
+        ],
+        [
+          1265,
+          1271
+        ],
+        [
+          1275,
+          1276
+        ],
+        [
+          1284,
+          1294
+        ],
+        [
+          1303,
+          1303
+        ],
+        [
+          1307,
+          1307
+        ],
+        [
+          1313,
+          1316
+        ],
+        [
+          1319,
+          1321
+        ],
+        [
+          1323,
+          1323
+        ],
+        [
+          1326,
+          1330
+        ],
+        [
+          1335,
+          1335
+        ]
+      ],
+      "purpose": "Actual local paste/drop/picker FileDTO→compressBatch(imageDetail)→compressed dataUrl/mime/name staging input. Native staging/claim/session/cwd mechanisms are boundaries; adjacent identity fields notcertified.",
+      "initialSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "endingBytes": 106169,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "lines": 391,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:36:20.790658+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          28
+        ],
+        [
+          62,
+          73
+        ],
+        [
+          81,
+          88
+        ],
+        [
+          90,
+          142
+        ],
+        [
+          152,
+          155
+        ]
+      ],
+      "semanticLineCount": 88,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          18,
+          49
+        ],
+        [
+          61,
+          156
+        ]
+      ],
+      "bodyDisplayedLineCount": 128,
+      "navigationLineRanges": [
+        [
+          18,
+          18
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          56,
+          56
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          67,
+          67
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          99,
+          99
+        ],
+        [
+          101,
+          101
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          180,
+          180
+        ],
+        [
+          182,
+          182
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          250,
+          250
+        ],
+        [
+          258,
+          258
+        ],
+        [
+          302,
+          302
+        ],
+        [
+          335,
+          335
+        ],
+        [
+          359,
+          359
+        ],
+        [
+          375,
+          375
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 140,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          29,
+          49
+        ],
+        [
+          56,
+          56
+        ],
+        [
+          60,
+          61
+        ],
+        [
+          74,
+          80
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          143,
+          151
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          180,
+          180
+        ],
+        [
+          182,
+          182
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          250,
+          250
+        ],
+        [
+          258,
+          258
+        ],
+        [
+          302,
+          302
+        ],
+        [
+          335,
+          335
+        ],
+        [
+          359,
+          359
+        ],
+        [
+          375,
+          375
+        ]
+      ],
+      "purpose": "Normal scalar attachment DTO, MIME/count/10MB validation, FileReader dataURL/file size and returned accepted/errors. Noaspect ratio gate. Path/session/custody/IDclock mechanism adjacent only.",
+      "initialSemanticReadSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "endingBytes": 13388,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:37:28.859092+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          275,
+          277
+        ],
+        [
+          1531,
+          1535
+        ],
+        [
+          2660,
+          2660
+        ]
+      ],
+      "semanticLineCount": 9,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          275,
+          278
+        ],
+        [
+          1530,
+          1537
+        ],
+        [
+          2656,
+          2663
+        ]
+      ],
+      "bodyDisplayedLineCount": 20,
+      "navigationLineRanges": [
+        [
+          275,
+          275
+        ],
+        [
+          1498,
+          1498
+        ],
+        [
+          1535,
+          1535
+        ],
+        [
+          2660,
+          2660
+        ],
+        [
+          2784,
+          2784
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 22,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          278,
+          278
+        ],
+        [
+          1498,
+          1498
+        ],
+        [
+          1530,
+          1530
+        ],
+        [
+          1536,
+          1537
+        ],
+        [
+          2656,
+          2659
+        ],
+        [
+          2661,
+          2663
+        ],
+        [
+          2784,
+          2784
+        ]
+      ],
+      "purpose": "Accepted merged.images.detail enum and actualimageDetail props. Provider/permission/settings lifecycle adjacent only, no realconfig.",
+      "initialSemanticReadSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingBytes": 122863,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "bytes": 3144,
+      "lines": 82,
+      "sha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:36:20.791031+00:00",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          82
+        ]
+      ],
+      "semanticLineCount": 82,
+      "sourceKind": "test-declaration",
+      "displayedLineRanges": [
+        [
+          1,
+          82
+        ]
+      ],
+      "bodyDisplayedLineCount": 82,
+      "navigationLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          6,
+          6
+        ],
+        [
+          7,
+          7
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          20,
+          20
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          35,
+          35
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          41,
+          41
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          61,
+          61
+        ],
+        [
+          62,
+          62
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          74,
+          74
+        ],
+        [
+          75,
+          75
+        ],
+        [
+          76,
+          76
+        ],
+        [
+          78,
+          78
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          80,
+          80
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 82,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Full82 existing declarationfile;11tests read,0executed. Existing invalid-detail fallback declarationnotusedasnormalcounterexample; nofixtureconstructed.",
+      "initialSemanticReadSha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "endingBytes": 3144,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    }
+  ],
+  "counts": {
+    "semanticFiles": 5,
+    "full": 2,
+    "selected": 3,
+    "allSemanticLines": 449,
+    "productSemanticLines": 367,
+    "testDeclarationSemanticLines": 82,
+    "bodyDisplayedLines": 549,
+    "displayIncludingNavigationLines": 567,
+    "testDeclarationsRead": 11,
+    "testsExecuted": 0
+  },
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:35:24.274826+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:35:24.275675+00:00"
+    }
+  ],
+  "instructionStatus": "SameSHAinstructions prior94reading carried; no newinstruction bodycount.",
+  "externalDocumentation": "external-standard.json WHATWGtoBlob steps2–4.2/lines336–350; documentation only, notproductsource/networkexperiment.",
+  "priorOverlapLimit": "NecessaryApp/ChatView consumers previouslyselected; nofirstever/allhistoryunique/globalcoverageupdate.",
+  "excerptTiming": "Post-read capture; durable sourcepins preceded body/navigation."
+}

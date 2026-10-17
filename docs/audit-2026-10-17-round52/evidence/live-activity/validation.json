@@ -1,0 +1,58 @@
+{
+  "role": "Independent bounded ordinary source/data reviewer, not runtime verifier.",
+  "checks": {
+    "productFunctions": 0,
+    "productHelpers": 0,
+    "productImports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "UI": 0,
+    "clock": 0,
+    "timers": 0,
+    "native": 0,
+    "network": 0,
+    "model": 0,
+    "Git": 0,
+    "realConfigSessionOrUserDataReads": 0
+  },
+  "metadataProcessing": "Own standard-library history/scalar/hash/range/receipt processing only.",
+  "allPinsBeforeBodyAndLineNavigation": true,
+  "lateInitialPins": [],
+  "testDeclarationsRead": 8,
+  "testRuns": 0,
+  "metadataDiagnostics": [
+    {
+      "toolChunk": "4b09ad",
+      "exitCode": 1,
+      "kind": "Expected filename-only literal no-match after successful source sed displays",
+      "preserved": "first-diagnostic.json descriptive record plus original complete tool transcript",
+      "actualSearchArgv": [
+        "rg",
+        "-l",
+        "uiVisibility: \"hidden\"",
+        "packages/core/src",
+        "-g",
+        "*.ts"
+      ],
+      "retries": 0
+    }
+  ],
+  "unexpectedMetadataErrors": [],
+  "productFailures": [],
+  "truncations": [],
+  "sourceDisplayToolChunks": [
+    "7ba784",
+    "f18120",
+    "4d2f6a",
+    "2a958f",
+    "8b0867",
+    "ea4662",
+    "5e0f04",
+    "00c99c",
+    "4b09ad"
+  ],
+  "sourceExcerptCapture": "a703cb after actual source display, not a pre-read pin",
+  "capturedUTC": "2026-10-17T17:39:56.657838+00:00"
+}

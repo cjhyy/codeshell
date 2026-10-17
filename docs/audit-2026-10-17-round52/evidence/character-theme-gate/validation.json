@@ -1,0 +1,30 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "decision": "OriginalR7Markdown9 explicitly complete renderer source reading paired with canonicalR7/files/48 samecurrentSHA; stop before currentbody. No new specific independent problem established.",
+  "scope": "Completed history gate/exclusion only; no new negative audit of theme IDs/colors/defaults/currentlookup/apply.",
+  "originalR7FailureBoundary": "Themeapply caller navigation stopped by unmatched zshglob; not retried. No current restoration of this or any failed direction.",
+  "currentExecution": {
+    "product": 0,
+    "helper": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "timer": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0,
+    "realAssetsOrConfigReads": 0
+  },
+  "metadataCommandFailures": 0,
+  "metadataTruncations": 0,
+  "metadataEvidenceWallClock": "Pythonstdlib capture timestamps only; no productclock/timer execution.",
+  "scopeUnconfirmedMeaning": "Datedprep87JSON-only scope is not unread; originalMD now supports this finite exclusion without rewriting oldscope/index/counts.",
+  "tests": "No test source inventoried as a matching leaf-specific test; no current test declarations/imports/helpers executed.",
+  "unrelatedFilenameInventory": "builtin-maki-theme.ts appeared only as a filename; it was not opened, hashed or followed."
+}

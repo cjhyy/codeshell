@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-10-17T17:31:29.825031+00:00",
+  "baseline": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "lines": 218,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null
+    }
+  ]
+}

@@ -1,0 +1,634 @@
+{
+  "patternsRead": [
+    "thin-image-cause",
+    "zero-canvas-cause",
+    "thin-exact-input"
+  ],
+  "rows": [
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "at": "$",
+      "context": "*代码硬化**:**5 批 Explore bug-scan 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**\n>\n> **续(D)文档准确性核查(4 批 Explore subagent + 亲自复核,~19 份文档,按 receiving-cod"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/archive/core-modules/logging.md",
+      "at": "$",
+      "context": "e. It owns: (1) a terse, always-on file logger that routes entries into two daily buckets under `~/.code-shell/logs/` — `ui-ink-*.log` (UI/render chatter) and `engine-*.log` (everything else); (2) redaction of secrets and image base64 payloads so nothing sensitive lands in logs or diagnostics; and (3) a fat, dev-only `session-recorder` that writes full prompt/response/tool bodies into `<repo>/log/<date>/{engine,ui}/session-<sid>.jsonl` for post-mortem debugging. Transcripts (replay data) are out of scope — they keep full bytes; this module only governs what reaches *logs*.\n\n## 文件 / Files\n\n| File | Purpose |\n| --- | --- |\n| `logger.ts` | The `logger` singleton, `Logger` class, spans, session-id (ALS + fallback) resolut"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-16/root.md",
+      "at": "$",
+      "context": " 写入失败（例如父路径实际是文件）。\n- 预期：默认原子模式拒绝补丁后原文件完全恢复。实际：Delete 的 snapshot 用 UTF-8 string 保存二进制；rollback 用 UTF-8 writeFile 重建，非法 UTF-8 字节变为替换字符，且 executable mode 也丢失。\n- 影响：明确返回失败、声称 all-or-nothing 的调用依然改变原始资源。二进制图片/资源可能永久损坏；文本脚本正文虽恢复，却不能执行。\n- 验证：`evidence/root-patch.test.ts` 后两项；临时二进制 `[89 50 4e 47 ff 00 80]` 的回滚字节与原件不等；另一用例恢复脚本文字后执行位为 0。后续失败由真实 ENOTDIR 引发，不 mock 文件系统。和 A01 的成功 move 是不同修复语义；本项将两种不完整 snapshot 表现合并计数。\n- 查重：旧两份审查索引未列此项。\n- 建议：删除/回滚 snapshot 保存 Buffer 和元数据，完整恢复；不能保证恢复时向调用者明确报出恢复失败。\n\n## A03 [P3] Git status 的首条未暂存路径被截掉首字符\n\n- 位置：`packages/coding/src/git/utils.ts:29-30,76-83`；调用方 `packages/coding/src/capability-runtime.ts:76-81`。\n- 触发：porcelain 第一行为常见的 ` M alpha.txt`。\n- 原因：通用 git helper 对整个 stdout"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"run_store\"][21][\"context\"]",
+      "context": "cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 brea"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"schedule_model\"][2][\"context\"]",
+      "context": "ug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"schedule_model\"][13][\"context\"]",
+      "context": "cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"schedule_model\"][39][\"context\"]",
+      "context": "ug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"interval_conversion\"][9][\"context\"]",
+      "context": "全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"interval_conversion\"][35][\"context\"]",
+      "context": "cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"interval_conversion\"][64][\"context\"]",
+      "context": "全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "at": "$[\"hits\"][\"inline_image_grammar\"][11][\"context\"]",
+      "context": "buckets under `~/.code-shell/logs/` — `ui-ink-*.log` (UI/render chatter) and `engine-*.log` (everything else); (2) redaction of secrets and image base64 payloads so nothing sensitive lands in logs or diagnostics; and (3) a fat, dev-only `session-recorder` that writes full prompt/response/tool bodies into `<repo>/log/<date>/{engine,ui}/session-<sid>.jsonl` for post-mortem debugging. Transcripts (replay data) are out of scope — th"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "at": "$[\"hits\"][\"inline_image_grammar\"][133][\"context\"]",
+      "context": "buckets under `~/.code-shell/logs/` — `ui-ink-*.log` (UI/render chatter) and `engine-*.log` (everything else); (2) redaction of secrets and image base64 payloads so nothing sensitive lands in logs or diagnostics; and (3) a fat, dev-only `session-recorder` that writes full prompt/response/tool bodies into `<repo>/log/<date>/{engine,ui}/session-<sid>.jsonl` for post-mortem debugging. Transcripts (replay data) are out of scope — th"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "at": "$[\"hits\"][\"inline_image_grammar\"][155][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "at": "$[\"hits\"][\"inline_image_grammar\"][158][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "at": "$[\"hits\"][\"inline_image_grammar\"][162][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+      "at": "$[\"hits\"][\"balanced_wrong_order\"][0][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+      "at": "$[\"hits\"][\"balanced_wrong_order\"][1][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+      "at": "$[\"hits\"][\"balanced_wrong_order\"][2][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+      "at": "$[\"hits\"][\"balanced_wrong_order\"][3][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise.\n\nProduction paired producer: `packages/se"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+      "at": "$[\"hits\"][\"balanced_wrong_order\"][4][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise.\n\nProduction paired producer: `packages/se"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+      "at": "$[\"hits\"][\"balanced_wrong_order\"][5][\"context\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise.\n\nProduction paired producer: `packages/se"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][5][\"excerpt\"]",
+      "context": "can 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][39][\"excerpt\"]",
+      "context": "cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 brea"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][46][\"excerpt\"]",
+      "context": "ug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][56][\"excerpt\"]",
+      "context": "cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][82][\"excerpt\"]",
+      "context": "ug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][86][\"excerpt\"]",
+      "context": "全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][96][\"excerpt\"]",
+      "context": "cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][121][\"excerpt\"]",
+      "context": "全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "at": "$[\"matches\"][\"exact\"][152][\"excerpt\"]",
+      "context": "can 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-history-selected.json",
+      "at": "$[\"selected\"][5][\"excerpt\"]",
+      "context": "can 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "at": "$[\"hits\"][\"retention_context\"][34][\"context\"]",
+      "context": " 写入失败（例如父路径实际是文件）。\n- 预期：默认原子模式拒绝补丁后原文件完全恢复。实际：Delete 的 snapshot 用 UTF-8 string 保存二进制；rollback 用 UTF-8 writeFile 重建，非法 UTF-8 字节变为替换字符，且 executable mode 也丢失。\n- 影响：明确返回失败、声称 all-or-nothing 的调用依然改变原始资源。二进制图片/资源可能永久损坏；文本脚本正文虽恢复，却不能执行。\n- 验证：`evidence/root-patch.test.ts` 后两项；临时二进制 `[89 50 4e 47 ff 00 80]` 的回滚字节与原件不等；另一用例恢复脚本文字后执行位为 0。后续失败由真实 ENOTDIR 引发，不 mock 文件系统。和 A01 的成功 move 是不同修复语义；本项将两种不完整 snapshot 表现合并"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "at": "$[\"hits\"][\"image-text-order\"][1][\"context\"]",
+      "context": "e. It owns: (1) a terse, always-on file logger that routes entries into two daily buckets under `~/.code-shell/logs/` — `ui-ink-*.log` (UI/render chatter) and `engine-*.log` (everything else); (2) redaction of secrets and image base64 payloads so nothing sensitive lands in logs or diagnostics; and (3) a fat, dev-only `session-recorder` that writes full prompt/response/tool bodies into `<repo>/log/<date>/{engine,ui}/session-<sid>.jsonl` for post-mortem debugging. Transcripts (replay data) are out of scope — they keep full bytes; this module only governs what reac"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "at": "$[\"hits\"][\"image-text-order\"][1][\"context\"]",
+      "context": "e. It owns: (1) a terse, always-on file logger that routes entries into two daily buckets under `~/.code-shell/logs/` — `ui-ink-*.log` (UI/render chatter) and `engine-*.log` (everything else); (2) redaction of secrets and image base64 payloads so nothing sensitive lands in logs or diagnostics; and (3) a fat, dev-only `session-recorder` that writes full prompt/response/tool bodies into `<repo>/log/<date>/{engine,ui}/session-<sid>.jsonl` for post-mortem debugging. Transcripts (replay data) are out of scope — they keep full bytes; this module only governs what reac"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/history.json",
+      "at": "$[\"hits\"][\"stream-utf8\"][11][\"context\"]",
+      "context": " 写入失败（例如父路径实际是文件）。\n- 预期：默认原子模式拒绝补丁后原文件完全恢复。实际：Delete 的 snapshot 用 UTF-8 string 保存二进制；rollback 用 UTF-8 writeFile 重建，非法 UTF-8 字节变为替换字符，且 executable mode 也丢失。\n- 影响：明确返回失败、声称 all-or-nothing 的调用依然改变原始资源。二进制图片/资源可能永久损坏；文本脚本正文虽恢复，却不能执行。\n- 验证：`evidence/root-patch.test.ts` 后两项；临时二进制 `[89 50 4e 47 ff 00 80]` 的回滚字节与原件不等；另一用例恢复脚本文字后执行位为 0。后续失败由真实 ENOTDIR 引发，不 mock 文件系统。和 A01 的成功 move 是不同修复语义；本项将两种不完整 snapshot 表现合并计数。\n- 查重：旧两份审查索引未列此项。\n- 建议：删除/回滚 snapshot 保存 Buffer 和元数据，完整恢复；不能保证恢复时向调用者明确报出恢复失败。\n\n## A03 [P3] Git status 的首条未暂存路径被截掉首字符\n\n- 位置：`packages/coding/src/git/utils.ts:29-30,76-83`；调用方 `packages/coding/src/capability-runtime.ts:76-81`。\n- 触发：porcelain 第一行为常见的 ` M alpha.txt`。\n- 原因：通用 git helper 对整个 stdout"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/selected-history-contexts.json",
+      "at": "$[\"matches\"][38][\"context\"]",
+      "context": " 写入失败（例如父路径实际是文件）。\n- 预期：默认原子模式拒绝补丁后原文件完全恢复。实际：Delete 的 snapshot 用 UTF-8 string 保存二进制；rollback 用 UTF-8 writeFile 重建，非法 UTF-8 字节变为替换字符，且 executable mode 也丢失。\n- 影响：明确返回失败、声称 all-or-nothing 的调用依然改变原始资源。二进制图片/资源可能永久损坏；文本脚本正文虽恢复，却不能执行。\n- 验证：`evidence/root-patch.test.ts` 后两项；临时二进制 `[89 50 4e 47 ff 00 80]` 的回滚字节与原件不等；另一用例恢复脚本文字后执行位为 0。后续失败由真实 ENOTDIR 引发，不 mock 文件系统。和 A01 的成功 move 是不同修复语义；本项将两种不完整 snapshot 表现合并计数。\n- 查重：旧两份审查索引未列此项。\n- 建议：删除/回滚 snapshot 保存 Buffer 和元数据，完整恢复；不能保证恢复时向调用者明确报出恢复失败。\n\n## A03 [P3] Git status 的首条未暂存路径被截掉首字符\n\n- 位置：`packages/coding/src/git/utils.ts:29-30,76-83`；调用方 `packages/coding/src/capability-runtime.ts:76-81`。\n- 触发：porcelain 第一行为常见的 ` M alpha.txt`。\n- 原因：通用 git helper 对整个 stdout"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-excerpts.json",
+      "at": "$[\"files\"][0][\"display\"][6][\"text\"]",
+      "context": " wire format the engine parses.\n          const blocks = pendingImagesRef.current.map((b) => {\n            const lines = b.split(\"\\n\");\n            // Find the closing </codeshell-image> and drop anything after.\n            const closeIdx = lines.findIndex((l) => l.trim() === \"</codeshell-image>\");\n            return closeIdx >= 0 ? lines.slice(0, closeIdx + 1).join(\"\\n\") : b;\n          });\n          engineMessage = engineMessage\n            ? `${engineMessage}\\n\\n${blocks.join(\"\\n\")}`\n            : blocks.join(\"\\n\");\n          pendingImagesRef.current = [];\n        }\n\n        const handleTransportResponse = () => {\n          const released = queryGuard.endLocalResponse(guardToken);\n          i"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round49/evidence/cost-review/coverage-gate-objects.json",
+      "at": "$[\"rows\"][442][\"row\"][\"display\"][6][\"text\"]",
+      "context": " wire format the engine parses.\n          const blocks = pendingImagesRef.current.map((b) => {\n            const lines = b.split(\"\\n\");\n            // Find the closing </codeshell-image> and drop anything after.\n            const closeIdx = lines.findIndex((l) => l.trim() === \"</codeshell-image>\");\n            return closeIdx >= 0 ? lines.slice(0, closeIdx + 1).join(\"\\n\") : b;\n          });\n          engineMessage = engineMessage\n            ? `${engineMessage}\\n\\n${blocks.join(\"\\n\")}`\n            : blocks.join(\"\\n\");\n          pendingImagesRef.current = [];\n        }\n\n        const handleTransportResponse = () => {\n          const released = queryGuard.endLocalResponse(guardToken);\n          i"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round7/providers.md",
+      "at": "$",
+      "context": "焦测试包含 SDK 顺序对照、两个 Anthropic 触发和一个 OpenAI 控制/候选；26 个为既有 baseline，不能称 30 个新增 bug 测试。完整命令和计数见 [validation](evidence/providers-validation.json)。\n\n审查了两 provider 的普通请求组装、流/非流结果抽取、工具结果文本/图片转换、usage/stop 读取与相关直接消费者；baseline 覆盖已有 thinking 请求字段、Anthropic usage、vision tool-result/error 转换与 OpenAI output clamp。没有全面运行所有 provider 或 Core 测试；未做清洁 build/typecheck/lint。Core client 中的 SDK `_client` 都被自有内存适配器替换；SDK MessageStream 仅解析本地内存行，没有创建 SDK 网络客户端、fetch/socket、真实 provider/模型、付费 API、用户数据、外部消息、native 程序或 auth/security/custody/watchdog 实验。保留现有依赖，没有重建共享 dist 或依赖。\n\n来源快照与范围见 [source manifest](evidence/providers-source-manifest.json)、[primary sources](evidence/providers-primary-sources.json)；本方向产物哈希见 [artifact receipt](evidence/providers"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][21][\"matches\"][2][\"text\"]",
+      "context": "*代码硬化**:**5 批 Explore bug-scan 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][28][\"matches\"][0][\"text\"]",
+      "context": "e. It owns: (1) a terse, always-on file logger that routes entries into two daily buckets under `~/.code-shell/logs/` — `ui-ink-*.log` (UI/render chatter) and `engine-*.log` (everything else); (2) redaction of secrets and image base64 payloads so nothing sensitive lands in logs or diagnostics; and (3) a fat, dev-only `session-recorder` that writes full prompt/response/tool bodies into `<repo>/log/<date>/{engine,ui}/session-<sid>.jsonl` for post-mortem debugging. Transcripts (replay data) are out of scope — they keep full bytes; this module only governs what reaches *logs*."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][271][\"matches\"][0][\"text\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][272][\"matches\"][0][\"text\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][284][\"matches\"][0][\"text\"]",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise."
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/PLAN.md",
+      "at": "$",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise.\n\nProduction paired producer: `packages/server/src/mobile-remote/mobile-chat-turn.ts:77–106` permits either text or image, and passes task/cwd/sessionId/clientMessageId/attachments without displayText/injected. `protocol/server.ts:2021–2040` supplies undefined displayText and false injected, `chat-session.ts:518/527` forwards these, and `run-session-open.ts:153–156/189–192` writes them. "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/PLAN.md",
+      "at": "$",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise.\n\nProduction paired producer: `packages/server/src/mobile-remote/mobile-chat-turn.ts:77–106` permits either text or image, and passes task/cwd/sessionId/clientMessageId/attachments without displayText/injected. `protocol/server.ts:2021–2040` supplies undefined displayText and false injected, `chat-session.ts:518/527` forwards these, and `run-session-open.ts:153–156/189–192` writes them. "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-integration-quality.raw.md",
+      "at": "$",
+      "context": "dinary Desktop with a cold local cache. Correct clean prose/identity/structured metadata and the68-byte original remain present; MessageStream omits the image summary and the pure-image user bubble. This is distinct from R84's never-published legacy projection failure. Nothing broadens the claim to immediate live-echo image clearing, lost bytes/history, full original preview/download, authorization failure, Pet, Quick Chat, steer or external producers.\n\nThe ordinary send/reopen extension remains static. The main appendix explicitly distinguishes the actual inline encoder+append+MessageStream UI representation control from an unexecuted ChatView/useRunController send hook. The Web normal control is actual journal→Web reducer→Workbench SSR in both image cases. It is n"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/PLAN.md",
+      "at": "$",
+      "context": "deshell-image>` from `m.text` and never renders `m.attachments`. Text+image has no visible attachment name/count; image-only returns null for the entire user bubble. The canonical image bytes and journal input remain intact. Proposed narrow P3 pending actual run and independent reproduction; no historical thumbnail, click-open, or download promise.\n\nProduction paired producer: `packages/server/src/mobile-remote/mobile-chat-turn.ts:77–106` permits either text or image, and passes task/cwd/sessionId/clientMessageId/attachments without displayText/injected. `protocol/server.ts:2021–2040` supplies undefined displayText and false injected, `chat-session.ts:518/527` forwards these, and `run-session-open.ts:153–156/189–192` writes them. "
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+      "at": "$",
+      "context": "te, resolves the\n * behavior profile / permission mode / plan mode, resolves workspace resume\n * (with its two early-return shapes) and the effective cwd. Pure of Engine —\n * everything arrives via the args object (run-setup.ts / run-image-input.ts\n * style).\n */\nimport type { SessionKind } from \"../types.js\";\nimport type { SessionManager } from \"../session/session-manager.js\";\nimport type { SettingsManager } from \"../settings/manager.js\";\nimport type { EngineConfig, EngineResult } from \"./types.js\";\nimport type { EngineRunOptions, RunBehaviorProfile } from \"./run-types.js\";\nimport { resolveRunProfileState, type RunProfileState } from \"./run-setup.js\";\n\n/**\n * Resolve the working directory for a run. Precedence for legacy session"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "at": "$",
+      "context": "`.\n\nWeb's nine image unit regressions/45 assertions remain separate from 31 browser\nbehavior checks. All 88 recorded source hashes and 25 PNGs verify; Root directly\nviewed the new narrow annotation and reauthenticated Workbench images, plus the\nLinux 390px dark Settings and Review screenshots. The Linux Review capture\nretains a dropdown exit-animation remnant; actual titles, paths and preview bytes\nare independently verified through DOM/Main receipts. SW/Auth lifecycle receipt\nlimits remain as previously recorded. No local native launch, provider request,\nreal account operation, tag or publication was added for these two matrices.\n\n### CI15 preparation recorded before execution\n\nThe following pending statements record prepa"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "at": "$",
+      "context": "ations. Inner fixture HOMEs are removed; outer launcher scratch remains\nretained. Six agent-viewed and two Root-viewed actual PNG samples show readable\nChinese, complete generated-image paths and contained narrow Settings controls.\n\nmacOS passes **83 native operations/12 Main**, plus both DMG UI rounds of\n**13 operations/one Main each**. Write React 11/38 and Review's 13 pure contracts\nare separate. Three startup post-exit phases restore the final gates; Review's\n11 cases, journal/stdout/stderr bounds, normal Main/controller exits and original\nreport agree. Four packaged watchdog request ledgers are empty/nontruncated.\nThe source-bound directory, mounted/copied payload and managed Node inventories,\nprod"
+    },
+    {
+      "pattern": "thin-image-cause",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "at": "$",
+      "context": "755→0700`, sandbox and LICENSE normalization deltas.\nSuite inner HOMEs are recorded removed; both outer package-launcher scratch roots\nare intentionally retained. Actual generated-image, narrow settings, Review,\nupdater and three draft PNGs have readable CJK in the independently viewed samples.\n\nmacOS independently passes original 83/12, new drafts three/one and the separate\nDMG installed/reinstalled UI 13+13 across two mounts, both detached. Its 212 machine\nchecks are exactly 116+55 original checks plus 41 draft checks. Summary v2 corrects\none inherited prose count of 173 to 171; the original summary/freeze and all raw\nreceipts remain preserved. This does not alter any runtime result"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+      "at": "$[\"files\"][10][\"frozenSha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+      "at": "$[\"files\"][10][\"currentSha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "at": "$[\"files\"][31][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "at": "$[\"files\"][288][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "at": "$[\"files\"][288][\"claims\"][0][\"sourceSha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "at": "$[\"rankedCandidates\"][96][\"sha256\"]",
+      "context": "624ed4d4cf822d24172210712dc74c204f00cd5d456feca7c5b32814000d8443"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][374][\"sha256\"]",
+      "context": "25bda5cb9c5d140000a6c0e61a09584d0ecc923db9a8ab68c16c4f95ba26669f"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][581][\"sha256\"]",
+      "context": "2393bd9f175a0f5008148936c07a13d658418ce01d400012cd151605307f2841"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][732][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][1707][\"sha256\"]",
+      "context": "624ed4d4cf822d24172210712dc74c204f00cd5d456feca7c5b32814000d8443"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+      "at": "$[\"rootFormalArtifactInitialPins\"][7][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+      "at": "$[\"finalCurrent31ArtifactInitialPins\"][19][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+      "at": "$[\"finalCurrent31ArtifactInitialPins\"][19][\"finishSha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+      "at": "$[\"activeReceiptChecks\"][0][\"files\"][6][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.first.json",
+      "at": "$[\"files\"][6][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+      "at": "$[\"files\"][6][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence/root-receipt-checks.json",
+      "at": "$[\"checks\"][6][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round31/evidence-index.json",
+      "at": "$[\"files\"][34][\"sha256\"]",
+      "context": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][1678][\"sourceHashFields\"][\"sha256\"]",
+      "context": "25bda5cb9c5d140000a6c0e61a09584d0ecc923db9a8ab68c16c4f95ba26669f"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][2422][\"sourceHashFields\"][\"sha256\"]",
+      "context": "2393bd9f175a0f5008148936c07a13d658418ce01d400012cd151605307f2841"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][3156][\"sourceHashFields\"][\"frozenSha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][3156][\"sourceHashFields\"][\"currentSha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][3157][\"sourceHashFields\"][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][7568][\"sourceHashFields\"][\"sha256\"]",
+      "context": "624ed4d4cf822d24172210712dc74c204f00cd5d456feca7c5b32814000d8443"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][13999][\"claimId\"]",
+      "context": "C014000"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][14095][\"claimId\"]",
+      "context": "C014096"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][16051][\"sourceHashFields\"][\"sha256\"]",
+      "context": "03b30db0f43ce2e79c4b4b9dfe040281ca7962a038f0c78491594000f7667952"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][684][\"sha256\"]",
+      "context": "25bda5cb9c5d140000a6c0e61a09584d0ecc923db9a8ab68c16c4f95ba26669f"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][893][\"sha256\"]",
+      "context": "2393bd9f175a0f5008148936c07a13d658418ce01d400012cd151605307f2841"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][1044][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][2025][\"sha256\"]",
+      "context": "624ed4d4cf822d24172210712dc74c204f00cd5d456feca7c5b32814000d8443"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][3793][\"claimIds\"][3]",
+      "context": "C014000"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][3824][\"claimIds\"][3]",
+      "context": "C014096"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "at": "$[\"files\"][684][\"sha256\"]",
+      "context": "25bda5cb9c5d140000a6c0e61a09584d0ecc923db9a8ab68c16c4f95ba26669f"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "at": "$[\"files\"][893][\"sha256\"]",
+      "context": "2393bd9f175a0f5008148936c07a13d658418ce01d400012cd151605307f2841"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "at": "$[\"files\"][1044][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "at": "$[\"files\"][2025][\"sha256\"]",
+      "context": "624ed4d4cf822d24172210712dc74c204f00cd5d456feca7c5b32814000d8443"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "at": "$[\"files\"][684][\"sha256\"]",
+      "context": "25bda5cb9c5d140000a6c0e61a09584d0ecc923db9a8ab68c16c4f95ba26669f"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "at": "$[\"files\"][893][\"sha256\"]",
+      "context": "2393bd9f175a0f5008148936c07a13d658418ce01d400012cd151605307f2841"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "at": "$[\"files\"][1044][\"sha256\"]",
+      "context": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "at": "$[\"files\"][2025][\"sha256\"]",
+      "context": "624ed4d4cf822d24172210712dc74c204f00cd5d456feca7c5b32814000d8443"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+      "at": "$[\"sessionsearch\"][32][\"contextEnd\"]",
+      "context": "140961"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+      "at": "$[\"sessionsearch\"][34][\"contextEnd\"]",
+      "context": "140961"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+      "at": "$[\"sessionsearch\"][36][\"contextEnd\"]",
+      "context": "140961"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+      "at": "$[\"sessionsearch\"][80][\"contextEnd\"]",
+      "context": "140961"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+      "at": "$[\"sessionsearch\"][82][\"contextEnd\"]",
+      "context": "140961"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/history-contexts.json",
+      "at": "$[\"sessionsearch\"][84][\"contextEnd\"]",
+      "context": "140961"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/native__file-mutex-round19__native-observations.json",
+      "at": "$[\"observations\"][2][\"elapsedMs\"]",
+      "context": "389.6140000000014"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "at": "$[\"groups\"][0][\"rawLogs\"][123][\"sha256\"]",
+      "context": "03b30db0f43ce2e79c4b4b9dfe040281ca7962a038f0c78491594000f7667952"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "at": "$[\"logs\"][123][\"sha256\"]",
+      "context": "03b30db0f43ce2e79c4b4b9dfe040281ca7962a038f0c78491594000f7667952"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/review-2026-10-12/validation/round19-native-results.json",
+      "at": "$[1][\"observations\"][2][\"elapsedMs\"]",
+      "context": "389.6140000000014"
+    },
+    {
+      "pattern": "thin-exact-input",
+      "path": "docs/review-2026-10-12/validation/workspace-quality-round11/r22-round6-secondary-root-observed.json",
+      "at": "$[\"registryRootStatus\"][\"addedAt\"]",
+      "context": "1791740969064"
+    }
+  ],
+  "limitations": "All retained focused contexts printed; metadata matches are not distinct prior findings and no semantic all-history absence claimed."
+}
