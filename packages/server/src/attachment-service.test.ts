@@ -5,11 +5,11 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import {
@@ -43,8 +43,8 @@ const PNG_URL = `data:image/png;base64,${IMAGE_FIXTURES["image/png"].toString("b
 describe("attachment-service", () => {
   let cwd: string;
 
-  beforeEach(() => {
-    cwd = realpathSync(mkdtempSync(join(tmpdir(), "cs-attachments-")));
+  beforeEach(async () => {
+    cwd = await realpath(mkdtempSync(join(tmpdir(), "cs-attachments-")));
   });
 
   afterEach(() => {
@@ -68,7 +68,7 @@ describe("attachment-service", () => {
     expect(meta.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(meta.relPath).toStartWith(".code-shell/attachments/sid-1/");
     expect(meta.path).toBe(meta.relPath);
-    expect(meta.absPath).toEndWith(meta.relPath!.replace(/\//g, "/"));
+    expect(meta.absPath).toBe(join(cwd, meta.relPath!));
     expect(existsSync(meta.absPath)).toBe(true);
     expect(
       relative(cwd, meta.absPath).startsWith(join(".code-shell", "attachments", "sid-1")),
