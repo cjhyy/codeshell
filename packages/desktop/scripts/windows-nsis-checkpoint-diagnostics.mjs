@@ -48,6 +48,7 @@ const labels = new Set([
   "uninstall",
 ]);
 const integer = (value) => value === null || (Number.isSafeInteger(value) && value >= 0);
+const exitCode = (value) => value === null || Number.isSafeInteger(value);
 const signal = (value) =>
   value === null || (typeof value === "string" && /^SIG[A-Z0-9]{1,12}$/.test(value));
 const requireValue = (value) => {
@@ -55,7 +56,7 @@ const requireValue = (value) => {
 };
 const result = (value) => {
   if (value == null) return null;
-  requireValue(integer(value.code) && signal(value.signal));
+  requireValue(exitCode(value.code) && signal(value.signal));
   const output = { code: value.code, signal: value.signal };
   if (typeof value.error === "string") output.error = value.error.slice(0, 2048);
   return output;

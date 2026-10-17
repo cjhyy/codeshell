@@ -233,7 +233,7 @@ test("the actual stage gate rejects a late mirror IO error despite returned oper
   assert.equal(mirror.receipt.failed, true);
 });
 
-async function failedOwnedProcess(writeFault = false) {
+async function failedOwnedProcess(writeFault = false, spawnErrno = null) {
   const root = await mkdtemp(join(await realpath(tmpdir()), "codeshell-nsis-stdout-contract-"));
   const executable = join(root, "fake-owned-executable.txt");
   await writeFile(executable, "Never executed.\n");
@@ -302,9 +302,10 @@ async function failedOwnedProcess(writeFault = false) {
         options.snapshotProcesses();
         setImmediate(() => {
           child.stderr.emit("data", Buffer.from("already observed owned stderr\n"));
-          child.exitCode = 1;
-          child.emit("exit", 1, null);
-          child.emit("close", 1, null);
+          child.exitCode = spawnErrno ?? 1;
+          if (spawnErrno === null) child.emit("exit", 1, null);
+          else child.emit("error", Error("spawn owned ENOENT"));
+          child.emit("close", child.exitCode, null);
           resolve(settlement);
         });
         return monitor;
@@ -343,4 +344,97 @@ test("stdout IO failure cannot skip production existing termination or create a 
   assert.equal(value.order.filter((x) => x === "actual-owned-terminate").length, 1);
   assert.equal(value.mirror.failed, true);
   assert.equal(value.failures.length, 1);
+});
+
+test("production negative spawn errno preserves the first error and unchanged failed custody cleanup", async () => {
+  // Node caches a negative libuv spawn errno before emitting error, then close (without exit).
+  const ts = createRequire(import.meta.url)("typescript");
+  const source = ts.createSourceFile(
+    "fixture.mjs",
+    readFileSync(new URL("./smoke-windows-nsis-install.mjs", import.meta.url), "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  let initializer;
+  const visit = (node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText() === "at")
+      initializer = node.initializer;
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  assert.ok(initializer && ts.isArrowFunction(initializer));
+  const stage = { phase: "initial", operations: [], recordingFailures: [] };
+  const checkpoints = [];
+  const at = vm.compileFunction(`return (${initializer.getText()})`, [
+    "report",
+    "assert",
+    "checkpoint",
+  ])(stage, assert, (kind) => checkpoints.push(kind));
+  let value;
+  await assert.rejects(
+    at("install", async () => {
+      value = await failedOwnedProcess(false, -4058);
+      if (value.caught) throw value.caught;
+      return value;
+    }),
+    (error) => error === value.caught,
+  );
+  assert.equal(stage.phase, "install");
+  assert.deepEqual(stage.operations, []);
+  assert.deepEqual(checkpoints, ["stage-start"]);
+  const operation = value.report.processes[0];
+  assert.ok(value.caught);
+  assert.equal(operation.status, "failed");
+  assert.equal(operation.exitObserved, undefined);
+  assert.deepEqual(operation.result, {
+    code: null,
+    signal: null,
+    error: "spawn owned ENOENT",
+  });
+  assert.equal(operation.cachedExit.code, -4058);
+  assert.equal(operation.settlement.status, "cleaned");
+  assert.deepEqual(operation.settlement.remaining, []);
+  assert.equal(operation.settlement.queryFailed, false);
+  assert.deepEqual(operation.errors, []);
+  assert.deepEqual(operation.signalRequests, []);
+  assert.equal(value.report.unprovenProcess, undefined);
+  assert.equal(value.order.filter((kind) => kind === "actual-owned-terminate").length, 1);
+  const first = value.records.find((row) => row.kind === "process-first-error");
+  assert.ok(first, "Original spawn error must reach CI stdout even with a negative cached exit");
+  assert.deepEqual(first.firstError, operation.failure);
+  assert.equal(first.firstError.message, value.caught.message.slice(0, 2048));
+  assert.deepEqual(first.process.result, operation.result);
+  assert.deepEqual(first.process.cachedExit, { code: -4058, signal: null });
+  assert.equal(first.process.status, "failed");
+  assert.equal(first.process.child.birth, "2026-10-17T09:00:00.1234567Z");
+  assert.ok(
+    value.order.indexOf("process-first-error") < value.order.indexOf("actual-owned-terminate"),
+  );
+  assert.deepEqual(value.failures, []);
+  assert.equal(value.mirror.failed, false);
+
+  for (const code of [Number.MIN_SAFE_INTEGER, -1, null, 0, Number.MAX_SAFE_INTEGER]) {
+    const accepted = capture();
+    const data = detail();
+    data.cachedExit.code = data.result.code = code;
+    accepted.mirror.checkpoint(event(1, { kind: "process-first-error", label: "install" }), data);
+    assert.equal(accepted.mirror.receipt.failed, false);
+    assert.equal(accepted.rows()[0].process.cachedExit.code, code);
+    assert.equal(accepted.rows()[0].process.result.code, code);
+  }
+  for (const invalid of [
+    (data) => (data.child.pid = -1),
+    (data) => (data.child.ppid = -1),
+    (data) => (data.logs.stderr.observedBytes = -1),
+    (data) => (data.logs.stderr.retainedBytes = -1),
+    (data) => (data.cachedExit.code = Number.MIN_SAFE_INTEGER - 1),
+    (data) => (data.result.code = -0.5),
+  ]) {
+    const rejected = capture();
+    const data = detail();
+    invalid(data);
+    rejected.mirror.checkpoint(event(1, { kind: "process-first-error", label: "install" }), data);
+    assert.equal(rejected.mirror.receipt.failed, true);
+    assert.equal(rejected.buffers.length, 0);
+  }
 });
