@@ -1,0 +1,16 @@
+{
+  "atUTC": "2026-10-17T15:34:24.968767+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "matchesInitial": true
+    }
+  ],
+  "historyOriginalFiles": 4162,
+  "historyChangedPaths": [],
+  "sourceBodyReruns": 0
+}

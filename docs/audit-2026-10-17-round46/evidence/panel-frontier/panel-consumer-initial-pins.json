@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "bytes": 34235,
+      "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "lines": 928,
+      "capturedUTC": "2026-10-17T15:27:04.197279+00:00",
+      "timing": "before55 actual tab array/active/close producer and existing test declaration navigation/read, no UI/native invocation"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.test.tsx",
+      "bytes": 6603,
+      "sha256": "82061aa01ddeb1f2ecb3b0ca9ca1c6cc100e13de7fe807c4ae0a6d496af87940",
+      "lines": 184,
+      "capturedUTC": "2026-10-17T15:27:04.198348+00:00",
+      "timing": "before55 actual tab array/active/close producer and existing test declaration navigation/read, no UI/native invocation"
+    }
+  ]
+}

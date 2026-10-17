@@ -1,0 +1,10 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "sameSHAWholeFileGateExclusions": 1,
+  "fallbackUsed": false,
+  "reason": "Explicit sameSHA R13 original inspectionScope entire file; current source gate-only, product body0.",
+  "coverageIndexLimit": "R28 pin-only / R44 incidental classification did not extract inspectionScope. Original evidence wins; ranks/no-row are selection hints, never historical unread proof.",
+  "newOrdinaryBehaviorConclusion": null
+}

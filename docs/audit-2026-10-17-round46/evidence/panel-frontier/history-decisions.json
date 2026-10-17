@@ -1,0 +1,96 @@
+{
+  "capturedUTC": "2026-10-17T15:29:47.774114+00:00",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "originalHypothesis": "Rank3/feature prose suggested ordinary conversation numeric/text/boolean preferences such as memory extraction. Actual leaf is no-repo capability whitelist/on|inherit; no ordinary numeric/text settings-patch flow exists here.",
+  "originalBodyDisplayed": [
+    [
+      1,
+      95
+    ]
+  ],
+  "originalAdditionalNavigation": [
+    118,
+    147,
+    173,
+    212
+  ],
+  "originalSemanticBoundarySelection": [
+    [
+      1,
+      17
+    ],
+    [
+      49,
+      56
+    ],
+    [
+      59,
+      74
+    ],
+    [
+      76,
+      90
+    ]
+  ],
+  "boundary": "Stop before actual capability authority consumers/backends; no capability correctness claim. Initial scope assumption corrected from actual text, not a product bug.",
+  "fallbackAuthorization": "Root allowed established PanelTabStrip after54 author confirmed onlyhash/body0 and independentShell-only; no further target after this fallback.",
+  "originalScopeRows": 12,
+  "originalRowsAllInventoryHashRank": true,
+  "panelScopeRows": 6,
+  "panelRowsAllInventoryHashRank": true,
+  "explicitSameShaFullFound": false,
+  "noNeverReadInference": true,
+  "history": {
+    "files": 4088,
+    "md": 1410,
+    "json": 2678,
+    "strings": 1631727,
+    "scalars": 2469249,
+    "parseErrors": [],
+    "includesFrozen44": true,
+    "excludedRules": [
+      45,
+      52,
+      53,
+      54,
+      55
+    ],
+    "originalExcluded6": 6,
+    "panelGateExcluded71": 71,
+    "sameIncludedPathsAndBytes": true,
+    "initialHitTotals": {
+      "source_path": 26,
+      "source_filename": 31,
+      "source_sha": 20,
+      "settings_contract": 203
+    },
+    "panelHitTotals": {
+      "source_path": 12,
+      "source_filename": 32,
+      "source_sha": 7,
+      "panel_contract": 36
+    },
+    "capPerGroup": 160,
+    "originalContract203Capped160NotAllSemanticallyRead": true,
+    "panelAllGroupsBelowCap": true,
+    "panelNonFilenameContractWindowsRead": 4,
+    "archiveSubstring175": 175,
+    "archiveExactDirectory": 162
+  },
+  "normalCounterevidence": [
+    "Strip map means keyboard index arithmetic only runs on rendered nonempty list; ArrowLeft/Right wrap and Home/End select endpoints of that same list.",
+    "PanelArea270–274 uses candidate member elsefirst visible active ID;592–619 passes sameactiveTabs IDs/labels/icons, visible ID and setActiveId.",
+    "PanelArea closeTab484–500 and strip44–52 use sameleft-neighbour fallback on the samevisible list; inactiveclose retains active ID, lastclose calls hostclose/focuscallback.",
+    "Existing77lines test declarations cover wrap/modifiers/active and inactiveclose/focusreturn; no test/harness/native/UI execution."
+  ],
+  "oldContextsNotNewRelated": "Four panel-tab history windows concern CC approvals or guest identity/runtime recovery. Not the present ordinary tab-array contract; not revalidated or expanded.",
+  "skips": [
+    "Authority/capability correctness",
+    "Native popout/pending-window cleanup mechanisms",
+    "Identity/project/session authorization",
+    "Old CLI/LSP/ApplyPatch/native/TUI/scroll or failed dynamic directions",
+    "Malformed/duplicate ID fake tabs or synthetic event/React fixture execution"
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "capturedAtUTC": "2026-10-17T15:32:51.855777+00:00",
+  "sourceAndInstructionChecks": [
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "bytes": 5192,
+      "sha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "unchanged": true,
+      "firstPinArtifact": "initial-pins.json"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true,
+      "firstPinArtifact": "initial-pins.json"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true,
+      "firstPinArtifact": "initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/StatusDot.tsx",
+      "bytes": 595,
+      "sha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "unchanged": true,
+      "firstPinArtifact": "consumer-initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.test.tsx",
+      "bytes": 1177,
+      "sha256": "e0bf0346d69e48c3b08b99b4c6eace299550c57f091a8316954ea88b87320f0f",
+      "unchanged": true,
+      "firstPinArtifact": "consumer-initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 92113,
+      "sha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "unchanged": true,
+      "firstPinArtifact": "producer-initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "bytes": 4953,
+      "sha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "unchanged": true,
+      "firstPinArtifact": "producer-initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/toolDisclosureState.test.tsx",
+      "bytes": 4345,
+      "sha256": "df3358b4e65fc456d1bcffa6251e67096091286bf45382a600647f61ed5f8409",
+      "unchanged": true,
+      "firstPinArtifact": "producer-initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "bytes": 2633,
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "unchanged": true,
+      "firstPinArtifact": "producer-initial-pins.json"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "bytes": 4127,
+      "sha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "unchanged": true,
+      "firstPinArtifact": "dispatcher-initial-pin.json"
+    }
+  ],
+  "all10MatchInitial": true,
+  "history": {
+    "initial": 4088,
+    "ending": 4088,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "scopePreserved": true
+  },
+  "noNewSemanticHistoryScanAtFinish": true,
+  "productRuns": 0,
+  "gitCommands": 0
+}

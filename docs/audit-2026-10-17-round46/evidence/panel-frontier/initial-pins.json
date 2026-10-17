@@ -1,0 +1,30 @@
+{
+  "capturedUTC": "2026-10-17T15:24:20.083866+00:00",
+  "rootContext": "Root stated ownedHEAD0b17496707e0f4d679a86a9d8b4c22477093e8a6, no own Git query",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "lines": 321,
+      "capturedUTC": "2026-10-17T15:24:20.081868+00:00",
+      "timing": "before55 body read; prior52 was hash-only fallback"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "capturedUTC": "2026-10-17T15:24:20.083439+00:00",
+      "timing": "instruction hash carry only; no new semantic read"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "capturedUTC": "2026-10-17T15:24:20.083861+00:00",
+      "timing": "instruction hash carry only; no new semantic read"
+    }
+  ]
+}

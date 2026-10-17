@@ -1,0 +1,15 @@
+{
+  "metadataErrors": 0,
+  "observations": [
+    {
+      "kind": "metadata field extraction limit discovered before product body",
+      "rawHistoricalField": "inspectionScope",
+      "rawHistoricalValue": "entire file; query producer/error consumer static only",
+      "meaning": "Initial extractor copied whitelisted coverage/scope fields without inspectionScope; detailed exact row establishes the old whole-file read. Existing old ranking/index not modified.",
+      "productFailure": false,
+      "retry": false
+    }
+  ],
+  "toolOutputs": "All commands so far exit0; no first error or truncation to suppress/fabricate.",
+  "noNewTargetGuessed": true
+}

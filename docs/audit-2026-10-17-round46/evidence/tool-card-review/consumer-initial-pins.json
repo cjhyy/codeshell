@@ -1,0 +1,20 @@
+{
+  "capturedAtUTC": "2026-10-17T15:26:41.477022+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/StatusDot.tsx",
+      "bytes": 595,
+      "lines": 22,
+      "sha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.test.tsx",
+      "bytes": 1177,
+      "lines": 35,
+      "sha256": "e0bf0346d69e48c3b08b99b4c6eace299550c57f091a8316954ea88b87320f0f",
+      "semanticRead": false
+    }
+  ],
+  "note": "Only actual rg path inventory; first pins before any content display. Leaf gate still pending."
+}

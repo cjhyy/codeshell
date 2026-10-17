@@ -1,0 +1,56 @@
+{
+  "createdUTC": "2026-10-17T15:27:14.178342+00:00",
+  "targetPin": {
+    "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+    "bytes": 11253,
+    "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+    "unchanged": true
+  },
+  "metadataEndingAllSame": true,
+  "historyEnding": {
+    "count": 4088,
+    "sameScopeAsInitial": true,
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "historyActualReading": {
+    "pathWindows": "No blanket claim to read100retained/180total windows; only explicit source/hash metadata rows inspected.",
+    "shaWindowsRead": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "explicitCoverageRowsRead": 18,
+    "detailedMetadataObjectsRead": 5,
+    "productBodyRead": 0,
+    "notSemanticExhaustiveness": true
+  },
+  "runtime": {
+    "productImports": 0,
+    "productFunctions": 0,
+    "tools": 0,
+    "fixtures": 0,
+    "testsSemanticRead": 0,
+    "testsExecuted": 0,
+    "uiNativeNetworkSessionOperations": 0,
+    "git": 0
+  }
+}

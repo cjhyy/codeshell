@@ -1,0 +1,21 @@
+{
+  "capturedAtUTC": "2026-10-17T15:34:47.060145+00:00",
+  "newFormal": 0,
+  "newCandidate": 0,
+  "newRelated": 0,
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "oldExcluded": [
+    {
+      "id": "DESKTOP-R12-01",
+      "cause": "Summary truncate cuts UTF-16 surrogate pair in shared helper; GenericToolCard summarizeArgs80 is the already-recorded consumer family. No new issue, no helper execution or retest."
+    }
+  ],
+  "boundedNegative": "No ordinary counterexample established in the shared shell/status token mapping and selected actual fallback/DTO/disclosure-intent chain. Not all specialized tool cards, UI events or timing verified.",
+  "independence": {
+    "author54ReportManifestExcerptsRead": false,
+    "author54FindingsKnownBeforeConclusion": false,
+    "newToolCardSourceReader": true
+  }
+}

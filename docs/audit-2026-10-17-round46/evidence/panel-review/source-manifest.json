@@ -1,0 +1,127 @@
+{
+  "atUTC": "2026-10-17T15:34:24.970298+00:00",
+  "role": "Root additional source reader, knew author55 negative outline; not blind",
+  "readSourceContext": "ec1f6ae458d3646d07db20e876a2b9ce8c9939b9",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "bytes": 5067,
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "lineCount": 142,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          142
+        ]
+      ],
+      "semanticLines": 142,
+      "displayedLineRanges": [
+        [
+          1,
+          142
+        ]
+      ],
+      "displayedLines": 142,
+      "scope": "All component lines read for ordinary tabs",
+      "beforeDedicatedRootBodyPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "bytes": 34235,
+      "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "lineCount": 928,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          258,
+          274
+        ],
+        [
+          483,
+          485
+        ],
+        [
+          490,
+          500
+        ],
+        [
+          591,
+          619
+        ],
+        [
+          696,
+          706
+        ],
+        [
+          720,
+          727
+        ],
+        [
+          907,
+          923
+        ],
+        [
+          570,
+          571
+        ]
+      ],
+      "semanticLines": 98,
+      "displayedLineRanges": [
+        [
+          258,
+          276
+        ],
+        [
+          477,
+          502
+        ],
+        [
+          583,
+          623
+        ],
+        [
+          687,
+          733
+        ],
+        [
+          905,
+          923
+        ],
+        [
+          567,
+          572
+        ]
+      ],
+      "displayedLines": 158,
+      "scope": "Only ordinary active-tab/filter/close/DOM ID attributes. Adjacent native/window/guest lifecycle displayed but not certified.",
+      "beforeDedicatedRootBodyPin": true
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "semanticStartSha256": null,
+      "reason": "Root read instruction source this session; this packet carries exact ending hash, not a fabricated initial semantic pin."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "semanticStartSha256": null,
+      "reason": "Root read instruction source this session; this packet carries exact ending hash, not a fabricated initial semantic pin."
+    }
+  ],
+  "productSemanticLines": 240,
+  "productDisplayedLines": 300,
+  "fullProductFiles": 1,
+  "selectedProductFiles": 1,
+  "testsOpened": 0,
+  "productRuns": 0,
+  "gitSourceReads": 0,
+  "gitMetadata": "Root repository status/log/binding/fetch operations occur outside this source packet and are not claimed zero."
+}

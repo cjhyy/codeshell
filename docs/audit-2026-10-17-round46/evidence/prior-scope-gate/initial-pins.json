@@ -1,0 +1,14 @@
+{
+  "parentReportedContext": "Owned0b17496707e0f4d679a86a9d8b4c22477093e8a6; no own Git certification",
+  "scope": "before history gate/product body; no fallback planned",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "bytes": 11253,
+      "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "lineCount": 293,
+      "pinUTC": "2026-10-17T15:25:59.652332+00:00",
+      "semanticRead": false
+    }
+  ]
+}

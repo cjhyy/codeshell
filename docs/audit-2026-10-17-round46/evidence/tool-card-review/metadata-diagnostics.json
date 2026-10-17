@@ -1,0 +1,22 @@
+{
+  "observations": [
+    {
+      "toolChunk": "c1d533",
+      "exitCode": 0,
+      "kind": "Optional dispatcher filename guess absent",
+      "detail": "producer-initial-pins retains ToolCard.tsx exists:false. Actual rg located tool-cards/index.tsx; separate dispatcher-initial-pin saved before its content. No product body read at nonexistent path."
+    },
+    {
+      "toolChunk": "fab23c",
+      "exitCode": 0,
+      "kind": "Overwide history context console print truncated",
+      "originalTokens": 9884,
+      "requestedOutputBudget": 3500,
+      "detail": "85 filtered retained records were attempted, but not all were displayed/read. Original history.json has counts218/cap100/retained100; only exact compact metadata and explicitly selected old-family contexts decide this review. Truncation is not product failure."
+    }
+  ],
+  "firstScannerExitArtifact": "history-first.exit.json",
+  "firstScannerExitCode": 0,
+  "productAttempts": 0,
+  "oldFailedDirectionsReopened": false
+}

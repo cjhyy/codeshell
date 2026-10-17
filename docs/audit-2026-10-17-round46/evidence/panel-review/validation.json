@@ -1,0 +1,13 @@
+{
+  "productAttempts": 0,
+  "helperInvocations": 0,
+  "testsRun": 0,
+  "fixtureRuns": 0,
+  "uiRuns": 0,
+  "network": 0,
+  "sourceWrites": 0,
+  "metadataOnlyProcessing": true,
+  "metadataFailures": 0,
+  "truncatedOutputs": 0,
+  "supplementalLocator": "One successful hidden/inert rg output was read from tool transcript without separate stdout/exit file; following selected counterevidence source capture is explicit. No execution failure or retry."
+}

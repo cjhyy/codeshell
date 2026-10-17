@@ -1,0 +1,67 @@
+{
+  "capturedUTC": "2026-10-17T15:30:53.170191+00:00",
+  "count": 12,
+  "links": [
+    {
+      "link": "initial-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-decisions.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "panel-initial-pin.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "panel-consumer-initial-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "source-manifest.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "source-excerpts.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "panel-history.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-finish-check.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "metadata-diagnostics.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "validation.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "artifact-receipt.json",
+      "inside": true,
+      "exists": true
+    }
+  ],
+  "outsideRelativeAliasesNeeded": false
+}

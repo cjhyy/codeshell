@@ -1,0 +1,38 @@
+{
+  "capturedAtUTC": "2026-10-17T15:27:41.019371+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 92113,
+      "lines": 2442,
+      "sha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "bytes": 4953,
+      "lines": 128,
+      "sha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCard.tsx",
+      "exists": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/toolDisclosureState.test.tsx",
+      "bytes": 4345,
+      "lines": 137,
+      "sha256": "df3358b4e65fc456d1bcffa6251e67096091286bf45382a600647f61ed5f8409",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "bytes": 2633,
+      "lines": 72,
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "semanticRead": false
+    }
+  ],
+  "note": "Before actual ordinary caller/type producer/test-intent navigation/body content. No tool/API/fixture executed."
+}

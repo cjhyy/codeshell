@@ -1,0 +1,13 @@
+{
+  "capturedAtUTC": "2026-10-17T15:29:01.344523+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "bytes": 4127,
+      "lines": 149,
+      "sha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "semanticRead": false
+    }
+  ],
+  "note": "Actual rg dispatcher path after optional ToolCard.tsx pin was absent. That original exists:false is retained; no body read at guessed path."
+}

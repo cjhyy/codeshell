@@ -1,0 +1,1 @@
+{"totals": {"files": 4088, "md": 1410, "json": 2678, "strings": 1631727, "scalars": 2469249, "exactArchivePaths": 169}, "counts": {"path": 25, "filename": 26, "sha": 7, "ordinary-contract": 218, "old-failed": 19}, "retained": {"path": 25, "filename": 26, "sha": 7, "ordinary-contract": 100, "old-failed": 19}, "objects": 8, "parseErrors": []}

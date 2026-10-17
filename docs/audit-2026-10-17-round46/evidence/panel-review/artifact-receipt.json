@@ -1,0 +1,94 @@
+{
+  "frozenUTC": "2026-10-17T15:34:24.993259+00:00",
+  "scope": "Exactly this Root additional static review packet; no new product findings or runtime validation",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 1225,
+      "sha256": "46e01b1163c8b8b5f2edb920621a19a6ac243b6849c5932c7dc5e7d77d2e5957"
+    },
+    {
+      "path": "consumer-excerpts.first.json",
+      "bytes": 7705,
+      "sha256": "ec5953ba4c85a0b0d024669964683399dbabe7f84bb1455ceb25ca50aaec4533"
+    },
+    {
+      "path": "consumer-hidden-counterexample.first.json",
+      "bytes": 767,
+      "sha256": "8d3967b546d72846fc437f57c09bae61d5c5b9b3b74892b7a7d424bdd1ab4b0b"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 323,
+      "sha256": "16a99fe57b8e5e2cee6a8dbb7faee2c609cb334fd0ac4cd7b306d18715339090"
+    },
+    {
+      "path": "consumer-navigation.first-exit.json",
+      "bytes": 43,
+      "sha256": "5f28c482587016f2a45d6343d846ec8e94df51a253932695f2e637db672ecedb"
+    },
+    {
+      "path": "consumer-navigation.first.txt",
+      "bytes": 325,
+      "sha256": "56f850c4f64ea486178cb00b5bcaad8f99ec2974f270e86413fe03f7be1a9f54"
+    },
+    {
+      "path": "coverage-rows.json",
+      "bytes": 5038,
+      "sha256": "988214598a2dceef3fb652cdc745054fd1eb498e30daca44736386015ed39efb"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 384,
+      "sha256": "718c45ce06647febdd981081c2d12a4b9ad99211af3e9b10fe87b40899861d1d"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 65,
+      "sha256": "bbb316351883b7c8a5271270a4fc1d4427e2cd6c6deede86e9e3100e7364e618"
+    },
+    {
+      "path": "history-first.log.txt",
+      "bytes": 182,
+      "sha256": "7be14a68cea83620ff219e28835dcd57b16ccbd8153b4ed39a5b23bbff9d7bb2"
+    },
+    {
+      "path": "history.json",
+      "bytes": 834258,
+      "sha256": "6daf8fe0d1bb4c81dbebbe5b1b8d82d72ed292004b0ad86c3f0c0d25fc92ebbe"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2473,
+      "sha256": "aff80e660a83477d4ff5120135bd5cf403a15ff0a0d82dc8c31a26de4c084830"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 2742,
+      "sha256": "76e82c08a436714a72d6306932483ead0dda932a19fab503ea413d1593e2f302"
+    },
+    {
+      "path": "selection-initial-pins.json",
+      "bytes": 518,
+      "sha256": "fd452cea5810599c0fcee288eef53a82df18b95f49bc407471bf24ed7c78903a"
+    },
+    {
+      "path": "source-excerpts.first.json",
+      "bytes": 6386,
+      "sha256": "88827d77f7593a244f08d750bb041d5fd4707a02f7b3e1be2f970d786a65ff49"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 3143,
+      "sha256": "2c6c6ba34dfa2e58519b9da3b8f2e1bf10320c760d65a79ab5df8325d58b67aa"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 451,
+      "sha256": "db1b306008a8bb7b8a62e4949b3a78a3d9743ec4b8f13579e8f0a0b6216bac79"
+    }
+  ],
+  "artifactCountExcludingSelf": 17,
+  "totalFilesIncludingSelf": 18,
+  "productRuns": 0
+}

@@ -1,0 +1,151 @@
+{
+  "purpose": "Exact historical metadata objects, no current product body read",
+  "rows": [
+    {
+      "historyPath": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "pointer": [
+        "files",
+        29
+      ],
+      "rawObject": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "currentSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "matchesFrozen": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "pointer": [
+        "files",
+        8
+      ],
+      "rawObject": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "frozenGitBlob": "3627bd9db9f5c1b1210769222e5d089878ddfba3",
+        "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "frozenBytes": 11253,
+        "currentEqualsFrozen": true,
+        "inspectionScope": "entire file; query producer/error consumer static only"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": [
+        "files",
+        748
+      ],
+      "rawObject": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "bytes": 11253,
+        "lines": 293,
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+                "jsonLocation": "$[\"files\"][29]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+                "jsonLocation": "$[\"files\"][53]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"files\"][47]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][8]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": [
+        "claims",
+        12510
+      ],
+      "rawObject": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sourceHashFields": {
+          "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+          "currentSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/desktop/src/renderer/shell/SessionSearchModal.tsx"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 244,
+            "jsonPointer": "/files/29"
+          }
+        ],
+        "claimId": "C012511"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": [
+        "claims",
+        12512
+      ],
+      "rawObject": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sourceHashFields": {
+          "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+          "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/desktop/src/renderer/shell/SessionSearchModal.tsx"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 417,
+            "jsonPointer": "/files/8"
+          }
+        ],
+        "claimId": "C012513"
+      }
+    }
+  ]
+}

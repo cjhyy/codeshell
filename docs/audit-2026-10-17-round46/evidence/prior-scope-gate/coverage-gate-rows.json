@@ -1,0 +1,172 @@
+{
+  "rows": [
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/286/file",
+      "row": {}
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "pointer": "/files/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "pointer": "/files/53/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "pointer": "/files/8/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "pointer": "/files/47/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "pointer": "/workerSourceChecks/8/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/748/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "lines": 293
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3094/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "lines": 293
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "pointer": "/files/9/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "lines": 293
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12508/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12509/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12510/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12511/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12512/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3415/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "lines": 293
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "pointer": "/rankChecks/9/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3415/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "lines": 293
+      }
+    },
+    {
+      "candidate": "sessionsearch",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3416/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "lines": 293
+      }
+    }
+  ],
+  "count": 18,
+  "requiresManualFullOrSelectedInterpretation": true
+}

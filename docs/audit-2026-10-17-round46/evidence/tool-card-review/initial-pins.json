@@ -1,0 +1,29 @@
+{
+  "capturedAtUTC": "2026-10-17T15:25:30.240855+00:00",
+  "rootReportedBaseline": "0b17496707e0f4d679a86a9d8b4c22477093e8a6",
+  "independentGitVerified": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "bytes": 5192,
+      "lines": 133,
+      "sha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "semanticRead": false
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "semanticRead": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "semanticRead": false
+    }
+  ],
+  "role": "New independent source reviewer; no author54 report/manifest/excerpts read"
+}
