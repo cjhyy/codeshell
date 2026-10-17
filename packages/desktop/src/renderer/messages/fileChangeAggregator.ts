@@ -336,6 +336,10 @@ export function aggregateFileChangeSummary(
       if (seenExternalAttribution.has(attributionKey)) continue;
       seenExternalAttribution.add(attributionKey);
       externalIdentities.add(identity);
+      // Completion markers have no execution receipt identifying which capture
+      // includes their writes. Neither delivery order nor a newer wall clock
+      // can establish coverage, even when this path was previously net-zero.
+      if (trackedPaths.has(identity)) unresolvedPaths.add(identity);
       externalFiles.push({
         sourceId,
         path,
@@ -428,7 +432,6 @@ export function aggregateFileChangeSummary(
   }
 
   for (const external of externalFiles) {
-    if (trackedPaths.has(external.identity)) continue;
     consume(
       `external:${external.sourceId}`,
       { path: external.path, added: 0, removed: 0, diff: "" },
@@ -436,6 +439,9 @@ export function aggregateFileChangeSummary(
       external.identity,
       external.identity,
     );
+    // An earlier relative preview may share this now-known execution identity.
+    // Keep the external file's authoritative root in its display/open target.
+    byPath.get(external.identity)!.path = external.identity;
   }
 
   const sessionDiffs: SessionFileDiff[] = [];

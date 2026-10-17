@@ -614,6 +614,21 @@ function withTurnTiming(
   return next;
 }
 
+function turnDiffNotice(snapshot: TurnDiffSnapshot, unresolvedPaths: string[] = []): string {
+  return [
+    snapshot.complete
+      ? ""
+      : `${translate(loadUILanguage(), "msg.files.incompleteDiff")} ${snapshot.omissions
+          .map((omission) => `${omission.path}: ${omission.reason}`)
+          .join("; ")}`.trim(),
+    unresolvedPaths.length
+      ? `${translate(loadUILanguage(), "msg.files.lateChangesDiff")} ${unresolvedPaths.join("; ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /** Replace the aggregate inside its original user turn, including late/replayed updates. */
 function applyTurnDiff(
   state: MessagesReducerState,
@@ -659,11 +674,7 @@ function applyTurnDiff(
   const marker: SystemMessage = {
     kind: "system",
     id: `turn-diff:${event.turnId}`,
-    text: event.complete
-      ? ""
-      : `${translate(loadUILanguage(), "msg.files.incompleteDiff")} ${event.omissions
-          .map((omission) => `${omission.path}: ${omission.reason}`)
-          .join("; ")}`.trim(),
+    text: turnDiffNotice(snapshot),
     turnDiff: snapshot,
     turnDiffCapturedAt: capturedAt,
   };
@@ -675,15 +686,21 @@ function applyTurnDiff(
     ),
     marker,
   ];
-  const summary = aggregateFileChangeSummary(logicalTurn);
-  if (summary?.unresolvedPaths?.length) {
-    marker.text = [
-      marker.text,
-      `${translate(loadUILanguage(), "msg.files.lateChangesDiff")} ${summary.unresolvedPaths.join("; ")}`,
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
+  const owner = scoped[0];
+  // Late completions are displayed after the newer turn, but their file
+  // evidence still belongs to this owner when an execution snapshot refreshes.
+  const priorLateMarkers =
+    owner.kind === "user" && owner.clientMessageId
+      ? state.messages
+          .slice(end)
+          .filter(
+            (message) =>
+              message.kind === "system" &&
+              message.externalFileChanges?.originClientMessageId === owner.clientMessageId,
+          )
+      : [];
+  const summary = aggregateFileChangeSummary([...logicalTurn, ...priorLateMarkers]);
+  marker.text = turnDiffNotice(snapshot, summary?.unresolvedPaths);
   if (summary?.files.length) logicalTurn.push(filesChangedMessage(summary, previous?.id));
   const messages = [
     ...state.messages.slice(0, start),
@@ -812,6 +829,15 @@ function attachExternalChangesToOriginTurn(
       : undefined,
   );
   const next = messages.slice();
+  for (let i = start + 1; i < end; i++) {
+    const message = next[i];
+    if (message.kind === "system" && message.turnDiff) {
+      next[i] = {
+        ...message,
+        text: turnDiffNotice(message.turnDiff, aggregate.unresolvedPaths),
+      };
+    }
+  }
   let insertedAt: number | undefined;
   if (existingCardIndex >= 0) {
     next[existingCardIndex] = summary;
