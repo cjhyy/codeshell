@@ -121,7 +121,7 @@ function fixture() {
       { shell_id: record.shellId, ...(mode ? { mode } : {}) },
       ctx,
     );
-    expect(result.startsWith(`[owned-utf8 status=running]`)).toBe(true);
+    expect(result.startsWith(`[owned-utf8 status=${record.status}`)).toBe(true);
     const body = result.slice(result.indexOf("\n") + 1);
     return body === "(no new output)" ? "" : body;
   };
@@ -218,4 +218,117 @@ test("the actual session-ownership gate refuses another session without advancin
   expect(result).toBe("Error: Unknown shell_id: owned-utf8");
   expect(record.agentReadOffset).toBe(0);
   expect(await peek()).toBe("owned中");
+});
+
+test("repeated empty frontier peeks retain bytes until the missing continuation arrives", async () => {
+  const { write, peek, record } = fixture();
+  write(Buffer.from([0x41, 0xe4, 0xb8]));
+  expect(await peek()).toBe("A");
+  expect(record.agentReadOffset).toBe(1);
+  expect(await peek()).toBe("");
+  expect(record.agentReadOffset).toBe(1);
+  expect(await peek("all")).toBe("A�"); // snapshot semantics stay unchanged
+  expect(record.agentReadOffset).toBe(1);
+  write(Buffer.from([0xad, 0x5a]));
+  expect(await peek()).toBe("中Z");
+  expect(record.agentReadOffset).toBe(5);
+  expect(await peek()).toBe("");
+});
+
+for (const status of ["exited", "killed", "orphaned"] as const) {
+  test(`${status} consumes an incomplete EOF once instead of retaining it forever`, async () => {
+    const { write, peek, record } = fixture();
+    write(Buffer.from([0x41, 0xf0, 0x9f, 0x98]));
+    expect(await peek()).toBe("A");
+    expect(record.agentReadOffset).toBe(1);
+    record.status = status; // inert process state; no real process or lifecycle call
+    expect(await peek()).toBe("�");
+    expect(record.agentReadOffset).toBe(4);
+    expect(await peek()).toBe("");
+    expect(record.agentReadOffset).toBe(4);
+  });
+}
+
+test("an already-terminal incomplete snapshot makes forward progress on its first read", async () => {
+  const { write, peek, record } = fixture();
+  write(Buffer.from([0xe4, 0xb8]));
+  record.status = "exited";
+  expect(await peek()).toBe("�");
+  expect(record.agentReadOffset).toBe(2);
+  expect(await peek()).toBe("");
+});
+
+test("invalid UTF8 bytes and impossible prefix ranges are consumed while still running", async () => {
+  for (const raw of [
+    [0x80],
+    [0xc0],
+    [0xc1],
+    [0xf5],
+    [0xff],
+    [0xe0, 0x80],
+    [0xed, 0xa0],
+    [0xf0, 0x80],
+    [0xf4, 0x90],
+  ]) {
+    const { write, peek, record } = fixture();
+    const bytes = Buffer.from(raw);
+    write(bytes);
+    expect(await peek()).toBe(bytes.toString("utf8"));
+    expect(record.agentReadOffset).toBe(bytes.length);
+    expect(await peek()).toBe("");
+  }
+});
+
+test("a held valid lead followed by an invalid next byte resumes with replacement decoding", async () => {
+  const { write, peek, record } = fixture();
+  write(Buffer.from([0xe4]));
+  expect(await peek()).toBe("");
+  expect(record.agentReadOffset).toBe(0);
+  write(Buffer.from("X"));
+  expect(await peek()).toBe("�X");
+  expect(record.agentReadOffset).toBe(2);
+  expect(await peek()).toBe("");
+});
+
+test("a partial frontier beyond a full cap stays unread until its remaining bytes arrive", async () => {
+  const { write, peek, record } = fixture();
+  const prefix = "a".repeat(16 * 1024);
+  write(Buffer.concat([Buffer.from(prefix), Buffer.from([0xe4])]));
+  expect(await peek()).toBe(prefix);
+  expect(record.agentReadOffset).toBe(16 * 1024);
+  expect(await peek()).toBe("");
+  expect(record.agentReadOffset).toBe(16 * 1024);
+  write(Buffer.from([0xb8, 0xad]));
+  expect(await peek()).toBe("中");
+  expect(record.agentReadOffset).toBe(16 * 1024 + 3);
+  expect(await peek()).toBe("");
+});
+
+test("valid UTF8 range boundaries survive every unfinished split without buffering valid complete bytes", async () => {
+  for (const codePoint of [0x80, 0x7ff, 0x800, 0xd7ff, 0xffff, 0x10000, 0x10ffff]) {
+    const char = String.fromCodePoint(codePoint);
+    const bytes = Buffer.from(char);
+    for (let split = 1; split < bytes.length; split++) {
+      const { write, peek, record } = fixture();
+      write(Buffer.concat([Buffer.from("A"), bytes.subarray(0, split)]));
+      expect(await peek()).toBe("A");
+      expect(record.agentReadOffset).toBe(1);
+      write(Buffer.concat([bytes.subarray(split), Buffer.from("Z")]));
+      expect(await peek()).toBe(char + "Z");
+      expect(record.agentReadOffset).toBe(bytes.length + 2);
+      expect(await peek()).toBe("");
+    }
+  }
+});
+
+test("a starting stream retains its incomplete frontier until it becomes complete", async () => {
+  const { write, peek, record } = fixture();
+  record.status = "starting";
+  write(Buffer.from([0xc2]));
+  expect(await peek()).toBe("");
+  expect(record.agentReadOffset).toBe(0);
+  record.status = "running";
+  write(Buffer.from([0x80]));
+  expect(await peek()).toBe("\u0080");
+  expect(record.agentReadOffset).toBe(2);
 });
