@@ -1,0 +1,451 @@
+{
+  "kind": "selected source matching lines, not full semantic file read",
+  "pattern": "connectTimeoutMs|connectRetries|inlineImages",
+  "hits": [
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "line": 44,
+      "text": "    connectTimeoutMs: snapshot.connectTimeoutMs ?? DEFAULT_MCP_CONNECT_TIMEOUT_MS,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "line": 45,
+      "text": "    connectRetries: snapshot.connectRetries ?? DEFAULT_MCP_CONNECT_RETRIES,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "line": 49,
+      "text": "    ...(snapshot.inlineImages === true ? { inlineImages: true } : {}),"
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.ts",
+      "line": 21,
+      "text": "  readonly inlineImages?: boolean;"
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.ts",
+      "line": 74,
+      "text": "    if (decl.inlineImages !== undefined && typeof decl.inlineImages !== \"boolean\") return {};"
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.ts",
+      "line": 82,
+      "text": "      ...(decl.inlineImages ? { inlineImages: true } : {}),"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 655,
+      "text": "  inlineImages: boolean,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 676,
+      "text": "          const inline = inlineImages"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1137,
+      "text": "    if (config.connectTimeoutMs !== undefined && !validMcpConnectTimeout(config.connectTimeoutMs)) {"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1139,
+      "text": "        \"Invalid connectTimeoutMs; expected an integer from 1 to 120000.\","
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1142,
+      "text": "    if (config.connectRetries !== undefined && !validMcpConnectRetries(config.connectRetries)) {"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1143,
+      "text": "      throw new McpInitializationError(\"Invalid connectRetries; expected an integer from 0 to 2.\");"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1145,
+      "text": "    const timeoutMs = config.connectTimeoutMs ?? DEFAULT_MCP_CONNECT_TIMEOUT_MS;"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1146,
+      "text": "    const retries = config.connectRetries ?? DEFAULT_MCP_CONNECT_RETRIES;"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1625,
+      "text": "        connection.config?.inlineImages === true && mcpContextSupportsVision(ctx),"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "line": 1735,
+      "text": "        conn.config?.inlineImages === true && mcpContextSupportsVision(workspace),"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 69,
+      "text": "    connectTimeoutMs: 300,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 127,
+      "text": "    const { receipt, registry, manager, config } = setup(\"timeout\", { connectRetries: 2 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 160,
+      "text": "    const { receipt, manager, config } = setup(\"malformed\", { connectTimeoutMs: 5_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 203,
+      "text": "      connectTimeoutMs: 5_000,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 225,
+      "text": "    const { receipt, manager, config } = setup(\"timeout\", { connectTimeoutMs: 5_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 243,
+      "text": "    const { receipt, manager, config } = setup(\"slow\", { connectTimeoutMs: 2_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 263,
+      "text": "    const { receipt, manager, config } = setup(\"slow\", { connectTimeoutMs: 2_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 284,
+      "text": "    const first = setup(\"timeout\", { connectTimeoutMs: 5_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 315,
+      "text": "    const { receipt, manager, config } = setup(\"slow\", { connectTimeoutMs: 2_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 340,
+      "text": "    const { receipt, manager, config } = setup(\"timeout\", { connectTimeoutMs: 5_000 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 354,
+      "text": "    const { receipt, manager, config } = setup(\"timeout\", { connectRetries: 3 });"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "line": 355,
+      "text": "    await expect(manager.connect(\"fixture\", config)).rejects.toThrow(\"connectRetries\");"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-workspace.test.ts",
+      "line": 167,
+      "text": "    servers.browser.connectTimeoutMs = 3_000;"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-workspace.test.ts",
+      "line": 168,
+      "text": "    servers.browser.connectRetries = 0;"
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.test.ts",
+      "line": 20,
+      "text": "        inlineImages: true,"
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.test.ts",
+      "line": 26,
+      "text": "    expect(servers[\"host:cua-driver\"]?.inlineImages).toBe(true);"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "line": 68,
+      "text": "      \"startup:valid\": { command: \"test\", connectTimeoutMs: 40_000, connectRetries: 2 },"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "line": 69,
+      "text": "      \"startup:invalid\": { command: \"test\", connectTimeoutMs: 120_001 },"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "line": 72,
+      "text": "      \"startup:valid\": { connectTimeoutMs: 80_000, connectRetries: 0 },"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "line": 74,
+      "text": "    expect(merged[\"startup:valid\"]).toMatchObject({ connectTimeoutMs: 80_000, connectRetries: 0 });"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 191,
+      "text": "  if (cfg.connectTimeoutMs !== undefined && !validMcpConnectTimeout(cfg.connectTimeoutMs))"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 193,
+      "text": "  if (cfg.connectRetries !== undefined && !validMcpConnectRetries(cfg.connectRetries))"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 227,
+      "text": "    ...(cfg.connectTimeoutMs !== undefined"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 228,
+      "text": "      ? { connectTimeoutMs: cfg.connectTimeoutMs as number }"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 230,
+      "text": "    ...(cfg.connectRetries !== undefined ? { connectRetries: cfg.connectRetries as number } : {}),"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 283,
+      "text": "  if (override.connectTimeoutMs !== undefined)"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 284,
+      "text": "    supplement.connectTimeoutMs = override.connectTimeoutMs;"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "line": 285,
+      "text": "  if (override.connectRetries !== undefined) supplement.connectRetries = override.connectRetries;"
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp.ts",
+      "line": 258,
+      "text": "        connectRetries: 0,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 410,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 433,
+      "text": "          { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 461,
+      "text": "        { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 469,
+      "text": "        { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 482,
+      "text": "      for (const config of [{}, { inlineImages: false }]) {"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 496,
+      "text": "    for (const config of [{}, { inlineImages: true }]) {"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 512,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 530,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 542,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 570,
+      "text": "        { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 576,
+      "text": "      const noConfig = await runImageTool({ inlineImages: true }, undefined, undefined, invocation);"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 583,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 591,
+      "text": "      { inlineImages: false },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 600,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 624,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 636,
+      "text": "        { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "line": 649,
+      "text": "      { inlineImages: true },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 38,
+      "text": "          connectTimeoutMs: DEFAULT_MCP_CONNECT_TIMEOUT_MS,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 39,
+      "text": "          connectRetries: DEFAULT_MCP_CONNECT_RETRIES,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 51,
+      "text": "          connectTimeoutMs: DEFAULT_MCP_CONNECT_TIMEOUT_MS,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 52,
+      "text": "          connectRetries: DEFAULT_MCP_CONNECT_RETRIES,"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 101,
+      "text": "      { connectTimeoutMs: DEFAULT_MCP_CONNECT_TIMEOUT_MS + 1 },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 102,
+      "text": "      { connectRetries: 0 },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 103,
+      "text": "      { connectRetries: 2 },"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 187,
+      "text": "  test(\"inlineImages separates identities only when enabled\", () => {"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 188,
+      "text": "    expect(identity(stdio({ inlineImages: false }))).toBe(identity(stdio()));"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "line": 189,
+      "text": "    expect(identity(stdio({ inlineImages: true }))).not.toBe(identity(stdio()));"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 8,
+      "text": "      mcpServers: { test: { command: \"test\", connectTimeoutMs: 90_000, connectRetries: 2 } },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 9,
+      "text": "      mcpServerOverrides: { \"plugin:test\": { connectTimeoutMs: 50_000, connectRetries: 0 } },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 11,
+      "text": "    expect(config.mcpServers.test.connectTimeoutMs).toBe(90_000);"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 12,
+      "text": "    expect(config.mcpServerOverrides[\"plugin:test\"].connectRetries).toBe(0);"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 16,
+      "text": "      { connectTimeoutMs: 0 },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 17,
+      "text": "      { connectTimeoutMs: 120_001 },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 18,
+      "text": "      { connectTimeoutMs: 1.5 },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 19,
+      "text": "      { connectRetries: -1 },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 20,
+      "text": "      { connectRetries: 3 },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "line": 21,
+      "text": "      { connectRetries: 0.5 },"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "line": 393,
+      "text": "            connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "line": 394,
+      "text": "            connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "line": 396,
+      "text": "            inlineImages: z.boolean().optional(),"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "line": 416,
+      "text": "            connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "line": 417,
+      "text": "            connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),"
+    },
+    {
+      "path": "packages/core/src/engine/engine.mcp-health.test.ts",
+      "line": 69,
+      "text": "          connectTimeoutMs: 2_000,"
+    },
+    {
+      "path": "packages/core/src/engine/engine.mcp-health.test.ts",
+      "line": 70,
+      "text": "          connectRetries: 0,"
+    }
+  ]
+}

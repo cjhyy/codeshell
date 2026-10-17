@@ -1,0 +1,197 @@
+{
+  "kind": "filesystem bytes only, no new semantic read or product function invocation",
+  "timeUTC": "2026-10-17T13:31:48.927520+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.mcp-health.test.ts",
+      "bytes": 4504,
+      "sha256": "f7856ae810d5ed68d3a3f4ed227c8cfbb1aafdbc064c32792566623cc7aed1c9",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp.ts",
+      "bytes": 12009,
+      "sha256": "7cd7625fac0d3a919adae1ffb98bdccc47a20fca5c789d9cdb12ed3877e2d754",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "bytes": 10277,
+      "sha256": "8e2b9f6216748052b773b66ff7f6c9dede8fa7999b439d4cf49c384660d8a4a7",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "bytes": 14536,
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.test.ts",
+      "bytes": 2440,
+      "sha256": "be618e42ec8bf589358c4f56317def2df60d9eec512b0af747872939b17b19db",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "bytes": 1738,
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "bytes": 9662,
+      "sha256": "90f63a4b8357f9c7af4e7dbf724ddd0d6f139086ce6e175f32076693e02042d2",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.test.ts",
+      "bytes": 2443,
+      "sha256": "bf494d885d89dcedcda54ed19d67e7ff5cb54ed92d259c65ed9f8af1c8b2803e",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.ts",
+      "bytes": 3692,
+      "sha256": "9e5a407ac43f9b65c184412a1655f0f58c3ec6315d8b54b9a812c11f2a291a1c",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "bytes": 6682,
+      "sha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "bytes": 2457,
+      "sha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "bytes": 53805,
+      "sha256": "fe5f2abf784158344be36df1c3de77d72dc5e0c0b7bb98d29915d612ce3e6c3d",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "bytes": 74360,
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "bytes": 14247,
+      "sha256": "9ef092bb2bbe51c5f8625bdf53a14412c90f3dea6143f7117b49e6383deae9f2",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-workspace.test.ts",
+      "bytes": 17427,
+      "sha256": "495d6ccc3b63999c6c202308f8a0c8285ae5bb64ffb8a97a1ddec2afee64189e",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "bytes": 75319,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+      "bytes": 10438,
+      "sha256": "59e15a04af1bcd9f56ecb21e1a30cccbe9ea27f07d6304d6ce963bdc36185417",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "bytes": 848,
+      "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesOriginalSemanticOrInstructionPin": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesOriginalSemanticOrInstructionPin": true
+    }
+  ],
+  "allStable": true,
+  "firstAndPriorFinishPinsPreserved": true,
+  "rootSuppliedContext": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "gitBindingPerformed": false,
+  "newProductSemanticReadLines": 0
+}

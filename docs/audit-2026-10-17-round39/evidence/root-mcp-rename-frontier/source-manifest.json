@@ -1,0 +1,113 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "bytes": 1738,
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "selectedLineRanges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "coverage": "selected",
+      "lineCount": 40,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Dedicated hash before this direct display; peer exact excerpts and prior Root38 overlapping selected ranges already known."
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "selectedLineRanges": [
+        [
+          371,
+          400
+        ]
+      ],
+      "coverage": "selected",
+      "lineCount": 731,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Dedicated hash before this direct display; peer exact excerpts and prior Root38 overlapping selected ranges already known."
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "selectedLineRanges": [
+        [
+          181,
+          215
+        ]
+      ],
+      "coverage": "selected",
+      "lineCount": 275,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Dedicated hash before this direct display; peer exact excerpts and prior Root38 overlapping selected ranges already known."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "selectedLineRanges": [
+        [
+          429,
+          436
+        ],
+        [
+          1375,
+          1395
+        ],
+        [
+          1428,
+          1445
+        ]
+      ],
+      "coverage": "selected",
+      "lineCount": 1893,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Dedicated hash before this direct display; peer exact excerpts and prior Root38 overlapping selected ranges already known."
+    }
+  ],
+  "semanticReadLines": 123,
+  "productRuns": 0,
+  "limitations": [
+    "Overlapping prior38 ranges are reinspection, not novel historical coverage.",
+    "Ordinary settings schema/DTO merge source only; no config, file write, helper expression, fixture, React, MCP, process, permission, auth or network execution."
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "coverage": "hash-only prior Root38 full62, no new semantic read"
+    }
+  ],
+  "allFinalChecks": [
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "matchesPin": true
+    }
+  ]
+}

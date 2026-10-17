@@ -1,0 +1,68 @@
+{
+  "checkedUTC": "2026-10-17T13:43:40.847677+00:00",
+  "method": "All Markdown inline links in this exact independent directory; existence only, not a product or formal verifier run",
+  "linkCount": 10,
+  "allExist": true,
+  "links": [
+    {
+      "source": "review.md",
+      "destination": "source-manifest.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/source-manifest.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/decisions.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "author-metadata-checks.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/author-metadata-checks.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "../codeshell-audit-round39-mcp-rename-fields-frontier/report.md",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/report.md",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/history-decisions.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/history.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-finish-check.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/history-finish-check.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "validation.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/validation.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "metadata-diagnostics.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/metadata-diagnostics.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "author-receipt.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round39-mcp-rename-review/author-receipt.json",
+      "exists": true
+    }
+  ]
+}

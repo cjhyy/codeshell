@@ -1,0 +1,241 @@
+{
+  "kind": "artifact metadata checks only",
+  "timeUTC": "2026-10-17T13:31:48.927520+00:00",
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/McpSection.tsx:429",
+      "exists": true,
+      "line": 429,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.ts:20",
+      "exists": true,
+      "line": 20,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/settings/schema-export.ts:1",
+      "exists": true,
+      "line": 1,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/settings/schema.ts:393",
+      "exists": true,
+      "line": 393,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/settings/schema.test.ts:5",
+      "exists": true,
+      "line": 5,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/settings-service.ts:35",
+      "exists": true,
+      "line": 35,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settingsAuthority.ts:3",
+      "exists": true,
+      "line": 3,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/index.ts:5447",
+      "exists": true,
+      "line": 5447,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/host-mcp-servers.ts:89",
+      "exists": true,
+      "line": 89,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/settings-service.ts:181",
+      "exists": true,
+      "line": 181,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/types.ts:1165",
+      "exists": true,
+      "line": 1165,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/metadata-diagnostics.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-delta.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/validation.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 15,
+  "allLinksValid": true,
+  "sourceRangeChecks": [
+    {
+      "path": "packages/core/src/engine/engine.mcp-health.test.ts",
+      "declaredReadLineCount": 2,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp.ts",
+      "declaredReadLineCount": 1,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "declaredReadLineCount": 4,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "declaredReadLineCount": 49,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "declaredReadLineCount": 39,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.test.ts",
+      "declaredReadLineCount": 1,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "declaredReadLineCount": 40,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "declaredReadLineCount": 33,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "declaredReadLineCount": 79,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.test.ts",
+      "declaredReadLineCount": 2,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.ts",
+      "declaredReadLineCount": 16,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "declaredReadLineCount": 10,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "declaredReadLineCount": 53,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "declaredReadLineCount": 17,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "declaredReadLineCount": 24,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "declaredReadLineCount": 12,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-workspace.test.ts",
+      "declaredReadLineCount": 2,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "declaredReadLineCount": 25,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "declaredReadLineCount": 73,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "declaredReadLineCount": 144,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "declaredReadLineCount": 20,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "declaredReadLineCount": 39,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+      "declaredReadLineCount": 64,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "declaredReadLineCount": 34,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "declaredReadLineCount": 515,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "declaredReadLineCount": 62,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "declaredReadLineCount": 114,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "declaredReadLineCount": 62,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "declaredReadLineCount": 25,
+      "matches": true
+    }
+  ],
+  "sourcePins": 29,
+  "sourceLines": 1561,
+  "newProductSemanticReadLines": 0,
+  "productExecutions": 0
+}

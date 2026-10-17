@@ -1,0 +1,486 @@
+{
+  "earlierDatedInventoryFiles": 3318,
+  "earlierScope": "future38 excluded37/38",
+  "currentDatedInventoryFiles": 3413,
+  "currentScope": "future39 includesfrozen37 excludes38/39",
+  "added": [
+    {
+      "path": "docs/audit-2026-10-17-round37/README.md",
+      "bytes": 1753,
+      "sha256": "5c051a59b2142e199b4f5249d20fff838ad5e03a1bfb1bc50b623a6e88c961fd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/candidates.json",
+      "bytes": 214,
+      "sha256": "ca292a6814cd4619e3be1ee784676484da1e427899b5d136e3c3d9cb4542b273"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/coverage.json",
+      "bytes": 525,
+      "sha256": "bf73b7e69cd3a53658ae5e58ed300c6201c1dbc4a9c992d64a3adcb575c61acf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence-index.json",
+      "bytes": 19287,
+      "sha256": "d8dde19ef35666c6cfb53e28c83a01b81c656b114e1ecad80cdcf9cc61910c78"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "bytes": 123285,
+      "sha256": "49febe7666803a53b0458b0df2adf15471f1d35f680f4139c18fe448720b7b68"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/initial-artifact-pins.json",
+      "bytes": 16162,
+      "sha256": "25d3de14de75fda56ab8555cbe08147a6c10ad3356e4c3cdd08fce51834ed2f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/metadata-review-notes.json",
+      "bytes": 3242,
+      "sha256": "5425695f66501002d2db9dad76d98282d3c6a0ffe51bb482b3d124206f122ac5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/review.md",
+      "bytes": 4629,
+      "sha256": "c76aa114f8491e51cd4b2ea8e32189b86bb39f9fd6254f82401a7d842edfd4e2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/reviewer-receipt.json",
+      "bytes": 1726,
+      "sha256": "ba9c164d04b03d1bb35d283cbd9ad1fb597874296477698805fd7830c49e52e4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/freeze-checks.json",
+      "bytes": 3162,
+      "sha256": "14e179bd929efaa7ea1fbcb218cd69e997e91d02ca9968e08b0c7f7452857245"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/frozen-artifact-whitespace.json",
+      "bytes": 178,
+      "sha256": "d882062479ebed39ecdc6ca0925501428d1b311570ec2fc04981681db491960b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-post-refresh-checks.json",
+      "bytes": 94,
+      "sha256": "647be08bb63dfc1ab7c80892cf387d83a2355860be632edfbc5e5c255f15d9e7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/checks.json",
+      "bytes": 6213,
+      "sha256": "46b4c2485c058f362bdaea8ec0194aefc57d6aaeed16dcba45555fe1627e8208"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/initial-pins.json",
+      "bytes": 1374,
+      "sha256": "974deafe96ea8cce7c08bbac58f941c61182a9b511ada4a115ff185f6634fc28"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/inventory-comparison.json",
+      "bytes": 21957,
+      "sha256": "c23051e420bf843063a6fd82fcaa6de8f1bff5c0974643dd0a4f1789681b2b16"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/new-delta-md-contexts.json",
+      "bytes": 3453,
+      "sha256": "e1c5358d04b2cabc885500d3fd52d1f400e8a10cb224ffad1b64fdfd96d5fb4c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+      "bytes": 1282080,
+      "sha256": "b218716d4491136aa1ccc8847db3b49c1d9587dd44a34e30045d4ca817c14bfd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/review.md",
+      "bytes": 3602,
+      "sha256": "4d05ebcb284edbaedda0cba0838b6d35740d97a3215fc0557bf687c04376bba9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/reviewer-receipt.json",
+      "bytes": 2777,
+      "sha256": "bbe2234e4a15a4ddc78773c6832176fd7670d41af187bdba2c37041dcfd27c46"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/selected-contexts.json",
+      "bytes": 31445,
+      "sha256": "f54137411b5da69bcce25728666240bbac51dedcab5b7e978f19c4cd8af798b7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/window-results.json",
+      "bytes": 582022,
+      "sha256": "588aae7ba72e90a21fc47e68429a32f51b67de604256d3ab8941ed135426f44c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/incoming-main-paths.json",
+      "bytes": 150,
+      "sha256": "8ba3807658e3422615feb98dd694bd3aa4537723db36e1ea19019863c77d1941"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/integration-before.json",
+      "bytes": 1375,
+      "sha256": "491f78f3d595e55740684e6b95e37dc3a9f0248317bd37a3e3ffe6f176b20a7c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/integration-plan.json",
+      "bytes": 3985,
+      "sha256": "ce95f15a3098bfcfa2a3ae438b2eb80dbb2ba5500fd76b7ee083161272efa7b5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/admission-path-initial-pins.json",
+      "bytes": 815,
+      "sha256": "305bad9af241472ac00c2f29d3b70e706211a78a65bf0612b7aa2adc2f590ec8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/artifact-receipt.json",
+      "bytes": 4120,
+      "sha256": "4112d3fea658aedd692c31f194c675a9a080519d625f257691ac91c405550293"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/classification.json",
+      "bytes": 931,
+      "sha256": "6e71676ba3c13ac74b533579a0eff723fdcc35410f4de4bd169f05fd9e451fb1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/dispatch-initial-pins.json",
+      "bytes": 706,
+      "sha256": "d4b03f43654289db563d13a333ff60f24aecf4c7797f5f5b16384f7ca1e48467"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/focused-history.json",
+      "bytes": 6910,
+      "sha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/history-decisions.json",
+      "bytes": 2576,
+      "sha256": "e022604e3e8dc638231a00e6520598a837e4f20bfed7294ed0b755bbe684e7d6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/history-delta.json",
+      "bytes": 16332,
+      "sha256": "38b7378452be64c8ece8b656a254589cc56275c5b71af532170dfdacbac54594"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/history.json",
+      "bytes": 717288,
+      "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/initial-pins.json",
+      "bytes": 3697,
+      "sha256": "b27e808e8ac914ab34f6e820a1c6d97d53c6e4e0a091a23c2ef4ef2ccdb8ce44"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/links-check.json",
+      "bytes": 2557,
+      "sha256": "81a3d17b9ee9049ba6904ea6a5be6aaa1c8186eb9a2006d32533f4435edca69a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/old-collision-history-late-pin.json",
+      "bytes": 448,
+      "sha256": "2cda7502c0b60e3fc1e58ad6a73fc10f3aa91fcf759f2dcc7a89c170253866cc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/registry-admission-initial-pins.json",
+      "bytes": 718,
+      "sha256": "4cb60a6e801782d4d29d969b57b9026c61019b2dff7cb51f93f2e624742a83ee"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/report.md",
+      "bytes": 8075,
+      "sha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/scope.json",
+      "bytes": 872,
+      "sha256": "1c3e250f8eb7291cd56925eb7b5b72ea1a7710d85ffe10c8b8e8144b99f9b5c7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/source-manifest.json",
+      "bytes": 31633,
+      "sha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/validation.json",
+      "bytes": 1185,
+      "sha256": "0f7f6b4c39846ed564e1d4e134e08877a265dcec216bf3b073d818e4db8d465b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/writer-type-initial-pins.json",
+      "bytes": 1134,
+      "sha256": "d8c3681850e03df93b02064634eeeb9823a27a28069b3b00f360c50568acdf97"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/adjacent-pins.json",
+      "bytes": 1623,
+      "sha256": "4763f422751d983f07314e36d1b0b1e45258676d49db1659bf28c486b3229d10"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/author-receipt.json",
+      "bytes": 6093,
+      "sha256": "dabba5faaca4069a9e6cfbee992fb9c652f32b82706d31202fbadf0a3b798f46"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/bridge-pins.json",
+      "bytes": 1217,
+      "sha256": "76636eb3710fbe2422a69503f79246acb10393df4442ffaf29a1e6e9abf7f071"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/decisions.json",
+      "bytes": 3611,
+      "sha256": "b27b0472878b590fd4ec7d787869ee60dd83d60c1da7ddd7862f5c14186185ec"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "bytes": 806839,
+      "sha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+      "bytes": 256585,
+      "sha256": "6e3a54ed850341dd0fe71bbb80a6894bbc444085eec710e59443ab3f346dff68"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-initial-pins.json",
+      "bytes": 708024,
+      "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-selection.json",
+      "bytes": 12945,
+      "sha256": "880e6ba6dcbf65c3d88394d819c8f5d298eb9464a8af28462180baed648da64f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected.json",
+      "bytes": 2807,
+      "sha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/author-receipt.json",
+      "bytes": 2218,
+      "sha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+      "bytes": 120837,
+      "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/finish-checks.json",
+      "bytes": 1141439,
+      "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/initial-pins.json",
+      "bytes": 816583,
+      "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/metadata-notes.json",
+      "bytes": 2288,
+      "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/review.md",
+      "bytes": 2662,
+      "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/selected-contexts.json",
+      "bytes": 15167,
+      "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/supplement.json",
+      "bytes": 153184,
+      "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/validation.json",
+      "bytes": 498,
+      "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history.json",
+      "bytes": 5395,
+      "sha256": "8536fc80fbf484978b29d19d6b0fe0e1c2a5e0fef085eb56525fccca09702c6a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/initial-pins.json",
+      "bytes": 4345,
+      "sha256": "935d493ea3c81ce2266f5f039874b0ad6507b95a29b5a578992cc37bbcac8325"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "bytes": 444,
+      "sha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/metadata-notes.json",
+      "bytes": 2342,
+      "sha256": "1b795dec5322cab936e789ac356dae95db3fb3f5f97c6d384d783a81cf17d99d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/proposal.md",
+      "bytes": 4560,
+      "sha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "bytes": 23256,
+      "sha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/validation.json",
+      "bytes": 1307,
+      "sha256": "d69703c382d38a5148010a142efc3735ec2f15c4e28356fc17a76bce7d917620"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/prep-copy-receipt.json",
+      "bytes": 23196,
+      "sha256": "4f6a172093a0c6f671c10dc01a3188a2455b89644834125c3b981eca9e614a3c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/review-aggregate.md",
+      "bytes": 3241,
+      "sha256": "8188ce2663a0007a8b6aed5cd7f719a3ca2ec4fcd6ef6ba0a5d783dba9627a91"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/author-receipt.json",
+      "bytes": 1442,
+      "sha256": "59a084698b3443360922be86db0dda626ac7e9dc953a9b6eca21d132e9f25f71"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/decisions.json",
+      "bytes": 2248,
+      "sha256": "c25843bd68330cba304a05db15723750d91f38d057d39222317fe575d3d9cc31"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/initial-pins.json",
+      "bytes": 3258,
+      "sha256": "c7751b25b9dd1dbd77ba631ee86130c7f2099b870d0ce19816d5a8dafe5050bf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/installed-key-pin.json",
+      "bytes": 403,
+      "sha256": "2f2b13b20a740bce85f3e2529d7fc0ab606355d75d238d6a91579242b0c6cd59"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/metadata-notes.json",
+      "bytes": 329,
+      "sha256": "f43e8f7336084a6662e28971cd4cc460f55dad2445aee3aec0d1d080a49f4576"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/proposal.md",
+      "bytes": 2587,
+      "sha256": "f24005f172238773d7fd28386621a303d3a1beb4894ee4d7e4f190aca7c8a244"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/read-ranges.json",
+      "bytes": 1646,
+      "sha256": "5b190156c837d53ab5d884b9162ef867cd19877f831b790fdd33aad42bab0557"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/source-manifest.json",
+      "bytes": 5647,
+      "sha256": "8f647580230aa2133b52863b9dd94c6c906c2e9f0e4e82265979d61adaca1ba1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/source-reader.first.exit.json",
+      "bytes": 574,
+      "sha256": "944b3c501288d909d41e0b91918eba92eb4768b888aaf41cd7be76179ece11bb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-frontier/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-history.json",
+      "bytes": 827111,
+      "sha256": "fcd8b542a2b4cb5ea122f5809ba62b191b7124d90062d6ba680c7fba29db8151"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-metadata-notes.json",
+      "bytes": 1295,
+      "sha256": "38fbe722e3a635b305999808456904c5a03d3c4ac4a0b08233d665b81bb62a67"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-receipt-checks.json",
+      "bytes": 42865,
+      "sha256": "c521076a187006dc65b76597686d73db03d241363f5ecfa1691383df6761fc76"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/author-receipt.json",
+      "bytes": 839,
+      "sha256": "2e9083bafea6a84a63efe0a98b3d61d396f85560f85d3d692706b89f622508f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/initial-artifact-pins.json",
+      "bytes": 1519,
+      "sha256": "6509714bd3cbd8adb3f220d59468c5fc9c7eabe35b37669072b96c3a7dd3e5ff"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/regex-codepoint-checks.json",
+      "bytes": 18607,
+      "sha256": "13393a3c39427d7f30f16e7262653ad7c7204f3bab0843123654b91b27dc5d28"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/review.md",
+      "bytes": 2674,
+      "sha256": "2a62ebe7d5192ba155ce121b05386ad58fa8c8de2c288c31b3f185823cea53d3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "bytes": 35976,
+      "sha256": "84cb4cca3a5c54a041f99eddd8cf6c5aac60309d64b7f2b1db21e5c00d7939d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/worktrees-before.json",
+      "bytes": 7566,
+      "sha256": "f3b6cef770ec6d366e20e9d2388454e7ab64f39858bd96655e06b2b1a5cb41bf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/findings.json",
+      "bytes": 2486,
+      "sha256": "cf34b2baca6a4240f22853d33c60b6d70d7610c8a6a3859897a86d1a788e1846"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/marketplace-local.md",
+      "bytes": 2536,
+      "sha256": "8d55fa27a70dc2a6253687bfc3590d309b0f684c9a761eb746f41e14c4fd3902"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/related.json",
+      "bytes": 92,
+      "sha256": "361a3a0fc9bb92b8786d9efd2f8d1f4cbdd9b2b479075cb1b59ff18df2d2bf18"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "bytes": 36504,
+      "sha256": "563952d5421a53ea5fbadea01fbc98808aa26fbd26fa27d3539325866feeb319"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/validation.json",
+      "bytes": 334,
+      "sha256": "ec2c6962273a6367864310975d0866f42f19d9da5a4d4da2c3bbe43bed699d17"
+    }
+  ],
+  "removed": [],
+  "sharedChanged": [],
+  "olderSnapshotUnmodified": true
+}

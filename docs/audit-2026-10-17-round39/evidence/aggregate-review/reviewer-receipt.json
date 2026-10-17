@@ -1,0 +1,83 @@
+{
+  "frozenUTC": "2026-10-17T13:47:42.326406+00:00",
+  "directory": "/tmp/codeshell-audit-round39-aggregate-review",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 134209,
+      "sha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae"
+    },
+    {
+      "path": "independent-frozen-artifact-pins.json",
+      "bytes": 6985,
+      "sha256": "18b024b17eba6cbcaf59e2124da0ca02ca87d9f64fff36efa694fa359448fd3a"
+    },
+    {
+      "path": "initial-frozen-artifact-pins.json",
+      "bytes": 8654,
+      "sha256": "4f6c2fb348e85a1b875cfbd35fde87f3ce1c6d0eab7e82d11c27abb9189178e0"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4937,
+      "sha256": "1264da204a776b4788f292c311f15a01c0cc48778ffe8291df1d669a9e5abb2a"
+    }
+  ],
+  "fileCountExcludingSelf": 4,
+  "scope": "Metadata/frozen counterevidence only, no current product source semantics or raw69-object decoding",
+  "sourceFilesHere": 0,
+  "newProductSemanticLines": 0,
+  "supportSingleP3": "MCP-R39-01",
+  "newStandaloneFindingIds": 0,
+  "inputArtifacts": 45,
+  "receiptRowsChecked": [
+    19,
+    4,
+    19
+  ],
+  "sourceRowsMetadataChecked": [
+    29,
+    4,
+    12
+  ],
+  "parentCoverageSeparated": {
+    "bodyRows": 18,
+    "navigationOnlyRows": 11,
+    "otherHashOnlyRows": 183,
+    "rangeOnlyLines": 1340,
+    "navigationBeyondRanges": 221,
+    "observationLines": 1561
+  },
+  "rawFirstHistoryArtifactBytes": 5530631,
+  "rawFirstHistoryArtifactJsonDecodedOrPrinted": false,
+  "parentFocused147CompleteReadClaim": false,
+  "parentCompleteReadIndices": [
+    108,
+    146
+  ],
+  "originalHistory3413Preserved": true,
+  "productRuns": 0,
+  "tests": 0,
+  "fixtures": 0,
+  "git": 0,
+  "reportLinks": [
+    {
+      "target": "initial-frozen-artifact-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "independent-frozen-artifact-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "existsOrSelf": true
+    }
+  ],
+  "allFrozenInputsUnmodified": true
+}

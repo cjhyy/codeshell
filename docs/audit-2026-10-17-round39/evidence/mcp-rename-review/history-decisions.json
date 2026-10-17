@@ -1,0 +1,125 @@
+{
+  "initialInventory": 3413,
+  "markdown": 1352,
+  "json": 2061,
+  "jsonStringValues": 887511,
+  "jsonScalarValues": 1329022,
+  "archiveBySubstring": 175,
+  "archiveCountDefinition": "Path substring archiv, not exact archive directory count. Do not conflate with author exact169.",
+  "parseErrors": 0,
+  "excludedAtInitialTime": [
+    "docs/audit-2026-10-17-round38/**",
+    "docs/audit-2026-10-17-round39/**"
+  ],
+  "includesFrozen37": true,
+  "queryCapPerGroup": 160,
+  "hitTotals": {
+    "source_path": 69,
+    "source_filename": 77,
+    "source_sha": 11,
+    "rename_fields": 12
+  },
+  "retained": {
+    "source_path": 69,
+    "source_filename": 77,
+    "source_sha": 11,
+    "rename_fields": 12
+  },
+  "selectedSemanticHistoryRead": {
+    "renameFieldsContexts": 12,
+    "samePathShaMetadataRows": 5,
+    "sourceLocatorContextsSelected": 61,
+    "uniqueContextTextsAfterDedup": 7,
+    "unique7ContextTextsFullyRead": true,
+    "allOtherLocatorContextsFullyRead": false
+  },
+  "selectedUniqueLocatorTexts": [
+    {
+      "group": "source_path",
+      "index": 8,
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "jsonPointer": "/records/5/matches/0/match",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/settings/mcpsection.tsx",
+      "context": "ails, the error is silently ignored but UI state is still cleared at lines 107-109 (load() is called, then selected and draft are set to null), leaving the UI inconsistent.\", \"fix\": \"Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for he",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3"
+    },
+    {
+      "group": "source_path",
+      "index": 20,
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "jsonPointer": "/matches/user-display/147/excerpt",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/settings/mcpsection.tsx",
+      "context": " silently ignored but UI state is still cleared at lines 107-109 (load() is called, then selected and draft are set to null), leaving the UI inconsistent.\", \"fix\": \"Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for he",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+    },
+    {
+      "group": "source_path",
+      "index": 21,
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "jsonPointer": "/matches/user-display/148/excerpt",
+      "line": 1,
+      "needle": "packages/desktop/src/renderer/settings/mcpsection.tsx",
+      "context": "gnored but UI state is still cleared at lines 107-109 (load() is called, then selected and draft are set to null), leaving the UI inconsistent.\", \"fix\": \"Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for he",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+    },
+    {
+      "group": "source_filename",
+      "index": 9,
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "jsonPointer": "/records/5/matches/0/match",
+      "line": 1,
+      "needle": "mcpsection.tsx",
+      "context": " UI state is still cleared at lines 107-109 (load() is called, then selected and draft are set to null), leaving the UI inconsistent.\", \"fix\": \"Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for he",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3"
+    },
+    {
+      "group": "source_filename",
+      "index": 21,
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "jsonPointer": "/matches/user-display/147/excerpt",
+      "line": 1,
+      "needle": "mcpsection.tsx",
+      "context": " cleared at lines 107-109 (load() is called, then selected and draft are set to null), leaving the UI inconsistent.\", \"fix\": \"Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for he",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+    },
+    {
+      "group": "source_filename",
+      "index": 22,
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "jsonPointer": "/matches/user-display/148/excerpt",
+      "line": 1,
+      "needle": "mcpsection.tsx",
+      "context": " lines 107-109 (load() is called, then selected and draft are set to null), leaving the UI inconsistent.\", \"fix\": \"Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for he",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+    },
+    {
+      "group": "source_filename",
+      "index": 59,
+      "path": "docs/nightly-2026-07-10/goal.md",
+      "jsonPointer": null,
+      "line": 31,
+      "needle": "mcpsection.tsx",
+      "context": "parent 指针树状 session**；快聊用完即走，合并靠 fork/复制派生。\n\n- [x] **A4. MCP HTTP Auth / OAuth / Link 认证体验**（体量 M）— ✅ oauth credential 类型+SafeStorageCipher 加密存储+MCP Bearer 注入+设置 UI，reviewer SHIP-with-nits（凭证不泄漏、向后兼容 OK），已合并。真实授权码登录/自动 refresh 留后续\n  - 锚点：`packages/core/src/credentials/types.ts:6`、`types.ts:718`、`tool-system/mcp-manager.ts:99`、`desktop/.../settings/McpSection.tsx:960`\n  - 目标：加 OAuth credential 类型、登录状态/刷新/退出、认证方式选择 UI，保持 Codex 风格字段兼容。\n\n- [x] **A5. 命名收口 repo / workspace / project / cwd**（体量 M）— ✅ 方案文档已产出并合并（naming-consolidation-plan.md，merge 25970519），机械改名留后续\n  - 锚点：`packages/desktop/src/renderer/repos.ts:14`、`core/src/types.ts:248`、`settings/schema.ts:361`\n  - 目标：先定概念表和迁移边界，再机械改名 / 适配旧 localStorage 与 state.json。\n  - 验收：本项**先只产出概念表 + 迁移方案文档**（写进 `docs/nightly-2026-07-10/naming-consolidation-plan.md`），机械改名作为后续。避免大范围改名夜里失控。\n\n- [x] **A6. Prompt cache 深化（第一步）**（体量 M）— ✅ 修 compaction 后 dynamicContext 残留（改用压缩输入侧剥离，覆盖 summary 路径）+ cache_read 暴跌诊断（LRU 上限）。3 轮 review：泄漏 Blocker→summary 漏剥 Blocker→anchor 记账 Blocker，逐一修复复审 SHIP，336 pass 已合并。prefix hash 分离/粘性锁定/O",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "e5a677d8a63735f840e503338cc960a3d8d03291d56ab01a56a375e11ad2f9cf"
+    }
+  ],
+  "oldCauseDecisions": [
+    "Round4 inline-image context/archive serialization is different from supported server setting fields lost only on Name change.",
+    "Old MCP headers KEY=VALUE display claim concerns a separate format/parser behavior; no duplicate rename cause established.",
+    "Source same-SHA rows describe inventory or selected1092–1112/21lines, not a whole-source prior full read.",
+    "Author separately records September11 atomic rename/disabled/deletion-marker history; that is reviewed author metadata, not an independent reread of its full historical documents. The current-source atomic patch and same-key merge counterevidence are independently inspected.",
+    "Known frozen38 argument array/text roundtrip is separate; excluded mutable38 history remains a dated exclusion even after Root integrated it. No original38 file changed."
+  ],
+  "noveltyConclusion": "No exact same-cause item located in complete matching scan and bounded history contexts read. This is a dated keyword/value gate, not a semantic exhaustive history proof or never-read claim. Root current-history/frozen38 delta is separate.",
+  "endingDrift": "history-finish-check.json retains original3413 path set and exactly one late release TODO byte change. Original query results are not rewritten or relabeled current.",
+  "oldFailedDirections": "All remain SKIP; no product direction reopened."
+}
