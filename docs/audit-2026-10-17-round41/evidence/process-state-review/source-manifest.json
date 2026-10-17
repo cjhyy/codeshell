@@ -1,0 +1,240 @@
+{
+  "prepOnly": true,
+  "formalBaseline": null,
+  "rootContextSupplied": "Frozen39 included in history; mutable40/future41/42/43 excluded. Parent43 tmp report not read. No Git binding.",
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T14:14:32.637000+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/panels/process-state.ts",
+      "bytes": 3867,
+      "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "lineCount": 127,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          26,
+          45
+        ],
+        [
+          54,
+          77
+        ],
+        [
+          85,
+          109
+        ],
+        [
+          111,
+          127
+        ]
+      ],
+      "coveredLineCount": 92,
+      "sourceKind": "product",
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:06:38.714210+00:00",
+      "initialSemanticReadSha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "prepRow": {
+        "path": "packages/server/src/panels/process-state.ts",
+        "bytes": 3867,
+        "lineCount": 127,
+        "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+        "pinBeforeBodyRead": true
+      },
+      "finishBytes": 3867,
+      "finishSha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "matchesInitialPin": true,
+      "role": "Full127lines displayed;92 ordinary semantic lines selected. Only relevant event/receipt caps, DTO and container/event aggregation. sameProcessOwner47–52, revokeGuest79–83 and native admission/lifetime/stdin/entry constants not assessed. Per-guest group count remains ordinary bucket data, not identity/permission validity. No Buffer or timer execution.",
+      "firstEverReadClaim": false,
+      "displayedLineRanges": [
+        [
+          1,
+          127
+        ]
+      ],
+      "displayedLineCount": 127
+    },
+    {
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "bytes": 2058,
+      "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "lineCount": 55,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "coveredLineCount": 55,
+      "sourceKind": "test",
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:07:59.947669+00:00",
+      "initialSemanticReadSha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "prepRow": {
+        "path": "packages/server/src/panels/process-state.test.ts",
+        "bytes": 2058,
+        "lineCount": 55,
+        "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 2058,
+      "finishSha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "matchesInitialPin": true,
+      "role": "Two existing test declarations, terminal-record fixture text and retention/sequence assertions read only. No fake clock, fixture loop, Buffer or helper execution.",
+      "firstEverReadClaim": false,
+      "displayedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "displayedLineCount": 55
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "bytes": 44502,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "lineCount": 1136,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          34,
+          35
+        ],
+        [
+          732,
+          749
+        ],
+        [
+          755,
+          761
+        ],
+        [
+          765,
+          771
+        ],
+        [
+          854,
+          855
+        ],
+        [
+          878,
+          883
+        ],
+        [
+          885,
+          885
+        ],
+        [
+          929,
+          936
+        ],
+        [
+          939,
+          960
+        ],
+        [
+          1123,
+          1124
+        ]
+      ],
+      "coveredLineCount": 75,
+      "sourceKind": "product",
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:07:59.947669+00:00",
+      "initialSemanticReadSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "prepRow": {
+        "path": "packages/server/src/panels/process-service.ts",
+        "bytes": 44502,
+        "lineCount": 1136,
+        "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 44502,
+      "finishSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "matchesInitialPin": true,
+      "role": "Only ordinary DTO constants/init/emit/chunk slice, once-close header, terminal assignment/add call, validated cursor limit and get data projection, stopping flags. Native close/termination/modelTrace/input authorization/owner+epoch predicate correctness remains outside conclusion, including where adjacent source was printed.",
+      "firstEverReadClaim": false,
+      "displayedLineRanges": [
+        [
+          732,
+          771
+        ],
+        [
+          846,
+          892
+        ],
+        [
+          894,
+          965
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        11,
+        12,
+        15,
+        34,
+        35,
+        89,
+        311,
+        318,
+        780,
+        841,
+        969,
+        1061,
+        1083,
+        1117,
+        1123,
+        1124
+      ],
+      "displayedLineCount": 175,
+      "excludedMechanisms": "Owner/epoch guard884 and937–938, native/output Buffer conversion, model trace/input authorization, wait/termination/identity methods and callback side effects outside ordinary semantic coverage even where displayed."
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "priorKnownSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesPriorKnownPin": true,
+      "coverage": "hash-only carry-forward of prior instruction reading",
+      "newSemanticReadLines": 0,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "priorKnownSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesPriorKnownPin": true,
+      "coverage": "hash-only carry-forward of prior instruction reading",
+      "newSemanticReadLines": 0,
+      "initialSemanticReadSha256": null
+    }
+  ],
+  "counts": {
+    "activeSemanticPins": 3,
+    "fullPins": 1,
+    "selectedPins": 2,
+    "productAndTestLines": 222,
+    "productLines": 167,
+    "testDeclarationLines": 55,
+    "testDeclarationsRead": 2,
+    "displayedLinesIncludingNavigation": 357,
+    "instructionHashChecks": 2,
+    "newInstructionSemanticReadLines": 0
+  },
+  "allSourceInitialFinishStable": true,
+  "scopeLimits": "Inclusive1-based text-read ranges, not a proof of every native/authority behavior. Author overlap is not globally new line coverage. Service native/Buffer/model/authorization neighbor source was sometimes printed but not assessed; no parent mutable report or tool-executor was read.",
+  "coverageLimits": "Final ordinary semantic ranges differ from all displayed text.127leaf display is92 selected ordinary lines. Native/identity/authority neighbors excluded; no added product reading during scope refinement. Author overlap is not globally new coverage."
+}

@@ -1,0 +1,24 @@
+{
+  "addedFiles": 115,
+  "patterns": {
+    "process-state": "process-state(?:\\.ts|\\.test\\.ts)?|appendProcessEvent|addProcessReceipt",
+    "process-replay": "(?:afterSequence|nextSequence).{0,160}(?:truncated|hasMore)|(?:truncated|hasMore).{0,160}(?:afterSequence|nextSequence)",
+    "retention-contract": "(?:process|进程).{0,100}(?:receipt|回执).{0,100}(?:retention|保留|FIFO|淘汰)"
+  },
+  "counts": {
+    "process-state": 0,
+    "process-replay": 0,
+    "retention-contract": 0
+  },
+  "hits": {
+    "process-state": [],
+    "process-replay": [],
+    "retention-contract": []
+  },
+  "contextCapEach": 80,
+  "productRuns": 0,
+  "limitations": [
+    "Only frozen40 newly added115 files, not a redefinition of prep43 dated3581 gate.",
+    "Bounded contexts are not whole historical scalar semantic reads."
+  ]
+}

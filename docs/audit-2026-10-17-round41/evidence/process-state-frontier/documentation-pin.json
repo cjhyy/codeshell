@@ -1,0 +1,14 @@
+{
+  "path": "docs/panel-native-tools.md",
+  "bytes": 39804,
+  "sha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+  "lines": 632,
+  "beforeSemanticPinSource": "history.json inventory row pinned during full scan before 0a1310 first document snippet",
+  "beforeSemanticPinUTCWindow": [
+    "2026-10-17T14:05:03.547566+00:00",
+    "2026-10-17T14:05:06.733565+00:00"
+  ],
+  "dedicatedPinUTC": "2026-10-17T14:08:37.639895+00:00",
+  "dedicatedPinAfterNavigationSnippet": true,
+  "stillMatchesHistoryPin": true
+}

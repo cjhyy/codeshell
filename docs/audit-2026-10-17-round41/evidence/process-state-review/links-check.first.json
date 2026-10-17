@@ -1,0 +1,87 @@
+{
+  "checkedUTC": "2026-10-17T14:15:45.218216+00:00",
+  "method": "All inline Markdown file links in exact independent dir, existence/inside-dir only, no product/formal verifier run",
+  "linkCount": 11,
+  "allExist": true,
+  "allInsideOwnedDirectory": false,
+  "outsideRelativeAliasRequired": false,
+  "links": [
+    {
+      "source": "review.md",
+      "destination": "classification.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/classification.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "source-manifest.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/source-manifest.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "metadata-notes.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/metadata-notes.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "history.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/history.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "history-selected-contexts.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/history-selected-contexts.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "history-decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/history-decisions.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "history-finish-check.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/history-finish-check.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "history-delta.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/history-delta.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "author-metadata-checks.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/author-metadata-checks.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "validation.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/validation.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    },
+    {
+      "source": "review.md",
+      "destination": "artifact-receipt.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round43-process-state-review/artifact-receipt.json",
+      "exists": true,
+      "insideOwnedDirectory": false
+    }
+  ]
+}

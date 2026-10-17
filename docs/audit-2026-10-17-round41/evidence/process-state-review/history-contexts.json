@@ -1,0 +1,235 @@
+{
+  "createdUTC": "2026-10-17T14:07:05.012379+00:00",
+  "hits": {
+    "source_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2050",
+        "line": 1,
+        "needle": "packages/server/src/panels/process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/958",
+        "line": 1,
+        "needle": "packages/server/src/panels/process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3588/path",
+        "line": 1,
+        "needle": "packages/server/src/panels/process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/server/src/panels/process-state.ts",
+          "bytes": 3867,
+          "lines": 127,
+          "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/84740d56/paths/79",
+        "line": 1,
+        "needle": "packages/server/src/panels/process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/a66f4ef2/paths/79",
+        "line": 1,
+        "needle": "packages/server/src/panels/process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      }
+    ],
+    "source_filename": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2050",
+        "line": 1,
+        "needle": "process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/958",
+        "line": 1,
+        "needle": "process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3588/path",
+        "line": 1,
+        "needle": "process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/server/src/panels/process-state.ts",
+          "bytes": 3867,
+          "lines": 127,
+          "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/84740d56/paths/79",
+        "line": 1,
+        "needle": "process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/a66f4ef2/paths/79",
+        "line": 1,
+        "needle": "process-state.ts",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      }
+    ],
+    "source_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3588/sha256",
+        "line": 1,
+        "needle": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+        "context": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+        "immediateParentForExactValue": {
+          "path": "packages/server/src/panels/process-state.ts",
+          "bytes": 3867,
+          "lines": 127,
+          "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      }
+    ],
+    "state_contract": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2050",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/941",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/958",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3587/path",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3588/path",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/server/src/panels/process-state.ts",
+          "bytes": 3867,
+          "lines": 127,
+          "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "jsonPointer": "/groups/0/rawLogs/60/file",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "73ad4e09fdb09e15673e0c5e7a585f46d48e7756438c63635f853b7b289be9af"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "jsonPointer": "/logs/60/file",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/84740d56/paths/79",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/a66f4ef2/paths/79",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/server-web-results.json",
+        "jsonPointer": "/60/file",
+        "line": 1,
+        "needle": "panels/process-state",
+        "context": "packages/server/src/panels/process-state.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e6c2ae23f2c342a0dee9ec9ad417f9c74a6a369920aa6719b136f564b8031209"
+      }
+    ]
+  },
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3588",
+      "row": {
+        "path": "packages/server/src/panels/process-state.ts",
+        "bytes": 3867,
+        "lines": 127,
+        "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+      }
+    }
+  ],
+  "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+}

@@ -1,0 +1,1 @@
+{"files": 3696, "stats": {"markdownFiles": 1379, "jsonFiles": 2317, "stringLeaves": 1130742, "scalarLeaves": 1704078}, "occurrenceCounts": {"process-state": 17, "process-replay": 0, "retention-contract": 1}, "parseErrors": 0, "added": 115, "changed": 0, "removed": 0, "productRuns": 0}

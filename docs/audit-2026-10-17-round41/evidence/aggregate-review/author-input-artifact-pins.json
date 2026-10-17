@@ -1,0 +1,87 @@
+{
+  "captureAtUTC": "2026-10-17T14:13:39.668923+00:00",
+  "kind": "frozen author artifacts before aggregate metadata content review",
+  "reviewerPackageNotReadPendingFreeze": true,
+  "artifacts": [
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/artifact-receipt.json",
+      "bytes": 4932,
+      "sha256": "cfe1397a41c70ac885ab379690c25968a31748914cb914d91377beef36cb1347"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/consumer-initial-pins.json",
+      "bytes": 1511,
+      "sha256": "63d96d1a7770a3b44a62c4a8d5899a15b39372523b6dce44e769214f3324d845"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/coverage-gate-rows.json",
+      "bytes": 11998,
+      "sha256": "7880a57e6b8a20b14cdc874b505336f2293e2115919a4a247b8b10cfc019db92"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/decisions.json",
+      "bytes": 3379,
+      "sha256": "5b92e15c091be384674979a91c688a2f05de24fab7bb8d712373d87fbd097184"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/documentation-pin.json",
+      "bytes": 532,
+      "sha256": "e71836bf4896f6c3c8b8f699b217e4b0047bc9b91f0275e2c88426f913036aa7"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/finish-checks.json",
+      "bytes": 2342,
+      "sha256": "ad38198b54820ee5ba6b25eec96885337174c08a5cbcd5f6fca5fec3b7171a08"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-contexts.json",
+      "bytes": 42048,
+      "sha256": "41cd2cc9cc90b6ab84dee12e29f32b2f763071f9de5933b4d921a4e659817fbe"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-focused-method.py",
+      "bytes": 2887,
+      "sha256": "7aee69ae735d70ab91cbbb23438d27301f0302637bdbcf483760c4f64d4aab8c"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-focused.json",
+      "bytes": 2584,
+      "sha256": "b87b064dc8799116268ce0256d03b4145687bef498aef02617222e8c9d93a9dd"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-method.py",
+      "bytes": 4403,
+      "sha256": "bd9f132f7e3a80f81ed7fd273f05a70fc621dbc4a59113bb5ac1c22097eeb135"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history.json",
+      "bytes": 708872,
+      "sha256": "f45b28aee062ad99e90b76fe1b4324586f20ad2e7b51e19baffce92b7430928d"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/initial-pins.json",
+      "bytes": 828,
+      "sha256": "0bd3378f00a90276fb8d280f9b99741773ac251665e2184d8beff465d988f97e"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/metadata-notes.json",
+      "bytes": 1720,
+      "sha256": "235f8eaa9589c66e4954b5ead4bc81f52e6ee92c15db556af5c88ff3e8918b22"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/report.md",
+      "bytes": 5253,
+      "sha256": "2eb420474dfc97a8b8efbd10457c1dedcf3cdcd8418054150f1a303be4e2fb2b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/source-excerpts.json",
+      "bytes": 22405,
+      "sha256": "57c1e04089236cc0257c71a0d2bbd153a32a74e8983acd1549627d3e1206a541"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/source-manifest.json",
+      "bytes": 9338,
+      "sha256": "18af35013b477922d76723fce7d506656831dfa488f328a219eee285b93717d2"
+    }
+  ]
+}

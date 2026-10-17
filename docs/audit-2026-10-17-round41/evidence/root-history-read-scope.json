@@ -1,0 +1,12 @@
+{
+  "actualReadContexts": {
+    "process-state": 17,
+    "process-replay": 0,
+    "retention-contract": 1
+  },
+  "totalRead": 18,
+  "new115DeltaReadContexts": 0,
+  "meaning": "All18 bounded Root query contexts read: inventories/log locators and one platform instruction snippet; one unrelated notification receipt context. No historical logs or giant scalar bodies read in full and no new product semantic read claimed. New frozen40 delta has0 matches under these three queries.",
+  "newRootProductSemanticReads": 0,
+  "productRuns": 0
+}

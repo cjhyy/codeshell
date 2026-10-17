@@ -1,0 +1,112 @@
+{
+  "capturedAtUTC": "2026-10-17T14:20:27.396292+00:00",
+  "toolChunk": "16b3d6",
+  "exitCode": 1,
+  "error": "AssertionError during range metadata consistency check after field-name adapter",
+  "productExecutions": 0,
+  "productSourceReads": 0,
+  "gitCommands": 0,
+  "rangeDiagnostics": [
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/process-state.ts",
+      "declaredSemantic": 99,
+      "computedSemantic": 99,
+      "declaredDisplayed": 127,
+      "computedDisplayed": 127,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "selected",
+      "lineCount": 127
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/process-service.ts",
+      "declaredSemantic": 91,
+      "computedSemantic": 91,
+      "declaredDisplayed": 182,
+      "computedDisplayed": 182,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "selected",
+      "lineCount": 1136
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "declaredSemantic": 42,
+      "computedSemantic": 42,
+      "declaredDisplayed": 60,
+      "computedDisplayed": 60,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "selected",
+      "lineCount": 666
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "declaredSemantic": 55,
+      "computedSemantic": 55,
+      "declaredDisplayed": 55,
+      "computedDisplayed": 55,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "full",
+      "lineCount": 55
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "docs/panel-native-tools.md",
+      "declaredSemantic": 4,
+      "computedSemantic": 4,
+      "declaredDisplayed": 32,
+      "computedDisplayed": 32,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "selected",
+      "lineCount": 632
+    },
+    {
+      "group": "codeshell-audit-round43-process-state-review",
+      "path": "packages/server/src/panels/process-state.ts",
+      "declaredSemantic": 92,
+      "computedSemantic": 92,
+      "declaredDisplayed": 127,
+      "computedDisplayed": 127,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "selected",
+      "lineCount": 127
+    },
+    {
+      "group": "codeshell-audit-round43-process-state-review",
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "declaredSemantic": 55,
+      "computedSemantic": 55,
+      "declaredDisplayed": 55,
+      "computedDisplayed": 55,
+      "semanticNotInDisplayed": [],
+      "allDisplayedWithinFile": true,
+      "coverage": "full",
+      "lineCount": 55
+    },
+    {
+      "group": "codeshell-audit-round43-process-state-review",
+      "path": "packages/server/src/panels/process-service.ts",
+      "declaredSemantic": 75,
+      "computedSemantic": 75,
+      "declaredDisplayed": 175,
+      "computedDisplayed": 159,
+      "semanticNotInDisplayed": [
+        34,
+        35,
+        1123,
+        1124
+      ],
+      "allDisplayedWithinFile": true,
+      "coverage": "selected",
+      "lineCount": 1136
+    }
+  ]
+}

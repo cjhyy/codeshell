@@ -1,0 +1,24 @@
+{
+  "capturedAtUTC": "2026-10-17T14:24:30.004141+00:00",
+  "freezeAuthority": "Root and reviewer both explicitly confirmed",
+  "artifacts": [
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-display-supplement/artifact-receipt.json",
+      "bytes": 724,
+      "sha256": "368239d4af86a552c61550f2363a0032a1efab486c806d3e83b52254e490cbb9",
+      "matchesReportedFreeze": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-display-supplement/display-clarification.json",
+      "bytes": 2712,
+      "sha256": "e78466f5fa7afb6c5168b08a7dbb4fb5f5902bb202ef4088613dcb5fcd25fc29",
+      "matchesReportedFreeze": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-display-supplement/review.md",
+      "bytes": 891,
+      "sha256": "116abc3d0495742fe47e14bb9f7c5d27acaf08b2bcf4cf3831e88d2a1bbd03f4",
+      "matchesReportedFreeze": true
+    }
+  ]
+}

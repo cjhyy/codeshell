@@ -1,0 +1,49 @@
+{
+  "mode": "Pure static ordinary state/event DTO counterevidence and filesystem metadata",
+  "productExecutions": 0,
+  "productImports": 0,
+  "helperOrLanguageFixturesEvaluated": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationsRead": 2,
+  "BufferOperationsEvaluated": 0,
+  "timerOrFakeClockOperationsEvaluated": 0,
+  "nativeRealProcessNetworkModelPermissionIdentityExperiments": 0,
+  "ReactOrRealStateActions": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round43-process-state-review",
+  "productRuns": [],
+  "metadataHistoryScan": {
+    "sessionId": 41986,
+    "sameHandleExitCode": 0
+  },
+  "metadataFailures": 1,
+  "metadataOutputTruncations": 0,
+  "sourceCoverageCounts": {
+    "activeSemanticPins": 3,
+    "fullPins": 1,
+    "selectedPins": 2,
+    "productAndTestLines": 222,
+    "productLines": 167,
+    "testDeclarationLines": 55,
+    "testDeclarationsRead": 2,
+    "displayedLinesIncludingNavigation": 357,
+    "instructionHashChecks": 2,
+    "newInstructionSemanticReadLines": 0
+  },
+  "all3SourcePinsMatch": true,
+  "instructionBothStable": true,
+  "historyInitialFinishChangedFiles": 0,
+  "historicalPassesBorrowed": false,
+  "oldFailedDirectionsReopened": false,
+  "parentReportRead": true,
+  "authorReportReadAfterFreezeAndIndependentSourceOpinion": true,
+  "authorSourceByteOnlyChecks": 8,
+  "authorByteChecksAddSemanticLines": false,
+  "metadataFailureDiagnostic": "freeze-first-diagnostic.json",
+  "metadataCorrection": "Canonicalize both /tmp base and resolved /private/tmp targets before inside-directory comparison. All files/links/source bytes already matched; no product rerun.",
+  "metadataFirstSnapshots": [
+    "links-check.first.json",
+    "artifact-receipt.first.json"
+  ]
+}

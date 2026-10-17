@@ -1,0 +1,248 @@
+{
+  "checkedUTC": "2026-10-17T14:14:32.631247+00:00",
+  "ownSourceOpinionFormedBeforeAuthorRead": true,
+  "authorReportReadOnlyAfterDeclaredFreeze": true,
+  "authorArtifactReceiptRows": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1511,
+      "sha256": "63d96d1a7770a3b44a62c4a8d5899a15b39372523b6dce44e769214f3324d845",
+      "matches": true
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 11998,
+      "sha256": "7880a57e6b8a20b14cdc874b505336f2293e2115919a4a247b8b10cfc019db92",
+      "matches": true
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 3379,
+      "sha256": "5b92e15c091be384674979a91c688a2f05de24fab7bb8d712373d87fbd097184",
+      "matches": true
+    },
+    {
+      "path": "documentation-pin.json",
+      "bytes": 532,
+      "sha256": "e71836bf4896f6c3c8b8f699b217e4b0047bc9b91f0275e2c88426f913036aa7",
+      "matches": true
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 2342,
+      "sha256": "ad38198b54820ee5ba6b25eec96885337174c08a5cbcd5f6fca5fec3b7171a08",
+      "matches": true
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 42048,
+      "sha256": "41cd2cc9cc90b6ab84dee12e29f32b2f763071f9de5933b4d921a4e659817fbe",
+      "matches": true
+    },
+    {
+      "path": "history-focused-method.py",
+      "bytes": 2887,
+      "sha256": "7aee69ae735d70ab91cbbb23438d27301f0302637bdbcf483760c4f64d4aab8c",
+      "matches": true
+    },
+    {
+      "path": "history-focused.json",
+      "bytes": 2584,
+      "sha256": "b87b064dc8799116268ce0256d03b4145687bef498aef02617222e8c9d93a9dd",
+      "matches": true
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4403,
+      "sha256": "bd9f132f7e3a80f81ed7fd273f05a70fc621dbc4a59113bb5ac1c22097eeb135",
+      "matches": true
+    },
+    {
+      "path": "history.json",
+      "bytes": 708872,
+      "sha256": "f45b28aee062ad99e90b76fe1b4324586f20ad2e7b51e19baffce92b7430928d",
+      "matches": true
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 828,
+      "sha256": "0bd3378f00a90276fb8d280f9b99741773ac251665e2184d8beff465d988f97e",
+      "matches": true
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1720,
+      "sha256": "235f8eaa9589c66e4954b5ead4bc81f52e6ee92c15db556af5c88ff3e8918b22",
+      "matches": true
+    },
+    {
+      "path": "report.md",
+      "bytes": 5253,
+      "sha256": "2eb420474dfc97a8b8efbd10457c1dedcf3cdcd8418054150f1a303be4e2fb2b",
+      "matches": true
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 22405,
+      "sha256": "57c1e04089236cc0257c71a0d2bbd153a32a74e8983acd1549627d3e1206a541",
+      "matches": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 9338,
+      "sha256": "18af35013b477922d76723fce7d506656831dfa488f328a219eee285b93717d2",
+      "matches": true
+    }
+  ],
+  "authorArtifactSetMatches": true,
+  "authorArtifactsIncludingReceipt": 16,
+  "authorFrozenInputChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/artifact-receipt.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/consumer-initial-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/coverage-gate-rows.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/decisions.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/documentation-pin.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/finish-checks.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-contexts.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-focused-method.py",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-focused.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history-method.py",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/history.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/initial-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/metadata-notes.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/report.md",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/source-excerpts.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-core-data-frontier/source-manifest.json",
+      "matches": true
+    }
+  ],
+  "allAuthorArtifactBytesMatch": true,
+  "authorSourceByteOnlyChecks": [
+    {
+      "path": "packages/server/src/panels/process-state.ts",
+      "authorCoverage": "selected",
+      "bytes": 3867,
+      "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "authorCoverage": "selected",
+      "bytes": 44502,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "authorCoverage": "selected",
+      "bytes": 27329,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "authorCoverage": "full",
+      "bytes": 2058,
+      "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "docs/panel-native-tools.md",
+      "authorCoverage": "selected",
+      "bytes": 39804,
+      "sha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "authorCoverage": "hash-only",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/server/src/panels/process-entry.ts",
+      "authorCoverage": "hash-only",
+      "bytes": 2220,
+      "sha256": "fa0280f375aa4e1ad61bb5c5cb40d2de42b44cfbf9b39287d24c239ad3ff1d13",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/server/src/panels/bridge-contract.ts",
+      "authorCoverage": "hash-only",
+      "bytes": 3493,
+      "sha256": "1ce948d0608f88ebc7e658ce92614db79f72f65e17e5270de445102870be3fcd",
+      "matches": true,
+      "semanticReadingAdopted": false
+    }
+  ],
+  "authorSourceByteOnlyCheckCount": 8,
+  "allAuthorSourceBytesMatch": true,
+  "authorCounts": {
+    "productSemanticFiles": 3,
+    "testSemanticFiles": 1,
+    "documentationSemanticFiles": 1,
+    "productSemanticLines": 232,
+    "testDeclarationLines": 55,
+    "documentationLines": 4,
+    "semanticLinesTotal": 291,
+    "displayedLinesTotal": 456,
+    "hashOnlyFiles": 3
+  },
+  "authorScopeNotAdopted": "Author291 semantic and456 displayed are separate; tool-executor/document source body not read by this independent reviewer. Whole-file byte checks are not new semantic lines.",
+  "parentSourceScopeOnlyCompared": "Both source opinions are limited0/0/0; no issueID created. Parent retained-event/truncated consumer claim treated as author claim, not my independent product reading.",
+  "relativeAuthorLinkAliasRequired": false
+}

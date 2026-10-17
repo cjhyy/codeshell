@@ -1,0 +1,458 @@
+{
+  "role": "independent artifact metadata review only; peer package pending freeze",
+  "files": [],
+  "productSourceBytesRead": 0,
+  "newProductSemanticReadLines": 0,
+  "gitCommands": 0,
+  "authorReceiptRows": 15,
+  "authorFilesIncludingReceipt": 16,
+  "artifactChecks": [
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/consumer-initial-pins.json",
+      "bytes": 1511,
+      "sha256": "63d96d1a7770a3b44a62c4a8d5899a15b39372523b6dce44e769214f3324d845",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/coverage-gate-rows.json",
+      "bytes": 11998,
+      "sha256": "7880a57e6b8a20b14cdc874b505336f2293e2115919a4a247b8b10cfc019db92",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/decisions.json",
+      "bytes": 3379,
+      "sha256": "5b92e15c091be384674979a91c688a2f05de24fab7bb8d712373d87fbd097184",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/documentation-pin.json",
+      "bytes": 532,
+      "sha256": "e71836bf4896f6c3c8b8f699b217e4b0047bc9b91f0275e2c88426f913036aa7",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/finish-checks.json",
+      "bytes": 2342,
+      "sha256": "ad38198b54820ee5ba6b25eec96885337174c08a5cbcd5f6fca5fec3b7171a08",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/history-contexts.json",
+      "bytes": 42048,
+      "sha256": "41cd2cc9cc90b6ab84dee12e29f32b2f763071f9de5933b4d921a4e659817fbe",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/history-focused-method.py",
+      "bytes": 2887,
+      "sha256": "7aee69ae735d70ab91cbbb23438d27301f0302637bdbcf483760c4f64d4aab8c",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/history-focused.json",
+      "bytes": 2584,
+      "sha256": "b87b064dc8799116268ce0256d03b4145687bef498aef02617222e8c9d93a9dd",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/history-method.py",
+      "bytes": 4403,
+      "sha256": "bd9f132f7e3a80f81ed7fd273f05a70fc621dbc4a59113bb5ac1c22097eeb135",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/history.json",
+      "bytes": 708872,
+      "sha256": "f45b28aee062ad99e90b76fe1b4324586f20ad2e7b51e19baffce92b7430928d",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/initial-pins.json",
+      "bytes": 828,
+      "sha256": "0bd3378f00a90276fb8d280f9b99741773ac251665e2184d8beff465d988f97e",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/metadata-notes.json",
+      "bytes": 1720,
+      "sha256": "235f8eaa9589c66e4954b5ead4bc81f52e6ee92c15db556af5c88ff3e8918b22",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/report.md",
+      "bytes": 5253,
+      "sha256": "2eb420474dfc97a8b8efbd10457c1dedcf3cdcd8418054150f1a303be4e2fb2b",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/source-excerpts.json",
+      "bytes": 22405,
+      "sha256": "57c1e04089236cc0257c71a0d2bbd153a32a74e8983acd1549627d3e1206a541",
+      "matchesReceipt": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/source-manifest.json",
+      "bytes": 9338,
+      "sha256": "18af35013b477922d76723fce7d506656831dfa488f328a219eee285b93717d2",
+      "matchesReceipt": true
+    }
+  ],
+  "rangeChecks": [
+    {
+      "path": "packages/server/src/panels/process-state.ts",
+      "coverage": "selected",
+      "semanticLines": 99,
+      "displayedLines": 127,
+      "rangesValid": true,
+      "pinTimingMetadata": {
+        "beforeCurrentSemanticReadPinSha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+        "firstEverSemanticReadClaim": false,
+        "pinUTC": "2026-10-17T14:05:03.545268+00:00"
+      }
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "coverage": "selected",
+      "semanticLines": 91,
+      "displayedLines": 182,
+      "rangesValid": true,
+      "pinTimingMetadata": {
+        "beforeCurrentSemanticReadPinSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+        "firstEverSemanticReadClaim": false,
+        "pinUTC": "2026-10-17T14:05:40.555785+00:00"
+      }
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "coverage": "selected",
+      "semanticLines": 42,
+      "displayedLines": 60,
+      "rangesValid": true,
+      "pinTimingMetadata": {
+        "beforeCurrentSemanticReadPinSha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+        "firstEverSemanticReadClaim": false,
+        "pinUTC": "2026-10-17T14:05:40.553535+00:00"
+      }
+    },
+    {
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "coverage": "full",
+      "semanticLines": 55,
+      "displayedLines": 55,
+      "rangesValid": true,
+      "pinTimingMetadata": {
+        "beforeCurrentSemanticReadPinSha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+        "firstEverSemanticReadClaim": false,
+        "pinUTC": "2026-10-17T14:05:40.555068+00:00"
+      }
+    },
+    {
+      "path": "docs/panel-native-tools.md",
+      "coverage": "selected",
+      "semanticLines": 4,
+      "displayedLines": 32,
+      "rangesValid": true,
+      "pinTimingMetadata": {
+        "beforeCurrentSemanticReadPinSha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+        "firstEverSemanticReadClaim": false,
+        "pinOrigin": "history.json full metadata inventory before first content snippet",
+        "pinUTCWindow": [
+          "2026-10-17T14:05:03.547566+00:00",
+          "2026-10-17T14:05:06.733565+00:00"
+        ],
+        "dedicatedPinAfterNavigationSnippet": true
+      }
+    }
+  ],
+  "semanticLineSum": 291,
+  "displayedLineSum": 456,
+  "relativeMarkdownLinks": [
+    {
+      "target": "finish-checks.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    },
+    {
+      "target": "coverage-gate-rows.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    },
+    {
+      "target": "history-focused.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    },
+    {
+      "target": "decisions.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    },
+    {
+      "target": "metadata-notes.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    },
+    {
+      "target": "artifact-receipt.json",
+      "exists": true,
+      "kind": "relative artifact link only"
+    }
+  ],
+  "historyTopMetadata": {
+    "startedUTC": "2026-10-17T14:05:03.547566+00:00",
+    "finishedUTC": "2026-10-17T14:05:06.733565+00:00",
+    "method": "All inventory MD text + all recursively visited JSON value scalars; keys not searched. One query hit per string value/MD document, bounded saved context. Source coverage rows selected by exact path scalar with sibling coverage/hash fields, not an unread claim.",
+    "scope": {
+      "includeFrozenThrough": 39,
+      "excludeMutableFuture": [
+        40,
+        41,
+        42,
+        43
+      ],
+      "roots": [
+        "docs",
+        "bugs"
+      ],
+      "archive": "exact path components archive or _archive included"
+    },
+    "fileCount": 3581,
+    "markdown": 1369,
+    "json": 2212,
+    "jsonStringLeaves": 1030881,
+    "jsonScalarLeaves": 1550274,
+    "exactArchivePaths": 169,
+    "parseErrors": [],
+    "queries": {
+      "translator": {
+        "hits": 84,
+        "cap": 80,
+        "retained": 80
+      },
+      "process-state": {
+        "hits": 5,
+        "cap": 80,
+        "retained": 5
+      },
+      "translator-current-sha": {
+        "hits": 1,
+        "cap": 80,
+        "retained": 1
+      },
+      "process-state-current-sha": {
+        "hits": 1,
+        "cap": 80,
+        "retained": 1
+      }
+    }
+  },
+  "finishChecksMetadata": {
+    "finishedUTC": "2026-10-17T14:10:36.097148+00:00",
+    "currentSourceAndHashOnlyPaths": [
+      {
+        "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "bytes": 6622,
+        "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "packages/server/src/panels/process-state.ts",
+        "bytes": 3867,
+        "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "packages/server/src/panels/tool-executor.ts",
+        "bytes": 27329,
+        "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "packages/server/src/panels/process-state.test.ts",
+        "bytes": 2058,
+        "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "packages/server/src/panels/process-service.ts",
+        "bytes": 44502,
+        "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "packages/server/src/panels/process-entry.ts",
+        "bytes": 2220,
+        "sha256": "fa0280f375aa4e1ad61bb5c5cb40d2de42b44cfbf9b39287d24c239ad3ff1d13",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "packages/server/src/panels/bridge-contract.ts",
+        "bytes": 3493,
+        "sha256": "1ce948d0608f88ebc7e658ce92614db79f72f65e17e5270de445102870be3fcd",
+        "matchesBeforeReadPin": true
+      },
+      {
+        "path": "docs/panel-native-tools.md",
+        "bytes": 39804,
+        "sha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+        "matchesBeforeReadHistoryPin": true
+      }
+    ],
+    "all8PinsStable": true,
+    "history": {
+      "originalFileCount": 3581,
+      "currentSameScopePathCount": 3581,
+      "added": [],
+      "removed": [],
+      "sharedByteChanges": [],
+      "missing": [],
+      "originalInventoryPreserved": true,
+      "endingCheckKind": "bytes/SHA/path metadata only; not new full semantic/history-context reading",
+      "canonicalInitialInventorySha256": "e5b3f7da1cee753e90ae8eb73024c0ee19a352550ea7620a0e7ed78b5b251f07"
+    },
+    "gitCommands": 0,
+    "productTestsFixturesFunctions": 0
+  },
+  "authorDecisions": {
+    "classification": {
+      "formal": 0,
+      "candidate": 0,
+      "newRelated": 0
+    },
+    "replacementCount": 0,
+    "ordinaryNegatives": [
+      {
+        "area": "event sequence/payload",
+        "evidence": "append increments once and adds the same sequence to stored envelope and payload; producer sends item.payload; get keeps retained order and filters >afterSequence; consumer buffers by numeric sequence and ignores prior sequence values"
+      },
+      {
+        "area": "bounded retained history",
+        "evidence": "leaf independently enforces event-count and serialized-byte limits by removing oldest items; get exposes truncated rather than claiming full output; real tool consumer treats truncation as explicit failure"
+      },
+      {
+        "area": "terminal receipt retention",
+        "evidence": "add prunes expired records and applies per-bucket/global retention bounds; completion mutates terminal DTO then stores it; get prunes before lookup; advertised limits mean evicted/expired history is not a promise of durable complete history"
+      },
+      {
+        "area": "ordinary output item size",
+        "evidence": "actual stdout/stderr path slices MAX_EVENT_CHARS=processLimits.maxEventChars before emit; no arbitrary oversized payload/invalid state used to manufacture a gap",
+        "limit": "Not a theorem that arbitrary native error messages or all potential payload producers are bounded; no large-pressure scenario expanded"
+      }
+    ],
+    "notEstablished": [
+      "No ordinary new source-level bug in the selected producer→state→get→consumer data chain",
+      "No claim all process lifecycle/timer/native/authorization behavior is correct",
+      "No semantic proof of never previously reviewed; unknown/no-row stays unknown",
+      "No runtime verification or test pass"
+    ],
+    "history": {
+      "snapshotFiles": 3581,
+      "markdown": 1369,
+      "json": 2212,
+      "jsonStringLeaves": 1030881,
+      "jsonScalarLeaves": 1550274,
+      "archivePaths": 169,
+      "parseErrors": 0,
+      "includeFrozen39": true,
+      "excludeMutableFuture": [
+        40,
+        41,
+        42,
+        43
+      ],
+      "initialQueryHits": {
+        "translator": 84,
+        "process-state": 5,
+        "translator-current-sha": 1,
+        "process-state-current-sha": 1
+      },
+      "initialCap": 80,
+      "retainedTranslator": 80,
+      "processStatePathValuesActuallyRead": 5,
+      "processStateHashValuesActuallyRead": 1,
+      "unusedTranslatorHashValueRead": 1,
+      "coverageRowsMetadataRead": 36,
+      "focusedQueries": {
+        "exact-names": {
+          "hits": 0,
+          "cap": 80,
+          "retained": 0
+        },
+        "replay-loss": {
+          "hits": 0,
+          "cap": 80,
+          "retained": 0
+        },
+        "replay-fields": {
+          "hits": 1,
+          "cap": 80,
+          "retained": 1
+        }
+      },
+      "focusedBoundedWindowRead": 1,
+      "focusedSameInventoryDrift": [],
+      "semanticExhaustionClaim": false
+    },
+    "existingTests": {
+      "file": "packages/server/src/panels/process-state.test.ts",
+      "linesRead": 55,
+      "syntacticTestCalls": 2,
+      "runs": 0,
+      "declaredIntent": [
+        "expiry/per-bucket/global receipt bounds",
+        "event count/byte bounds and terminal sequence"
+      ]
+    },
+    "validation": {
+      "product": 0,
+      "tests": 0,
+      "languageFixtures": 0,
+      "timerPromiseOrBufferFixtures": 0,
+      "realBusinessFilesNativeNetworkModelProcessIdentityPermissionExperiments": 0,
+      "git": 0
+    }
+  },
+  "authorMetadataNotes": {
+    "diagnostics": [
+      {
+        "toolChunk": "c0c976",
+        "observedExitCode": 0,
+        "kind": "Metadata display truncated, original8755tokens, budget6500",
+        "scope": "unused translator candidate only",
+        "noProductAttempt": true,
+        "consequence": "Do not count all80 retained translator contexts as fully read; no semantic conclusions about the old native failed direction"
+      },
+      {
+        "kind": "Metadata context anchoring limitation",
+        "affectedQuery": "translator only; chosen process-state gate unaffected",
+        "reason": "Predicate allowed basename-only hit but initial context locator searched the full canonical path; when absent it anchored at0. Counts remain unit counts; some large MD saved windows show headers instead of basename vicinity",
+        "originalMethodAndContextsPreserved": true,
+        "notRegexEscapeDiagnosis": true,
+        "notUsedAsCoverageOrSameCauseProof": true
+      },
+      {
+        "kind": "AND query context limitation",
+        "query": "replay-fields",
+        "hits": 1,
+        "reason": "One large Markdown document contains process.get and truncated in separate chapters; initial window starts around model trace truncated text and is not a precise old-cause hit",
+        "followup": "Actual process.get contract lines96–99 selected under before-read history SHA, not whole39804-character document semantic reading"
+      }
+    ],
+    "productOrRuntimeFailures": [],
+    "oldFailedDirectionsReopened": false,
+    "rootContextOnly": {
+      "mainReported": "48bc (short only)",
+      "frozenThrough": 39,
+      "formal41and42NotBuilt": "Root supplied; their temp prep is planned for formal40",
+      "independentGit": false
+    },
+    "noPriorSnapshotsOrAuthorSourceModified": true
+  },
+  "reviewerPackageRead": false
+}

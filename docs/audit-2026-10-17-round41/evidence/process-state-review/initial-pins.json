@@ -1,0 +1,17 @@
+{
+  "capturedUTC": "2026-10-17T14:06:38.714210+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "rootSuppliedContext": "Frozen39 included, mutable40/future41/42/43 excluded; Root43 parent still tmp, no report adopted.",
+  "expectedSha256Supplied": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+  "matchesSuppliedSha256": true,
+  "files": [
+    {
+      "path": "packages/server/src/panels/process-state.ts",
+      "bytes": 3867,
+      "lineCount": 127,
+      "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "pinBeforeBodyRead": true
+    }
+  ]
+}
