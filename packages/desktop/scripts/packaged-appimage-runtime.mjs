@@ -97,7 +97,24 @@ export function assertAppImagePayload(source, extracted) {
       entry[1] === "file" &&
       entry[2] === 0o4755 &&
       actual[2] === 0o755;
-    assert.ok(directory || license || sandbox, `AppImage payload mode changed ${entry[0]}`);
+    if (!(directory || license || sandbox)) {
+      const failure = {
+        path: entry[0],
+        type: entry[1],
+        sourceMode: entry[2],
+        extractedMode: actual[2],
+        sourceModeOctal: `0${entry[2].toString(8)}`,
+        extractedModeOctal: `0${actual[2].toString(8)}`,
+      };
+      const error = new assert.AssertionError({
+        message: `AppImage payload mode changed ${entry[0]}: source ${failure.sourceModeOctal}, extracted ${failure.extractedModeOctal}`,
+        expected: entry[2],
+        actual: actual[2],
+        operator: "reviewed payload mode normalization",
+      });
+      error.appImagePayloadModeFailure = failure;
+      throw error;
+    }
     changes.push({
       path: entry[0],
       type: entry[1],
@@ -133,6 +150,39 @@ export async function inventoryAppImagePayload(root, records) {
   );
 }
 const payloadPermissions = (records) => records.map((record) => record.slice(0, 3));
+
+/** Preserve complete, bounded full-mode evidence before validation can fail.
+ * These are fixture-relative names and metadata only, never file contents.
+ * Oversized inventories fail closed instead of writing truncated evidence. */
+export async function assertAppImagePayloadWithEvidence(source, extracted, { evidence, report }) {
+  const inventories = [
+    ["source", source],
+    ["extracted", extracted],
+  ].map(([kind, records]) => {
+    assert.ok(records.length <= 20_000, `${kind} payload permission inventory exceeds row limit`);
+    const json = JSON.stringify(payloadPermissions(records));
+    const bytes = Buffer.byteLength(json);
+    assert.ok(bytes <= 4 * 1024 * 1024, `${kind} payload permission inventory exceeds byte limit`);
+    return {
+      kind,
+      file: `appimage-${kind}-payload-permissions-before.json`,
+      entries: records.length,
+      bytes,
+      sha256: sha256(json),
+      json,
+    };
+  });
+  report.payloadPermissionEvidence = inventories.map(({ json: _json, ...metadata }) => metadata);
+  for (const inventory of inventories)
+    await writeFile(join(evidence, inventory.file), inventory.json, { mode: 0o600, flag: "wx" });
+  try {
+    return assertAppImagePayload(source, extracted);
+  } catch (error) {
+    if (error.appImagePayloadModeFailure)
+      report.payloadModeFailure = error.appImagePayloadModeFailure;
+    throw error;
+  }
+}
 
 async function readReceipt(file) {
   assert.equal(await realpath(file), resolve(file), "AppImage receipt cannot traverse links");
@@ -322,11 +372,10 @@ export async function preparePackagedAppImageRuntime({
     assert.equal(extractedIntegrity.asarSHA256, receipt.appAsarSha256);
     assert.equal(extractedIntegrity.managedNodeManifestSHA256, receipt.managedNodeManifestSha256);
     const extractedInventory = await inventoryAppImagePayload(extracted);
-    report.payloadModeNormalizations = assertAppImagePayload(sourceInventory, extractedInventory);
-    await writeFile(
-      join(evidence, "appimage-source-payload-permissions-before.json"),
-      JSON.stringify(sourcePermissions),
-      { mode: 0o600, flag: "wx" },
+    report.payloadModeNormalizations = await assertAppImagePayloadWithEvidence(
+      sourceInventory,
+      extractedInventory,
+      { evidence, report },
     );
     const appRoot = join(temporary, `appimage_extracted_${imageBefore.runtimeCacheMD5}`);
     await rename(extracted, appRoot);

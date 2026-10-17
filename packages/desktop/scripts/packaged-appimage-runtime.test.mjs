@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  cp,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -8,9 +19,10 @@ import { pathToFileURL } from "node:url";
 import {
   assertAppImageMainIdentity,
   assertAppImagePayload,
+  assertAppImagePayloadWithEvidence,
   inventoryAppImagePayload,
 } from "./packaged-appimage-runtime.mjs";
-import { inventoryAppTree } from "./packaged-app-integrity.mjs";
+import { inventoryAppTree, sha256 } from "./packaged-app-integrity.mjs";
 import { preloadPausedPackagedMain } from "./packaged-main-preload.mjs";
 import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
@@ -177,6 +189,80 @@ test("owned inventory retains SUID bits and detects runtime-added SUID/SGID", as
       assert.equal(current[0][2], mode);
       assert.notDeepEqual(current, baseline);
       assert.throws(() => assertAppImagePayload(baseline, current));
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("rejected directory modes retain both complete permission inventories before throwing", async () => {
+  const root = await mkdtemp(join(tmpdir(), "appimage-mode-evidence-"));
+  try {
+    const source = [
+      ["locales", "directory", 0o755],
+      ["chrome-sandbox", "file", 0o4755, 7, "owned-sha"],
+      ["alias", "link", "locales"],
+    ];
+    // This is an owned contract counterexample, not an observed Linux mode.
+    const extracted = source.map((row) => [...row]);
+    extracted[0][2] = 0o700;
+    const report = {};
+    await assert.rejects(
+      assertAppImagePayloadWithEvidence(source, extracted, { evidence: root, report }),
+      /AppImage payload mode changed locales: source 0755, extracted 0700/,
+    );
+    assert.deepEqual(report.payloadModeFailure, {
+      path: "locales",
+      type: "directory",
+      sourceMode: 0o755,
+      extractedMode: 0o700,
+      sourceModeOctal: "0755",
+      extractedModeOctal: "0700",
+    });
+    for (const [index, inventory] of [source, extracted].entries()) {
+      const metadata = report.payloadPermissionEvidence[index];
+      const file = join(root, metadata.file);
+      const json = await readFile(file, "utf8");
+      assert.deepEqual(
+        JSON.parse(json),
+        inventory.map((row) => row.slice(0, 3)),
+      );
+      assert.equal(metadata.entries, inventory.length);
+      assert.equal(metadata.bytes, Buffer.byteLength(json));
+      assert.equal(metadata.sha256, sha256(json));
+      assert.equal((await lstat(file)).mode & 0o7777, 0o600);
+    }
+    assert.equal(report.payloadModeNormalizations, undefined);
+    const acceptedReport = {};
+    const accepted = join(root, "accepted");
+    await mkdir(accepted);
+    assert.deepEqual(
+      await assertAppImagePayloadWithEvidence(source, source, {
+        evidence: accepted,
+        report: acceptedReport,
+      }),
+      [],
+    );
+    assert.equal(acceptedReport.payloadModeFailure, undefined);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("oversized permission evidence fails closed without truncated files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "appimage-mode-evidence-bounds-"));
+  try {
+    for (const records of [
+      Array.from({ length: 20_001 }, () => ["owned", "directory", 0o755]),
+      [["x".repeat(4 * 1024 * 1024), "directory", 0o755]],
+    ]) {
+      const report = {};
+      await assert.rejects(
+        assertAppImagePayloadWithEvidence([], records, { evidence: root, report }),
+        /payload permission inventory exceeds (row|byte) limit/,
+      );
+      assert.deepEqual(await readdir(root), []);
+      assert.equal(report.payloadPermissionEvidence, undefined);
     }
   } finally {
     await rm(root, { recursive: true, force: true });
