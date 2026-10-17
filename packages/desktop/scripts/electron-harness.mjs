@@ -3,11 +3,174 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
+import { performance } from "node:perf_hooks";
+import {
+  ensureElectronKeychainContext,
+  getElectronKeychainPreflightDiagnostic,
+} from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 
 export function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+const diagnosticPhases = new Set([
+  "harness-preflight",
+  "harness-bootstrap",
+  "harness-windows-transport",
+  "harness-launch",
+  "harness-main-identity",
+  "harness-watch",
+  "harness-ready",
+  "startup-find-renderer",
+  "startup-worker-guard",
+  "startup-runtime",
+  "startup-cold-pet",
+  "startup-reload",
+  "startup-reload-pet",
+  "startup-second-window",
+  "startup-second-window-pet",
+  "startup-second-window-close",
+  "startup-graceful-close",
+  "startup-custody",
+  "startup-cycle-gates",
+]);
+
+export function electronChildExitState(child) {
+  try {
+    return {
+      pid: child?.pid ?? null,
+      exitCode: child?.exitCode ?? null,
+      signalCode: child?.signalCode ?? null,
+      exitObserved: child ? child.exitCode != null || child.signalCode != null : null,
+    };
+  } catch {
+    return { pid: null, exitCode: null, signalCode: null, exitObserved: null, readFailed: true };
+  }
+}
+
+/** Diagnostic failure must never prevent the existing custody operation. */
+export function observeElectronDiagnostic(diagnostics, method, ...args) {
+  try {
+    return diagnostics?.[method]?.(...args);
+  } catch {
+    try {
+      diagnostics.receipt.recordingFailed = true;
+    } catch {
+      // Even an invalid diagnostic observer confers no right to alter cleanup.
+    }
+    return undefined;
+  }
+}
+
+/** Evidence only: never confers process authority or changes an acceptance gate. */
+export function createElectronTestDiagnostics({ ownedRoots = [] } = {}) {
+  const normalize = (text) => {
+    const path = text.replace(/\\/g, "/");
+    return process.platform === "win32" ? path.toLowerCase() : path;
+  };
+  const roots = ownedRoots.map((path) => normalize(path).replace(/\/+$/, "") + "/");
+  const receipt = {
+    phase: null,
+    firstError: null,
+    cleanups: [],
+    signals: [],
+    exits: [],
+    timeline: [],
+    truncated: false,
+    boundary:
+      "Observed ChildProcess states and cleanup signal requests; not OS liveness or all OS signals",
+  };
+  const started = performance.now();
+  let sequence = 0;
+  const event = (kind, fields) => {
+    const record = {
+      sequence: ++sequence,
+      elapsedMs: performance.now() - started,
+      kind,
+      ...fields,
+    };
+    if (receipt.timeline.length < 256) receipt.timeline.push(record);
+    else receipt.truncated = true;
+    return record;
+  };
+  return {
+    receipt,
+    phase(phase) {
+      assert(diagnosticPhases.has(phase), "Unknown Electron diagnostic phase");
+      receipt.phase = phase;
+      event("phase", { phase });
+    },
+    error(error, child) {
+      if (receipt.firstError) return;
+      let keychainDiagnostic, name, message, stack;
+      try {
+        keychainDiagnostic = getElectronKeychainPreflightDiagnostic(error);
+        message = keychainDiagnostic
+          ? "Keychain metadata preflight refused startup"
+          : String(error?.message ?? error).slice(0, 4096);
+        name = String(error?.name ?? "Error").slice(0, 120);
+        stack = keychainDiagnostic
+          ? ""
+          : String(error?.stack ?? "")
+              .split(/\r?\n/)
+              .filter(
+                (line) =>
+                  /^\s+at /.test(line) && roots.some((root) => normalize(line).includes(root)),
+              )
+              .slice(0, 16)
+              .join("\n")
+              .slice(0, 16384);
+      } catch {
+        name = "Error";
+        message = "Uninspectable thrown value";
+        stack = "";
+        keychainDiagnostic = null;
+      }
+      receipt.firstError = event("first-error", {
+        phase: receipt.phase,
+        child: electronChildExitState(child),
+        name,
+        message,
+        stack,
+        stackScope: "owned-path-frames-only",
+        keychainDiagnostic,
+      });
+    },
+    cleanup(trigger, child) {
+      if (!["harness-error", "cycle-error", "cycle-complete"].includes(trigger))
+        trigger = "diagnostic-recording-error";
+      const record = event("cleanup-start", {
+        trigger,
+        phase: receipt.phase,
+        before: electronChildExitState(child),
+        requests: [],
+      });
+      if (receipt.cleanups.length < 16) receipt.cleanups.push(record);
+      else receipt.truncated = true;
+      return record;
+    },
+    request(cleanup, method, child) {
+      if (!["application.close", "monitor.terminate"].includes(method))
+        method = "diagnostic-recording-error";
+      const request = event("cleanup-request", { method, before: electronChildExitState(child) });
+      if (cleanup.requests.length < 8) cleanup.requests.push(request);
+      else receipt.truncated = true;
+    },
+    settled(cleanup, child) {
+      cleanup.after = electronChildExitState(child);
+      event("cleanup-settled", { trigger: cleanup.trigger, after: cleanup.after });
+    },
+    signal(pid, signal) {
+      if (receipt.signals.length < 256)
+        receipt.signals.push(event("observed-cleanup-signal-request", { pid, signal }));
+      else receipt.truncated = true;
+    },
+    exit(kind, code, signal) {
+      if (receipt.exits.length < 4) receipt.exits.push(event(kind, { code, signal }));
+      else receipt.truncated = true;
+    },
+  };
 }
 
 export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-") {
@@ -101,6 +264,7 @@ export async function launchCodeShellElectron(
     },
     platform = process.platform,
     windowsLaunchDetails = sourceWindowsLaunchDetails,
+    diagnostics,
   } = {},
 ) {
   if (
@@ -124,6 +288,7 @@ export async function launchCodeShellElectron(
   };
   // Metadata checks happen before even loading Playwright. A missing default
   // must fail here instead of entering macOS's create/reset-Keychain dialog.
+  diagnostics?.phase("harness-preflight");
   preflight({
     home,
     environment: {
@@ -141,6 +306,7 @@ export async function launchCodeShellElectron(
   // Electron initializes OS cryptography; a command-line argument alone loses
   // to that loader. Every caller already owns a temporary home.
   const keyringBootstrap = join(home, "real-keyring.cjs");
+  diagnostics?.phase("harness-bootstrap");
   await writeFile(
     keyringBootstrap,
     `const { app } = require("electron");
@@ -183,6 +349,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
     env: environment,
   };
   if (platform === "win32") {
+    diagnostics?.phase("harness-windows-transport");
     const details = await windowsLaunchDetails();
     const { installWindowsElectronDirectTransport } =
       await import("./windows-electron-direct-transport.mjs");
@@ -208,7 +375,9 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
       },
     });
     try {
+      diagnostics?.phase("harness-launch");
       const application = await launch(options);
+      diagnostics?.phase("harness-main-identity");
       assert(
         captured && application.process() === captured,
         "Playwright must expose the captured direct Main",
@@ -218,15 +387,33 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
         home,
       });
       application.__sourceWindowsTransport = transport.receipt();
+      diagnostics?.phase("harness-ready");
       return application;
     } catch (error) {
+      observeElectronDiagnostic(diagnostics, "error", error, captured);
+      const cleanup = observeElectronDiagnostic(diagnostics, "cleanup", "harness-error", captured);
       // Never route Playwright's taskkill or an ordinary app.close without
       // identity. The same early monitor owns any permitted termination.
-      if (typeof custody?.terminate === "function") await custody.terminate();
-      else {
-        captured?.unref();
-        captured?.stdout?.unref?.();
-        captured?.stderr?.unref?.();
+      try {
+        if (typeof custody?.terminate === "function") {
+          if (cleanup)
+            observeElectronDiagnostic(
+              diagnostics,
+              "request",
+              cleanup,
+              "monitor.terminate",
+              captured,
+            );
+          await custody.terminate();
+        } else {
+          captured?.unref();
+          captured?.stdout?.unref?.();
+          captured?.stderr?.unref?.();
+        }
+      } finally {
+        if (cleanup) {
+          observeElectronDiagnostic(diagnostics, "settled", cleanup, captured);
+        }
       }
       throw error;
     } finally {
@@ -234,8 +421,10 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
       syncBuiltinESMExports();
     }
   }
+  diagnostics?.phase("harness-launch");
   const application = await launch(options);
   try {
+    diagnostics?.phase("harness-watch");
     watch(application.process(), { timeoutMs: runtimeTimeoutMs, reportFailure });
   } catch (error) {
     // An unsuccessful birth query grants no quit/signal authority.
@@ -245,6 +434,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
     child?.stderr?.unref?.();
     throw error;
   }
+  diagnostics?.phase("harness-ready");
   return application;
 }
 

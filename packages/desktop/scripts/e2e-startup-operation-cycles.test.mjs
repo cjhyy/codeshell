@@ -3,6 +3,8 @@ import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { createElectronTestDiagnostics, observeElectronDiagnostic } from "./electron-harness.mjs";
+import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import {
   assertStartupCycleSettled,
   resolveStartupEvidence,
@@ -19,6 +21,102 @@ const proof = () => ({
   mainErrors: [],
   deniedAttempts: [],
   spawnedWorkers: [],
+});
+
+test("diagnostics distinguish worker-guard and runtime errors without overwriting the first failure", () => {
+  const diagnostics = createElectronTestDiagnostics({ ownedRoots: ["/owned"] });
+  const child = { pid: 42, exitCode: null, signalCode: null };
+  diagnostics.phase("startup-worker-guard");
+  diagnostics.error(new Error("Guard IPC failure"), child);
+  diagnostics.phase("startup-runtime");
+  diagnostics.error(new Error("Runtime IPC failure"), child);
+  assert.equal(diagnostics.receipt.firstError.phase, "startup-worker-guard");
+  assert.equal(diagnostics.receipt.firstError.message, "Guard IPC failure");
+  assert.equal(diagnostics.receipt.firstError.child.exitObserved, false);
+  assert.throws(() => diagnostics.phase("arbitrary payload"), /Unknown Electron diagnostic phase/);
+});
+
+test("diagnostic errors cannot throw for null, undefined or hostile error getters", () => {
+  const hostile = new Proxy(
+    {},
+    {
+      get() {
+        throw new Error("Private getter detail");
+      },
+    },
+  );
+  for (const value of [null, undefined, "string rejection", hostile]) {
+    const diagnostics = createElectronTestDiagnostics();
+    diagnostics.phase("harness-main-identity");
+    assert.doesNotThrow(() => diagnostics.error(value));
+    assert.equal(diagnostics.receipt.firstError.child.exitObserved, null);
+    assert.doesNotMatch(JSON.stringify(diagnostics.receipt), /Private getter detail/);
+  }
+  const observer = {
+    receipt: {},
+    error() {
+      throw Error("Diagnostic failure");
+    },
+    cleanup() {
+      throw Error("Diagnostic failure");
+    },
+  };
+  assert.doesNotThrow(() => observeElectronDiagnostic(observer, "error", hostile));
+  assert.doesNotThrow(() => observeElectronDiagnostic(observer, "cleanup", "harness-error"));
+  assert.equal(observer.receipt.recordingFailed, true);
+});
+
+test("diagnostic records stay bounded and cannot turn a cleanup exit1 into a passing cycle", () => {
+  const diagnostics = createElectronTestDiagnostics();
+  diagnostics.phase("startup-custody");
+  for (let i = 0; i < 400; i++) diagnostics.signal(42, "SIGTERM");
+  assert.equal(diagnostics.receipt.timeline.length, 256);
+  assert.equal(diagnostics.receipt.signals.length, 256);
+  assert.equal(diagnostics.receipt.truncated, true);
+  const value = proof();
+  value.exit.code = 1;
+  value.diagnostics = diagnostics.receipt;
+  assert.throws(() => assertStartupCycleSettled(value), /Main must exit normally/);
+});
+
+test("Keychain diagnostic stacks do not expose private metadata or raw causes", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-startup-diagnostic-test-")));
+  try {
+    const home = join(root, "home"),
+      operatorHome = join(root, "operator");
+    await mkdir(home, { mode: 0o700 });
+    await mkdir(operatorHome, { mode: 0o700 });
+    let failure;
+    try {
+      ensureElectronKeychainContext({
+        home,
+        environment: { HOME: home, USERPROFILE: home },
+        platform: "darwin",
+        operatorHome,
+        query() {
+          throw Error("private-keychain-path ino=123 uid=456");
+        },
+      });
+    } catch (error) {
+      failure = error;
+    }
+    assert.ok(failure);
+    const diagnostics = createElectronTestDiagnostics({ ownedRoots: [root] });
+    diagnostics.phase("harness-preflight");
+    diagnostics.error(failure);
+    assert.equal(
+      diagnostics.receipt.firstError.message,
+      "Keychain metadata preflight refused startup",
+    );
+    assert.ok(diagnostics.receipt.firstError.keychainDiagnostic);
+    assert.equal(diagnostics.receipt.firstError.stack, "");
+    assert.doesNotMatch(
+      JSON.stringify(diagnostics.receipt),
+      /private-keychain-path|ino=123|uid=456/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("a cycle is ready to advance only with guarded normal exit and settled custody", () => {

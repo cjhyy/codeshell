@@ -11,9 +11,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   assertSourceElectronTransportSettled,
   captureRendererErrors,
+  createElectronTestDiagnostics,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  observeElectronDiagnostic,
 } from "./electron-harness.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import {
@@ -138,16 +140,33 @@ export async function runStartupOperationCycles(args) {
       .split("\n")
       .filter(Boolean)
       .map(JSON.parse);
-  async function closeCycle() {
+  async function closeCycle(trigger = "cycle-complete") {
     const resource = active,
       application = app;
     active = app = win = undefined;
     if (!resource) return;
     const errors = [];
+    const cleanup = observeElectronDiagnostic(
+      resource.diagnostics,
+      "cleanup",
+      trigger,
+      resource.child,
+    );
     try {
-      if (application && resource.monitor)
+      if (application && resource.monitor) {
+        resource.diagnostics.phase("startup-graceful-close");
+        if (cleanup)
+          observeElectronDiagnostic(
+            resource.diagnostics,
+            "request",
+            cleanup,
+            "application.close",
+            resource.child,
+          );
         await bounded(application.close(), 8000, "Owned startup graceful close timed out");
+      }
     } catch (error) {
+      observeElectronDiagnostic(resource.diagnostics, "error", error, resource.child);
       errors.push(error);
     }
     try {
@@ -155,14 +174,28 @@ export async function runStartupOperationCycles(args) {
         resource.monitor,
         "Main birth identity was never established; unsafe close skipped",
       );
+      resource.diagnostics.phase("startup-custody");
+      if (cleanup)
+        observeElectronDiagnostic(
+          resource.diagnostics,
+          "request",
+          cleanup,
+          "monitor.terminate",
+          resource.child,
+        );
       resource.proof.settlement = await resource.monitor.terminate();
       resource.proof.exit = await bounded(resource.closed, 3000, "Main close event unavailable");
     } catch (error) {
+      observeElectronDiagnostic(resource.diagnostics, "error", error, resource.child);
       errors.push(error);
+    } finally {
+      if (cleanup)
+        observeElectronDiagnostic(resource.diagnostics, "settled", cleanup, resource.child);
     }
     resource.proof.rendererErrors = resource.errors.flat().map((error) => error.message);
     resource.proof.mainErrors = startupMainLogErrors(resource.logs.stderr);
     try {
+      resource.diagnostics.phase("startup-cycle-gates");
       resource.proof.windowsTransport = assertSourceElectronTransportSettled(resource.child);
       resource.proof.deniedAttempts = await rows("startup-denied-attempts.jsonl");
       resource.proof.spawnedWorkers = await rows("spawned-workers.jsonl");
@@ -182,6 +215,7 @@ export async function runStartupOperationCycles(args) {
       if (process.platform === "darwin") assert.equal(context?.reused, true);
       resource.proof.keychainMetadataRechecked = process.platform === "darwin";
     } catch (error) {
+      observeElectronDiagnostic(resource.diagnostics, "error", error, resource.child);
       errors.push(error);
     }
     for (const stream of ["stdout", "stderr"])
@@ -257,7 +291,16 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
     for (let cycle = 1; cycle <= 3; cycle++) {
       const proof = { cycle, status: "failed", observerFailures: [], operations: [] };
       cycles.push(proof);
-      const resource = (active = { proof, errors: [], logs: { stdout: "", stderr: "" } });
+      const diagnostics = createElectronTestDiagnostics({
+        ownedRoots: [repository, isolated.home],
+      });
+      proof.diagnostics = diagnostics.receipt;
+      const resource = (active = {
+        proof,
+        diagnostics,
+        errors: [],
+        logs: { stdout: "", stderr: "" },
+      });
       const originalSpawn = children.spawn;
       children.spawn = function (command, args, options) {
         const child = originalSpawn.call(this, command, args, options);
@@ -265,8 +308,14 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           assert.equal(resource.child, undefined, "One Main per cold launch");
           resource.child = child;
           proof.pid = child.pid;
+          child.once("exit", (code, signal) =>
+            observeElectronDiagnostic(diagnostics, "exit", "child-exit", code, signal),
+          );
           resource.closed = new Promise((done) =>
-            child.once("close", (code, signal) => done({ code, signal })),
+            child.once("close", (code, signal) => {
+              observeElectronDiagnostic(diagnostics, "exit", "child-close", code, signal);
+              done({ code, signal });
+            }),
           );
           child.once("error", () => proof.observerFailures.push("Owned Electron spawn error"));
           for (const stream of ["stdout", "stderr"])
@@ -278,6 +327,12 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           resource.monitor = watchElectronTestProcess(child, {
             timeoutMs: 120000,
             reportFailure: (message) => proof.observerFailures.push(message),
+            signalProcess(pid, signal) {
+              // The existing watcher alone decides fresh birth authority. The
+              // diagnostic records its request and never sends another signal.
+              observeElectronDiagnostic(diagnostics, "signal", pid, signal);
+              return process.kill(pid, signal);
+            },
           });
         }
         return child;
@@ -296,6 +351,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
               );
               return resource.monitor;
             },
+            diagnostics,
           },
         );
       } finally {
@@ -307,10 +363,13 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         app.process(),
         "Early Main custody must bind the actual application",
       );
+      diagnostics.phase("startup-find-renderer");
       win = await findCodeShellWindow(app);
       win.setDefaultTimeout(15000);
       resource.errors.push(captureRendererErrors(win));
+      diagnostics.phase("startup-worker-guard");
       proof.guard = await fixture.assertWorker(app, { requireWorker: false });
+      diagnostics.phase("startup-runtime");
       proof.runtime = await app.evaluate(({ app }) => ({
         appPath: app.getAppPath(),
         userData: app.getPath("userData"),
@@ -339,36 +398,44 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         assert.ok(result.attention && typeof result.attention === "object");
         return { activeSessionCleared: true, snapshotRead: true, attentionRead: true };
       };
+      diagnostics.phase("startup-cold-pet");
       proof.operations.push({
         operation: "cold renderer real Pet IPC",
         result: await checkPet(win),
       });
+      diagnostics.phase("startup-reload");
       await win.reload();
+      diagnostics.phase("startup-reload-pet");
       proof.operations.push({
         operation: "renderer reload real Pet IPC",
         result: await checkPet(win),
       });
       await win.screenshot({ path: join(evidence, `cycle-${cycle}-reload.png`) });
       if (cycle === 1) {
+        diagnostics.phase("startup-second-window");
         const opened = app.waitForEvent("window", { timeout: 15000 });
         opened.catch(() => {});
         await win.evaluate(() => window.codeshell.newWindow());
         const other = await opened;
         resource.errors.push(captureRendererErrors(other));
+        diagnostics.phase("startup-second-window-pet");
         proof.operations.push({
           operation: "production second window real Pet IPC",
           result: await checkPet(other),
         });
         await other.screenshot({ path: join(evidence, "second-window.png") });
+        diagnostics.phase("startup-second-window-close");
         await other.close();
       }
       await closeCycle(); // Prove this cycle before starting the next Main.
     }
   } catch (error) {
+    if (active) observeElectronDiagnostic(active.diagnostics, "error", error, active.child);
     const diagnostic = getElectronKeychainPreflightDiagnostic(error);
     failures.push({
       message: diagnostic ? "Keychain metadata preflight refused startup" : error.message,
       keychainDiagnostic: diagnostic,
+      firstError: active?.proof.diagnostics.firstError,
       errors: error.errors?.map((item) => ({
         message: item.message,
         keychainDiagnostic: getElectronKeychainPreflightDiagnostic(item),
@@ -377,7 +444,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
     await win?.screenshot({ path: join(evidence, "failure.png"), timeout: 2000 }).catch(() => {});
   } finally {
     try {
-      await closeCycle();
+      await closeCycle("cycle-error");
     } catch (error) {
       failures.push({
         message: error.message,

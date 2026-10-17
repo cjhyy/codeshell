@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   assertSourceElectronTransportSettled,
+  createElectronTestDiagnostics,
   launchCodeShellElectron,
 } from "./electron-harness.mjs";
 
@@ -35,11 +36,13 @@ async function fakeLaunch(t, mode = "success") {
   child.stdout = child.stderr = { unref() {} };
   const order = [],
     failures = [];
+  const diagnostics = createElectronTestDiagnostics({ ownedRoots: [root] });
   const settlement = { status: "cleaned", queryFailed: false, remainingCount: 0 };
   const monitor = Object.assign(() => {}, {
     completed: Promise.resolve(settlement),
     terminate() {
       terminations++;
+      if (mode === "evaluate rejection") child.exitCode = 1;
       return Promise.resolve(settlement);
     },
   });
@@ -66,12 +69,31 @@ async function fakeLaunch(t, mode = "success") {
   });
   const app = {
     process: () => child,
-    evaluate: async () => ({
-      pid: mode === "wrong Main" ? child.pid + 1 : child.pid,
-      ppid: process.pid,
-      executable,
-      home,
-    }),
+    evaluate: async () => {
+      if (mode === "null rejection") throw null;
+      if (mode === "undefined rejection") throw undefined;
+      if (mode === "hostile rejection")
+        throw new Proxy(
+          {},
+          {
+            get() {
+              throw Error("Private getter detail");
+            },
+          },
+        );
+      if (["evaluate rejection", "exited before evaluate rejection"].includes(mode)) {
+        if (mode === "exited before evaluate rejection") child.exitCode = 1;
+        const error = new Error("Resulting promise was garbage collected.");
+        error.stack = `Error: ${error.message}\n    at owned (${appDir}/caller.mjs:1:1)\n    at foreign (/foreign/operator/caller.mjs:2:1)`;
+        throw error;
+      }
+      return {
+        pid: mode === "wrong Main" ? child.pid + 1 : child.pid,
+        ppid: process.pid,
+        executable,
+        home,
+      };
+    },
     close: async () => {
       quits++;
     },
@@ -90,6 +112,7 @@ async function fakeLaunch(t, mode = "success") {
           if (mode === "no custody") throw Error("Synthetic birth query failed");
           return monitor;
         },
+        diagnostics,
         launch: async (options) => {
           const argv = ["-r", loader, "--inspect=0", "--remote-debugging-port=0", ...options.args];
           // Exact coreBundle45543/45698 encoding, independently spelled here.
@@ -122,6 +145,8 @@ async function fakeLaunch(t, mode = "success") {
     outerCapture,
     order,
     failures,
+    diagnostics: diagnostics.receipt,
+    observer: diagnostics,
     state: () => ({ unrefs, quits, terminations, spawns }),
   };
 }
@@ -163,6 +188,64 @@ test("source Windows handshake rejection uses the same early monitor and restore
   await assert.rejects(fixture.run(), /Synthetic handshake failure/);
   assert.equal(fixture.state().terminations, 1);
   assert.equal(fixture.state().quits, 0);
+  assert.equal(children.spawn, fixture.outerCapture);
+  assert.equal(fixture.diagnostics.firstError.phase, "harness-launch");
+  assert.equal(fixture.diagnostics.cleanups[0].trigger, "harness-error");
+});
+
+for (const mode of ["evaluate rejection", "exited before evaluate rejection"])
+  test(`source Windows ${mode} preserves the first error before custody cleanup`, async (t) => {
+    const fixture = await fakeLaunch(t, mode);
+    await assert.rejects(fixture.run(), /Resulting promise was garbage collected/);
+    const diagnostic = fixture.diagnostics;
+    assert.equal(diagnostic.firstError.phase, "harness-main-identity");
+    assert.match(diagnostic.firstError.stack, /owned.*caller\.mjs/);
+    assert.doesNotMatch(diagnostic.firstError.stack, /foreign|operator/);
+    assert.equal(diagnostic.firstError.child.exitObserved, mode !== "evaluate rejection");
+    const cleanup = diagnostic.cleanups[0];
+    assert.equal(cleanup.before.exitObserved, mode !== "evaluate rejection");
+    assert.equal(cleanup.requests[0].method, "monitor.terminate");
+    assert.equal(cleanup.after.exitCode, 1);
+    assert.equal(cleanup.after.signalCode, null);
+    assert.ok(diagnostic.firstError.sequence < cleanup.sequence);
+    assert.ok(cleanup.sequence < cleanup.requests[0].sequence);
+    for (let i = 1; i < diagnostic.timeline.length; i++) {
+      assert.ok(diagnostic.timeline[i].sequence > diagnostic.timeline[i - 1].sequence);
+      assert.ok(diagnostic.timeline[i].elapsedMs >= diagnostic.timeline[i - 1].elapsedMs);
+    }
+    assert.equal(fixture.state().terminations, 1);
+    assert.equal(fixture.state().quits, 0);
+    assert.equal(children.spawn, fixture.outerCapture);
+  });
+
+for (const mode of ["null rejection", "undefined rejection", "hostile rejection"])
+  test(`source Windows ${mode} still performs existing custody cleanup`, async (t) => {
+    const fixture = await fakeLaunch(t, mode);
+    let rejected = false;
+    try {
+      await fixture.run();
+    } catch {
+      // Node assert.rejects itself inspects properties of a hostile rejection.
+      rejected = true;
+    }
+    assert.equal(rejected, true);
+    assert.equal(fixture.diagnostics.firstError.phase, "harness-main-identity");
+    assert.equal(fixture.state().terminations, 1);
+    assert.equal(fixture.state().quits, 0);
+    assert.equal(children.spawn, fixture.outerCapture);
+    assert.doesNotMatch(JSON.stringify(fixture.diagnostics), /Private getter detail/);
+  });
+
+test("a throwing diagnostic observer cannot skip the existing Windows cleanup or replace its error", async (t) => {
+  const fixture = await fakeLaunch(t, "evaluate rejection");
+  for (const method of ["error", "cleanup", "request", "settled"])
+    fixture.observer[method] = () => {
+      throw Error("Diagnostic observer failure");
+    };
+  await assert.rejects(fixture.run(), /Resulting promise was garbage collected/);
+  assert.equal(fixture.state().terminations, 1);
+  assert.equal(fixture.state().quits, 0);
+  assert.equal(fixture.diagnostics.recordingFailed, true);
   assert.equal(children.spawn, fixture.outerCapture);
 });
 
