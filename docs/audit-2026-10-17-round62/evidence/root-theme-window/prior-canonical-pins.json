@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "bytes": 222261,
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "beforeOwnMetadataParse": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "bytes": 111340,
+      "sha256": "99d2ef32a15255c9d22fe21b2a9f2c7e8cf00c71e7bde5902718c012b6f834fd",
+      "beforeOwnMetadataParse": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "beforeOwnMetadataParse": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+      "bytes": 244127,
+      "sha256": "cb465195195433b72d3de735ea2a724470a22fd3bf6ad781f58f83fbe61dd7c2",
+      "beforeOwnMetadataParse": true
+    }
+  ]
+}

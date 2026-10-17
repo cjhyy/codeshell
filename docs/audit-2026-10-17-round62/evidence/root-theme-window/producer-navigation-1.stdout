@@ -1,0 +1,5 @@
+248:import { installedThemeToPack } from "./theme-pack-conversion.js";
+466:import { installThemeAssetProtocol, THEME_ASSET_SCHEME } from "./theme-asset-protocol.js";
+3480:  installThemeAssetProtocol();
+4966:  return themes.map(installedThemeToPack);
+4990:  const pack = installedThemeToPack(installed);

@@ -1,0 +1,20 @@
+{
+  "productImports": 0,
+  "productHelpers": 0,
+  "fixtures": 0,
+  "testsExecuted": 0,
+  "declaredTestsRead": 7,
+  "UI": 0,
+  "timerOrClockExperiments": 0,
+  "native": 0,
+  "models": 0,
+  "network": 0,
+  "Git": 0,
+  "sourceRepairs": 0,
+  "oldDynamicFailureDirections": "SKIP; no NDJSON/timer, SSE/UTF8, native/model reattempt",
+  "metadataMethodsOnly": [
+    "pin-and-history.py",
+    "prepare.py"
+  ],
+  "scope": "Static text and metadata processing; source assertions are not test passes"
+}

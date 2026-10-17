@@ -1,0 +1,29 @@
+3:import { collectionConfig } from "../collection.js";
+30:  resourceId: string,
+43:  const entry = collectionConfig(definition).entries.find((item) => item.id === resourceId);
+46:    entry.kind === "local" ? collectionLocalDirectoryIdentity(entry) : undefined;
+48:  let documentName = entry.name;
+50:  if (entry.kind === "local") bytes = readCollectionLocalFile(entry, options);
+52:    const downloaded = await downloadCollectionUrl({ url: entry.url, expected: entry }, options);
+55:    documentName = collectionUrlDocumentName(downloaded.proof, entry.name);
+60:    if (entry.kind === "local") {
+70:  const index = await loadUploadedDocumentIndex(options.cwd, entry.id, bytes, {
+78:    text = JSON.stringify(searchDocumentIndex(index, options.query, options.limit ?? 5));
+83:    text = JSON.stringify({ resourceId: entry.id, sourceHash: entry.sha256, ...chunk });
+90:  return {
+93:    ...(entry.kind === "url"
+98:              { url: entry.url, expected: entry },
+110:    content: { resourceId: entry.id, ...content, truncated: content.truncated || index.truncated },
+116:  async listScopes(definition) {
+117:    return collectionConfig(definition).entries.map((entry) => ({
+118:      id: entry.id,
+119:      label: entry.relativePath ?? entry.name,
+122:  async listResources(definition, scopeId) {
+123:    const entry = collectionConfig(definition).entries.find((item) => item.id === scopeId);
+124:    return entry
+127:            id: entry.id,
+128:            scopeId: entry.id,
+129:            name: entry.relativePath ?? entry.name,
+130:            sizeBytes: entry.sizeBytes,
+137:    resourceId,
+145:    return (await readCollectionDocument(definition, resourceId, options)).content;

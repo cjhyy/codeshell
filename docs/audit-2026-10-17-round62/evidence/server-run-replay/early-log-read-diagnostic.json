@@ -1,0 +1,11 @@
+{
+  "scope": "Own metadata logging only",
+  "toolChunks": ["1d9ec6", "db0c95"],
+  "exitCodes": [1, 1],
+  "originalOutputs": [
+    "cat: /tmp/codeshell-audit-round167-server-run-replay/pin-history-first.stdout: No such file or directory\n",
+    "cat: /tmp/codeshell-audit-round167-server-run-replay/pin-history-first.stderr: No such file or directory\n"
+  ],
+  "cause": "The metadata scanner was still running and had not yet persisted its final stdout/stderr buffers. These reads were premature.",
+  "resolution": "Wait for scanner completion before reading final logs. No product source or product function was read or executed by these failed log reads."
+}

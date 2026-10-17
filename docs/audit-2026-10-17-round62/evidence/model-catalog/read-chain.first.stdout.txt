@@ -1,0 +1,381 @@
+
+SOURCE packages/core/src/model-catalog/types.ts KIND product
+66: export const modelPresetSchema = z.object({
+67:   value: id,
+68:   label: shortText.optional(),
+69:   maxContextTokens: boundedNumber.optional(),
+70:   maxOutputTokens: boundedNumber.optional(),
+71:   supportsVision: z.boolean().optional(),
+72:   /** Params this model supports; absent → no adjustable knobs. */
+73:   params: z.array(paramSpecSchema).max(64).optional(),
+74: });
+75: 
+76: export type ModelPreset = z.infer<typeof modelPresetSchema>;
+77: 
+78: export const catalogEntrySchema = z.object({
+79:   /** Template id, e.g. "openai" / "openai-images" / "fal-video". */
+80:   id,
+81:   /** Which 连接 page group this lands in. (audio = speech-to-text / voice input.) */
+82:   tag: z.enum(["text", "image", "video", "audio", "speech"]),
+83:   /**
+84:    * Provider/gateway identity for text (distinct from `protocol`), or concrete
+85:    * runtime adapter for image/video. OpenRouter is `openrouter` even though its
+86:    * text protocol is `openai-compat`.
+87:    */
+88:   adapterKind: id,
+89:   /** LLM client protocol (text entries). */
+90:   protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
+91:   /** HTTP shape — documentation/future only; runtime dispatches on adapterKind. */
+92:   shape: z.enum(["generic-sync", "fal-queue"]).optional(),
+93:   displayName: z.string().min(1).max(256),
+94:   description: z.string().max(4_096),
+95:   defaultBaseUrl: z.string().max(4_096),
+96:   defaultModel: shortText.optional(),
+97:   /** Whether this provider needs an API key (ollama/local = false). */
+98:   needsKey: z.boolean().optional(),
+99:   /**
+100:    * How a user entry with the same id as a built-in provider contributes model
+101:    * presets. Absent/"replace" preserves the legacy full-override behavior;
+102:    * "merge" treats modelPresets as per-model additions/overrides keyed by
+103:    * `value`, so future built-in models remain visible.
+104:    */
+105:   modelPresetsMode: z.enum(["replace", "merge"]).optional(),
+106:   modelPresets: z.array(modelPresetSchema).max(512).optional(),
+107:   signupUrl: z.string().max(4_096).optional(),
+108:   /** Whether the 连接 card offers a "测试" button (image=true, video=false). */
+109:   test: z.boolean().optional(),
+110:   /**
+111:    * Natural-language note on the params/usage this entry supports — surfaced to
+112:    * the agent via the dynamic GenerateImage/GenerateVideo tool description so it
+
+SOURCE packages/core/src/model-catalog/index.ts KIND product
+68: export function getMergedCatalog(): CatalogEntry[] {
+69:   const byId = new Map<string, CatalogEntry>();
+70:   for (const e of BUILTIN_CATALOG) byId.set(e.id, e);
+71:   for (const userEntry of loadUserCatalog()) {
+72:     const base = byId.get(userEntry.id);
+73:     if (!base || userEntry.modelPresetsMode !== "merge") {
+74:       byId.set(userEntry.id, userEntry); // legacy/full user override
+75:       continue;
+76:     }
+77: 
+78:     const presets = new Map((base.modelPresets ?? []).map((preset) => [preset.value, preset]));
+79:     for (const preset of userEntry.modelPresets ?? []) presets.set(preset.value, preset);
+80:     byId.set(userEntry.id, {
+81:       ...base,
+82:       ...userEntry,
+83:       modelPresets: [...presets.values()],
+84:     });
+85:   }
+86:   return [...byId.values()];
+87: }
+88: 
+89: /**
+90:  * Look up a catalog entry by id (e.g. an instance's `catalogId`), falling back
+91:  * to the first entry whose `adapterKind` matches `kindFallback`. Since an
+92:  * adapterKind (e.g. "openai") can now back both a text and an image entry,
+93:  * `tagFallback` disambiguates the fallback to the right group.
+94:  */
+95: export function findCatalogEntry(
+96:   catalog: CatalogEntry[],
+97:   id: string | undefined,
+98:   kindFallback?: string,
+99:   tagFallback?: CatalogEntry["tag"],
+100: ): CatalogEntry | undefined {
+101:   if (id) {
+102:     const exact = catalog.find((e) => e.id === id);
+103:     if (exact) return exact;
+104:   }
+105:   if (kindFallback) {
+106:     return catalog.find(
+
+SOURCE packages/core/src/model-catalog/save-entry.ts KIND product
+118: export function saveCatalogEntry(
+119:   entry: unknown,
+120:   opts: { path: string; stamp: string },
+121: ): SaveCatalogResult {
+122:   // Validate the incoming entry first — never write a malformed catalog.
+123:   const parsed = catalogEntrySchema.safeParse(entry);
+124:   if (!parsed.success) {
+125:     return { ok: false, error: `invalid catalog entry: ${parsed.error.issues.map((i) => i.message).join("; ")}` };
+126:   }
+127:   const valid: CatalogEntry = parsed.data;
+128:   if (!BACKUP_STAMP_RE.test(opts.stamp)) return { ok: false, error: "invalid backup stamp" };
+129:   let release: (() => void) | undefined;
+130:   try {
+131:     release = acquireFileLock(opts.path);
+132:     const existing = readExistingCatalog(opts.path);
+133:     let backup = existing ? `${opts.path}.bak-${opts.stamp}` : undefined;
+134:     if (existing && !writeBackup(backup!, existing.raw)) backup = undefined;
+135:     const action: "added" | "updated" = existing?.entries.some((e) => e.id === valid.id)
+136:       ? "updated"
+137:       : "added";
+138:     writeCatalogAtomic(opts.path, upsertCatalogEntry(existing?.entries ?? [], valid));
+139:     return { ok: true, action, backup };
+140:   } catch (e) {
+141:     return { ok: false, error: `could not write catalog: ${e instanceof Error ? e.message : String(e)}` };
+
+SOURCE packages/core/src/tool-system/builtin/generate-image.ts KIND product
+186: function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvider | null {
+187:   const settings = new SettingsManager(cwd, "full").get();
+188: 
+189:   // 0. Unified store (统一模型接入方案): modelConnections (tag=image) +
+190:   // credentials. Takes precedence over the legacy imageGen.providers[] so the
+191:   // unified connection page drives image generation. Falls through to the
+192:   // legacy paths below when no image connection is configured.
+193:   const conns = (settings as { modelConnections?: GenInstanceSource[] }).modelConnections;
+194:   const creds = (settings as { credentials?: CredentialSource[] }).credentials;
+195:   if (Array.isArray(conns) && conns.some((c) => c.tag === "image")) {
+196:     const list = genInstancesFromConnections(
+197:       conns as never[],
+198:       (Array.isArray(creds) ? creds : []) as never[],
+199:       getMergedCatalog(),
+200:       "image",
+201:     ) as unknown as GenInstance[];
+202:     const def = (settings as { defaults?: { image?: string } }).defaults?.image;
+203:     const resolved = resolveFromGenList(list, prefer, def);
+204:     if (resolved) return resolved;
+205:     if (prefer) return null; // explicit request not usable → don't silently fall back
+206:   }
+207: 
+208:   // 1. Canonical imageGen config.
+209:   const imageGen = (
+210:     settings as { imageGen?: { defaultProvider?: string; providers?: GenInstance[] } }
+211:   ).imageGen;
+212:   if (imageGen && Array.isArray(imageGen.providers) && imageGen.providers.length > 0) {
+213:     const list = imageGen.providers;
+214:     const usable = (p: GenInstance): boolean =>
+215:       !!effectiveApiKey(p, list) && getImageProvider(p.kind) !== null;
+216:     const credsOf = (p: GenInstance): ImageProviderCreds => ({
+217:       baseUrl: p.baseUrl,
+218:       apiKey: effectiveApiKey(p, list)!,
+219:     });
+220: 
+221:     if (prefer) {
+222:       // Explicit request — respect the user's intent. If that exact instance
+223:       // isn't usable (no key / no adapter), DON'T silently use another one.
+224:       const chosen = list.find((p) => p.id === prefer);
+225:       if (chosen && usable(chosen)) {
+226:         return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+227:       }
+228:       return null;
+229:     }
+230: 
+231:     // No explicit request: prefer defaultProvider, but if it isn't usable
+232:     // (e.g. configured but no key yet) fall back to the first usable entry,
+233:     // rather than erroring. (User-confirmed: default-with-no-key → fall back.)
+234:     const preferred = imageGen.defaultProvider
+235:       ? list.find((p) => p.id === imageGen.defaultProvider)
+236:       : undefined;
+237:     const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+238:     if (chosen) {
+239:       return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+240:     }
+241:     return null;
+424:   const resolved = resolveImageProvider(cwd, preferKind);
+425:   if (!resolved) {
+426:     return preferKind
+427:       ? `Error: no image provider "${preferKind}" is available (unknown id/kind, or it has no API key). Configure it in your code-shell settings, or omit \`provider\` to use the default.`
+428:       : "Error: no image provider available. Configure an image provider (including an apiKey) " +
+429:           "in your code-shell settings to use GenerateImage.";
+430:   }
+431: 
+432:   const adapter = getImageProvider(resolved.kind, modelTraceFetch(globalThis.fetch));
+433:   if (!adapter) {
+434:     return `Error: image generation is not supported for provider kind "${resolved.kind}".`;
+435:   }
+436: 
+437:   // Model precedence: call arg > instance defaultModel (imageGen) > kind default.
+438:   const model =
+439:     overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
+440: 
+441:   let result: ImageGenerateResult | undefined;
+442:   try {
+443:     await withModelTraceContext({ workspacePath: cwd, purpose: "image_generation" }, () =>
+444:       withModelTrace(
+445:         {
+
+SOURCE packages/core/src/tool-system/builtin/generate-video.ts KIND product
+234: function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
+235:   const settings = new SettingsManager(cwd, "full").get();
+236: 
+237:   // 0. Unified store (统一模型接入方案): modelConnections (tag=video) +
+238:   // credentials, taking precedence over legacy videoGen.providers[].
+239:   const conns = (settings as { modelConnections?: { tag?: string }[] }).modelConnections;
+240:   const creds = (settings as { credentials?: unknown[] }).credentials;
+241:   if (Array.isArray(conns) && conns.some((c) => c.tag === "video")) {
+242:     const list = genInstancesFromConnections(
+243:       conns as never[],
+244:       (Array.isArray(creds) ? creds : []) as never[],
+245:       getMergedCatalog(),
+246:       "video",
+247:     ) as unknown as VideoInstance[];
+248:     const def = (settings as { defaults?: { video?: string } }).defaults?.video;
+249:     const usable = (p: VideoInstance): boolean => !!p.apiKey && getVideoProvider(p.kind) !== null;
+250:     const credsOf = (p: VideoInstance): VideoProviderCreds => ({
+251:       baseUrl: p.baseUrl,
+252:       apiKey: p.apiKey!,
+253:     });
+254:     if (preferKind) {
+255:       const chosen = list.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
+256:       if (chosen)
+257:         return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+258:       return null;
+259:     }
+260:     const preferred = def ? list.find((p) => p.id === def) : undefined;
+261:     const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+262:     if (chosen)
+263:       return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+264:     if (def || preferKind) return null;
+265:   }
+350:   let defaultModel: string | undefined;
+351:   if (injectedProvider) {
+352:     adapter = injectedProvider;
+353:     kind = injectedProvider.kind;
+354:     creds = { baseUrl: "test", apiKey: "test" };
+355:   } else {
+356:     const resolved = resolveVideoProvider(cwd, preferKind);
+357:     if (!resolved) {
+358:       return preferKind
+359:         ? `Error: no video provider of kind "${preferKind}" available. Configure it (with an apiKey) in settings.`
+360:         : "Error: no video provider available. Video generation requires a configured video provider (none are wired yet).";
+361:     }
+362:     const a = getVideoProvider(resolved.kind);
+363:     if (!a) return `Error: video generation is not supported for provider kind "${resolved.kind}".`;
+364:     adapter = a;
+365:     kind = resolved.kind;
+366:     creds = resolved.creds;
+367:     defaultModel = resolved.defaultModel;
+368:   }
+369: 
+370:   const model = overrideModel ?? defaultModel ?? DEFAULT_VIDEO_MODEL[kind] ?? kind;
+371: 
+372:   // Normalize image inputs (local paths → uploaded URLs) before submit. The
+373:   // provider only ever receives URLs and routes t2v/i2v/ref2v by count.
+374:   const uploader = getImageUploader(kind) ?? getImageUploader("fal")!;
+
+SOURCE packages/core/src/model-catalog/gen-connections.test.ts KIND test-declaration
+1: /**
+2:  * genInstancesFromConnections — project unified modelConnections (tag=image or
+3:  * video) + credentials into the {kind, baseUrl, apiKey, defaultModel} shape the
+4:  * image/video runtime resolvers consume, so image/video also flow through the
+5:  * unified credentials store. Key comes from the referenced credential.
+6:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.
+7:  */
+8: import { describe, test, expect } from "bun:test";
+9: import { genInstancesFromConnections } from "./gen-connections.js";
+10: import type { CatalogEntry } from "./types.js";
+11: import type { ModelInstance, Credential } from "./resolve.js";
+12: 
+13: const CATALOG: CatalogEntry[] = [
+14:   {
+15:     id: "openai-images",
+16:     tag: "image",
+17:     adapterKind: "openai",
+18:     displayName: "OpenAI Images",
+19:     description: "x",
+20:     defaultBaseUrl: "https://api.openai.com/v1",
+21:     defaultModel: "gpt-image-2",
+22:   },
+23:   {
+24:     id: "fal-video",
+25:     tag: "video",
+26:     adapterKind: "fal",
+27:     displayName: "fal",
+28:     description: "x",
+29:     defaultBaseUrl: "https://queue.fal.run",
+30:   },
+31: ];
+32: 
+33: const CREDS: Credential[] = [
+34:   { id: "openai-acct", catalogId: "openai-images", apiKey: "sk-img" },
+35:   { id: "fal-acct", catalogId: "fal-video", apiKey: "sk-fal" },
+36: ];
+37: 
+38: describe("genInstancesFromConnections", () => {
+39:   test("projects image connections to {id, kind, baseUrl, apiKey, defaultModel}", () => {
+40:     const conns: ModelInstance[] = [
+41:       { id: "img1", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "openai-acct" },
+42:     ];
+43:     const out = genInstancesFromConnections(conns, CREDS, CATALOG, "image");
+44:     expect(out).toHaveLength(1);
+45:     expect(out[0]).toMatchObject({
+46:       id: "img1",
+47:       kind: "openai",
+48:       baseUrl: "https://api.openai.com/v1",
+49:       apiKey: "sk-img",
+50:       defaultModel: "gpt-image-2",
+51:     });
+52:   });
+53: 
+54:   test("filters by tag (image vs video)", () => {
+55:     const conns: ModelInstance[] = [
+56:       { id: "img1", catalogId: "openai-images", tag: "image", model: "m", credentialId: "openai-acct" },
+57:       { id: "vid1", catalogId: "fal-video", tag: "video", model: "m", credentialId: "fal-acct" },
+58:     ];
+59:     expect(genInstancesFromConnections(conns, CREDS, CATALOG, "image").map((i) => i.id)).toEqual(["img1"]);
+60:     expect(genInstancesFromConnections(conns, CREDS, CATALOG, "video").map((i) => i.id)).toEqual(["vid1"]);
+72:   test("connection model overrides the catalog defaultModel", () => {
+73:     const conns: ModelInstance[] = [
+74:       { id: "a", catalogId: "openai-images", tag: "image", model: "dall-e-3", credentialId: "openai-acct" },
+75:     ];
+76:     expect(genInstancesFromConnections(conns, CREDS, CATALOG, "image")[0]!.defaultModel).toBe("dall-e-3");
+77:   });
+78: 
+79:   test("unknown catalogId connection is skipped", () => {
+80:     const conns: ModelInstance[] = [
+81:       { id: "ok", catalogId: "openai-images", tag: "image", model: "m", credentialId: "openai-acct" },
+82:       { id: "bad", catalogId: "ghost", tag: "image", model: "m", credentialId: "openai-acct" },
+83:     ];
+84:     expect(genInstancesFromConnections(conns, CREDS, CATALOG, "image").map((i) => i.id)).toEqual(["ok"]);
+85:   });
+
+SOURCE packages/core/src/model-catalog/upsert.test.ts KIND test-declaration
+29: describe("upsertCatalogEntry", () => {
+30:   test("adds a new entry to an empty list", () => {
+31:     const out = upsertCatalogEntry([], A);
+32:     expect(out).toEqual([A]);
+33:   });
+34: 
+35:   test("appends when the id is new", () => {
+36:     const out = upsertCatalogEntry([A], B);
+37:     expect(out.map((e) => e.id)).toEqual(["prov-a", "prov-b"]);
+38:   });
+39: 
+40:   test("replaces the existing entry with the same id (update), in place", () => {
+41:     const updated: CatalogEntry = { ...A, displayName: "A renamed", defaultModel: "m1" };
+42:     const out = upsertCatalogEntry([A, B], updated);
+43:     expect(out).toHaveLength(2);
+44:     expect(out[0]!.displayName).toBe("A renamed");
+45:     expect(out[0]!.defaultModel).toBe("m1");
+46:     expect(out[1]).toEqual(B); // others untouched, order preserved
+47:   });
+48: 
+49:   test("does not mutate the input array", () => {
+50:     const input = [A];
+51:     upsertCatalogEntry(input, B);
+52:     expect(input).toEqual([A]);
+53:   });
+54: });
+55: 
+56: describe("upsertModelPreset", () => {
+57:   test("appends a new model without changing existing presets", () => {
+58:     const existing = [{ value: "model-a", label: "A" }];
+59:     expect(upsertModelPreset(existing, { value: "model-b", label: "B" })).toEqual([
+60:       { value: "model-a", label: "A" },
+61:       { value: "model-b", label: "B" },
+62:     ]);
+63:     expect(existing).toEqual([{ value: "model-a", label: "A" }]);
+64:   });
+65: 
+66:   test("updates an existing model by value without duplicating it", () => {
+67:     expect(
+68:       upsertModelPreset(
+69:         [
+70:           { value: "model-a", label: "Old" },
+71:           { value: "model-b", label: "B" },
+72:         ],
+73:         { value: "model-a", label: "New" },
+74:       ),
+75:     ).toEqual([
+76:       { value: "model-a", label: "New" },

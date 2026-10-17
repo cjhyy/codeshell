@@ -1,0 +1,471 @@
+
+packages/core/src/themes/installer.ts
+75:   reviewToken: string;
+76:   warnings: string[];
+77: }
+78: 
+79: /** An installed theme as the host exposes it to the renderer. */
+80: export interface InstalledTheme {
+81:   id: string;
+82:   name: string;
+83:   version: string;
+84:   colors: { light: Record<string, string>; dark: Record<string, string> };
+85:   pet: Partial<Record<PetState, string>> & { walk?: string[] }; // canonical relative asset paths
+86:   wallpaper?: { light?: string; dark?: string; opacity?: number };
+87:   surfaces?: ThemeManifest["surfaces"];
+88:   frame?: ThemeManifest["frame"];
+89:   sounds?: ThemeManifest["sounds"];
+90:   music?: ThemeManifest["music"];
+91: }
+92: 
+93: interface RegistryEntry {
+94:   id: string;
+95:   name: string;
+96:   version: string;
+97:   installedAt: number;
+98: }
+99: interface Registry {
+100:   version: 1;
+101:   themes: RegistryEntry[];
+102: }
+103: 
+104: async function readAssetBytes(sourceDir: string, rel: string, maxBytes: number): Promise<Buffer> {
+105:   const abs = resolve(sourceDir, rel);
+163: /** Collect the declared assets, validating each, into canonical-name mappings. */
+164: async function resolveAssets(
+165:   sourceDir: string,
+166:   manifest: ThemeManifest,
+167: ): Promise<{ assets: ResolvedAsset[]; bytesByName: Map<string, Buffer> }> {
+168:   const assets: ResolvedAsset[] = [];
+169:   const bytesByName = new Map<string, Buffer>();
+170:   const add = async (rel: string | undefined, base: string): Promise<void> => {
+171:     if (!rel) return;
+172:     const { bytes, ext } = await readImageAsset(sourceDir, rel);
+173:     const canonicalName = `${base}.${ext}`;
+174:     assets.push({ sourceRel: rel, canonicalName });
+175:     bytesByName.set(canonicalName, bytes);
+176:   };
+177:   await add(manifest.pet?.idle, "pet-idle");
+178:   await add(manifest.pet?.running, "pet-running");
+179:   await add(manifest.pet?.alert, "pet-alert");
+180:   for (let i = 0; i < (manifest.pet?.walk?.length ?? 0); i += 1) {
+181:     await add(manifest.pet!.walk![i], `pet-walk-${i + 1}`);
+182:   }
+183:   await add(manifest.wallpaper?.light, "wallpaper-light");
+184:   await add(manifest.wallpaper?.dark, "wallpaper-dark");
+185:   for (const name of THEME_SURFACE_NAMES) {
+186:     await add(manifest.surfaces?.[name]?.light, `surface-${name}-light`);
+187:     await add(manifest.surfaces?.[name]?.dark, `surface-${name}-dark`);
+188:   }
+189:   const addAudio = async (rel: string | undefined, base: string, music: boolean): Promise<void> => {
+190:     if (!rel) return;
+191:     const bytes = await readAssetBytes(
+192:       sourceDir,
+193:       rel,
+194:       music ? MAX_THEME_MUSIC_BYTES : MAX_THEME_SOUND_BYTES,
+195:     );
+196:     const audio = detectThemeWav(bytes);
+197:     if (!audio) throw new ThemeInstallError(`asset is not a supported PCM16 WAV: ${rel}`);
+198:     if (audio.durationSeconds > (music ? 600 : 10)) {
+199:       throw new ThemeInstallError(`audio duration exceeds ${music ? 600 : 10} seconds: ${rel}`);
+200:     }
+201:     const canonicalName = `${base}.wav`;
+202:     assets.push({ sourceRel: rel, canonicalName });
+203:     bytesByName.set(canonicalName, bytes);
+204:   };
+205:   for (const event of THEME_SOUND_EVENTS) {
+206:     await addAudio(manifest.sounds?.[event], `sound-${event}`, false);
+207:   }
+208:   for (let index = 0; index < (manifest.music?.length ?? 0); index += 1) {
+209:     await addAudio(manifest.music![index].file, `music-${index + 1}`, true);
+210:   }
+211:   return { assets, bytesByName };
+212: }
+427: function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]): ThemeManifest {
+428:   const nameFor = (base: string): string | undefined =>
+429:     assets.find((a) => a.canonicalName.startsWith(`${base}.`))?.canonicalName;
+430:   const rel = (base: string): string | undefined => {
+431:     const n = nameFor(base);
+432:     return n ? `${THEME_ASSET_DIR}/${n}` : undefined;
+433:   };
+434:   const walk = (manifest.pet?.walk ?? [])
+435:     .map((_, i) => rel(`pet-walk-${i + 1}`))
+436:     .filter((p): p is string => Boolean(p));
+437:   const pet = manifest.pet
+438:     ? {
+439:         ...(rel("pet-idle") ? { idle: rel("pet-idle") } : {}),
+440:         ...(rel("pet-running") ? { running: rel("pet-running") } : {}),
+441:         ...(rel("pet-alert") ? { alert: rel("pet-alert") } : {}),
+442:         ...(walk.length ? { walk } : {}),
+443:       }
+444:     : undefined;
+445:   const wallpaper = manifest.wallpaper
+446:     ? {
+447:         ...(rel("wallpaper-light") ? { light: rel("wallpaper-light") } : {}),
+448:         ...(rel("wallpaper-dark") ? { dark: rel("wallpaper-dark") } : {}),
+449:         ...(manifest.wallpaper.opacity !== undefined
+450:           ? { opacity: manifest.wallpaper.opacity }
+451:           : {}),
+452:       }
+453:     : undefined;
+454:   const surfaces = manifest.surfaces
+455:     ? Object.fromEntries(
+456:         THEME_SURFACE_NAMES.flatMap((name) => {
+457:           const surface = manifest.surfaces?.[name];
+458:           if (!surface) return [];
+459:           // Preserve scalar appearance controls; only asset paths are rewritten.
+460:           const { light: _light, dark: _dark, ...appearance } = surface;
+461:           const light = rel(`surface-${name}-light`);
+462:           const dark = rel(`surface-${name}-dark`);
+463:           return [
+464:             [name, { ...appearance, ...(light ? { light } : {}), ...(dark ? { dark } : {}) }],
+465:           ];
+466:         }),
+467:       )
+468:     : undefined;
+469:   const sounds = manifest.sounds
+470:     ? Object.fromEntries(
+471:         THEME_SOUND_EVENTS.flatMap((event) => {
+472:           const file = rel(`sound-${event}`);
+473:           return file ? [[event, file]] : [];
+474:         }),
+475:       )
+476:     : undefined;
+477:   const music = manifest.music?.map((track, index) => ({
+478:     title: track.title,
+479:     ...(track.artist ? { artist: track.artist } : {}),
+480:     ...(track.url ? { url: track.url } : { file: rel(`music-${index + 1}`)! }),
+481:   }));
+482:   return {
+483:     schemaVersion: 1,
+484:     id: manifest.id,
+485:     name: manifest.name,
+486:     version: manifest.version,
+487:     ...(manifest.colors ? { colors: manifest.colors } : {}),
+488:     ...(pet && Object.keys(pet).length ? { pet } : {}),
+489:     ...(wallpaper && Object.keys(wallpaper).length ? { wallpaper } : {}),
+490:     ...(surfaces && Object.keys(surfaces).length ? { surfaces } : {}),
+491:     ...(manifest.frame ? { frame: manifest.frame } : {}),
+492:     ...(sounds && Object.keys(sounds).length ? { sounds } : {}),
+493:     ...(music?.length ? { music } : {}),
+494:   };
+495: }
+496: 
+497: function toInstalledTheme(manifest: ThemeManifest): InstalledTheme {
+498:   return {
+499:     id: manifest.id,
+500:     name: manifest.name,
+501:     version: manifest.version,
+502:     colors: { light: manifest.colors?.light ?? {}, dark: manifest.colors?.dark ?? {} },
+503:     pet: {
+504:       ...(manifest.pet?.idle ? { idle: manifest.pet.idle } : {}),
+505:       ...(manifest.pet?.running ? { running: manifest.pet.running } : {}),
+506:       ...(manifest.pet?.alert ? { alert: manifest.pet.alert } : {}),
+507:       ...(manifest.pet?.walk?.length ? { walk: manifest.pet.walk } : {}),
+508:     },
+509:     ...(manifest.wallpaper ? { wallpaper: manifest.wallpaper } : {}),
+510:     ...(manifest.surfaces ? { surfaces: manifest.surfaces } : {}),
+511:     ...(manifest.frame ? { frame: manifest.frame } : {}),
+512:     ...(manifest.sounds ? { sounds: manifest.sounds } : {}),
+513:     ...(manifest.music ? { music: manifest.music } : {}),
+514:   };
+515: }
+516: 
+517: async function readRegistry(): Promise<Registry> {
+518:   try {
+519:     const raw = await readBoundedText(themesRegistryPath(), MAX_REGISTRY_BYTES);
+605: export async function listInstalledThemes(): Promise<InstalledTheme[]> {
+606:   let ids: string[];
+607:   try {
+608:     const entries = await readdir(themesRoot(), { withFileTypes: true });
+609:     ids = entries.filter((e) => e.isDirectory() && !e.name.startsWith(".")).map((e) => e.name);
+610:   } catch {
+611:     return [];
+612:   }
+613:   const themes: InstalledTheme[] = [];
+614:   for (const id of ids) {
+615:     try {
+616:       assertSafeThemeName(id);
+617:       const manifest = await loadManifest(themeInstallDir(id));
+618:       if (manifest.id !== id) continue; // dir name must match manifest id
+619:       themes.push(toInstalledTheme(manifest));
+620:     } catch {
+621:       /* skip a corrupt/foreign directory */
+622:     }
+623:   }
+624:   return themes;
+625: }
+626: 
+627: /** Remove an installed theme and its registry entry. */
+
+packages/core/src/themes/manifest.ts
+67:   );
+68: 
+69: export const THEME_ID = /^[a-z0-9][a-z0-9-]{1,63}$/;
+70: 
+71: /** Host UI surfaces with independently configurable backgrounds. */
+72: export const THEME_SURFACE_NAMES = [
+73:   "window",
+74:   "sidebar",
+75:   "titlebar",
+76:   "chat",
+77:   "composer",
+78:   "panel",
+79: ] as const;
+80: 
+81: const ThemeModeColorsSchema = z
+82:   .object({
+83:     light: z.string().regex(HSL).optional(),
+84:     dark: z.string().regex(HSL).optional(),
+85:   })
+125:   .object({
+126:     title: z.string().trim().min(1).max(120),
+127:     artist: z.string().trim().min(1).max(120).optional(),
+128:     file: RELATIVE_ASSET.optional(),
+129:     url: z
+130:       .string()
+131:       .max(4096)
+132:       .url()
+133:       .refine((value) => {
+134:         try {
+135:           const url = new URL(value);
+136:           return url.protocol === "https:" && !url.username && !url.password;
+137:         } catch {
+138:           return false;
+139:         }
+140:       }, "music links must use HTTPS without credentials")
+141:       .optional(),
+142:   })
+143:   .strict()
+144:   .refine((track) => Boolean(track.file) !== Boolean(track.url), {
+145:     message: "music tracks must declare exactly one file or HTTPS URL",
+146:   });
+147: 
+148: export type ThemeMusicTrack = z.infer<typeof ThemeMusicTrackSchema>;
+149: 
+150: export const ThemeManifestSchema = z.object({
+151:   schemaVersion: z.literal(1),
+152:   id: z.string().regex(THEME_ID, "id must match ^[a-z0-9][a-z0-9-]{1,63}$"),
+153:   name: z.string().min(1).max(80),
+154:   version: z.string().min(1).max(32),
+155:   colors: z
+156:     .object({ light: ThemeVarsSchema.optional(), dark: ThemeVarsSchema.optional() })
+157:     .optional(),
+158:   pet: z
+159:     .object({
+160:       idle: RELATIVE_ASSET.optional(),
+161:       running: RELATIVE_ASSET.optional(),
+162:       alert: RELATIVE_ASSET.optional(),
+163:       /** Ordered frames cycled while the widget is dragged (a "run" loop). */
+164:       walk: z.array(RELATIVE_ASSET).max(16).optional(),
+165:     })
+166:     .optional(),
+167:   wallpaper: z
+168:     .object({
+169:       light: RELATIVE_ASSET.optional(),
+170:       dark: RELATIVE_ASSET.optional(),
+171:       opacity: z.number().min(0).max(1).optional(),
+172:     })
+173:     .optional(),
+174:   surfaces: z
+175:     .object({
+176:       window: ThemeSurfaceSchema.optional(),
+177:       sidebar: ThemeSurfaceSchema.optional(),
+178:       titlebar: ThemeSurfaceSchema.optional(),
+179:       chat: ThemeSurfaceSchema.optional(),
+180:       composer: ThemeSurfaceSchema.optional(),
+181:       panel: ThemeSurfaceSchema.optional(),
+182:     })
+183:     .strict()
+184:     .optional(),
+185:   frame: ThemeFrameSchema.optional(),
+186:   sounds: ThemeSoundsSchema.optional(),
+187:   music: z.array(ThemeMusicTrackSchema).max(12).optional(),
+188: });
+189: 
+190: export type ThemeManifest = z.infer<typeof ThemeManifestSchema>;
+191: 
+192: /** Parse + validate a raw `.cs-theme.json` object. Throws ZodError on invalid input. */
+193: export function parseThemeManifest(raw: unknown): ThemeManifest {
+194:   return ThemeManifestSchema.parse(raw);
+195: }
+
+packages/core/src/themes/paths.ts
+1: import { homedir } from "node:os";
+2: import { join } from "node:path";
+3: import { THEME_ID } from "./manifest.js";
+4: 
+5: export class ThemeInstallError extends Error {}
+6: 
+7: /** A review token changed between preview and install (content was modified). */
+8: export class ThemeReviewChangedError extends ThemeInstallError {
+9:   constructor() {
+10:     super("theme content changed since preview");
+11:   }
+12: }
+13: 
+14: /**
+15:  * Where installed themes live.
+16:  *
+17:  * This used to resolve HOME on its own, so a test that reached it without
+18:  * CODE_SHELL_HOME wrote into the developer's real theme registry — eight
+19:  * "concurrent-N" fixture packs showed up in a real settings picker on
+20:  * 2026-09-06. The sessions-root guard did not cover it because this was a
+21:  * second, independent home resolution.
+22:  *
+23:  * Fails closed under a test runner instead. `bun test` sets NODE_ENV=test
+24:  * itself, so no test has to opt in, and a real host run is untouched.
+25:  */
+26: function userHome(): string {
+27:   const explicit = process.env.CODE_SHELL_HOME;
+28:   if (explicit) return explicit;
+29:   if (process.env.NODE_ENV === "test" || process.env.BUN_TEST === "1") {
+30:     throw new ThemeInstallError(
+31:       "Refusing to use the real ~/.code-shell/themes from a test. Set CODE_SHELL_HOME " +
+32:         "to a temp dir (packages/core/test-setup.ts does this via the bunfig preload).",
+33:     );
+34:   }
+35:   return process.env.HOME ?? homedir();
+36: }
+37: 
+38: /** A theme id must be a single safe path segment matching the manifest pattern. */
+39: export function assertSafeThemeName(id: string): void {
+40:   if (!THEME_ID.test(id) || id === "." || id === "..") {
+41:     throw new ThemeInstallError(`invalid theme id: ${JSON.stringify(id)}`);
+42:   }
+43: }
+44: 
+45: export function themesRoot(): string {
+46:   return join(userHome(), ".code-shell", "themes");
+47: }
+48: 
+49: export function themeInstallDir(id: string): string {
+50:   assertSafeThemeName(id);
+51:   return join(themesRoot(), id);
+52: }
+53: 
+54: /** Canonical asset subdirectory inside an installed theme. */
+55: export const THEME_ASSET_DIR = ".cs-theme-assets";
+56: 
+57: /** Registry of installed themes. */
+58: export function themesRegistryPath(): string {
+59:   return join(themesRoot(), "installed.json");
+60: }
+
+packages/desktop/src/shared/theme-packs.ts
+1: /**
+2:  * Renderer-facing shapes for installable theme packs, shared between preload and
+3:  * the renderer. Asset urls are cstheme:// links the main process resolves.
+4:  */
+5: 
+6: import type { ThemeFrame, ThemeSurface, ThemeSurfaceName } from "@cjhyy/code-shell-core";
+7: 
+8: export type ThemeImportKind = "zip" | "directory";
+9: 
+10: export type ThemeSoundEvent = "send" | "complete" | "approval" | "error";
+11: export type ThemeSounds = Partial<Record<ThemeSoundEvent, string>>;
+12: /** Local files are resolved asset URLs; web tracks open only on an explicit click. */
+13: export type ThemeMusicTrack = { title: string; artist?: string } & (
+14:   | { file: string; url?: never }
+15:   | { url: string; file?: never }
+16: );
+17: 
+18: export interface InstalledThemePack {
+19:   id: string;
+20:   name: string;
+21:   swatch: string;
+22:   colors: { light: Record<string, string>; dark: Record<string, string> };
+23:   pet?: { idle?: string; running?: string; alert?: string; walk?: string[] };
+24:   wallpaper?: { light?: string; dark?: string; opacity?: number };
+25:   surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurface>>;
+26:   frame?: ThemeFrame;
+27:   sounds?: ThemeSounds;
+28:   music?: ThemeMusicTrack[];
+29:   source: "installed";
+30: }
+31: 
+32: /** Result of the pick-and-preview step before a user confirms an install. */
+33: export type ThemePickPreview =
+34:   | { cancelled: true }
+35:   | {
+36:       cancelled: false;
+37:       path: string;
+38:       preview: {
+39:         id: string;
+40:         name: string;
+41:         version: string;
+42:         hasColors: boolean;
+43:         petStates: Array<"idle" | "running" | "alert">;
+44:         wallpaperModes: Array<"light" | "dark">;
+45:         surfaceNames?: ThemeSurfaceName[];
+46:         hasFrame?: boolean;
+47:         soundEvents?: ThemeSoundEvent[];
+48:         musicCount?: number;
+49:         swatch?: string;
+50:         reviewToken: string;
+51:         warnings: string[];
+52:       };
+53:     };
+
+packages/desktop/src/main/index.ts
+3475:   await projectStore.warm();
+3476:   writeSettingsSchemaAtStartup();
+3477:   void cleanupKnownAttachments();
+3478:   // The main window and the pet popout both render on the default session, so
+3479:   // one handler there serves cstheme:// assets to every window.
+3480:   installThemeAssetProtocol();
+3481:   session.defaultSession.protocol.handle(MEDIA_PREVIEW_SCHEME, (request) =>
+3482:     mediaPreviewService.respond(request),
+3483:   );
+3484: 
+3485:   await chromeExtensionRuntimeService.start().catch((error) => {
+4955:       reviewToken: string;
+4956:       overwrite?: boolean;
+4957:     },
+4958:   ) => {
+4959:     const result = await installLocalPluginForUi(input);
+4960:     if (result.ok) broadcastPluginCommandsChanged(mainWindows);
+4961:     return result;
+4962:   },
+4963: );
+4964: ipcMain.handle("themes:list", async () => {
+4965:   const themes = await listInstalledThemes();
+4966:   return themes.map(installedThemeToPack);
+4967: });
+4968: ipcMain.handle(
+4969:   "themes:pickAndPreview",
+4970:   async (
+4971:     _e,
+4972:     kind?: unknown,
+4973:   ): Promise<{ cancelled: true } | { cancelled: false; path: string; preview: ThemePreview }> => {
+4974:     const options = themeImportDialogOptions(kind);
+4975:     const win = BrowserWindow.getFocusedWindow();
+4976:     const picked = win
+4977:       ? await dialog.showOpenDialog(win, options)
+4978:       : await dialog.showOpenDialog(options);
+4979:     const path = picked.filePaths[0];
+4980:     if (picked.canceled || !path) return { cancelled: true };
+4981:     const preview = await previewLocalTheme(path);
+4982:     return { cancelled: false, path, preview };
+4983:   },
+4984: );
+4985: ipcMain.handle("themes:install", async (_e, input: { path: string; reviewToken: string }) => {
+4986:   if (!input || typeof input.path !== "string" || typeof input.reviewToken !== "string") {
+4987:     throw new Error("themes:install requires { path, reviewToken }");
+4988:   }
+4989:   const installed = await installReviewedLocalTheme(input.path, input.reviewToken);
+4990:   const pack = installedThemeToPack(installed);
+4991:   for (const window of BrowserWindow.getAllWindows()) {
+4992:     if (!window.isDestroyed()) window.webContents.send("themes:changed");
+4993:   }
+4994:   return pack;
+4995: });
+4996: ipcMain.handle("themes:uninstall", async (_e, id: string) => {
+4997:   if (typeof id !== "string") throw new Error("themes:uninstall requires an id");
+4998:   await uninstallTheme(id);
+4999:   for (const window of BrowserWindow.getAllWindows()) {
+5000:     if (!window.isDestroyed()) window.webContents.send("themes:changed");
+5001:   }
+5002:   return { ok: true };
+5003: });
+5004: ipcMain.handle(

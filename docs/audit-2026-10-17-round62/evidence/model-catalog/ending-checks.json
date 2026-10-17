@@ -1,0 +1,149 @@
+{
+  "atUTC": "2026-10-17T20:41:04.382880+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "initialSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "endingSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "initialBytes": 4284,
+      "endingBytes": 4284,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "initialSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "endingSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "initialBytes": 1539,
+      "endingBytes": 1539,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "initialSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "endingSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "initialBytes": 1099,
+      "endingBytes": 1099,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "initialSha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "endingSha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "initialBytes": 5401,
+      "endingBytes": 5401,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "initialSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "endingSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "initialBytes": 4933,
+      "endingBytes": 4933,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/save-entry.ts",
+      "initialSha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "endingSha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "initialBytes": 6541,
+      "endingBytes": 6541,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "initialSha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "endingSha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "initialBytes": 20093,
+      "endingBytes": 20093,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "initialSha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+      "endingSha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+      "initialBytes": 24537,
+      "endingBytes": 24537,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+      "initialSha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+      "endingSha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+      "initialBytes": 3587,
+      "endingBytes": 3587,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.test.ts",
+      "initialSha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+      "endingSha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+      "initialBytes": 2537,
+      "endingBytes": 2537,
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialBytes": 17639,
+      "endingBytes": 17639,
+      "same": true
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialBytes": 206,
+      "endingBytes": 206,
+      "same": true
+    }
+  ],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+      "initialSha256": "1bb1472806c05b9756a18700ef03b8fb8fd785275d2d9bcf4f0e0fde9c971ae1",
+      "endingSha256": "1bb1472806c05b9756a18700ef03b8fb8fd785275d2d9bcf4f0e0fde9c971ae1",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+      "initialSha256": "2823ccfc08f464aecd29a2fae71f0dac1d0287329b6a9943da01087fc7eac059",
+      "endingSha256": "2823ccfc08f464aecd29a2fae71f0dac1d0287329b6a9943da01087fc7eac059",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/catalog.md",
+      "initialSha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d",
+      "endingSha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+      "initialSha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61",
+      "endingSha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/catalog.md",
+      "initialSha256": "2a8acde17a0ab61a9a1975dff3ed83bc0f26b1ae6c59148ea0be087eead7f5ce",
+      "endingSha256": "2a8acde17a0ab61a9a1975dff3ed83bc0f26b1ae6c59148ea0be087eead7f5ce",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md",
+      "initialSha256": "89df4c2777bd599f2b6d72599d6e628e813bf2d7507888417bc29912058d0e14",
+      "endingSha256": "89df4c2777bd599f2b6d72599d6e628e813bf2d7507888417bc29912058d0e14",
+      "same": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round166-desktop-theme-window/history-batch.json",
+      "initialSha256": "ef4df7a319131c0faaf06d395d75705091386a4b243fe9899c693f29195de07a",
+      "endingSha256": "ef4df7a319131c0faaf06d395d75705091386a4b243fe9899c693f29195de07a",
+      "same": true
+    }
+  ],
+  "allSourceSame": true,
+  "allSelectedMetadataSame": true,
+  "wholeHistoryEndingRehashed": false,
+  "scope": "Only source pins, six directly selected canonical metadata files and shared batch bytes rehashed; no new whole-history scan or product semantic read."
+}

@@ -1,0 +1,358 @@
+{
+  "atUTC": "2026-10-17T20:43:52.606942+00:00",
+  "role": "New bounded source review; prep163 metadata work supplies no source-review proof",
+  "rootReportedBaselineOnly": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "bytes": 7446,
+      "sha256": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+      "lines": 206,
+      "pinAtUTC": "2026-10-17T20:40:48.887991+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target-before-body",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5,
+          22
+        ],
+        [
+          24,
+          27
+        ],
+        [
+          40,
+          69
+        ],
+        [
+          108,
+          146
+        ],
+        [
+          178,
+          184
+        ],
+        [
+          188,
+          206
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          206
+        ]
+      ],
+      "additionalNavigationSnippetLineRanges": [],
+      "scope": "Ordinary baseline/request set, event serialization and byte/event/global budget, cloned overlay/snapshot, sequence cursor and in-memory finish/forget/clear state only. OutputCoverage and persistence/proof/identity calls in displayed adjacent code are navigation boundaries, not full mechanism certification. OldR21 zero-baseline journal-anchor clipping remains excluded; no new unique/first coverage claim.",
+      "category": "product-selected",
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "semanticLineCount": 117,
+      "bodyDisplayedLineCount": 206,
+      "displayedLineRanges": [
+        [
+          1,
+          206
+        ]
+      ],
+      "displayedLineCount": 206
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "bytes": 66162,
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "lines": 1690,
+      "beforeBodyAndLineNavigation": true,
+      "atUTC": "2026-10-17T20:41:50.075968+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          220,
+          228
+        ],
+        [
+          239,
+          240
+        ],
+        [
+          257,
+          274
+        ],
+        [
+          382,
+          415
+        ],
+        [
+          493,
+          499
+        ],
+        [
+          975,
+          985
+        ],
+        [
+          1166,
+          1173
+        ],
+        [
+          1220,
+          1229
+        ],
+        [
+          1235,
+          1246
+        ],
+        [
+          1256,
+          1263
+        ],
+        [
+          1473,
+          1485
+        ],
+        [
+          1506,
+          1517
+        ],
+        [
+          1559,
+          1605
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          218,
+          276
+        ],
+        [
+          378,
+          421
+        ],
+        [
+          480,
+          507
+        ],
+        [
+          965,
+          996
+        ],
+        [
+          1158,
+          1185
+        ],
+        [
+          1202,
+          1277
+        ],
+        [
+          1466,
+          1616
+        ]
+      ],
+      "additionalNavigationSnippetLineRanges": [
+        [
+          40,
+          40
+        ],
+        [
+          317,
+          317
+        ],
+        [
+          699,
+          699
+        ],
+        [
+          1330,
+          1330
+        ],
+        [
+          1346,
+          1346
+        ]
+      ],
+      "scope": "Actual ordinary worker-stream event projection -> publish/append -> outgoing cursor, accepted run baseline/begin/running fields, worker result/finish, agent/query local snapshot JSON. Authority/lease/enforcement, native bridge execution, output journal/store/file mechanics and cloud or account behavior shown adjacent are not certified. Prior R21 response-window overlap retained; source reading is not claimed unique.",
+      "category": "product-selected",
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "semanticLineCount": 191,
+      "bodyDisplayedLineCount": 418,
+      "displayedLineRanges": [
+        [
+          40,
+          40
+        ],
+        [
+          218,
+          276
+        ],
+        [
+          317,
+          317
+        ],
+        [
+          378,
+          421
+        ],
+        [
+          480,
+          507
+        ],
+        [
+          699,
+          699
+        ],
+        [
+          965,
+          996
+        ],
+        [
+          1158,
+          1185
+        ],
+        [
+          1202,
+          1277
+        ],
+        [
+          1330,
+          1330
+        ],
+        [
+          1346,
+          1346
+        ],
+        [
+          1466,
+          1616
+        ]
+      ],
+      "displayedLineCount": 423
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.test.ts",
+      "bytes": 5239,
+      "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd",
+      "lines": 109,
+      "beforeBodyAndLineNavigation": true,
+      "atUTC": "2026-10-17T20:41:50.077900+00:00",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          109
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          109
+        ]
+      ],
+      "additionalNavigationSnippetLineRanges": [],
+      "scope": "Full existing7 unit-test declarations for normal prefix/overlay/cursor, overlapping request lifetime, missing session, bounds, clear, total budget and ownership. Source text only, never imported or executed; declared asserts are not observed results.",
+      "category": "test-declaration",
+      "semanticFull": true,
+      "newUniqueCoverageClaim": false,
+      "semanticLineCount": 109,
+      "bodyDisplayedLineCount": 109,
+      "displayedLineRanges": [
+        [
+          1,
+          109
+        ]
+      ],
+      "displayedLineCount": 109
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/server/src/session-http-responses.ts",
+      "bytes": 1369,
+      "sha256": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+      "lines": 39,
+      "pinAtUTC": "2026-10-17T20:40:48.890881+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target-before-body",
+      "scope": "Old same-SHA full gate; no product body read this task"
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinAtUTC": "2026-10-17T20:40:48.891768+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction-hash-reuse"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinAtUTC": "2026-10-17T20:40:48.893119+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction-hash-reuse"
+    }
+  ],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "bytes": 12586,
+      "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.772863+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "bytes": 10648,
+      "sha256": "c2a286f5026778105341baa47927449137e5149fcc86c31d21f037abf8c639ea",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.774890+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/README.md",
+      "bytes": 72500,
+      "sha256": "0b3bbba150474889a536dda42e62e73490bcc7f4adbcdcf77a9be49ab940d9a7",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.775752+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/auth-round7.md",
+      "bytes": 13793,
+      "sha256": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.776468+00:00"
+    }
+  ],
+  "history": {
+    "path": "history-navigation.json",
+    "scope": "Target path/currentSHA/filename only; recursive JSON values, MD lines, archives included, formal62+ excluded",
+    "documents": 6484,
+    "machineNavigationNotSemanticHistoryRead": true,
+    "actualWindows": "actual-history-windows.json"
+  },
+  "totals": {
+    "semanticFiles": 3,
+    "fullProductFiles": 0,
+    "selectedProductFiles": 2,
+    "fullTestDeclarationFiles": 1,
+    "productSemanticLines": 308,
+    "testDeclarationLines": 109,
+    "semanticLines": 417,
+    "bodyDisplayedLines": 733,
+    "bodyPlusAdditionalNavigationDisplayedLines": 738,
+    "hashOnlyProductFiles": 1,
+    "hashOnlyInstructions": 2,
+    "declaredExistingTests": 7,
+    "testsExecuted": 0,
+    "newUniqueCoverageClaim": false
+  },
+  "ending": "ending.json",
+  "sourceReadBoundary": "No authority, real native worker/file/journal/store/permission enforcement certification; imports/helper/functions/fixtures/tests/browser/network/Git never executed."
+}

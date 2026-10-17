@@ -1,0 +1,677 @@
+{
+  "atUTC": "2026-10-17T20:41:05.313475+00:00",
+  "counts": {
+    "packages/server/src/hub/run-replay.ts": 46,
+    "packages/server/src/session-http-responses.ts": 63
+  },
+  "capPerTarget": 80,
+  "retainedCounts": {
+    "packages/server/src/hub/run-replay.ts": 46,
+    "packages/server/src/session-http-responses.ts": 63
+  },
+  "hits": {
+    "packages/server/src/hub/run-replay.ts": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1974",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/152",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/3453/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/3453/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/root-history.json",
+        "pointer": "/hits/active-ref-draft/4/context",
+        "value": "D 会执行第二次。当前丢 ACK 路径恢复普通草稿并重新生成 UUID，缺少不确定回执状态与历史核对。建议沿用 Hub 控制器的意图保留思路，先确认 durable receipt，再允许重发。\n\nR04、R05 分别涉及迟到的异步展开和组件内附件状态。发起操作时应冻结会话 ID；回写时检查该 ID，不能使用完成时的 activeBucketRef。附件、引用和文本草稿应采用一致的会话归属。R16 同时需要 viewer 定向回包及导航请求关联，避免跨页签和迟到回复改变目标。\n\n### 控件必须对应实际运行时\n\nR02 和 R08 的共因是 CLI 房间仍使用原生会话的权限和停止回调。R02 限定实际以 bypass 启动的受信任工作区；非受信任 cwd 的 bypass 请求会被服务端降为 default。界面需要显示房间实际启动模式，并用显式房间协议取消或重启 CLI。R07 则需要记录每个运行的 runtime 来源，Core worker 退出只能清理 Core 活动。R15 的后台队列推进应独立于当前显示的会话。\n\n### 新会话首次运行中的恢复不能裁掉日志基点\n\nR21 的真实 native Hub + Core + 本地模拟模型响应中，`outputJournal.status=ok`、`legacyBaseComplete=true`，但 `transcript=[]`。服务端 [run-replay.ts](../../packages/server/src/hub/run-replay.ts) 第 192 行按开始运行前的 `baselineEvents=0` 裁掉随后生成的 `session_meta`；[headless-server.ts](",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13929/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13929/directSourcePathsInObject/0",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13930/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13930/sourceHashFields/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13930/directSourcePathsInObject/0",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/3775/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/3775/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/3775/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/3775/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/3433",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "pointer": "/files/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "pointer": "/files/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "pointer": "/files/3776/oldSha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "pointer": "/files/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "pointer": "/files/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "pointer": "/files/3776/oldSha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "pointer": "/files/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "pointer": "/files/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "pointer": "/files/3776/oldSha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "pointer": "/rows/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "pointer": "/rows/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "pointer": "/rows/3776/original55Sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "pointer": "/rows/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "pointer": "/rows/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "pointer": "/files/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "pointer": "/files/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "pointer": "/files/3776/oldSha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/baselineFiles/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/baselineFiles/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/mainFiles/3776/path",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/mainFiles/3776/sha256",
+        "value": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "pointer": "/filenames/273",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-call-cap-dedup.json",
+        "pointer": "/hits/22/text",
+        "value": "**成立，且不是只有日志样本的一次性断言。** `headless-server.ts:1062–1067` 对尚未落盘的新会话取 baseline=0，`:1134` 交给 HubRunReplay。journal 分支 `:1460–1478` 已读到 complete legacy base，仍把同一 transcript 传给 `runReplay.snapshot`。`hub/run-replay.ts:192` 在 RAM log 未 truncated 时按旧 baseline 截断，故首个 worker 后来创建的 session_meta anchor 被裁掉。`finish` 的 `:137–145` 最后一个请求结束后释放 RAM log，所以结束后重开是合理恢复路径。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "pointer": "/hits/155/matches/0/text",
+        "value": "R21 的真实 native Hub + Core + 本地模拟模型响应中，`outputJournal.status=ok`、`legacyBaseComplete=true`，但 `transcript=[]`。服务端 [run-replay.ts](../../packages/server/src/hub/run-replay.ts) 第 192 行按开始运行前的 `baselineEvents=0` 裁掉随后生成的 `session_meta`；[headless-server.ts](../../packages/server/src/serve/headless-server.ts) 第 1460–1478 行将该结果用于日志恢复。真实 [chat.ts](../../packages/web/app/chat.ts) 第 102–107 行因此抛出 `Output recovery has no complete legacy base`。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "pointer": "/hits/190/matches/0/text",
+        "value": "**成立，且不是只有日志样本的一次性断言。** `headless-server.ts:1062–1067` 对尚未落盘的新会话取 baseline=0，`:1134` 交给 HubRunReplay。journal 分支 `:1460–1478` 已读到 complete legacy base，仍把同一 transcript 传给 `runReplay.snapshot`。`hub/run-replay.ts:192` 在 RAM log 未 truncated 时按旧 baseline 截断，故首个 worker 后来创建的 session_meta anchor 被裁掉。`finish` 的 `:137–145` 最后一个请求结束后释放 RAM log，所以结束后重开是合理恢复路径。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/README.md",
+        "pointer": "/line/138",
+        "value": "R21 的真实 native Hub + Core + 本地模拟模型响应中，`outputJournal.status=ok`、`legacyBaseComplete=true`，但 `transcript=[]`。服务端 [run-replay.ts](../../packages/server/src/hub/run-replay.ts) 第 192 行按开始运行前的 `baselineEvents=0` 裁掉随后生成的 `session_meta`；[headless-server.ts](../../packages/server/src/serve/headless-server.ts) 第 1460–1478 行将该结果用于日志恢复。真实 [chat.ts](../../packages/web/app/chat.ts) 第 102–107 行因此抛出 `Output recovery has no complete legacy base`。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/quality-audit.md",
+        "pointer": "/line/35",
+        "value": "**成立，且不是只有日志样本的一次性断言。** `headless-server.ts:1062–1067` 对尚未落盘的新会话取 baseline=0，`:1134` 交给 HubRunReplay。journal 分支 `:1460–1478` 已读到 complete legacy base，仍把同一 transcript 传给 `runReplay.snapshot`。`hub/run-replay.ts:192` 在 RAM log 未 truncated 时按旧 baseline 截断，故首个 worker 后来创建的 session_meta anchor 被裁掉。`finish` 的 `:137–145` 最后一个请求结束后释放 RAM log，所以结束后重开是合理恢复路径。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "pointer": "/module_inventory/84740d56/paths/16",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "pointer": "/module_inventory/a66f4ef2/paths/16",
+        "value": "packages/server/src/hub/run-replay.ts",
+        "matchedCurrentSHA": false
+      }
+    ],
+    "packages/server/src/session-http-responses.ts": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2101",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "pointer": "/files/0/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "pointer": "/files/0/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/68/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/68/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/68/currentSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/68/mainSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/workerSourceChecks/0/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/workerSourceChecks/0/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/134",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/893/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/893/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/893/claims/0/sourceSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/172/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/172/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/3683/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/3683/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14688/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14688/directSourcePathsInObject/0",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14689/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14689/sourceHashFields/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14689/sourceHashFields/currentSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14689/sourceHashFields/mainSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14689/directSourcePathsInObject/0",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14690/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14690/sourceHashFields/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14690/directSourcePathsInObject/0",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14691/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14691/sourceHashFields/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/14691/directSourcePathsInObject/0",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/4005/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/4005/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/4005/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/4005/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/3653",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "pointer": "/files/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "pointer": "/files/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "pointer": "/files/4006/oldSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "pointer": "/files/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "pointer": "/files/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "pointer": "/files/4006/oldSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "pointer": "/files/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "pointer": "/files/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "pointer": "/files/4006/oldSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "pointer": "/rows/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "pointer": "/rows/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "pointer": "/rows/4006/original55Sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "pointer": "/rows/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "pointer": "/rows/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "pointer": "/files/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "pointer": "/files/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "pointer": "/files/4006/oldSha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/baselineFiles/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/baselineFiles/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/mainFiles/4006/path",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "pointer": "/mainFiles/4006/sha256",
+        "value": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+        "matchedCurrentSHA": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "pointer": "/filenames/169",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/auth-round7.md",
+        "pointer": "/line/73",
+        "value": "- [session-http-responses.ts:7](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/session-http-responses.ts:7) cancelOwner destroy 实际 response；17–32 行跟踪 finish/close，覆盖 handler 返回后仍继续的响应。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-session-continuation-round26/hub-export-static.md",
+        "pointer": "/line/34",
+        "value": "HTTP 失败统一返回实际错误状态和 JSON（`:341–357`）；export admitted 后所有退出路径均在 finally 释放 activeExports（`:358–359`）。只读 export 分支没有 saveState/rename/PATCH/onChanged 调用。response 生命周期由 `packages/server/src/session-http-responses.ts:7–32` 追踪至 finish/close，并可按认证 session 销毁；未从 handler return 时刻推断下载已完整完成。",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "pointer": "/module_inventory/84740d56/paths/117",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "pointer": "/module_inventory/a66f4ef2/paths/118",
+        "value": "packages/server/src/session-http-responses.ts",
+        "matchedCurrentSHA": false
+      }
+    ]
+  },
+  "errors": [],
+  "inventoryDocuments": 6484,
+  "scalarValuesVisited": 4876274,
+  "MDLineAndJSONValueNavigationOnly": true,
+  "sourceSemanticsRead": 0
+}

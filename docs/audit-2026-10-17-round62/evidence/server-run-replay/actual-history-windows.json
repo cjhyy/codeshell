@@ -1,0 +1,62 @@
+{
+  "machineCountsOnly": {
+    "packages/server/src/hub/run-replay.ts": 46,
+    "packages/server/src/session-http-responses.ts": 63
+  },
+  "cap": 80,
+  "allTargetMatchesRetained": true,
+  "actualHumanReadCanonicalWindows": [
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/0"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "lines": [
+        28,
+        42
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/README.md",
+      "lines": [
+        132,
+        143
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/auth-round7.md",
+      "lines": [
+        67,
+        77
+      ]
+    }
+  ],
+  "navigationObjects": [
+    {
+      "target": "packages/server/src/hub/run-replay.ts",
+      "retainedHitIndex": 42,
+      "path": "docs/review-2026-10-12/README.md",
+      "pointer": "/line/138",
+      "value": "R21 的真实 native Hub + Core + 本地模拟模型响应中，`outputJournal.status=ok`、`legacyBaseComplete=true`，但 `transcript=[]`。服务端 [run-replay.ts](../../packages/server/src/hub/run-replay.ts) 第 192 行按开始运行前的 `baselineEvents=0` 裁掉随后生成的 `session_meta`；[headless-server.ts](../../packages/server/src/serve/headless-server.ts) 第 1460–1478 行将该结果用于日志恢复。真实 [chat.ts](../../packages/web/app/chat.ts) 第 102–107 行因此抛出 `Output recovery has no complete legacy base`。",
+      "matchedCurrentSHA": false
+    },
+    {
+      "target": "packages/server/src/hub/run-replay.ts",
+      "retainedHitIndex": 43,
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "pointer": "/line/35",
+      "value": "**成立，且不是只有日志样本的一次性断言。** `headless-server.ts:1062–1067` 对尚未落盘的新会话取 baseline=0，`:1134` 交给 HubRunReplay。journal 分支 `:1460–1478` 已读到 complete legacy base，仍把同一 transcript 传给 `runReplay.snapshot`。`hub/run-replay.ts:192` 在 RAM log 未 truncated 时按旧 baseline 截断，故首个 worker 后来创建的 session_meta anchor 被裁掉。`finish` 的 `:137–145` 最后一个请求结束后释放 RAM log，所以结束后重开是合理恢复路径。",
+      "matchedCurrentSHA": false
+    },
+    {
+      "target": "packages/server/src/session-http-responses.ts",
+      "retainedHitIndex": 1,
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/0/path",
+      "value": "packages/server/src/session-http-responses.ts",
+      "matchedCurrentSHA": false
+    }
+  ],
+  "noAllHistorySemanticClaim": true
+}

@@ -1,0 +1,15 @@
+16:export interface CollectionReadOptions {
+22:export function collectionLocalDirectoryIdentity(entry: LocalCollectionEntry): string {
+29:  return JSON.stringify([parent, info.dev.toString(), info.ino.toString()]);
+108:    return {
+110:      sizeBytes: length,
+111:      sha256: createHash("sha256").update(content).digest("hex"),
+122:export function captureCollectionLocalFile(
+124:  id: string,
+140:    sizeBytes: Number(info.size),
+143:  return CollectionLocalEntrySchema.parse({
+145:    name: label,
+148:    checkedAt: new Date().toISOString(),
+154:export function readCollectionLocalFile(
+165:    current.sha256 !== expected.sha256
+170:  return current.bytes;

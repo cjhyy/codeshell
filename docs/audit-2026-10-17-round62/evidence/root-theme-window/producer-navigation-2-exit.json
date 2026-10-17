@@ -1,0 +1,1 @@
+{"args": ["rg", "-n", "THEME_ASSET_DIR|InstalledTheme|canonical|normalize|assetFilename", "packages/core/src/themes/installer.ts"], "exitCode": 0}

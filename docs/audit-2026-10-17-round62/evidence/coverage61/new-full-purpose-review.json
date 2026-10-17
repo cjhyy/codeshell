@@ -1,0 +1,277 @@
+{
+  "meaning": "Full-text metadata coverage within each original purpose; no full-behavior or runtime certification",
+  "count": 5,
+  "files": [
+    {
+      "id": "61-002",
+      "path": "packages/core/src/capability-control/service.ts",
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "bytes": 7690,
+      "lines": 197,
+      "coverage": "full",
+      "semanticLineRanges": [
+        [
+          1,
+          197
+        ]
+      ],
+      "semanticLineCount": 197,
+      "purpose": "Full control-layer source: projection composition and injected settings write routing only. No real loader/registry/Host/settings operation or live activation guarantee.",
+      "testDeclarationOnly": false,
+      "newUniqueSourceReadClaim": false,
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "metadataSHA256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+        "jsonPointer": "/files/1"
+      },
+      "originalObject": {
+        "path": "packages/core/src/capability-control/service.ts",
+        "bytes": 7690,
+        "lines": 197,
+        "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+        "pinAt": "2026-10-17T20:08:40.404475+00:00",
+        "coverage": "full",
+        "pinArtifact": "initial-pins.json",
+        "sourceKind": "product",
+        "selectedLineRanges": [
+          [
+            1,
+            197
+          ]
+        ],
+        "semanticLineCount": 197,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            197
+          ]
+        ],
+        "bodyDisplayedLineCount": 197,
+        "displayArtifacts": [
+          "target-source-display.json"
+        ],
+        "scope": "Full control-layer source: projection composition and injected settings write routing only. No real loader/registry/Host/settings operation or live activation guarantee.",
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+        "endingUnchanged": true
+      },
+      "preserveSourceLimitationsVerbatim": true,
+      "explicitSemanticRangeOutsideBodyButWithinNavigationDisplay": false,
+      "noNavigationOnlyRangePromoted": true
+    },
+    {
+      "id": "61-003",
+      "path": "packages/core/src/capability-control/project.ts",
+      "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "bytes": 5930,
+      "lines": 172,
+      "coverage": "full",
+      "semanticLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "semanticLineCount": 172,
+      "purpose": "Full pure descriptor projection and metadata control fields. Not actual runtime registry/permission behavior.",
+      "testDeclarationOnly": false,
+      "newUniqueSourceReadClaim": false,
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "metadataSHA256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+        "jsonPointer": "/files/2"
+      },
+      "originalObject": {
+        "path": "packages/core/src/capability-control/project.ts",
+        "bytes": 5930,
+        "lines": 172,
+        "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+        "pinAt": "2026-10-17T20:08:40.404769+00:00",
+        "coverage": "full",
+        "pinArtifact": "initial-pins.json",
+        "sourceKind": "product",
+        "selectedLineRanges": [
+          [
+            1,
+            172
+          ]
+        ],
+        "semanticLineCount": 172,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            172
+          ]
+        ],
+        "bodyDisplayedLineCount": 172,
+        "displayArtifacts": [
+          "target-source-display.json"
+        ],
+        "scope": "Full pure descriptor projection and metadata control fields. Not actual runtime registry/permission behavior.",
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+        "endingUnchanged": true
+      },
+      "preserveSourceLimitationsVerbatim": true,
+      "explicitSemanticRangeOutsideBodyButWithinNavigationDisplay": false,
+      "noNavigationOnlyRangePromoted": true
+    },
+    {
+      "id": "61-004",
+      "path": "packages/core/src/capability-control/types.ts",
+      "sha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+      "bytes": 2864,
+      "lines": 76,
+      "coverage": "full",
+      "semanticLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "semanticLineCount": 76,
+      "purpose": "Full static descriptor/write-scope/interface contracts and ordinary error type.",
+      "testDeclarationOnly": false,
+      "newUniqueSourceReadClaim": false,
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "metadataSHA256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+        "jsonPointer": "/files/3"
+      },
+      "originalObject": {
+        "path": "packages/core/src/capability-control/types.ts",
+        "bytes": 2864,
+        "lines": 76,
+        "sha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+        "pinAt": "2026-10-17T20:10:53.935787+00:00",
+        "coverage": "full",
+        "pinArtifact": "caller-initial-pins.json",
+        "sourceKind": "product",
+        "selectedLineRanges": [
+          [
+            1,
+            76
+          ]
+        ],
+        "semanticLineCount": 76,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            76
+          ]
+        ],
+        "bodyDisplayedLineCount": 76,
+        "displayArtifacts": [
+          "caller-storage-display.json"
+        ],
+        "scope": "Full static descriptor/write-scope/interface contracts and ordinary error type.",
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+        "endingUnchanged": true
+      },
+      "preserveSourceLimitationsVerbatim": true,
+      "explicitSemanticRangeOutsideBodyButWithinNavigationDisplay": false,
+      "noNavigationOnlyRangePromoted": true
+    },
+    {
+      "id": "61-015",
+      "path": "packages/core/src/composition/lifetime.ts",
+      "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "bytes": 2868,
+      "lines": 95,
+      "coverage": "full",
+      "semanticLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "semanticLineCount": 95,
+      "purpose": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "testDeclarationOnly": false,
+      "newUniqueSourceReadClaim": false,
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+        "metadataSHA256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+        "jsonPointer": "/files/0"
+      },
+      "originalObject": {
+        "path": "packages/core/src/composition/lifetime.ts",
+        "bytes": 2868,
+        "lines": 95,
+        "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            95
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            95
+          ]
+        ],
+        "semanticLines": 95,
+        "bodyDisplayedLines": 95,
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+        "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+      },
+      "preserveSourceLimitationsVerbatim": true,
+      "explicitSemanticRangeOutsideBodyButWithinNavigationDisplay": false,
+      "noNavigationOnlyRangePromoted": true
+    },
+    {
+      "id": "61-016",
+      "path": "packages/core/src/composition/activation.ts",
+      "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "bytes": 4413,
+      "lines": 146,
+      "coverage": "full",
+      "semanticLineRanges": [
+        [
+          1,
+          146
+        ]
+      ],
+      "semanticLineCount": 146,
+      "purpose": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "testDeclarationOnly": false,
+      "newUniqueSourceReadClaim": false,
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+        "metadataSHA256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+        "jsonPointer": "/files/1"
+      },
+      "originalObject": {
+        "path": "packages/core/src/composition/activation.ts",
+        "bytes": 4413,
+        "lines": 146,
+        "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            146
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            146
+          ]
+        ],
+        "semanticLines": 146,
+        "bodyDisplayedLines": 146,
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+        "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+      },
+      "preserveSourceLimitationsVerbatim": true,
+      "explicitSemanticRangeOutsideBodyButWithinNavigationDisplay": false,
+      "noNavigationOnlyRangePromoted": true
+    }
+  ]
+}

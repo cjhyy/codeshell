@@ -1,0 +1,42 @@
+[
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+    "range": [
+      55,
+      105
+    ],
+    "text": " * Effective key for an instance: its own `apiKey`, or — when empty and\n * `apiKeyRef` is set — the key of the referenced instance in the same list\n * (reuse-key feature). Returns undefined when neither yields a key.\n */\nexport function effectiveApiKey(inst: GenInstance, list: GenInstance[]): string | undefined {\n  if (inst.apiKey) return inst.apiKey;\n  if (inst.apiKeyRef) {\n    const ref = list.find((p) => p.id === inst.apiKeyRef);\n    if (ref?.apiKey) return ref.apiKey;\n  }\n  return undefined;\n}\n\n/** Loose shapes read off raw settings for the unified store. */\ninterface GenInstanceSource {\n  tag?: string;\n  [k: string]: unknown;\n}\ninterface CredentialSource {\n  id?: string;\n  [k: string]: unknown;\n}\n\n/**\n * Resolve a ResolvedImageProvider from a candidate list whose entries already\n * carry a direct `apiKey` (the unified store dereferences credentials upfront).\n * `prefer` selects by id (explicit → no silent fallback); else `def` then the\n * first usable. Shared by the unified-store path.\n */\nfunction resolveFromGenList(\n  list: GenInstance[],\n  prefer: string | undefined,\n  def: string | undefined,\n): ResolvedImageProvider | null {\n  const usable = (p: GenInstance): boolean => !!p.apiKey && getImageProvider(p.kind) !== null;\n  const credsOf = (p: GenInstance): ImageProviderCreds => ({\n    baseUrl: p.baseUrl,\n    apiKey: p.apiKey!,\n  });\n  if (prefer) {\n    const chosen = list.find((p) => p.id === prefer);\n    if (chosen && usable(chosen))\n      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };\n    return null;\n  }\n  const preferred = def ? list.find((p) => p.id === def) : undefined;\n  const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);\n  return chosen\n    ? { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel }\n    : null;\n}\n",
+    "selectedTextSha256": "e4e56d3d9ddaef5060677e7e523358f5d2880d158f8177b71d284c7bfac41e7c",
+    "bytes": 1871
+  },
+  {
+    "path": "packages/core/src/model-catalog/types.ts",
+    "range": [
+      113,
+      118
+    ],
+    "text": "   * knows what a configured model accepts (different models differ).\n   */\n  paramsDoc: longText.optional(),\n});\n\nexport type CatalogEntry = z.infer<typeof catalogEntrySchema>;\n",
+    "selectedTextSha256": "bd90c66fd77a6b1fd3bbf0c56cc4686593c493dc22437f61a560a34f6bf85638",
+    "bytes": 178
+  },
+  {
+    "path": "packages/core/src/model-catalog/index.ts",
+    "range": [
+      107,
+      113
+    ],
+    "text": "      (e) => e.adapterKind === kindFallback && (!tagFallback || e.tag === tagFallback),\n    );\n  }\n  return undefined;\n}\n\nexport type CatalogEntryOrigin = \"builtin\" | \"user\" | \"user-override-of-builtin\";\n",
+    "selectedTextSha256": "48fd6c49b2451bae3845d23d326a220fcc51da6ddbf6be3012421f910430635b",
+    "bytes": 204
+  },
+  {
+    "path": "packages/core/src/model-catalog/upsert.test.ts",
+    "range": [
+      77,
+      80
+    ],
+    "text": "      { value: \"model-b\", label: \"B\" },\n    ]);\n  });\n});\n",
+    "selectedTextSha256": "9bf3e69d95125fc93ea1b27766dd784a3a6e4614d3a61ea78ea886cbf626e42f",
+    "bytes": 58
+  }
+]

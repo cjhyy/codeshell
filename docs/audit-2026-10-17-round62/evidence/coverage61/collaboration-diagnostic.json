@@ -1,0 +1,7 @@
+{
+  "kind": "Coordination state race; not product or metadata processing failure",
+  "observed": "An agent inventory showed snapshot completed on previous161. A narrow metadata peer request was sent.",
+  "correction": "Snapshot and Root confirmed new165 task had already been assigned. Snapshot declined163 and continued165.",
+  "resolution": "No peer163 output is required or claimed. This package uses its own independent adapter and separate metadata checker only. Root will perform its own later checks.",
+  "productRuns": 0
+}

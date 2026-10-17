@@ -1,0 +1,21 @@
+packages/core/src/model-catalog/save-entry.ts:25:import { upsertCatalogEntry } from "./upsert.js";
+packages/core/src/model-catalog/save-entry.ts:65:      const parsed = userCatalogFileSchema.safeParse(JSON.parse(raw));
+packages/core/src/model-catalog/save-entry.ts:118:export function saveCatalogEntry(
+packages/core/src/model-catalog/save-entry.ts:123:  const parsed = catalogEntrySchema.safeParse(entry);
+packages/core/src/model-catalog/save-entry.ts:138:    writeCatalogAtomic(opts.path, upsertCatalogEntry(existing?.entries ?? [], valid));
+packages/core/src/model-catalog/save-entry.ts:161:export function deleteUserCatalogEntry(
+packages/core/src/model-catalog/types.ts:66:export const modelPresetSchema = z.object({
+packages/core/src/model-catalog/types.ts:76:export type ModelPreset = z.infer<typeof modelPresetSchema>;
+packages/core/src/model-catalog/types.ts:102:   * "merge" treats modelPresets as per-model additions/overrides keyed by
+packages/core/src/model-catalog/types.ts:105:  modelPresetsMode: z.enum(["replace", "merge"]).optional(),
+packages/core/src/model-catalog/types.ts:106:  modelPresets: z.array(modelPresetSchema).max(512).optional(),
+packages/core/src/model-catalog/index.ts:26:export function userCatalogPath(): string {
+packages/core/src/model-catalog/index.ts:34:export function loadUserCatalog(): CatalogEntry[] {
+packages/core/src/model-catalog/index.ts:48:    const result = userCatalogFileSchema.safeParse(parsed);
+packages/core/src/model-catalog/index.ts:68:export function getMergedCatalog(): CatalogEntry[] {
+packages/core/src/model-catalog/index.ts:73:    if (!base || userEntry.modelPresetsMode !== "merge") {
+packages/core/src/model-catalog/index.ts:78:    const presets = new Map((base.modelPresets ?? []).map((preset) => [preset.value, preset]));
+packages/core/src/model-catalog/index.ts:79:    for (const preset of userEntry.modelPresets ?? []) presets.set(preset.value, preset);
+packages/core/src/model-catalog/index.ts:83:      modelPresets: [...presets.values()],
+packages/core/src/model-catalog/index.ts:95:export function findCatalogEntry(
+packages/core/src/model-catalog/index.ts:120:export function catalogEntryOrigins(): Record<string, CatalogEntryOrigin> {

@@ -1,0 +1,172 @@
+{
+  "atUTC": "2026-10-17T20:39:37.247565+00:00",
+  "scope": "Own metadata freeze checks, not product verification",
+  "files": [],
+  "links": [
+    {
+      "document": "report.md",
+      "target": "summary.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "unified-current-index.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "transitions.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "canonical-row-review.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "semantic-claims.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "excluded-rows.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "retained-status-provenance.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "new-full-purpose-review.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "deferred-rows.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "display-diagnostic.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "reader-correction.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "reader-correction-first-artifacts.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "migration-first.stdout",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "migration-first.exit.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "migration-second.stdout",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "migration-second.exit.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "independent-checks.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "independent-check.py",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "collaboration-diagnostic.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "source-manifest.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "initial-metadata-pins.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "ending-checks.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "navigation-first.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "freeze-first-tool-result.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "validation.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": false
+    },
+    {
+      "document": "report.md",
+      "target": "artifact-receipt.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true,
+      "selfExcludedReceiptCheckedAfterCreation": true
+    }
+  ],
+  "linkCount": 26,
+  "firstMethodSHAMatchesOriginalExit": true,
+  "activeMethodSHAMatchesSecondExit": true,
+  "countsMatchIndependentMethod": true,
+  "sourceEndHashRows4643Same": true,
+  "metadataEndPins10Same": true,
+  "productSemanticReads": 0,
+  "Git": 0,
+  "noExternalPeerClaim": true
+}

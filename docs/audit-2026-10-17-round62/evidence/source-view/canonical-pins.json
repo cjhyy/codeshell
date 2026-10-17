@@ -1,0 +1,23 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round15/evidence/docinput-source-manifest.json",
+    "bytes": 3547,
+    "sha256": "9dcfd98366643d5457896822572b8421d9cb3fc0322a65f808d39dc7f1299dda",
+    "pinnedAtUTC": "2026-10-17T20:36:29.672762+00:00",
+    "timing": "before own bounded canonical metadata read"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+    "bytes": 6963,
+    "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+    "pinnedAtUTC": "2026-10-17T20:36:29.673867+00:00",
+    "timing": "before own bounded canonical metadata read"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "bytes": 12061422,
+    "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+    "pinnedAtUTC": "2026-10-17T20:36:29.681979+00:00",
+    "timing": "before own bounded canonical metadata read"
+  }
+]

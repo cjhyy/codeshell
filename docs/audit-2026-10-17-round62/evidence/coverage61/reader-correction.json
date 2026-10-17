@@ -1,0 +1,8 @@
+{
+  "firstDiagnostic": "migrate.first.py deferred mcp-dot-readback-review /files/10 because explicit selected17 was outside bodyDisplayed91-147.",
+  "originalEvidence": "The same canonical object explicitly includes semantic selected17 and actual additionalNavigation/displayed line17. Its SHA, EOF and semantic counts match; body+navigation display supports the explicit semantic declaration.",
+  "correction": "Require explicit semantic full/selected ranges to be within actual body+navigation display union. Navigation-only lines still never create semantic ranges. Full still requires an explicit full record covering 1-EOF.",
+  "classification": "Adapter containment false positive, withdrawn; not an error in original161 /files/10. First method, outputs, summary, deferred rows and transitions retained.",
+  "otherDiagnosticUnchanged": "Original161 /files/7 body/display40-124 exceeds EOF120. Entire row deferred; semantic51-80/114-120 independently valid and preserved diagnostically. Other valid canonical records support the same path without repairing this original row.",
+  "productExecutions": 0
+}

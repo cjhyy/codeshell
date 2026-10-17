@@ -1,0 +1,278 @@
+
+packages/desktop/src/main/theme-pack-conversion.ts
+1: import type { InstalledTheme } from "@cjhyy/code-shell-core";
+2: import type { InstalledThemePack } from "../shared/theme-packs.js";
+3: import { themeAssetUrl } from "./theme-asset-url.js";
+4: 
+5: /** Convert the two image modes while retaining every appearance control. */
+6: function withAssetUrls<T extends { light?: string; dark?: string }>(
+7:   appearance: T,
+8:   asset: (relativePath: string) => string,
+9: ): T {
+10:   return {
+11:     ...appearance,
+12:     ...(appearance.light ? { light: asset(appearance.light) } : {}),
+13:     ...(appearance.dark ? { dark: asset(appearance.dark) } : {}),
+14:   };
+15: }
+16: 
+17: /** Renderer pack with canonical local asset paths replaced by cstheme:// URLs. */
+18: export function installedThemeToPack(theme: InstalledTheme): InstalledThemePack {
+19:   const asset = (rel: string): string => themeAssetUrl(theme.id, rel);
+20:   const pet: NonNullable<InstalledThemePack["pet"]> = {};
+21:   if (theme.pet.idle) pet.idle = asset(theme.pet.idle);
+22:   if (theme.pet.running) pet.running = asset(theme.pet.running);
+23:   if (theme.pet.alert) pet.alert = asset(theme.pet.alert);
+24:   if (theme.pet.walk?.length) pet.walk = theme.pet.walk.map(asset);
+25:   const surfaces = theme.surfaces
+26:     ? Object.fromEntries(
+27:         Object.entries(theme.surfaces).flatMap(([name, surface]) =>
+28:           surface ? [[name, withAssetUrls(surface, asset)]] : [],
+29:         ),
+30:       )
+31:     : undefined;
+32:   return {
+33:     id: theme.id,
+34:     name: theme.name,
+35:     swatch: theme.colors.light["--cs-primary"] ?? theme.colors.dark["--cs-primary"] ?? "0 0% 50%",
+36:     colors: theme.colors,
+37:     ...(Object.keys(pet).length ? { pet } : {}),
+38:     ...(theme.wallpaper ? { wallpaper: withAssetUrls(theme.wallpaper, asset) } : {}),
+39:     ...(surfaces ? { surfaces } : {}),
+40:     ...(theme.frame ? { frame: theme.frame } : {}),
+41:     ...(theme.sounds
+42:       ? {
+43:           sounds: Object.fromEntries(
+44:             Object.entries(theme.sounds).flatMap(([event, file]) =>
+45:               file ? [[event, asset(file)]] : [],
+46:             ),
+47:           ),
+48:         }
+49:       : {}),
+50:     ...(theme.music
+51:       ? {
+52:           music: theme.music.map((track) => ({
+53:             title: track.title,
+54:             ...(track.artist ? { artist: track.artist } : {}),
+55:             ...(track.file ? { file: asset(track.file) } : { url: track.url! }),
+56:           })),
+57:         }
+58:       : {}),
+59:     source: "installed",
+60:   };
+61: }
+
+packages/desktop/src/main/theme-asset-url.ts
+1: import { assertSafeThemeName, THEME_ASSET_DIR } from "@cjhyy/code-shell-core";
+2: 
+3: /**
+4:  * Pure cstheme:// url helpers, kept free of any electron import so they are
+5:  * unit-testable. The protocol handler (theme-asset-protocol.ts) builds on these.
+6:  */
+7: export const THEME_ASSET_SCHEME = "cstheme";
+8: 
+9: export interface ParsedThemeUrl {
+10:   id: string;
+11:   relativePath: string;
+12: }
+13: 
+14: /**
+15:  * Parse a cstheme:// asset url into { id, relativePath }, or null when it is not
+16:  * a safe canonical-asset request. Only `<THEME_ASSET_DIR>/<file>` (exactly two
+17:  * segments) under a safe theme id is reachable.
+18:  */
+19: export function parseThemeUrl(source: string): ParsedThemeUrl | null {
+20:   let url: URL;
+21:   try {
+22:     url = new URL(source);
+23:   } catch {
+24:     return null;
+25:   }
+26:   if (
+27:     url.protocol !== `${THEME_ASSET_SCHEME}:` ||
+28:     url.username ||
+29:     url.password ||
+30:     url.search ||
+31:     url.hash ||
+32:     !url.hostname
+33:   ) {
+34:     return null;
+35:   }
+36:   let relativePath: string;
+37:   try {
+38:     relativePath = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+39:   } catch {
+40:     return null;
+41:   }
+42:   const segments = relativePath.split("/");
+43:   if (
+44:     !relativePath ||
+45:     relativePath.includes("\\") ||
+46:     relativePath.includes("\0") ||
+47:     segments[0] !== THEME_ASSET_DIR ||
+48:     segments.length !== 2 ||
+49:     !segments[1] ||
+50:     segments[1] === "." ||
+51:     segments[1] === ".."
+52:   ) {
+53:     return null;
+54:   }
+55:   try {
+56:     assertSafeThemeName(url.hostname);
+57:   } catch {
+58:     return null;
+59:   }
+60:   return { id: url.hostname, relativePath };
+61: }
+62: 
+63: /** Build the cstheme:// url for an installed asset's canonical relative path. */
+64: export function themeAssetUrl(id: string, relativePath: string): string {
+65:   const pathname = relativePath
+66:     .split("/")
+67:     .map((segment) => encodeURIComponent(segment))
+68:     .join("/");
+69:   return `${THEME_ASSET_SCHEME}://${id}/${pathname}`;
+70: }
+
+packages/desktop/src/main/theme-asset-protocol.ts
+1: import { session } from "electron";
+2: import { constants } from "node:fs";
+3: import { open, realpath } from "node:fs/promises";
+4: import { extname, resolve, sep } from "node:path";
+5: import { detectThemeWav, MAX_THEME_MUSIC_BYTES, themeInstallDir } from "@cjhyy/code-shell-core";
+6: import { THEME_ASSET_SCHEME, parseThemeUrl } from "./theme-asset-url.js";
+7: 
+8: /**
+9:  * `cstheme://` serves an installed theme pack's media assets to the renderer.
+10:  * URL shape: cstheme://<id>/.cs-theme-assets/<file>. Only image and WAV MIME types are
+11:  * allowed; the theme id is validated as a safe segment and the resolved file
+12:  * must stay strictly under that theme's install dir (defense against traversal
+13:  * and symlink escape, mirroring the Panel App protocol). Pure url parsing
+14:  * lives in theme-asset-url.ts so it stays electron-free and testable.
+15:  */
+16: export { THEME_ASSET_SCHEME, themeAssetUrl } from "./theme-asset-url.js";
+17: 
+18: const CSP = "default-src 'none'; img-src 'self'; style-src 'none'; script-src 'none'";
+19: 
+20: const ASSET_MIME: Readonly<Record<string, string>> = {
+21:   ".png": "image/png",
+22:   ".jpg": "image/jpeg",
+23:   ".jpeg": "image/jpeg",
+24:   ".webp": "image/webp",
+25:   ".gif": "image/gif",
+26:   ".wav": "audio/wav",
+27: };
+28: 
+29: const handledSessions = new WeakSet<Electron.Session>();
+30: 
+31: function response(
+32:   status: number,
+33:   body?: BodyInit,
+34:   contentType = "text/plain; charset=utf-8",
+35:   headers: Record<string, string> = {},
+36: ) {
+37:   return new Response(body, {
+38:     status,
+39:     headers: {
+40:       "Content-Type": contentType,
+41:       "Content-Security-Policy": CSP,
+42:       "X-Content-Type-Options": "nosniff",
+43:       "Cache-Control": "no-store",
+44:       ...headers,
+45:     },
+46:   });
+47: }
+48: 
+49: function strictlyContained(root: string, candidate: string): boolean {
+50:   const prefix = root.endsWith(sep) ? root : `${root}${sep}`;
+51:   return candidate.startsWith(prefix);
+52: }
+53: 
+54: /** Resolve a single byte range; multipart requests are intentionally rejected. */
+55: function byteRange(value: string, size: number): { start: number; end: number } | null {
+56:   const match = /^bytes=(\d*)-(\d*)$/.exec(value);
+57:   if (!match || (!match[1] && !match[2]) || size === 0) return null;
+58:   if (!match[1]) {
+59:     const suffix = Number(match[2]);
+60:     if (!Number.isSafeInteger(suffix) || suffix <= 0) return null;
+61:     return { start: Math.max(0, size - suffix), end: size - 1 };
+62:   }
+63:   const start = Number(match[1]);
+64:   const end = match[2] ? Number(match[2]) : size - 1;
+65:   if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || end < start) {
+66:     return null;
+67:   }
+68:   return { start, end: Math.min(size - 1, end) };
+69: }
+70: 
+71: export async function handleThemeAssetRequest(request: Request): Promise<Response> {
+72:   if (request.method !== "GET" && request.method !== "HEAD")
+73:     return response(405, "Method Not Allowed");
+74:   const parsed = parseThemeUrl(request.url);
+75:   if (!parsed) return response(400, "Bad Request");
+76:   const mime = ASSET_MIME[extname(parsed.relativePath).toLowerCase()];
+77:   if (!mime) return response(415, "Unsupported Media Type");
+78:   try {
+79:     const root = await realpath(themeInstallDir(parsed.id));
+80:     const target = await realpath(
+81:       resolve(themeInstallDir(parsed.id), ...parsed.relativePath.split("/")),
+82:     );
+83:     if (!strictlyContained(root, target)) {
+84:       return response(403, "Forbidden");
+85:     }
+86:     const handle = await open(
+87:       target,
+88:       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+89:     );
+90:     try {
+91:       const info = await handle.stat();
+92:       const audio = mime === "audio/wav";
+93:       if (!info.isFile()) return response(403, "Forbidden");
+94:       if (info.size > (audio ? MAX_THEME_MUSIC_BYTES : 8 * 1024 * 1024)) {
+95:         return response(413, "Content Too Large");
+96:       }
+97:       const buffer = Buffer.alloc(info.size + 1);
+98:       let total = 0;
+99:       while (total < buffer.length) {
+100:         const { bytesRead } = await handle.read(buffer, total, buffer.length - total, null);
+101:         if (!bytesRead) break;
+102:         total += bytesRead;
+103:       }
+104:       if (total !== info.size) return response(409, "Asset Changed");
+105:       const bytes = buffer.subarray(0, total);
+106:       if (audio) {
+107:         const wav = detectThemeWav(bytes);
+108:         if (!wav || wav.durationSeconds > 600) return response(415, "Unsupported Media Type");
+109:       }
+110:       const headers: Record<string, string> = {
+111:         "Content-Length": String(total),
+112:         ...(audio ? { "Accept-Ranges": "bytes" } : {}),
+113:       };
+114:       if (request.method === "HEAD") return response(200, undefined, mime, headers);
+115:       const rangeHeader = request.headers.get("range");
+116:       if (audio && rangeHeader) {
+117:         const range = byteRange(rangeHeader, total);
+118:         if (!range) {
+119:           return response(416, undefined, mime, { "Content-Range": `bytes */${total}` });
+120:         }
+121:         return response(206, bytes.subarray(range.start, range.end + 1), mime, {
+122:           ...headers,
+123:           "Content-Length": String(range.end - range.start + 1),
+124:           "Content-Range": `bytes ${range.start}-${range.end}/${total}`,
+125:         });
+126:       }
+127:       return response(200, bytes, mime, headers);
+128:     } finally {
+129:       await handle.close();
+130:     }
+131:   } catch {
+132:     return response(404, "Not Found");
+133:   }
+134: }
+135: 
+136: /** Install the handler on a session (default renderer + pet popout share it). */
+137: export function installThemeAssetProtocol(target: Electron.Session = session.defaultSession): void {
+138:   if (handledSessions.has(target)) return;
+139:   target.protocol.handle(THEME_ASSET_SCHEME, handleThemeAssetRequest);
+140:   handledSessions.add(target);
+141: }

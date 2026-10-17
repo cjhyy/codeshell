@@ -1,0 +1,14 @@
+{
+  "productHelperImportFixtureTestExecution": 0,
+  "gitCommands": 0,
+  "actualUserDataOrConfigurationRead": 0,
+  "networkNativeExecution": 0,
+  "firstInventoryExit": 0,
+  "metadataFailure": null,
+  "outputTruncation": false,
+  "initialInventoryExtra": "Filename glob also found adapters/collection.ts and four tests; adapter later selected under its initial before pin, tests stayed unused hash-only with declaration/body/execution0.",
+  "oldS03Lookup": "Original Oct16 findings exact id lookup retained0; normal metadata navigation corrected to original Oct17 Sources MD, with no product retry.",
+  "capLimitation": "Retained first100/110 link-view,100/593 context-summary,100/102 collection,100/132 resolve; no full-history semantic read or exhaustive absent cause conclusion.",
+  "sourceReadingEnded": "2026-10-17T20:40:17.242338+00:00",
+  "validation": "Own stdlib metadata range/hash/receipt only; no source helper, URL/Buffer/JSON/Intl fixture, historical author method, test or runtime executed."
+}

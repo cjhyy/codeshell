@@ -1,0 +1,1 @@
+{"args": ["rg", "-l", "installedThemeToPack|themeAssetUrl|installThemeAssetProtocol", "packages/desktop/src", "-g", "*.ts", "-g", "*.tsx"], "exitCode": 0}

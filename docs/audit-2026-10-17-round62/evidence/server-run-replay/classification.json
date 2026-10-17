@@ -1,0 +1,21 @@
+{
+  "newFormal": [],
+  "newCandidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldCauseExclusions": [
+    {
+      "id": "R21",
+      "cause": "New Hub session baseline0 clips a later durable journal legacy anchor during active run",
+      "disposition": "Known cause, no new ID or current runtime revalidation"
+    }
+  ],
+  "oldFullTargetExclusions": [
+    "packages/server/src/session-http-responses.ts"
+  ],
+  "conclusion": "No additional ordinary mismatch established in selected range. Not a whole-module, HTTP system, authority or all-history no-bug assertion."
+}

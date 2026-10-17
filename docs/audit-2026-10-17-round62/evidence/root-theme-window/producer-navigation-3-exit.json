@@ -1,0 +1,1 @@
+{"args": ["rg", "-n", "^export|regex|THEME_ID", "packages/core/src/themes/manifest.ts"], "exitCode": 0}

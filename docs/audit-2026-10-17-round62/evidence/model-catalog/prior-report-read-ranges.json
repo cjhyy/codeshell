@@ -1,0 +1,46 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round10/catalog.md",
+    "selectedLineRanges": [
+      [
+        1,
+        35
+      ]
+    ],
+    "displayLines": 35,
+    "totalLines": 35
+  },
+  {
+    "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+    "selectedLineRanges": [
+      [
+        1,
+        10
+      ]
+    ],
+    "displayLines": 10,
+    "totalLines": 10
+  },
+  {
+    "path": "docs/audit-2026-10-17-round17/catalog.md",
+    "selectedLineRanges": [
+      [
+        1,
+        43
+      ]
+    ],
+    "displayLines": 43,
+    "totalLines": 43
+  },
+  {
+    "path": "docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md",
+    "selectedLineRanges": [
+      [
+        1,
+        31
+      ]
+    ],
+    "displayLines": 31,
+    "totalLines": 31
+  }
+]
