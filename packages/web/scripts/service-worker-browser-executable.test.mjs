@@ -90,6 +90,25 @@ test("legacy darwin Chrome and explicit override selection remain distinct", () 
   );
 });
 
+test("explicit headful planning preserves the original regular Chromium branch", () => {
+  for (const [platform, arch, cacheRoot, executablePath] of [
+    ["linux", "x64", "/owned-cache", "/owned-cache/chromium-1248/chrome-linux64/chrome"],
+    ["linux", "arm64", "/owned-cache", "/owned-cache/chromium-1248/chrome-linux-arm64/chrome"],
+    ["win32", "x64", "D:\\owned-cache", "D:\\owned-cache\\chromium-1248\\chrome-win64\\chrome.exe"],
+  ])
+    assert.deepEqual(
+      planServiceWorkerBrowserExecutable({
+        ...expected(),
+        platform,
+        arch,
+        headless: false,
+        environment: { PLAYWRIGHT_BROWSERS_PATH: cacheRoot },
+      }),
+      { executablePath, selection: "locked-chromium", cacheRoot },
+    );
+  assert.throws(() => planServiceWorkerBrowserExecutable({ ...expected(), headless: "false" }));
+});
+
 test("unknown metadata, revisions, overrides, source and platform fail closed", () => {
   for (const change of [
     (value) => (value.packageMetadata.version = "1.65.0"),

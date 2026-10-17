@@ -7,10 +7,17 @@ import path from "node:path";
 const VERSION = "1.64.0";
 const REGISTRY_SHA256 = "2325ca4c1c83070e89dc49fb82525508f0a68e0cf12e2a624277968da216b7e0";
 const METADATA_SHA256 = "2cfd419f71ac6475d81e1301fa86c34cf2a2a6bae2a0da4b5a2b18310216b6bf";
-const HEADLESS_PATHS = {
-  "linux-x64": ["chrome-headless-shell-linux64", "chrome-headless-shell"],
-  "linux-arm64": ["chrome-headless-shell-linux-arm64", "chrome-headless-shell"],
-  "win32-x64": ["chrome-headless-shell-win64", "chrome-headless-shell.exe"],
+const PLATFORM_PATHS = {
+  chromium: {
+    "linux-x64": ["chrome-linux64", "chrome"],
+    "linux-arm64": ["chrome-linux-arm64", "chrome"],
+    "win32-x64": ["chrome-win64", "chrome.exe"],
+  },
+  "chromium-headless-shell": {
+    "linux-x64": ["chrome-headless-shell-linux64", "chrome-headless-shell"],
+    "linux-arm64": ["chrome-headless-shell-linux-arm64", "chrome-headless-shell"],
+    "win32-x64": ["chrome-headless-shell-win64", "chrome-headless-shell.exe"],
+  },
 };
 
 /** A source-derived path plan, not execution or a private Playwright API call.
@@ -26,27 +33,28 @@ export function planServiceWorkerBrowserExecutable({
   environment,
   platform,
   arch,
+  headless = true,
 }) {
+  assert.equal(typeof headless, "boolean", "Browser headless selection must be explicit boolean");
   assert.equal(packageMetadata?.name, "playwright-core", "Unexpected browser package");
   assert.equal(packageMetadata.version, VERSION, "Unsupported installed Playwright version");
   assert.equal(registrySourceSHA256, REGISTRY_SHA256, "Unsupported installed registry source");
   assert.equal(metadataSHA256, METADATA_SHA256, "Unsupported installed browser metadata");
   assert.ok(Array.isArray(browsersMetadata?.browsers), "Malformed browser metadata");
-  const matching = browsersMetadata.browsers.filter(
-    (entry) => entry?.name === "chromium-headless-shell",
-  );
-  assert.equal(matching.length, 1, "Expected exactly one headless-shell descriptor");
+  const name = headless ? "chromium-headless-shell" : "chromium";
+  const matching = browsersMetadata.browsers.filter((entry) => entry?.name === name);
+  assert.equal(matching.length, 1, "Expected exactly one selected Chromium descriptor");
   const descriptor = matching[0];
-  assert.equal(descriptor.revision, "1248", "Unsupported headless-shell revision");
-  assert.equal(descriptor.installByDefault, true, "Unsupported headless-shell install policy");
+  assert.equal(descriptor.revision, "1248", "Unsupported Chromium revision");
+  assert.equal(descriptor.installByDefault, true, "Unsupported Chromium install policy");
   assert.equal(
     descriptor.revisionOverrides,
     undefined,
-    "Headless revision overrides are unsupported",
+    "Chromium revision overrides are unsupported",
   );
   assert.ok(
     (platform === "darwin" && ["x64", "arm64"].includes(arch)) ||
-      Object.hasOwn(HEADLESS_PATHS, `${platform}-${arch}`),
+      Object.hasOwn(PLATFORM_PATHS[name], `${platform}-${arch}`),
     "Unsupported browser platform or architecture",
   );
   const paths = platform === "win32" ? path.win32 : path.posix;
@@ -77,12 +85,16 @@ export function planServiceWorkerBrowserExecutable({
   );
   const executablePath = paths.join(
     cacheRoot,
-    `chromium_headless_shell-${descriptor.revision}`,
-    ...HEADLESS_PATHS[`${platform}-${arch}`],
+    `${name.replace(/-/g, "_")}-${descriptor.revision}`,
+    ...PLATFORM_PATHS[name][`${platform}-${arch}`],
   );
   const relative = paths.relative(cacheRoot, executablePath);
   assert.ok(relative && !relative.startsWith("..") && !paths.isAbsolute(relative));
-  return { executablePath, selection: "locked-headless-shell", cacheRoot };
+  return {
+    executablePath,
+    selection: headless ? "locked-headless-shell" : "locked-chromium",
+    cacheRoot,
+  };
 }
 
 async function pinRegularFile(filename, limit, includeBytes = false) {
@@ -140,6 +152,7 @@ export async function resolveServiceWorkerBrowserExecutable({
   environment = process.env,
   platform = process.platform,
   arch = process.arch,
+  headless = true,
 }) {
   assert.equal(platform, process.platform, "File pinning must use the actual filesystem platform");
   const packagePath = await realpath(playwrightCorePackagePath);
@@ -156,6 +169,7 @@ export async function resolveServiceWorkerBrowserExecutable({
     environment,
     platform,
     arch,
+    headless,
   });
   if (plan.cacheRoot)
     assert.equal(
@@ -171,7 +185,8 @@ export async function resolveServiceWorkerBrowserExecutable({
       playwrightVersion: VERSION,
       platform,
       arch,
-      revision: plan.selection === "locked-headless-shell" ? "1248" : null,
+      headless,
+      revision: plan.cacheRoot ? "1248" : null,
       packageSHA256: packagePin.sha256,
       metadataSHA256: metadataPin.sha256,
       registrySourceSHA256: sourcePin.sha256,
