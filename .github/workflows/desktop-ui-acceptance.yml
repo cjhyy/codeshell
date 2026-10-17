@@ -282,6 +282,12 @@ jobs:
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/runtime/output-clean.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/output-clean.log"
 
+      - name: concurrent file Review aggregation regressions
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts packages/desktop/src/renderer/types.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/review-file-aggregation.log"
+
       - name: materialize production workspace packages
         timeout-minutes: 5
         run: bun run --cwd packages/desktop predist
@@ -466,6 +472,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/startup.log
             ${{ env.ACCEPTANCE_ROOT }}/write-card-byte-count.log
             ${{ env.ACCEPTANCE_ROOT }}/output-clean.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-file-aggregation.log
             ${{ env.ACCEPTANCE_ROOT }}/startup/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/cycle-*.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/*.png
@@ -573,6 +580,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/linux-fonts-*.json
             ${{ env.ACCEPTANCE_ROOT }}/write-card-byte-count.log
             ${{ env.ACCEPTANCE_ROOT }}/output-clean.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-file-aggregation.log
             ${{ env.ACCEPTANCE_ROOT }}/startup/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/cycle-*.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/*.png
