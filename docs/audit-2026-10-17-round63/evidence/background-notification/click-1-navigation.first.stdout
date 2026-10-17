@@ -1,0 +1,5 @@
+19:  const off = api.onNotificationOpenSession((id) => first.push(id));
+24:  api.onNotificationOpenSession((id) => second.push(id));
+40:  const off = api.onNotificationOpenSession((id) => retired.push(id));
+43:  api.onNotificationOpenSession((id) => remounted.push(id));
+58:  api.onNotificationOpenSession((id) => opened.push(id));

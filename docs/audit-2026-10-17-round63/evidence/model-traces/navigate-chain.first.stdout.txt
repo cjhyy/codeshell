@@ -1,0 +1,32 @@
+test filename inventory ["packages/core/src/model-traces/native-frames.test.ts", "packages/core/src/model-traces/native-process.test.ts", "packages/core/src/model-traces/sanitize.test.ts"]
+NAV 0
+packages/core/src/model-traces/native-process.ts:2:import { createNativeModelTraceFrameDecoder } from "./native-frames.js";
+packages/core/src/model-traces/native-process.ts:29:  const frames = createNativeModelTraceFrameDecoder();
+packages/core/src/model-traces/native-process.ts:161:    frames.clear();
+packages/core/src/model-traces/types.ts:4:export type ModelTraceContentState = "recorded" | "not-recorded" | "truncated" | "redacted";
+packages/core/src/model-traces/types.ts:49:  inputState: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:51:  outputState: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:77:  inputState: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:84:  outputState: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:157:  inputState: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:159:  outputState: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:170:  inputState?: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:171:  outputState?: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:206:  inputState?: ModelTraceContentState;
+packages/core/src/model-traces/types.ts:207:  outputState?: ModelTraceContentState;
+packages/core/src/model-traces/context.ts:9:import { sanitizeTraceValue } from "./sanitize.js";
+packages/core/src/model-traces/context.ts:119:  stores.clear();
+packages/core/src/model-traces/context.ts:120:  toolParents.clear();
+packages/core/src/model-traces/context.ts:121:  capturePolicies.clear();
+packages/core/src/model-traces/context.ts:122:  externalCallContexts.clear();
+packages/core/src/model-traces/context.ts:229:    const safe = sanitizeTraceValue(value, call.redactions);
+packages/core/src/model-traces/context.ts:250:      sanitizeTraceValue(error instanceof Error ? error.message : String(error)).value,
+packages/core/src/model-traces/context.ts:761:        const safe = sanitizeTraceValue(input.input);
+packages/core/src/model-traces/context.ts:766:        const safe = sanitizeTraceValue(input.output);
+packages/core/src/model-traces/context.ts:770:      if (event.error) event.error = String(sanitizeTraceValue(event.error).value).slice(0, 4096);
+packages/core/src/model-traces/context.ts:831:        const safe = sanitizeTraceValue({
+packages/core/src/model-traces/context.ts:845:        const safe = sanitizeTraceValue(input.output);
+packages/core/src/model-traces/context.ts:861:        ? String(sanitizeTraceValue(input.error).value).slice(0, 4096)
+
+NAV 1
+

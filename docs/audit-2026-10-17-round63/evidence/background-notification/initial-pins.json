@@ -1,0 +1,63 @@
+{
+  "rootReportedBaseline": "9874f8abdfce0ade5bb058d26e026b10f173a129",
+  "gitCertified": false,
+  "instructionReuse": "Same-SHA previously fully read CODESHELL/AGENTS reused; no new instruction body169",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:49:53.528348+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:49:53.530144+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notification-routes.ts",
+      "bytes": 5240,
+      "lineCount": 172,
+      "sha256": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+      "pinnedAtUTC": "2026-10-17T20:49:53.531238+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/desktop/src/main/native-desktop-notification.ts",
+      "bytes": 1346,
+      "lineCount": 34,
+      "sha256": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+      "pinnedAtUTC": "2026-10-17T20:49:53.532660+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/desktop/src/main/background-notification-content.ts",
+      "bytes": 6444,
+      "lineCount": 173,
+      "sha256": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+      "pinnedAtUTC": "2026-10-17T20:49:53.533619+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notification-routes.test.ts",
+      "bytes": 9759,
+      "lineCount": 288,
+      "sha256": "d9f1339d159124a9600718b577f78083e45e5536b1e7e8164ce0b92721492e1e",
+      "pinnedAtUTC": "2026-10-17T20:49:53.534338+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/desktop/src/main/native-desktop-notification.test.ts",
+      "bytes": 2154,
+      "lineCount": 70,
+      "sha256": "73d78beda67d1378cb38c6e5718e4c8176a9de1601eca8e99944dd4b060e2817",
+      "pinnedAtUTC": "2026-10-17T20:49:53.535098+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed"
+    }
+  ]
+}

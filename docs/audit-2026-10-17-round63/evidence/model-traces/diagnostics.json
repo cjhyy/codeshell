@@ -1,0 +1,17 @@
+{
+  "firstErrors": [],
+  "navigationSyntaxWarnings": {
+    "artifact": "navigate-chain.first.stderr.txt",
+    "childExitCode": 0,
+    "meaning": "Python non-raw regex string emits invalid-escape SyntaxWarning; regex navigation completed, raw stderr preserved, method not rewritten or rerun."
+  },
+  "noMatchNavigation": {
+    "artifact": "chain-navigation.json",
+    "group": 1,
+    "exitCode": 1,
+    "meaning": "Heading regex required two spaces before test/it; actual native-frames.test declarations are top-level test. No match is metadata, not failed test/import; query not corrected/rerun. Later ordinary declaration read used already pinned actual filename."
+  },
+  "displayTruncations": [],
+  "oldFailureBoundary": "R18 original report32 keeps Core model-trace backend/i18n failed runtime directions skipped; no recovery experiment here.",
+  "productTestImportAttempts": 0
+}

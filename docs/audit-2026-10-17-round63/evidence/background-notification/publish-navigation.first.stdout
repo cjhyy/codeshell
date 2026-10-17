@@ -1,0 +1,5 @@
+383:function legacyItemToDraft(item: NotificationItem, sessionId: string): ResultEnvelopeDraft {
+568:        ? legacyItemToDraft(draftOrItem as NotificationItem, legacySessionId as string)
+642:    agentNotificationBus.publish(envelope);
+928:  publish(envelope: NotificationEnvelope): void {
+951:export const agentNotificationBus = new AgentNotificationBus();

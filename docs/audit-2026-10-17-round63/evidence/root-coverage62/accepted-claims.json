@@ -1,0 +1,2397 @@
+{
+  "claims": [
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/0",
+      "original": {
+        "path": "packages/core/src/model-catalog/resolve.ts",
+        "bytes": 4284,
+        "lines": 113,
+        "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+        "initialPinAtUTC": "2026-10-17T20:34:36.398034+00:00",
+        "initialSemanticReadSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "semanticReadLines": 113,
+        "sourceKind": "product",
+        "scope": "Full physical body read; ordinary exact catalog/preset lookup and returned model/paramValues fields. Credential compatibility, secret use and runtime behavior are not certified.",
+        "navigationLineRanges": [],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+      },
+      "claimId": "formal62:model-catalog:0",
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "classification": "full",
+      "semanticLineCount": 113,
+      "selectedLineRanges": [
+        [
+          1,
+          113
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/1",
+      "original": {
+        "path": "packages/core/src/model-catalog/gen-connections.ts",
+        "bytes": 1539,
+        "lines": 43,
+        "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+        "initialPinAtUTC": "2026-10-17T20:34:36.398790+00:00",
+        "initialSemanticReadSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "semanticReadLines": 43,
+        "sourceKind": "product",
+        "scope": "Full physical body read; normal tag filtering and id/kind/baseUrl/defaultModel projection; no real provider or credential operation.",
+        "navigationLineRanges": [],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+      },
+      "claimId": "formal62:model-catalog:1",
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "classification": "full",
+      "semanticLineCount": 43,
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/2",
+      "original": {
+        "path": "packages/core/src/model-catalog/upsert.ts",
+        "bytes": 1099,
+        "lines": 25,
+        "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+        "initialPinAtUTC": "2026-10-17T20:34:36.399605+00:00",
+        "initialSemanticReadSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            25
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            25
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            25
+          ]
+        ],
+        "semanticReadLines": 25,
+        "sourceKind": "product",
+        "scope": "Full physical body read; exact id/value append/replace and copied input array; no storage durability certification.",
+        "navigationLineRanges": [],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+      },
+      "claimId": "formal62:model-catalog:2",
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "classification": "full",
+      "semanticLineCount": 25,
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/3",
+      "original": {
+        "path": "packages/core/src/model-catalog/types.ts",
+        "bytes": 5401,
+        "lines": 121,
+        "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+        "initialPinAtUTC": "2026-10-17T20:37:23.191028+00:00",
+        "initialSemanticReadSha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            66,
+            118
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            66,
+            118
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            66,
+            118
+          ]
+        ],
+        "semanticReadLines": 53,
+        "sourceKind": "product",
+        "scope": "Selected catalog/preset field shape and ordinary merge-mode declarations only; schema not executed.",
+        "navigationLineRanges": [
+          [
+            66,
+            66
+          ],
+          [
+            76,
+            76
+          ],
+          [
+            102,
+            102
+          ],
+          [
+            105,
+            106
+          ]
+        ],
+        "navigationOnlyLineRanges": [],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:3",
+      "path": "packages/core/src/model-catalog/types.ts",
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "classification": "selected",
+      "semanticLineCount": 53,
+      "selectedLineRanges": [
+        [
+          66,
+          118
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/4",
+      "original": {
+        "path": "packages/core/src/model-catalog/index.ts",
+        "bytes": 4933,
+        "lines": 127,
+        "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+        "initialPinAtUTC": "2026-10-17T20:37:23.193570+00:00",
+        "initialSemanticReadSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            68,
+            113
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            68,
+            113
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            68,
+            113
+          ]
+        ],
+        "semanticReadLines": 46,
+        "sourceKind": "product",
+        "scope": "Selected getMergedCatalog and findCatalogEntry value/order contracts only; user-catalog filesystem loader not read or run in this packet.",
+        "navigationLineRanges": [
+          [
+            26,
+            26
+          ],
+          [
+            34,
+            34
+          ],
+          [
+            48,
+            48
+          ],
+          [
+            68,
+            68
+          ],
+          [
+            73,
+            73
+          ],
+          [
+            78,
+            79
+          ],
+          [
+            83,
+            83
+          ],
+          [
+            95,
+            95
+          ],
+          [
+            120,
+            120
+          ]
+        ],
+        "navigationOnlyLineRanges": [
+          [
+            26,
+            26
+          ],
+          [
+            34,
+            34
+          ],
+          [
+            48,
+            48
+          ],
+          [
+            120,
+            120
+          ]
+        ],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:4",
+      "path": "packages/core/src/model-catalog/index.ts",
+      "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "classification": "selected",
+      "semanticLineCount": 46,
+      "selectedLineRanges": [
+        [
+          68,
+          113
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/5",
+      "original": {
+        "path": "packages/core/src/model-catalog/save-entry.ts",
+        "bytes": 6541,
+        "lines": 189,
+        "sha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+        "initialPinAtUTC": "2026-10-17T20:37:23.194351+00:00",
+        "initialSemanticReadSha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            118,
+            141
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            118,
+            141
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            118,
+            141
+          ]
+        ],
+        "semanticReadLines": 24,
+        "sourceKind": "product",
+        "scope": "Selected validation/result and actual upsert call site. Lock/backup/atomic-write names appear, but their implementations and durability are not audited or run.",
+        "navigationLineRanges": [
+          [
+            25,
+            25
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            118,
+            118
+          ],
+          [
+            123,
+            123
+          ],
+          [
+            138,
+            138
+          ],
+          [
+            161,
+            161
+          ]
+        ],
+        "navigationOnlyLineRanges": [
+          [
+            25,
+            25
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            161,
+            161
+          ]
+        ],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:5",
+      "path": "packages/core/src/model-catalog/save-entry.ts",
+      "sha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "classification": "selected",
+      "semanticLineCount": 24,
+      "selectedLineRanges": [
+        [
+          118,
+          141
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/6",
+      "original": {
+        "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+        "bytes": 20093,
+        "lines": 500,
+        "sha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+        "initialPinAtUTC": "2026-10-17T20:37:23.195598+00:00",
+        "initialSemanticReadSha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            55,
+            105
+          ],
+          [
+            186,
+            241
+          ],
+          [
+            424,
+            445
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            55,
+            105
+          ],
+          [
+            186,
+            241
+          ],
+          [
+            424,
+            445
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            55,
+            105
+          ],
+          [
+            186,
+            241
+          ],
+          [
+            424,
+            445
+          ]
+        ],
+        "semanticReadLines": 129,
+        "sourceKind": "product",
+        "scope": "Selected unified connection list, model default selection and downstream call model precedence. Adjacent legacy/key and trace setup are shown, without authentication, transport or model execution certification.",
+        "navigationLineRanges": [
+          [
+            41,
+            41
+          ],
+          [
+            49,
+            49
+          ],
+          [
+            97,
+            97
+          ],
+          [
+            103,
+            103
+          ],
+          [
+            170,
+            170
+          ],
+          [
+            186,
+            186
+          ],
+          [
+            196,
+            196
+          ],
+          [
+            226,
+            226
+          ],
+          [
+            239,
+            239
+          ],
+          [
+            347,
+            347
+          ],
+          [
+            424,
+            424
+          ],
+          [
+            437,
+            437
+          ],
+          [
+            439,
+            439
+          ]
+        ],
+        "navigationOnlyLineRanges": [
+          [
+            41,
+            41
+          ],
+          [
+            49,
+            49
+          ],
+          [
+            170,
+            170
+          ],
+          [
+            347,
+            347
+          ]
+        ],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:6",
+      "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "sha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "classification": "selected",
+      "semanticLineCount": 129,
+      "selectedLineRanges": [
+        [
+          55,
+          105
+        ],
+        [
+          186,
+          241
+        ],
+        [
+          424,
+          445
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/7",
+      "original": {
+        "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+        "bytes": 24537,
+        "lines": 640,
+        "sha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+        "initialPinAtUTC": "2026-10-17T20:37:23.196664+00:00",
+        "initialSemanticReadSha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            234,
+            265
+          ],
+          [
+            350,
+            374
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            234,
+            265
+          ],
+          [
+            350,
+            374
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            234,
+            265
+          ],
+          [
+            350,
+            374
+          ]
+        ],
+        "semanticReadLines": 57,
+        "sourceKind": "product",
+        "scope": "Selected unified connection list, default model forwarding and call override precedence. No upload, transport, authentication or generation is run or certified.",
+        "navigationLineRanges": [
+          [
+            40,
+            40
+          ],
+          [
+            48,
+            48
+          ],
+          [
+            167,
+            167
+          ],
+          [
+            231,
+            231
+          ],
+          [
+            234,
+            234
+          ],
+          [
+            242,
+            242
+          ],
+          [
+            257,
+            257
+          ],
+          [
+            263,
+            263
+          ],
+          [
+            281,
+            281
+          ],
+          [
+            289,
+            289
+          ],
+          [
+            308,
+            308
+          ],
+          [
+            312,
+            312
+          ],
+          [
+            350,
+            350
+          ],
+          [
+            356,
+            356
+          ],
+          [
+            367,
+            367
+          ],
+          [
+            370,
+            370
+          ]
+        ],
+        "navigationOnlyLineRanges": [
+          [
+            40,
+            40
+          ],
+          [
+            48,
+            48
+          ],
+          [
+            167,
+            167
+          ],
+          [
+            231,
+            231
+          ],
+          [
+            281,
+            281
+          ],
+          [
+            289,
+            289
+          ],
+          [
+            308,
+            308
+          ],
+          [
+            312,
+            312
+          ]
+        ],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:7",
+      "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "sha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+      "classification": "selected",
+      "semanticLineCount": 57,
+      "selectedLineRanges": [
+        [
+          234,
+          265
+        ],
+        [
+          350,
+          374
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/8",
+      "original": {
+        "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+        "bytes": 3587,
+        "lines": 86,
+        "sha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+        "initialPinAtUTC": "2026-10-17T20:37:23.197623+00:00",
+        "initialSemanticReadSha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            60
+          ],
+          [
+            72,
+            85
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            60
+          ],
+          [
+            72,
+            85
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            1,
+            60
+          ],
+          [
+            72,
+            85
+          ]
+        ],
+        "semanticReadLines": 74,
+        "sourceKind": "test-declaration",
+        "scope": "Selected existing test declarations; tests/imports/assertions were not executed and no current pass is claimed.",
+        "navigationLineRanges": [
+          [
+            2,
+            2
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            38,
+            39
+          ],
+          [
+            43,
+            43
+          ],
+          [
+            54,
+            54
+          ],
+          [
+            59,
+            60
+          ],
+          [
+            63,
+            63
+          ],
+          [
+            68,
+            68
+          ],
+          [
+            72,
+            72
+          ],
+          [
+            76,
+            76
+          ],
+          [
+            79,
+            79
+          ],
+          [
+            84,
+            84
+          ]
+        ],
+        "navigationOnlyLineRanges": [
+          [
+            63,
+            63
+          ],
+          [
+            68,
+            68
+          ]
+        ],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:8",
+      "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+      "sha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+      "classification": "selected",
+      "semanticLineCount": 74,
+      "selectedLineRanges": [
+        [
+          1,
+          60
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "pointer": "/files/9",
+      "original": {
+        "path": "packages/core/src/model-catalog/upsert.test.ts",
+        "bytes": 2537,
+        "lines": 80,
+        "sha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+        "initialPinAtUTC": "2026-10-17T20:37:23.198638+00:00",
+        "initialSemanticReadSha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            29,
+            80
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            29,
+            80
+          ]
+        ],
+        "semanticReadLineRanges": [
+          [
+            29,
+            80
+          ]
+        ],
+        "semanticReadLines": 52,
+        "sourceKind": "test-declaration",
+        "scope": "Selected existing test declarations; tests/imports/assertions were not executed and no current pass is claimed.",
+        "navigationLineRanges": [
+          [
+            2,
+            2
+          ],
+          [
+            9,
+            9
+          ],
+          [
+            29,
+            31
+          ],
+          [
+            35,
+            36
+          ],
+          [
+            40,
+            40
+          ],
+          [
+            42,
+            42
+          ],
+          [
+            49,
+            49
+          ],
+          [
+            51,
+            51
+          ],
+          [
+            56,
+            57
+          ],
+          [
+            59,
+            59
+          ],
+          [
+            66,
+            66
+          ],
+          [
+            68,
+            68
+          ]
+        ],
+        "navigationOnlyLineRanges": [
+          [
+            2,
+            2
+          ],
+          [
+            9,
+            9
+          ]
+        ],
+        "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+      },
+      "claimId": "formal62:model-catalog:9",
+      "path": "packages/core/src/model-catalog/upsert.test.ts",
+      "sha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+      "classification": "selected",
+      "semanticLineCount": 52,
+      "selectedLineRanges": [
+        [
+          29,
+          80
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "pointer": "/files/4",
+      "original": {
+        "path": "packages/core/src/sources/collection.ts",
+        "bytes": 3025,
+        "lineCount": 89,
+        "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+        "pinnedAtUTC": "2026-10-17T20:34:43.582625+00:00",
+        "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+        "selectedLineRanges": [
+          [
+            1,
+            89
+          ]
+        ],
+        "semanticLineCount": 89,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            89
+          ]
+        ],
+        "bodyDisplayedLineCount": 89,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [
+          [
+            1,
+            89
+          ]
+        ],
+        "displayedLineCount": 89,
+        "semanticFull": true,
+        "coverage": "full",
+        "category": "product-semantic",
+        "scopeBoundary": "Full static DTO/schema leaf read. Normalizer and real path/identity/I/O enforcement callees not read or exercised; full file is not transitive mechanism certification. Prior original Sources MD7 already described selected reading, so no first-read claim."
+      },
+      "claimId": "formal62:source-view:4",
+      "path": "packages/core/src/sources/collection.ts",
+      "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "classification": "full",
+      "semanticLineCount": 89,
+      "selectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "sourceKind": "product-semantic",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "pointer": "/files/5",
+      "original": {
+        "path": "packages/core/src/sources/link-view.ts",
+        "bytes": 3804,
+        "lineCount": 97,
+        "sha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+        "pinnedAtUTC": "2026-10-17T20:34:43.582923+00:00",
+        "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+        "selectedLineRanges": [
+          [
+            12,
+            36
+          ]
+        ],
+        "semanticLineCount": 25,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            97
+          ]
+        ],
+        "bodyDisplayedLineCount": 97,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [
+          [
+            1,
+            97
+          ]
+        ],
+        "displayedLineCount": 97,
+        "semanticFull": false,
+        "coverage": "selected",
+        "category": "product-semantic",
+        "scopeBoundary": "Whole file displayed; only12–36 config→scopeId/title is semantic. Availability/credential/authority methods39–97 are displayed boundary only, with no auth/custody or safety certification."
+      },
+      "claimId": "formal62:source-view:5",
+      "path": "packages/core/src/sources/link-view.ts",
+      "sha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+      "classification": "selected",
+      "semanticLineCount": 25,
+      "selectedLineRanges": [
+        [
+          12,
+          36
+        ]
+      ],
+      "sourceKind": "product-semantic",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "pointer": "/files/10",
+      "original": {
+        "path": "packages/core/src/sources/adapters/collection.ts",
+        "bytes": 5415,
+        "lineCount": 147,
+        "sha256": "564e8db97c4fd74a3b1a3d0fd98aad82eead3f20ef58238801d60630c6a014d5",
+        "pinnedAtUTC": "2026-10-17T20:34:43.584493+00:00",
+        "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+        "selectedLineRanges": [
+          [
+            43,
+            44
+          ],
+          [
+            48,
+            48
+          ],
+          [
+            70,
+            83
+          ],
+          [
+            116,
+            147
+          ]
+        ],
+        "semanticLineCount": 49,
+        "bodyDisplayedLineRanges": [
+          [
+            40,
+            49
+          ],
+          [
+            70,
+            84
+          ],
+          [
+            116,
+            147
+          ]
+        ],
+        "bodyDisplayedLineCount": 57,
+        "additionalNavigationSnippetLineRanges": [
+          [
+            3,
+            3
+          ],
+          [
+            30,
+            30
+          ],
+          [
+            50,
+            50
+          ],
+          [
+            52,
+            52
+          ],
+          [
+            55,
+            55
+          ],
+          [
+            60,
+            60
+          ],
+          [
+            90,
+            90
+          ],
+          [
+            93,
+            93
+          ],
+          [
+            98,
+            98
+          ],
+          [
+            110,
+            110
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            3,
+            3
+          ],
+          [
+            30,
+            30
+          ],
+          [
+            40,
+            50
+          ],
+          [
+            52,
+            52
+          ],
+          [
+            55,
+            55
+          ],
+          [
+            60,
+            60
+          ],
+          [
+            70,
+            84
+          ],
+          [
+            90,
+            90
+          ],
+          [
+            93,
+            93
+          ],
+          [
+            98,
+            98
+          ],
+          [
+            110,
+            110
+          ],
+          [
+            116,
+            147
+          ]
+        ],
+        "displayedLineCount": 67,
+        "semanticFull": false,
+        "coverage": "selected",
+        "category": "product-semantic",
+        "scopeBoundary": "Ordinary source config/entry ID/name/display projection only. Filesystem, URL/Link I/O, account, grant, authority/credential and native mechanisms not certified. Earlier source reading overlap is retained; not first-ever or unique global coverage."
+      },
+      "claimId": "formal62:source-view:10",
+      "path": "packages/core/src/sources/adapters/collection.ts",
+      "sha256": "564e8db97c4fd74a3b1a3d0fd98aad82eead3f20ef58238801d60630c6a014d5",
+      "classification": "selected",
+      "semanticLineCount": 49,
+      "selectedLineRanges": [
+        [
+          43,
+          44
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          70,
+          83
+        ],
+        [
+          116,
+          147
+        ]
+      ],
+      "sourceKind": "product-semantic",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "pointer": "/files/11",
+      "original": {
+        "path": "packages/core/src/sources/catalog.ts",
+        "bytes": 9080,
+        "lineCount": 233,
+        "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+        "pinnedAtUTC": "2026-10-17T20:38:07.868342+00:00",
+        "timing": "before own body/nav; filename-only consumer inventory confirmed",
+        "selectedLineRanges": [
+          [
+            19,
+            43
+          ],
+          [
+            165,
+            176
+          ]
+        ],
+        "semanticLineCount": 37,
+        "bodyDisplayedLineRanges": [
+          [
+            19,
+            43
+          ],
+          [
+            165,
+            176
+          ]
+        ],
+        "bodyDisplayedLineCount": 37,
+        "additionalNavigationSnippetLineRanges": [
+          [
+            8,
+            9
+          ],
+          [
+            15,
+            15
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            77,
+            77
+          ],
+          [
+            106,
+            107
+          ],
+          [
+            126,
+            126
+          ],
+          [
+            130,
+            130
+          ],
+          [
+            135,
+            135
+          ],
+          [
+            143,
+            143
+          ],
+          [
+            195,
+            195
+          ],
+          [
+            200,
+            200
+          ],
+          [
+            212,
+            212
+          ],
+          [
+            226,
+            226
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            8,
+            9
+          ],
+          [
+            15,
+            15
+          ],
+          [
+            19,
+            43
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            77,
+            77
+          ],
+          [
+            106,
+            107
+          ],
+          [
+            126,
+            126
+          ],
+          [
+            130,
+            130
+          ],
+          [
+            135,
+            135
+          ],
+          [
+            143,
+            143
+          ],
+          [
+            165,
+            176
+          ],
+          [
+            195,
+            195
+          ],
+          [
+            200,
+            200
+          ],
+          [
+            212,
+            212
+          ],
+          [
+            226,
+            226
+          ]
+        ],
+        "displayedLineCount": 52,
+        "semanticFull": false,
+        "coverage": "selected",
+        "category": "product-semantic",
+        "scopeBoundary": "Ordinary source config/entry ID/name/display projection only. Filesystem, URL/Link I/O, account, grant, authority/credential and native mechanisms not certified. Earlier source reading overlap is retained; not first-ever or unique global coverage."
+      },
+      "claimId": "formal62:source-view:11",
+      "path": "packages/core/src/sources/catalog.ts",
+      "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+      "classification": "selected",
+      "semanticLineCount": 37,
+      "selectedLineRanges": [
+        [
+          19,
+          43
+        ],
+        [
+          165,
+          176
+        ]
+      ],
+      "sourceKind": "product-semantic",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "pointer": "/files/12",
+      "original": {
+        "path": "packages/core/src/sources/collection-local.ts",
+        "bytes": 6114,
+        "lineCount": 171,
+        "sha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54",
+        "pinnedAtUTC": "2026-10-17T20:38:07.869207+00:00",
+        "timing": "before own body/nav; filename-only consumer inventory confirmed",
+        "selectedLineRanges": [
+          [
+            122,
+            127
+          ],
+          [
+            129,
+            130
+          ],
+          [
+            136,
+            150
+          ]
+        ],
+        "semanticLineCount": 23,
+        "bodyDisplayedLineRanges": [
+          [
+            122,
+            153
+          ]
+        ],
+        "bodyDisplayedLineCount": 32,
+        "additionalNavigationSnippetLineRanges": [
+          [
+            16,
+            16
+          ],
+          [
+            22,
+            22
+          ],
+          [
+            29,
+            29
+          ],
+          [
+            108,
+            108
+          ],
+          [
+            110,
+            111
+          ],
+          [
+            154,
+            154
+          ],
+          [
+            165,
+            165
+          ],
+          [
+            170,
+            170
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            16,
+            16
+          ],
+          [
+            22,
+            22
+          ],
+          [
+            29,
+            29
+          ],
+          [
+            108,
+            108
+          ],
+          [
+            110,
+            111
+          ],
+          [
+            122,
+            154
+          ],
+          [
+            165,
+            165
+          ],
+          [
+            170,
+            170
+          ]
+        ],
+        "displayedLineCount": 41,
+        "semanticFull": false,
+        "coverage": "selected",
+        "category": "product-semantic",
+        "scopeBoundary": "Ordinary source config/entry ID/name/display projection only. Filesystem, URL/Link I/O, account, grant, authority/credential and native mechanisms not certified. Earlier source reading overlap is retained; not first-ever or unique global coverage."
+      },
+      "claimId": "formal62:source-view:12",
+      "path": "packages/core/src/sources/collection-local.ts",
+      "sha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54",
+      "classification": "selected",
+      "semanticLineCount": 23,
+      "selectedLineRanges": [
+        [
+          122,
+          127
+        ],
+        [
+          129,
+          130
+        ],
+        [
+          136,
+          150
+        ]
+      ],
+      "sourceKind": "product-semantic",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/0",
+      "original": {
+        "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+        "bytes": 2306,
+        "lines": 61,
+        "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            61
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            61
+          ]
+        ],
+        "semanticLineCount": 61,
+        "bodyDisplayedLineCount": 61,
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:0",
+      "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+      "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+      "classification": "full",
+      "semanticLineCount": 61,
+      "selectedLineRanges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/1",
+      "original": {
+        "path": "packages/desktop/src/main/theme-asset-url.ts",
+        "bytes": 1823,
+        "lines": 70,
+        "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            70
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            70
+          ]
+        ],
+        "semanticLineCount": 70,
+        "bodyDisplayedLineCount": 70,
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:1",
+      "path": "packages/desktop/src/main/theme-asset-url.ts",
+      "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+      "classification": "full",
+      "semanticLineCount": 70,
+      "selectedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/2",
+      "original": {
+        "path": "packages/desktop/src/main/theme-asset-protocol.ts",
+        "bytes": 5489,
+        "lines": 141,
+        "sha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8",
+        "beforeBodyOrLineNavigation": true,
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            20,
+            27
+          ],
+          [
+            49,
+            85
+          ],
+          [
+            90,
+            108
+          ],
+          [
+            110,
+            127
+          ],
+          [
+            137,
+            140
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            141
+          ]
+        ],
+        "semanticLineCount": 86,
+        "bodyDisplayedLineCount": 141,
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:2",
+      "path": "packages/desktop/src/main/theme-asset-protocol.ts",
+      "sha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8",
+      "classification": "selected",
+      "semanticLineCount": 86,
+      "selectedLineRanges": [
+        [
+          20,
+          27
+        ],
+        [
+          49,
+          85
+        ],
+        [
+          90,
+          108
+        ],
+        [
+          110,
+          127
+        ],
+        [
+          137,
+          140
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/3",
+      "original": {
+        "path": "packages/core/src/themes/manifest.ts",
+        "bytes": 6099,
+        "lines": 195,
+        "sha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38",
+        "beforeBodyOrLineNavigation": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            69,
+            79
+          ],
+          [
+            125,
+            146
+          ],
+          [
+            150,
+            188
+          ],
+          [
+            193,
+            195
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            67,
+            85
+          ],
+          [
+            125,
+            195
+          ]
+        ],
+        "semanticLineCount": 75,
+        "bodyDisplayedLineCount": 90,
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38",
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:3",
+      "path": "packages/core/src/themes/manifest.ts",
+      "sha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38",
+      "classification": "selected",
+      "semanticLineCount": 75,
+      "selectedLineRanges": [
+        [
+          69,
+          79
+        ],
+        [
+          125,
+          146
+        ],
+        [
+          150,
+          188
+        ],
+        [
+          193,
+          195
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/4",
+      "original": {
+        "path": "packages/core/src/themes/paths.ts",
+        "bytes": 2101,
+        "lines": 60,
+        "sha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f",
+        "beforeBodyOrLineNavigation": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            38,
+            55
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            60
+          ]
+        ],
+        "semanticLineCount": 18,
+        "bodyDisplayedLineCount": 60,
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f",
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:4",
+      "path": "packages/core/src/themes/paths.ts",
+      "sha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f",
+      "classification": "selected",
+      "semanticLineCount": 18,
+      "selectedLineRanges": [
+        [
+          38,
+          55
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/5",
+      "original": {
+        "path": "packages/core/src/themes/installer.ts",
+        "bytes": 24118,
+        "lines": 662,
+        "sha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360",
+        "beforeBodyOrLineNavigation": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            80,
+            91
+          ],
+          [
+            170,
+            188
+          ],
+          [
+            201,
+            210
+          ],
+          [
+            427,
+            514
+          ],
+          [
+            614,
+            619
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            75,
+            105
+          ],
+          [
+            163,
+            212
+          ],
+          [
+            427,
+            519
+          ],
+          [
+            605,
+            627
+          ]
+        ],
+        "semanticLineCount": 135,
+        "bodyDisplayedLineCount": 197,
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360",
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:5",
+      "path": "packages/core/src/themes/installer.ts",
+      "sha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360",
+      "classification": "selected",
+      "semanticLineCount": 135,
+      "selectedLineRanges": [
+        [
+          80,
+          91
+        ],
+        [
+          170,
+          188
+        ],
+        [
+          201,
+          210
+        ],
+        [
+          427,
+          514
+        ],
+        [
+          614,
+          619
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/6",
+      "original": {
+        "path": "packages/desktop/src/shared/theme-packs.ts",
+        "bytes": 1788,
+        "lines": 53,
+        "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+        "beforeBodyOrLineNavigation": true,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            53
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            53
+          ]
+        ],
+        "semanticLineCount": 53,
+        "bodyDisplayedLineCount": 53,
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:6",
+      "path": "packages/desktop/src/shared/theme-packs.ts",
+      "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+      "classification": "full",
+      "semanticLineCount": 53,
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "pointer": "/files/7",
+      "original": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "lines": 7330,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "beforeBodyOrLineNavigation": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            3478,
+            3480
+          ],
+          [
+            4964,
+            4967
+          ],
+          [
+            4985,
+            4994
+          ],
+          [
+            4996,
+            5002
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            3475,
+            3485
+          ],
+          [
+            4955,
+            5004
+          ]
+        ],
+        "semanticLineCount": 24,
+        "bodyDisplayedLineCount": 61,
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+        "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+      },
+      "claimId": "formal62:root-theme-window:7",
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "classification": "selected",
+      "semanticLineCount": 24,
+      "selectedLineRanges": [
+        [
+          3478,
+          3480
+        ],
+        [
+          4964,
+          4967
+        ],
+        [
+          4985,
+          4994
+        ],
+        [
+          4996,
+          5002
+        ]
+      ],
+      "sourceKind": "product",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/server-run-replay/source-manifest.json",
+      "pointer": "/files/0",
+      "original": {
+        "path": "packages/server/src/hub/run-replay.ts",
+        "bytes": 7446,
+        "sha256": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+        "lines": 206,
+        "pinAtUTC": "2026-10-17T20:40:48.887991+00:00",
+        "beforeBodyAndLineNavigation": true,
+        "role": "target-before-body",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            5,
+            22
+          ],
+          [
+            24,
+            27
+          ],
+          [
+            40,
+            69
+          ],
+          [
+            108,
+            146
+          ],
+          [
+            178,
+            184
+          ],
+          [
+            188,
+            206
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            206
+          ]
+        ],
+        "additionalNavigationSnippetLineRanges": [],
+        "scope": "Ordinary baseline/request set, event serialization and byte/event/global budget, cloned overlay/snapshot, sequence cursor and in-memory finish/forget/clear state only. OutputCoverage and persistence/proof/identity calls in displayed adjacent code are navigation boundaries, not full mechanism certification. OldR21 zero-baseline journal-anchor clipping remains excluded; no new unique/first coverage claim.",
+        "category": "product-selected",
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "semanticLineCount": 117,
+        "bodyDisplayedLineCount": 206,
+        "displayedLineRanges": [
+          [
+            1,
+            206
+          ]
+        ],
+        "displayedLineCount": 206
+      },
+      "claimId": "formal62:server-run-replay:0",
+      "path": "packages/server/src/hub/run-replay.ts",
+      "sha256": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+      "classification": "selected",
+      "semanticLineCount": 117,
+      "selectedLineRanges": [
+        [
+          5,
+          22
+        ],
+        [
+          24,
+          27
+        ],
+        [
+          40,
+          69
+        ],
+        [
+          108,
+          146
+        ],
+        [
+          178,
+          184
+        ],
+        [
+          188,
+          206
+        ]
+      ],
+      "sourceKind": "product-selected",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/server-run-replay/source-manifest.json",
+      "pointer": "/files/1",
+      "original": {
+        "path": "packages/server/src/serve/headless-server.ts",
+        "bytes": 66162,
+        "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+        "lines": 1690,
+        "beforeBodyAndLineNavigation": true,
+        "atUTC": "2026-10-17T20:41:50.075968+00:00",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            220,
+            228
+          ],
+          [
+            239,
+            240
+          ],
+          [
+            257,
+            274
+          ],
+          [
+            382,
+            415
+          ],
+          [
+            493,
+            499
+          ],
+          [
+            975,
+            985
+          ],
+          [
+            1166,
+            1173
+          ],
+          [
+            1220,
+            1229
+          ],
+          [
+            1235,
+            1246
+          ],
+          [
+            1256,
+            1263
+          ],
+          [
+            1473,
+            1485
+          ],
+          [
+            1506,
+            1517
+          ],
+          [
+            1559,
+            1605
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            218,
+            276
+          ],
+          [
+            378,
+            421
+          ],
+          [
+            480,
+            507
+          ],
+          [
+            965,
+            996
+          ],
+          [
+            1158,
+            1185
+          ],
+          [
+            1202,
+            1277
+          ],
+          [
+            1466,
+            1616
+          ]
+        ],
+        "additionalNavigationSnippetLineRanges": [
+          [
+            40,
+            40
+          ],
+          [
+            317,
+            317
+          ],
+          [
+            699,
+            699
+          ],
+          [
+            1330,
+            1330
+          ],
+          [
+            1346,
+            1346
+          ]
+        ],
+        "scope": "Actual ordinary worker-stream event projection -> publish/append -> outgoing cursor, accepted run baseline/begin/running fields, worker result/finish, agent/query local snapshot JSON. Authority/lease/enforcement, native bridge execution, output journal/store/file mechanics and cloud or account behavior shown adjacent are not certified. Prior R21 response-window overlap retained; source reading is not claimed unique.",
+        "category": "product-selected",
+        "semanticFull": false,
+        "newUniqueCoverageClaim": false,
+        "semanticLineCount": 191,
+        "bodyDisplayedLineCount": 418,
+        "displayedLineRanges": [
+          [
+            40,
+            40
+          ],
+          [
+            218,
+            276
+          ],
+          [
+            317,
+            317
+          ],
+          [
+            378,
+            421
+          ],
+          [
+            480,
+            507
+          ],
+          [
+            699,
+            699
+          ],
+          [
+            965,
+            996
+          ],
+          [
+            1158,
+            1185
+          ],
+          [
+            1202,
+            1277
+          ],
+          [
+            1330,
+            1330
+          ],
+          [
+            1346,
+            1346
+          ],
+          [
+            1466,
+            1616
+          ]
+        ],
+        "displayedLineCount": 423
+      },
+      "claimId": "formal62:server-run-replay:1",
+      "path": "packages/server/src/serve/headless-server.ts",
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "classification": "selected",
+      "semanticLineCount": 191,
+      "selectedLineRanges": [
+        [
+          220,
+          228
+        ],
+        [
+          239,
+          240
+        ],
+        [
+          257,
+          274
+        ],
+        [
+          382,
+          415
+        ],
+        [
+          493,
+          499
+        ],
+        [
+          975,
+          985
+        ],
+        [
+          1166,
+          1173
+        ],
+        [
+          1220,
+          1229
+        ],
+        [
+          1235,
+          1246
+        ],
+        [
+          1256,
+          1263
+        ],
+        [
+          1473,
+          1485
+        ],
+        [
+          1506,
+          1517
+        ],
+        [
+          1559,
+          1605
+        ]
+      ],
+      "sourceKind": "product-selected",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round62/evidence/server-run-replay/source-manifest.json",
+      "pointer": "/files/2",
+      "original": {
+        "path": "packages/server/src/hub/run-replay.test.ts",
+        "bytes": 5239,
+        "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd",
+        "lines": 109,
+        "beforeBodyAndLineNavigation": true,
+        "atUTC": "2026-10-17T20:41:50.077900+00:00",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            109
+          ]
+        ],
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            109
+          ]
+        ],
+        "additionalNavigationSnippetLineRanges": [],
+        "scope": "Full existing7 unit-test declarations for normal prefix/overlay/cursor, overlapping request lifetime, missing session, bounds, clear, total budget and ownership. Source text only, never imported or executed; declared asserts are not observed results.",
+        "category": "test-declaration",
+        "semanticFull": true,
+        "newUniqueCoverageClaim": false,
+        "semanticLineCount": 109,
+        "bodyDisplayedLineCount": 109,
+        "displayedLineRanges": [
+          [
+            1,
+            109
+          ]
+        ],
+        "displayedLineCount": 109
+      },
+      "claimId": "formal62:server-run-replay:2",
+      "path": "packages/server/src/hub/run-replay.test.ts",
+      "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd",
+      "classification": "full",
+      "semanticLineCount": 109,
+      "selectedLineRanges": [
+        [
+          1,
+          109
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "scope": "Original purpose/overlap/limits retained verbatim in original object; no new source reading."
+    }
+  ]
+}

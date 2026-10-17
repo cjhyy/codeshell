@@ -1,0 +1,16 @@
+{
+  "allReadersFrozen": true,
+  "rootSourceReviewComplete": true,
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "historicalFormal": 119,
+  "priorities": {
+    "P2": 46,
+    "P3": 73
+  },
+  "historicalCandidates": 42,
+  "notPromotedBoundary": "Panel storage JSON budget plus trailing LF: no normal exact-boundary producer established; no ID or candidate increment.",
+  "productRuns": 0,
+  "goalStillActive": true
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "path": "packages/core/src/model-traces/native-process.ts",
+    "range": [
+      81,
+      139
+    ],
+    "text": "          ]\n        : [\n            \"version\",\n            \"type\",\n            \"phase\",\n            \"callId\",\n            \"status\",\n            \"output\",\n            \"outputState\",\n            \"error\",\n            \"usage\",\n          ];\n    if (Object.keys(message).some((key) => !allowed.includes(key))) return;\n    if (message.phase === \"start\") {\n      if (\n        seen.has(message.callId) ||\n        seen.size >= 256 ||\n        active.size >= 64 ||\n        typeof message.provider !== \"string\" ||\n        !message.provider ||\n        message.provider.length > 200 ||\n        typeof message.model !== \"string\" ||\n        !message.model ||\n        message.model.length > 256 ||\n        !message.input ||\n        typeof message.input !== \"object\" ||\n        Array.isArray(message.input)\n      )\n        return;\n      if (message.inputState !== undefined && message.inputState !== \"truncated\") return;\n      const input = message.input;\n      if (\n        Object.keys(input).some(\n          (key) => ![\"systemPrompt\", \"messages\", \"tools\", \"parameters\"].includes(key),\n        ) ||\n        (input.systemPrompt !== undefined && typeof input.systemPrompt !== \"string\") ||\n        (input.messages !== undefined && !Array.isArray(input.messages)) ||\n        (input.tools !== undefined && !Array.isArray(input.tools)) ||\n        (input.parameters !== undefined &&\n          (!input.parameters ||\n            typeof input.parameters !== \"object\" ||\n            Array.isArray(input.parameters)))\n      )\n        return;\n      seen.add(message.callId);\n      const initial: ExternalModelTraceInput = {\n        ...context,\n        source: options.source,\n        purpose:\n          typeof message.purpose === \"string\" ? message.purpose.slice(0, 128) : \"native-model\",\n        provider: message.provider,\n        model: message.model,\n        startedAt: Date.now(),\n        status: \"running\",\n        coverage: \"logical-input\",\n        stream: message.stream === true,\n        input: {\n          systemPrompt: input.systemPrompt ?? \"\",\n          messages: input.messages ?? [],\n",
+    "bytes": 2067,
+    "sha256": "4fb8cc40516270ea2ac6bd34c5c3cf83ad61fda5406d34472c8aed93618a0a9b"
+  },
+  {
+    "path": "packages/core/src/model-traces/native-process.ts",
+    "range": [
+      164,
+      192
+    ],
+    "text": "    data(chunk: Uint8Array | string) {\n      if (closed) return;\n      bytes += Buffer.byteLength(chunk);\n      if (bytes > 32 * 1024 * 1024) {\n        finish(\"failed\");\n        return;\n      }\n      pending += typeof chunk === \"string\" ? chunk : decoder.write(Buffer.from(chunk));\n      for (let newline; (newline = pending.indexOf(\"\\n\")) >= 0; ) {\n        const line = pending.slice(0, newline);\n        pending = pending.slice(newline + 1);\n        if (Buffer.byteLength(line) > 256 * 1024) {\n          finish(\"failed\");\n          return;\n        }\n        try {\n          const message = frames.read(line);\n          if (message !== undefined) accept(JSON.parse(message));\n        } catch {\n          // A broken channel closes observations without changing command output.\n          finish(\"failed\");\n          return;\n        }\n      }\n      if (Buffer.byteLength(pending) > 256 * 1024) finish(\"failed\");\n    },\n    finish,\n  };\n}\n",
+    "bytes": 937,
+    "sha256": "052b7738dca013cf7badd95fcbbf6972dd388fd3026498e0cd64f21bca1bb705"
+  },
+  {
+    "path": "packages/core/src/model-traces/context.ts",
+    "range": [
+      241,
+      248
+    ],
+    "text": "    target.outputState = captured.state;\n  } else if (target.output !== undefined) {\n    target.outputState = \"truncated\";\n  } else target.outputState = captured.state;\n}\nfunction errorText(call: TraceCall, error: unknown): string {\n  try {\n    if (!canCapture(call)) return error instanceof Error ? error.name : \"Model request failed\";\n",
+    "bytes": 337,
+    "sha256": "380f40aa8731d38e698ef0d20087c3df52d33a18379467b58ec5a6a4424f5846"
+  },
+  {
+    "path": "packages/core/src/model-traces/context.ts",
+    "range": [
+      776,
+      807
+    ],
+    "text": "            ? \"truncated\"\n            : previous.inputState;\n        event.output = previous.output;\n        event.outputState =\n          input.output !== undefined && previous.output !== undefined\n            ? \"truncated\"\n            : previous.outputState;\n        event.parentId ??= previous.parentId;\n      }\n      if (event.error) event.error = \"Operation failed\";\n    }\n    if (!context.ephemeral || ephemeralAllowed(policy, settings)) target.store.writeEvent(event);\n    return event;\n  } catch {\n    return null;\n  }\n}\n\nexport function recordExternalModelTrace(input: ExternalModelTraceInput): ModelTraceRecord | null {\n  try {\n    const context = { ...contexts.getStore(), ...input };\n    const target = targetForContext(context);\n    if (!target) return null;\n    const settings = target.store.getConfig();\n    if (!settings.enabled) return null;\n    const attributed = attribution(context);\n    const id = input.id ?? randomUUID(),\n      runId = attributed.runId;\n    const previous = input.id ? target.store.get(input.id) : null;\n    const initialPolicy = policyFor(target.store, \"external\", id, settings, input.id === undefined);\n    if (!initialPolicy && !previous) return null;\n    const policy = initialPolicy ?? metadataPolicy(settings);\n",
+    "bytes": 1257,
+    "sha256": "e18afb3c7a7863fa58ec078e71cf699e67813b331519346a68680487087e370d"
+  }
+]

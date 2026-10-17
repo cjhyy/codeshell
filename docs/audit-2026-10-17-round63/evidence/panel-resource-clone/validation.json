@@ -1,0 +1,22 @@
+{
+  "productImports": 0,
+  "productHelpers": 0,
+  "fixtures": 0,
+  "testsExecuted": 0,
+  "native": 0,
+  "Host": 0,
+  "realResourceOrUserData": 0,
+  "model": 0,
+  "network": 0,
+  "Git": 0,
+  "sourceRepairs": 0,
+  "platformGuaranteesValidated": false,
+  "testDeclarationsUsed": 2,
+  "testDeclarationBoundary": "Two selected ordinary test fragments, other native/security/platform/cancellation declarations are not pass results",
+  "permanentFailureDirections": "SKIP; no old dynamic retry",
+  "metadataFirstLogs": [
+    "pin-first.*",
+    "history-first.*",
+    "prepare-first.*"
+  ]
+}

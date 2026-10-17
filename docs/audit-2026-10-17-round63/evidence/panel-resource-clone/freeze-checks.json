@@ -1,0 +1,79 @@
+{
+  "atUTC": "2026-10-17T20:57:40.630457+00:00",
+  "metadataChecksOnly": true,
+  "sourceRangesWithinEOF": true,
+  "explicitFullRowsCoverEOF": 4,
+  "unchangedSourceInstructionCanonicalPins": 15,
+  "sharedHistoryUnchanged": true,
+  "linkCount": 13,
+  "links": [
+    {
+      "document": "report.md",
+      "target": "classification.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "source-manifest.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "classification.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "source-excerpts.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "validation.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "shared-target-projection.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "canonical-old-gate.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "projection-diagnostics.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "initial-pins.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "dependency-pins.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "consumer-pins.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "ending.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "artifact-receipt.json",
+      "existsInsideExactDirectoryAfterReceiptCreation": true
+    }
+  ],
+  "productExecution": 0,
+  "Git": 0,
+  "notPromotedBoundaryHasNoIDOrCandidateCount": true
+}

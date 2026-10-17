@@ -1,0 +1,232 @@
+{
+  "transitions": [
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:8"
+      ],
+      "sha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03"
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:model-catalog:1"
+      ],
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce"
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:4"
+      ],
+      "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb"
+    },
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:model-catalog:0"
+      ],
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140"
+    },
+    {
+      "path": "packages/core/src/model-catalog/save-entry.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:5"
+      ],
+      "sha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328"
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.test.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:9"
+      ],
+      "sha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8"
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:model-catalog:2"
+      ],
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380"
+    },
+    {
+      "path": "packages/core/src/sources/adapters/collection.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:source-view:10"
+      ],
+      "sha256": "564e8db97c4fd74a3b1a3d0fd98aad82eead3f20ef58238801d60630c6a014d5"
+    },
+    {
+      "path": "packages/core/src/sources/catalog.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:source-view:11"
+      ],
+      "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142"
+    },
+    {
+      "path": "packages/core/src/sources/collection-local.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:source-view:12"
+      ],
+      "sha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54"
+    },
+    {
+      "path": "packages/core/src/sources/collection.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:source-view:4"
+      ],
+      "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6"
+    },
+    {
+      "path": "packages/core/src/sources/link-view.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:source-view:5"
+      ],
+      "sha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135"
+    },
+    {
+      "path": "packages/core/src/themes/installer.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:root-theme-window:5"
+      ],
+      "sha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360"
+    },
+    {
+      "path": "packages/core/src/themes/manifest.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:root-theme-window:3"
+      ],
+      "sha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38"
+    },
+    {
+      "path": "packages/core/src/themes/paths.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:root-theme-window:4"
+      ],
+      "sha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:7"
+      ],
+      "sha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b"
+    },
+    {
+      "path": "packages/desktop/src/main/theme-asset-protocol.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:root-theme-window:2"
+      ],
+      "sha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8"
+    },
+    {
+      "path": "packages/desktop/src/main/theme-asset-url.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:root-theme-window:1"
+      ],
+      "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007"
+    },
+    {
+      "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:root-theme-window:0"
+      ],
+      "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116"
+    },
+    {
+      "path": "packages/desktop/src/shared/theme-packs.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:root-theme-window:6"
+      ],
+      "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.test.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "full",
+      "claimIds": [
+        "formal62:server-run-replay:2"
+      ],
+      "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "fromCoverage": "unknown",
+      "toCoverage": "selected",
+      "claimIds": [
+        "formal62:server-run-replay:0"
+      ],
+      "sha256": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38"
+    }
+  ],
+  "retainedStatusProvenance": [
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "coverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:3"
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "coverage": "selected",
+      "claimIds": [
+        "formal62:model-catalog:6"
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "coverage": "selected",
+      "claimIds": [
+        "formal62:root-theme-window:7"
+      ]
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "coverage": "selected",
+      "claimIds": [
+        "formal62:server-run-replay:1"
+      ]
+    }
+  ]
+}

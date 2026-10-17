@@ -1,0 +1,52 @@
+{
+  "sourceRows": 9,
+  "counts": {
+    "sourceRows": 9,
+    "productSemanticFiles": 5,
+    "productFullFiles": 3,
+    "productSelectedFiles": 2,
+    "productHashOnlyFiles": 1,
+    "testSelectedFiles": 1,
+    "instructionHashOnlyFiles": 2,
+    "productSemanticLines": 552,
+    "testDeclarationSemanticLines": 46,
+    "displayedLines": 612
+  },
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "reportLinks": [
+    {
+      "target": "history-gate-objects.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "history-projection.json",
+      "exists": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "target": "diagnostics.json",
+      "exists": true
+    }
+  ],
+  "allLinksExist": true,
+  "endingAllSame": true,
+  "excerptRangeObjectsChecked": 12,
+  "excerptBytesAndHashesValid": true,
+  "productExecutions": 0,
+  "gitCalls": 0
+}

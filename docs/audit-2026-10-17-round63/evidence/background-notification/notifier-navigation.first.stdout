@@ -1,0 +1,10 @@
+8:export interface DesktopNotificationInput {
+14:  sessionId?: string;
+32:  show(input: { title: string; body: string; sessionId?: string }): void;
+58:  notify(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
+121:  private async notifyLoaded(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
+125:    if (input.sessionId !== undefined && !isValidDesktopNotificationSessionId(input.sessionId)) {
+126:      throw new Error("desktop notification sessionId is invalid");
+137:      this.dependencies.show({
+142:        ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
+190:export function isValidDesktopNotificationSessionId(value: unknown): value is string {

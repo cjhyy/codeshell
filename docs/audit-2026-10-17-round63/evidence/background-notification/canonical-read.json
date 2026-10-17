@@ -1,0 +1,164 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/7405",
+    "value": {
+      "path": "packages/desktop/src/main/background-notification-content.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/desktop/src/main/background-notification-content.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/891"
+        }
+      ],
+      "claimId": "C007406"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/7406",
+    "value": {
+      "path": "packages/desktop/src/main/background-notification-content.ts",
+      "sourceHashFields": {
+        "sha256": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/desktop/src/main/background-notification-content.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/1651"
+        }
+      ],
+      "claimId": "C007407"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/7760",
+    "value": {
+      "path": "packages/desktop/src/main/desktop-notification-routes.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/desktop/src/main/desktop-notification-routes.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/963"
+        }
+      ],
+      "claimId": "C007761"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/7761",
+    "value": {
+      "path": "packages/desktop/src/main/desktop-notification-routes.ts",
+      "sourceHashFields": {
+        "sha256": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/desktop/src/main/desktop-notification-routes.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/1786"
+        }
+      ],
+      "claimId": "C007762"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/8291",
+    "value": {
+      "path": "packages/desktop/src/main/native-desktop-notification.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/desktop/src/main/native-desktop-notification.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/1053"
+        }
+      ],
+      "claimId": "C008292"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/8292",
+    "value": {
+      "path": "packages/desktop/src/main/native-desktop-notification.ts",
+      "sourceHashFields": {
+        "sha256": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/desktop/src/main/native-desktop-notification.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/1955"
+        }
+      ],
+      "claimId": "C008293"
+    }
+  }
+]

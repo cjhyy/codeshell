@@ -1,0 +1,1 @@
+77:    const unsubscribe = window.codeshell.onNotificationOpenSession?.(open);

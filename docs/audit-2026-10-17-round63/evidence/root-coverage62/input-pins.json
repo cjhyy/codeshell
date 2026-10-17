@@ -1,0 +1,61 @@
+{
+  "atUTC": "2026-10-17T20:53:01.349073+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+      "bytes": 3965938,
+      "sha256": "0e476c3d434cce61bd6d08700b1e0e5fc4a328f7c05b58a0a603762ac72f7ac5",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round62/evidence/model-catalog/source-manifest.json",
+      "bytes": 21383,
+      "sha256": "af245685b37352ef6e9c3539d5600f43e45613577763e7a758e292ae42a652a1",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round62/evidence/source-view/source-manifest.json",
+      "bytes": 16067,
+      "sha256": "42f3c5501b2c947cff2ae0818768fcf80cb38a57b15acf79f66fbb891fa89337",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round62/evidence/root-theme-window/source-manifest.json",
+      "bytes": 17868,
+      "sha256": "53c3f7322318e97b5eaa3628712a120f2ba58403dc73b76ed04d41a00aa5ab42",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round62/evidence/server-run-replay/source-manifest.json",
+      "bytes": 9119,
+      "sha256": "ccd2ee6edf203b0d73e3710598d7da7aa34902cf3c8f12f36bb3f4c09a9edaac",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round62/evidence/scope-clarifications.json",
+      "bytes": 1256,
+      "sha256": "b70ea6daebb93913751588cbdc2b7f1b8fede5a533ef46bc1058e9b9ac9916af",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeAdapterParse": true,
+      "timing": "Before this adapter parse. Four source manifests had an earlier Root schema-only projection; this is not a claim of persistent pin before every earlier peek."
+    }
+  ]
+}

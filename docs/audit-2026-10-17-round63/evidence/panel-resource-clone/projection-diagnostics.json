@@ -1,0 +1,17 @@
+{
+  "firstProjection": {
+    "artifact": "shared-target-projection.initial.json",
+    "issue": "A substring filter matched clone only and did not match the exact storage.ts/directories.ts keys. First method/output/exit remain unchanged.",
+    "correction": "The active projection selects the three exact target paths from initial-pins.json under shared counts/hits. No history rescan or product operation occurred."
+  },
+  "firstBroadPresentation": {
+    "toolChunk": "d59d4f",
+    "exitCode": 0,
+    "outputOriginalTokens": 11522,
+    "maxOutputTokens": 7000,
+    "reportedOutputLines": 159,
+    "truncated": true,
+    "boundary": "All153 hit objects are saved in the active projection, but the wide display was truncated and is not claimed fully read. A compact unique-document list and original canonical objects were inspected afterward."
+  },
+  "productRuns": 0
+}

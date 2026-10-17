@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "lines": 666,
+      "atUTC": "2026-10-17T20:53:52.222362+00:00",
+      "beforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/resources.test.ts",
+      "bytes": 22838,
+      "sha256": "07e4b9dad86296ea680600416754bee085b4e048b1559a755305ab294e428d1f",
+      "lines": 657,
+      "atUTC": "2026-10-17T20:53:52.223338+00:00",
+      "beforeBodyAndLineNavigation": true
+    }
+  ]
+}

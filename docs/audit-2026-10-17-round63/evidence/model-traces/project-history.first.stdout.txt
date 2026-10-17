@@ -1,0 +1,83 @@
+
+TARGET packages/core/src/model-traces/native-frames.ts COUNT 57 SAVED 57
+{"document": "docs/audit-2026-10-16/inventory.json", "locations": ["/source_inventory/375"]}
+{"document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json", "locations": ["/files/1144"]}
+{"document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json", "locations": ["/rankedCandidates/132/path", "/rankedCandidates/132/sha256"]}
+{"document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json", "locations": ["/files/752/path", "/files/752/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json", "locations": ["/claims/3224/path", "/claims/3224/directSourcePathsInObject/0", "/claims/3225/path", "/claims/3225/sourceHashFields/sha256", "/claims/3225/directSourcePathsInObject/0", "/claims/3226/path", "/claims/3226/directSourcePathsInObject/0", "/claims/3233/directSourcePathsInObject/0"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json", "locations": ["/files/1064/path", "/files/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json", "locations": ["/files/1064/path", "/files/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json", "locations": ["/unknownPaths/989"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json", "locations": ["/files/1064/path", "/files/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json", "locations": ["/files/1064/path", "/files/1064/sha256", "/files/1064/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json", "locations": ["/files/1064/path", "/files/1064/sha256", "/files/1064/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json", "locations": ["/files/1064/path", "/files/1064/sha256", "/files/1064/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round56/evidence/trace-history/producer-filenames.json", "locations": ["/stdout"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json", "locations": ["/rows/1064/path", "/rows/1064/sha256", "/rows/1064/original55Sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json", "locations": ["/rows/1064/path", "/rows/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json", "locations": ["/files/1064/path", "/files/1064/sha256", "/files/1064/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json", "locations": ["/baselineFiles/1064/path", "/baselineFiles/1064/sha256", "/mainFiles/1064/path", "/mainFiles/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json", "locations": ["/filenames/2956"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json", "locations": ["/baselineFiles/1064/path", "/baselineFiles/1064/sha256", "/mainFiles/1064/path", "/mainFiles/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json", "locations": ["/files/1064/path", "/files/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json", "locations": ["/files/1064/path", "/files/1064/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json", "locations": ["/files/1064/path", "/files/1064/sha256", "/files/1064/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json", "locations": ["/relativeImports/546/resolved"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json", "locations": ["/relativeImports/625/resolved"]}
+
+TARGET packages/core/src/model-traces/sanitize.ts COUNT 60 SAVED 60
+{"document": "docs/audit-2026-10-16/inventory.json", "locations": ["/source_inventory/377"]}
+{"document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json", "locations": ["/files/1153"]}
+{"document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json", "locations": ["/files/756/path", "/files/756/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json", "locations": ["/claims/3059/directSourcePathsInObject/1", "/claims/3212/directSourcePathsInObject/1", "/claims/3237/path", "/claims/3237/directSourcePathsInObject/0", "/claims/3238/path", "/claims/3238/sourceHashFields/sha256", "/claims/3238/directSourcePathsInObject/0", "/claims/3239/path", "/claims/3239/directSourcePathsInObject/1", "/claims/3240/path", "/claims/3240/directSourcePathsInObject/1"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json", "locations": ["/files/1068/path", "/files/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json", "locations": ["/files/1068/path", "/files/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json", "locations": ["/unknownPaths/993"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json", "locations": ["/files/1068/path", "/files/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json", "locations": ["/files/1068/path", "/files/1068/sha256", "/files/1068/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json", "locations": ["/files/1068/path", "/files/1068/sha256", "/files/1068/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json", "locations": ["/files/1068/path", "/files/1068/sha256", "/files/1068/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round56/evidence/trace-history/producer-filenames.json", "locations": ["/stdout"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json", "locations": ["/rows/1068/path", "/rows/1068/sha256", "/rows/1068/original55Sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json", "locations": ["/rows/1068/path", "/rows/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json", "locations": ["/files/1068/path", "/files/1068/sha256", "/files/1068/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json", "locations": ["/baselineFiles/1068/path", "/baselineFiles/1068/sha256", "/mainFiles/1068/path", "/mainFiles/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json", "locations": ["/filenames/2962"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json", "locations": ["/baselineFiles/1068/path", "/baselineFiles/1068/sha256", "/mainFiles/1068/path", "/mainFiles/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json", "locations": ["/files/1068/path", "/files/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json", "locations": ["/files/1068/path", "/files/1068/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json", "locations": ["/files/1068/path", "/files/1068/sha256", "/files/1068/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json", "locations": ["/relativeImports/543/resolved", "/relativeImports/544/from"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json", "locations": ["/relativeImports/622/resolved", "/relativeImports/623/from"]}
+
+TARGET packages/core/src/model-traces/classification.ts COUNT 84 SAVED 84
+{"document": "docs/audit-2026-10-16/inventory.json", "locations": ["/source_inventory/372"]}
+{"document": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json", "locations": ["/files/7/path", "/files/7/frozenSha256", "/files/7/currentSha256"]}
+{"document": "docs/audit-2026-10-17-round18/presentation.md", "locations": [22]}
+{"document": "docs/audit-2026-10-17-round18/source-manifest.json", "locations": ["/files/12/path", "/files/12/sha256", "/files/12/currentSha256", "/files/12/mainSha256", "/workerSourceChecks/7/path", "/workerSourceChecks/7/sha256"]}
+{"document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json", "locations": ["/files/1141"]}
+{"document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json", "locations": ["/files/291/path", "/files/291/sha256", "/files/291/claims/0/sourceSha256"]}
+{"document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json", "locations": ["/rankedCandidates/186/path", "/rankedCandidates/186/sha256"]}
+{"document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json", "locations": ["/files/748/path", "/files/748/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json", "locations": ["/claims/3199/path", "/claims/3199/directSourcePathsInObject/0", "/claims/3200/path", "/claims/3200/sourceHashFields/sha256", "/claims/3200/sourceHashFields/currentSha256", "/claims/3200/sourceHashFields/mainSha256", "/claims/3200/directSourcePathsInObject/0", "/claims/3201/path", "/claims/3201/sourceHashFields/sha256", "/claims/3201/directSourcePathsInObject/0", "/claims/3202/path", "/claims/3202/directSourcePathsInObject/0", "/claims/3203/path", "/claims/3203/sourceHashFields/frozenSha256", "/claims/3203/sourceHashFields/currentSha256", "/claims/3203/directSourcePathsInObject/0", "/claims/3249/directSourcePathsInObject/0"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json", "locations": ["/files/1060/path", "/files/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json", "locations": ["/files/1060/path", "/files/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json", "locations": ["/unknownPaths/985"]}
+{"document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json", "locations": ["/files/1060/path", "/files/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round50/evidence/trace-query-review/coverage-gate-objects.json", "locations": ["/rows/12/row/directSourcePathsInObject/0", "/rows/20/row/resolved", "/rows/22/row/resolved"]}
+{"document": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json", "locations": ["/storePath/2/context", "/storeFilename/2/context"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json", "locations": ["/files/1060/path", "/files/1060/sha256", "/files/1060/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json", "locations": ["/files/1060/path", "/files/1060/sha256", "/files/1060/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json", "locations": ["/files/1060/path", "/files/1060/sha256", "/files/1060/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round56/evidence/trace-history/producer-filenames.json", "locations": ["/stdout"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json", "locations": ["/rows/1060/path", "/rows/1060/sha256", "/rows/1060/original55Sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json", "locations": ["/rows/1060/path", "/rows/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json", "locations": ["/files/1060/path", "/files/1060/sha256", "/files/1060/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json", "locations": ["/baselineFiles/1060/path", "/baselineFiles/1060/sha256", "/mainFiles/1060/path", "/mainFiles/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json", "locations": ["/filenames/2950"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json", "locations": ["/baselineFiles/1060/path", "/baselineFiles/1060/sha256", "/mainFiles/1060/path", "/mainFiles/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json", "locations": ["/files/1060/path", "/files/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json", "locations": ["/files/1060/path", "/files/1060/sha256"]}
+{"document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json", "locations": ["/files/1060/path", "/files/1060/sha256", "/files/1060/oldSha256"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json", "locations": ["/relativeImports/545/resolved"]}
+{"document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json", "locations": ["/relativeImports/624/resolved"]}
