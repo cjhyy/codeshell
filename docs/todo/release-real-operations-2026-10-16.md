@@ -8,18 +8,17 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI27, failed overall. Web and Linux pass their stated
-audited scopes. macOS observes three Pet operation groups, then fails the
-post-exit Keychain identity gate: Main exits normally and observed custody is
-cleaned, but the pinned/current inode comparison differs. Windows passes original
-83 operations/12 Main launches and separate new Review drafts three/one, then
-fails its first NSIS-installed UI launch with zero UI operations and an abnormal
-`0xC0000005` Main exit. Both failure causes remain unknown; failed private HOMEs
-are retained and the Windows replacement/uninstall/OS-restoration gates are not
-reached. See the
-[CI27 actual record](#ci27--actual-platform-results-and-installed-ui-launch-failure).
-The distinct CI26 packaged-launch and CI25 query/Setup failures remain in their
-historical records. The NSIS uninstaller hook remains without successful native
+The latest completed run, CI28, failed overall. macOS, Linux and Web pass their
+stated audited scopes. Windows passes seven startup operations/three normal Main
+launches, then fails the Review identity read before any Review operation. Its
+Main exit `1/null` is observed after cleanup signal requests; this does not prove
+a native crash before cleanup or establish the identity error's cause. The failed
+Review HOME is retained. Review drafts and all later Windows native suites,
+packaged runtime, updater and NSIS are not reached. See the
+[CI28 actual record](#ci28--actual-platform-results-and-windows-review-identity-failure).
+The distinct CI27 inode/installed-UI failures, CI26 packaged-launch failure and
+CI25 query/Setup failures remain unknown in their historical records. The CI24
+uninstall absence failure and NSIS hook still lack successful native uninstall
 lifecycle validation.
 
 CI14 remains the latest fully passing matrix in its earlier, narrower scope,
@@ -3209,3 +3208,139 @@ Its initial source-metadata slicing error is retained. At this preparation
 checkpoint CI28 has not been pushed or executed. It does not recover the missing
 file from the frozen CI27 ZIP, validate the uninstaller hook or explain/repair the
 abnormal installed Main exit.
+
+## CI28 — actual platform results and Windows Review identity failure
+
+[Run 39060777611](https://github.com/cjhyy/codeshell/actions/runs/39060777611),
+attempt 1 / push, binds source `ccceee3a05f8493af3d1e62c9d99cfa87b92fcb0`.
+All four jobs are terminal: macOS, Linux and Web succeed; Windows fails. The
+overall result is **FAILED**, not release acceptance. Product/runtime/wrapper
+source and the Web job body are unchanged from CI27; the only workflow
+delta is the two reviewed nested Windows first-error upload paths.
+
+| Platform    | Actual accepted scope                                                                                                                                              | Incomplete or separate boundary                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| macOS arm64 | Original 83 operations/12 normal Main launches; separate Review drafts three/one; DMG installed 13 and replacement 13 in two normal Mains.                         | Fifteen normal Mains total; owned same-build replacement, ad-hoc signing, no notarization/Gatekeeper or real user migration.                     |
+| Linux x64   | Original 83 operations/12 normal Mains; separate Review drafts three/one; actual AppImage updater ten manifest GETs.                                               | No update asset download/install or OS-wide custody/signal completeness claim.                                                                   |
+| Web         | 31 actual browser behaviors; attachment nine/45 and 64 pure lifecycle contracts separate; two controls plus six expected negative UI failures retain HOME/profile. | Owned HTTP/WebSocket fixtures; no real account/provider or all-browser-state claim.                                                              |
+| Windows x64 | Seven startup operations in three normal Mains.                                                                                                                    | Review identity fails with zero operations; steps 29–39, including drafts, later source suites, packaged runtime, updater and NSIS, are skipped. |
+
+Windows step 28 first latches
+`electronApplication.evaluate: Resulting promise was garbage collected.` in
+`harness-main-identity`. Actual Main 3296, parent 3268, has full recorded birth
+`2026-10-17T19:10:29.7523420Z`. Durable first error sequence 10 precedes cleanup
+start/request 11/12. Three descendant SIGTERM requests are recorded at 13–15,
+then the Main SIGTERM request at 16; exit `1/null` and close follow at 17/18.
+The first-error snapshot precedes this Main ChildProcess's recorded exit; it is
+not a fresh OS-liveness observation. Neither the later exit nor requested signals prove
+a pre-cleanup native crash, actual signal delivery, kernel ordering or the GC cause.
+
+Twenty-four captured full-birth identities settle to zero with query failure
+false and nontruncated evidence. That proves observed custody cleanup, not normal
+Main acceptance or all OS descendants. The failed Review HOME is retained;
+the second normal-exit refusal remains a secondary failure. Startup's three Mains
+exit normally, its 17/4/4 observed sets settle to zero and its HOME is removed.
+No Review page is returned, so no failure screenshot or later runtime result is
+invented. The packaged passive EventLog collector and the two new nested
+first-error upload paths are not exercised in this Windows job. Source validation
+of those paths does not validate an actual nested upload or repair the missing
+CI27 bytes. The 43-file public Windows ZIP passes CRC; its failed summary has
+SHA-256 `be118c53818de5cda346f3b3b6b938f8732fadab331e6b52283b54d67909bb26`.
+
+The bounded source review finds that the identity callback is already synchronous
+and returns a plain object. The pinned SDK's evaluation/error-mapping chain
+identifies the reported error class, not why V8 produced it; actual protocol
+request/reply bytes and the physical CI SDK file are not uploaded. Official
+[upstream issue 33737](https://github.com/microsoft/playwright/issues/33737) is a
+similar report, not this run's proven cause or fix. Root's
+static-chain receipt has SHA-256
+`36e3864924ebdba2eea35b2176444f9518026e00441f3e93c8c020439e90c728`.
+The independent feasibility conclusion has SHA-256
+`4095c03f70193e866488d198645d60ec4e8badd3fb05163ca8805a355a54ccff`,
+with append-only peer/source binding
+`191b56b9c16fd81233fec9721faeabd5ea6a7d210ba38679869bafdb64800122`.
+It establishes no reliable source fix. Public close listeners would not expose
+the private Node Promise/context lifetime or cover launch failures without a
+returned handle; their three proposed fake contracts remain unexecuted. No retry,
+sleep, identity relaxation, replacement transport or speculative SDK repair is made.
+
+macOS completes the original suites, separate drafts and both DMG UI sequences.
+Four packaged Mains 36243/36978/39493/39993 exit `0/null`; their 8/14/14/9 observed
+sets settle to zero, and complete signal-request objects have empty `requests`
+with `truncated:false`. All fifteen distinct accepted Mains have normal exits,
+observed cleaned custody and the recorded HOME removal gates. Package ASAR,
+managed Node manifest and before/after inventory bindings agree in the runner;
+raw App/ASAR/DMG bytes are not uploaded for local physical rehash. DMG attachments
+are one **read-write construction stage** and one **read-only final verification**,
+both detached, rather than two readonly mounts.
+
+The Mac archive has 144 regular public files under 166 finite patterns, with all
+ZIP CRCs checked. Twenty-seven map copies/245 edges and 49 PNG CRCs are metadata,
+not extra operations. Root views six images; independent peer views three selected
+images from that set. The 390px dark settings, complete wrapped generated-image
+path and B-session draft are readable, without observed horizontal clipping.
+The summary has SHA-256
+`af8b63a5c4c80583a2634b0368e516e7a457ee2bdc8948819cf63416e71230c8`.
+This pass does not explain prior Keychain inode mismatches, query timeouts or GC.
+
+Linux Main 8912 completes packaged UI normally; actual AppImage Main 9457 and
+launcher 9454 also exit normally. The updater makes exactly ten owned
+`/latest-linux.yml` GETs for five error modes and five healthy retries, with zero
+asset downloads, workers or native secret-storage calls. First-instruction
+identity/probes, actual APPIMAGE/APPDIR, no `--no-sandbox`, the exact owned
+root:root 04755 helper and full-07777 source/cache inventories pass. File bytes
+and identities are unchanged; the exact authorized extraction permission
+normalizations are retained. Removed runtime HOME and retained outer launcher
+scratch remain distinct. UI/updater recorded signal-request arrays are empty,
+which is not an OS-wide signal audit or all-descendant normal-exit proof.
+The 142-file archive passes CRC under 166 finite patterns; 22 map copies/244
+edges, 35 PNG CRCs and three actual image views remain metadata/visual scope.
+Linux summary has SHA-256
+`f7e14d68b56010dd43b2f4cd5c12b7dfc89a51f4b10fa7145e0f4550f3145c38`.
+
+Web's 31 behaviors remain eleven ServiceWorker, four authentication, eight child
+and eight annotation cases. Six complete payload arrays match final settled Host
+RPC rows, each exactly once. Its five observed birth sets, 7/23/10/10/10, settle
+to zero with normal browser exits and the original late-ledger/HOME/profile gates;
+the negative run's HOME/profile remains retained. All 57 regular public files
+pass CRC and 28 finite patterns; 106 source hashes plus thirteen provenance pins
+and 33 PNG CRCs are checked. Two actual Chinese/narrow screenshots are readable.
+The Web summary has SHA-256
+`f96aed6b1d1d4b3066c44c4f4d2dbfd06682c2aa72e911969e09b691ab8dba42`.
+English `lstart` birth values retain second precision and allow equality; they do
+not provide subsecond or OS-wide process proof.
+
+Offline audit mistakes remain separate from runtime results. The Mac preparation
+first stops on a hand-copied old SHA before any reader; v2 binds the exact pinned
+source. Its four admitted readers each run once with exit zero. A later summary
+writer's wrong `observedSignals` key stops before writing its summary; correction
+uses the complete raw `observedSignalRequests` object without rerunning readers.
+A mistaken screenshot path is corrected before viewing the existing files.
+Linux's three original readers each run once with exit zero; a later supplemental
+19-total-calls versus nine-target-payload equality is rejected as overstrong.
+After source/raw review, its corrected comparison accounts for all control frames
+and the nine ordered complete payloads. Windows source-preparation assumptions
+and three reader revisions are corrected before execution; only fixed v4 runs
+once with exit zero. Web's two admitted comparisons each run once with exit zero.
+These corrections neither change runtime gates nor turn metadata checks into
+additional native cases; their first errors and unexecuted versions are retained.
+
+Actual native-job Bun gates are 445 tests/32 files with 3,550 expectations on
+macOS, 3,547 on Linux and 3,541 on Windows, each zero failures/skips. Write eleven/38,
+output sixteen/32, branch fifteen/50, Review diagnostics thirteen and combined
+draft/lineage/invocation 72 remain separate. Windows installer/collector 73 pure
+contracts pass; they are not Windows native lifecycle events. Numeric thin-image
+helper and goal-callback SSR tests do not establish dedicated native encoding,
+button clicks or Core goal mutations. Earlier 445/158 local gates are reused only
+by exact executable-input byte identity, not freshly rerun at CI28 or the current
+docs-only checkout.
+
+Root's `ci28-final-matrix-binding-20261018.json` has SHA-256
+`a5ae7d57fafc9a699ef18795caa69e2e8abfaf988a8d98eed0ccbdaa0ed12ef8`.
+It binds nineteen proof references to final API jobs, source and artifact digests;
+those references are not native checks. The editing base additionally contains
+195 reviewed round57 audit-doc paths, with one static Pet P3 outside this UI
+scope and without new runtime proof. Historical finding totals are not remaining
+defect counts. CI27/26/25/24 failures, the accidental discovery unknowns and the
+unvalidated NSIS uninstall lifecycle remain intact. No release, publication,
+new CI dispatch or acceptance-gate weakening is performed for this record.
