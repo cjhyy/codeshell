@@ -1279,7 +1279,7 @@ describe("applyStreamEvent — goal_progress markers", () => {
 });
 
 describe("applyStreamEvent — background_agent_completed", () => {
-  test("DriveAgent changedFiles join the current turn and dedupe against in-session edits", () => {
+  test("DriveAgent changedFiles stay separate from relative tools with unknown caller cwd", () => {
     const messages: Message[] = [
       { kind: "user", id: "u1", text: "edit the feature" },
       {
@@ -1313,8 +1313,9 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(cards).toHaveLength(1);
     if (cards[0]?.kind === "files_changed") {
       expect(cards[0].files).toEqual([
-        { path: "src/a.ts", added: 1, removed: 1, count: 2 },
-        { path: "src/b.ts", added: 0, removed: 0, count: 1 },
+        { path: "src/a.ts", added: 1, removed: 1, count: 1 },
+        { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
+        { path: "/repo/src/b.ts", added: 0, removed: 0, count: 1 },
       ]);
     }
   });
@@ -1364,7 +1365,7 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(cards[0]!.index).toBeLessThan(user2Index);
     expect(cards[0]!.message).toMatchObject({
       kind: "files_changed",
-      files: [{ path: "old.ts", added: 0, removed: 0, count: 1 }],
+      files: [{ path: "/repo/old.ts", added: 0, removed: 0, count: 1 }],
     });
   });
 
@@ -1404,9 +1405,9 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(cards[0]!.message).toMatchObject({
       kind: "files_changed",
       files: [
-        { path: "one.ts", added: 0, removed: 0, count: 1 },
-        { path: "shared.ts", added: 0, removed: 0, count: 2 },
-        { path: "two.ts", added: 0, removed: 0, count: 1 },
+        { path: "/repo/one.ts", added: 0, removed: 0, count: 1 },
+        { path: "/repo/shared.ts", added: 0, removed: 0, count: 2 },
+        { path: "/repo/two.ts", added: 0, removed: 0, count: 1 },
       ],
     });
   });

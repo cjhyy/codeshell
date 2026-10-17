@@ -89,6 +89,9 @@ function loadedFiles(
 }
 
 function absoluteReviewPath(repoRoot: string, file: string): string {
+  // Turn snapshots can name files in an external worktree. Their authoritative
+  // absolute target must not be reinterpreted under the current chat's cwd.
+  if (file.startsWith("/") || /^[A-Za-z]:[\\/]/.test(file) || file.startsWith("\\\\")) return file;
   const separator = repoRoot.includes("\\") ? "\\" : "/";
   return `${repoRoot.replace(/[\\/]+$/, "")}${separator}${file.replace(/^\.\//, "")}`;
 }

@@ -43,7 +43,6 @@ interface ExternalFileChange {
   sourceId: string;
   path: string;
   identity: string;
-  displayPath: string;
 }
 
 function normalizeFilePath(path: string): string {
@@ -53,6 +52,7 @@ function normalizeFilePath(path: string): string {
     ?.slice(0, 2)
     .toUpperCase();
   const absolute = slash.startsWith("/") || drive !== undefined;
+  const unc = slash.startsWith("//");
   const body = drive ? slash.slice(3) : slash.startsWith("/") ? slash.slice(1) : slash;
   const parts: string[] = [];
   for (const part of body.split("/")) {
@@ -64,7 +64,7 @@ function normalizeFilePath(path: string): string {
     }
     parts.push(part);
   }
-  const prefix = drive ? `${drive}/` : absolute ? "/" : "";
+  const prefix = drive ? `${drive}/` : unc ? "//" : absolute ? "/" : "";
   return `${prefix}${parts.join("/")}` || (absolute ? prefix : ".");
 }
 
@@ -76,12 +76,6 @@ function resolveFilePath(cwd: string, path: string): string {
   const normalized = normalizeFilePath(path);
   if (isAbsoluteFilePath(normalized)) return normalized;
   return normalizeFilePath(`${normalizeFilePath(cwd)}/${normalized}`);
-}
-
-function displayExternalPath(cwd: string, path: string): string {
-  const absolute = resolveFilePath(cwd, path);
-  const root = normalizeFilePath(cwd).replace(/\/$/, "");
-  return absolute.startsWith(`${root}/`) ? absolute.slice(root.length + 1) : absolute;
 }
 
 function parseApplyPatch(patch: string): ToolEditChange[] {
@@ -267,12 +261,11 @@ export function aggregateFileChangeSummary(
   const boundary = messages[start];
   const boundaryClientMessageId = boundary.kind === "user" ? boundary.clientMessageId : undefined;
 
-  // Pre-index external paths before consuming tools. This lets an in-session
-  // relative path (`src/a.ts`) and DriveAgent's absolute transcript path
-  // (`/repo/src/a.ts`) resolve to one physical file regardless of event order.
+  // External completion carries its own cwd. Keep that absolute identity for
+  // display/open targets; a relative tool path has no caller-cwd evidence and
+  // must not be attributed to whichever external root happens to match first.
   const externalFiles: ExternalFileChange[] = [];
   const externalIdentities = new Set<string>();
-  const externalCwds = new Set<string>();
   const seenExternalAttribution = new Set<string>();
   for (let i = start + 1; i < messages.length; i++) {
     const m = messages[i];
@@ -284,10 +277,9 @@ export function aggregateFileChangeSummary(
     ) {
       continue;
     }
-    externalCwds.add(cwd);
     for (const path of files) {
-      if (typeof path !== "string" || !path.trim()) continue;
-      const identity = resolveFilePath(cwd, path.trim());
+      if (typeof path !== "string" || !path) continue;
+      const identity = resolveFilePath(cwd, path);
       const attributionKey = `${sourceId}\0${identity}`;
       if (seenExternalAttribution.has(attributionKey)) continue;
       seenExternalAttribution.add(attributionKey);
@@ -296,20 +288,9 @@ export function aggregateFileChangeSummary(
         sourceId,
         path,
         identity,
-        displayPath: displayExternalPath(cwd, path),
       });
     }
   }
-
-  const identityForToolPath = (path: string): string => {
-    const normalized = normalizeFilePath(path);
-    if (isAbsoluteFilePath(normalized)) return normalized;
-    for (const cwd of externalCwds) {
-      const candidate = resolveFilePath(cwd, normalized);
-      if (externalIdentities.has(candidate)) return candidate;
-    }
-    return normalized;
-  };
 
   const byPath = new Map<string, FileEditEntry>();
   const operationsByPath = new Map<
@@ -325,7 +306,7 @@ export function aggregateFileChangeSummary(
     toolCallId: string,
     raw: ToolEditChange,
     writer: string | null,
-    identity = identityForToolPath(raw.path),
+    identity = normalizeFilePath(raw.path),
     displayPath = normalizeFilePath(raw.path),
   ): void => {
     const existing = byPath.get(identity);
@@ -383,7 +364,7 @@ export function aggregateFileChangeSummary(
       { path: external.path, added: 0, removed: 0, diff: "" },
       null,
       external.identity,
-      external.displayPath,
+      external.identity,
     );
   }
 

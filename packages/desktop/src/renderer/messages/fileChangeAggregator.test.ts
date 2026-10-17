@@ -308,7 +308,7 @@ describe("aggregateFileChanges", () => {
     ).toBeNull();
   });
 
-  test("external attribution can preserve a touched file with an authoritative empty preview", () => {
+  test("external attribution preserves its file without attributing reversed relative edits", () => {
     const summary = aggregateFileChangeSummary([
       user(),
       tool("Edit", { file_path: "a.ts", old_string: "a", new_string: "b" }),
@@ -324,7 +324,7 @@ describe("aggregateFileChanges", () => {
         },
       },
     ]);
-    expect(summary?.files).toEqual([{ path: "a.ts", added: 0, removed: 0, count: 3 }]);
+    expect(summary?.files).toEqual([{ path: "/repo/a.ts", added: 0, removed: 0, count: 1 }]);
     expect(summary?.sessionDiffs).toEqual([]);
   });
 
