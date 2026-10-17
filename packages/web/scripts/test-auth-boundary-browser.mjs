@@ -379,6 +379,11 @@ async function run(name, operation) {
     record.result = "fail";
     record.failure = error.stack;
     record.body = await page.locator("body").innerText();
+    record.focusDiagnostics = await page.evaluate(() => ({
+      events: window.__authFocusEvents,
+      visibility: document.visibilityState,
+      focused: document.hasFocus(),
+    }));
     failure ??= error;
   } finally {
     record.requests = requests.slice(record.requestsAt);
@@ -436,8 +441,17 @@ try {
       );
     });
     const other = await context.newPage();
+    const otherCdp = await context.newCDPSession(other);
+    await otherCdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
     await other.goto("about:blank");
     await other.bringToFront();
+    // Observe the actual background transition before activating the login tab.
+    // Otherwise two front operations can coalesce before Chromium emits events.
+    await page.waitForFunction(() => document.visibilityState === "hidden" || !document.hasFocus());
+    record.backgroundState = await page.evaluate(() => ({
+      visibility: document.visibilityState,
+      focused: document.hasFocus(),
+    }));
     const status = page
       .waitForResponse((response) => response.url() === origin + "/api/v1/auth/status", {
         timeout: 1_000,
