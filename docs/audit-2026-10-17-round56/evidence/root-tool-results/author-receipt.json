@@ -1,0 +1,81 @@
+{
+  "frozen": true,
+  "files": [
+    {
+      "path": "canonical-metadata.json",
+      "bytes": 2074,
+      "sha256": "58ac2b2ac49212b19bccfe6d6faf5817af18dfd6202b880a7904eac227227d57"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1219,
+      "sha256": "50250364ff7456b528b633f2eb114a97585f3c500a88ed33263f22405bcbb720"
+    },
+    {
+      "path": "consumer-before-pins.json",
+      "bytes": 759,
+      "sha256": "728ff23086b85ea223716a5f8044acc97f8a9f559441238746730f305fbb0762"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1041,
+      "sha256": "28af0d422802ee3596723fd5ef77d80a200c59d0eb42e0b1698f94db7f784f9a"
+    },
+    {
+      "path": "freeze-metadata.py",
+      "bytes": 8835,
+      "sha256": "f0054e7b56bd586093099d0233ce4c5ec6a6d74e5fe3fe5900c1ab7fa0485bc6"
+    },
+    {
+      "path": "history-batch.json",
+      "bytes": 1362192,
+      "sha256": "03e45f55e814fedcbeed4c19e47f75c1263a24c23af220a5c398463585b1880c"
+    },
+    {
+      "path": "history-batch.py",
+      "bytes": 2399,
+      "sha256": "f817393e75fbbcafcae023b9a3dc20c1103fbcb09ac285ff6fbb90099c68fc6c"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "path": "history-first.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "history-first.stdout",
+      "bytes": 372,
+      "sha256": "1a29b6bc4ad2b1dcf9f461e02d0c6cde57161dd34351f2d361bf20bff4711990"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 582,
+      "sha256": "ae3ea2da6489748c1ae857f0e3f1ad9f01c7744975ff443c121751a90ddfb0d8"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2831,
+      "sha256": "e2c246543a59ee691e347dcf1226432d3379899a3537c26723bd94dce72f080a"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 96676,
+      "sha256": "9445452dd9c41a4cc8ef9304912c13c8c58419657dccd1d420770a85b6b07854"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 7441,
+      "sha256": "8360d79ee4d6849cb40df1759a36a9c86e5e5e54aca92a9758bea09aa6411c8e"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 266,
+      "sha256": "296121d7820fe5071bef22d595c30151d93170d8b69b01178ce17c5682ab1984"
+    }
+  ],
+  "scope": "Self-excluded exact finite source/metadata evidence, product execution0."
+}

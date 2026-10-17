@@ -1,0 +1,1838 @@
+{
+  "projectionUTC": "2026-10-17T18:45:00.218671+00:00",
+  "sourceBatchPin": {
+    "path": "/tmp/codeshell-audit-round131-tool-results/history-batch.json",
+    "bytes": 1362192,
+    "sha256": "03e45f55e814fedcbeed4c19e47f75c1263a24c23af220a5c398463585b1880c",
+    "capturedUTC": "2026-10-17T18:45:00.218671+00:00",
+    "role": "Root shared machine batch metadata, not own full-corpus semantic read"
+  },
+  "scope": {
+    "historyFiles": 5584,
+    "excludedFormalAtOrAbove": 56,
+    "jsonValueScalarsVisited": 4182993,
+    "capPerTarget": 100,
+    "errors": []
+  },
+  "targets": {
+    "packages/browser-devtools/src/inspector.ts": {
+      "query": [
+        "packages/browser-devtools/src/inspector.ts",
+        "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+      ],
+      "totalMatches": 329,
+      "retainedHits": [
+        {
+          "document": "docs/audit-2026-10-16/inventory.json",
+          "location": "/source_inventory/52",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/diagnostics.md",
+          "location": 7,
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:167–172`。`Array.from(element.children)` 和 shadow children 的 `Array.from(...)` 先完整生成数组，随后 `for` 内才检查 1000 项 queue cap。`:134` 的 visited 上限和返回节点 limit 不会限制这次枚举。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-findings.json",
+          "location": "/findings/0/file",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-findings.json",
+          "location": "/findings/0/contract/2",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/7/text",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/11/text",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:137–138`；`visibility:hidden` 与 `display:none` 共用 `continue`，在后续 `children`/shadow children 入队（`:167–173`）前终止整棵子树。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/13/text",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/28/text",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/72/text",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+          "location": "/files/5/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+          "location": "/files/5/frozenSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+          "location": "/files/5/currentSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-validation.json",
+          "location": "/confirmedFindings/0/file",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-validation.json",
+          "location": "/confirmedFindings/0/contract/2",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/findings.json",
+          "location": "/findings/0/source",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+          "location": "/files/13/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+          "location": "/files/13/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "location": "/files/33/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "location": "/files/33/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "location": "/files/33/claims/0/sourceSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/62/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/62/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/cdp-browser.md",
+          "location": 36,
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:137–138`；`visibility:hidden` 与 `display:none` 共用 `continue`，在后续 `children`/shadow children 入队（`:167–173`）前终止整棵子树。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+          "location": "/files/7/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+          "location": "/files/7/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/findings.json",
+          "location": "/findings/8/source",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/source-manifest.json",
+          "location": "/files/32/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/source-manifest.json",
+          "location": "/files/32/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/initial-pins.json",
+          "location": "/files/0/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/initial-pins.json",
+          "location": "/files/0/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+          "location": "/files/0/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+          "location": "/files/0/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+          "location": "/files/0/initialSemanticReadSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/3/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/6/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "造 collection；生产 Desktop 适配器接线只做静态追踪。\n\n## DIAG-R10-01 / P3：DOM 节点预算生效前，先完整枚举宽子树的 children collection\n\n- **位置**：`packages/browser-devtools/src/inspector.ts:167–172`。`Array.from(element.children)` 和 shadow children 的 `Array.from(...)` 先完整生成数组，随后 `for` 内才检查 1000 项 queue cap。`:134` 的 visited 上限和返回节点 limit 不会限制这次枚举。\n- **合同**：包 README `:43–44` 明确说明 DOM traversal 有界；已有设计记录 `docs/to",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/10/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/12/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/17/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/19/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:137–138`；`visibility:hidden` 与 `display:none` 共用 `continue`，在后续 `children`/shadow children 入队（`:167–173`）前终止整棵子树。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/20/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/28/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/29/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/36/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/40/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/42/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/45/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/51/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/initial-pins.json",
+          "location": "/files/2/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/initial-pins.json",
+          "location": "/files/2/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+          "location": "/checks/4/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+          "location": "/checks/4/oldR10FrozenSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+          "location": "/checks/4/independentCurrentReadStartSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/0/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/0/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/0/initialFilesystemSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/0/finishFilesystemSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/0/initialSemanticReadSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/priorVersionComparison/checks/4/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/priorVersionComparison/checks/4/oldR10FrozenSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/priorVersionComparison/checks/4/independentCurrentReadStartSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/3/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/7/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "0f98d21dbc2ecced6cdd6467d17b81bc39`。本批新增 **1 个 P3 确认项**；没有修改产品代码。动态证据来自实际 inspector callback、内存 page adapter、Node VM 和自造 collection；生产 Desktop 适配器接线只做静态追踪。\n\n## DIAG-R10-01 / P3：DOM 节点预算生效前，先完整枚举宽子树的 children collection\n\n- **位置**：`packages/browser-devtools/src/inspector.ts:167–172`。`Array.from(element.children)` 和 shadow children 的 `Array.from(...)` 先完整生成数组，随后 `for` 内才检查 1000 项 queue cap。`:134` 的 visited 上限和返回节点 limit 不会限制这次枚举。\n- **合同**：包 README `:43–44` 明确说明 DOM traversal 有界；已有设计记录 `docs/todo/browser-automation-library-reuse.md:81` 说明 DOM 遍历另有节点上限。源码 `:132–134` 也设定独立遍历预算。因此，本项针对遍历工作量，不把“返回最多 100 个 nodes”误读为“输出超限”。\n- **正常触发**：大表格、列表或普通自定义元素的容器拥有很多直接子节点；调用 `inspect({mode:\"dom\",maxEntries:1})`。开放 shadow root 下同样可达。每个子节点均是普通元",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/8/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "ctor callback、内存 page adapter、Node VM 和自造 collection；生产 Desktop 适配器接线只做静态追踪。\n\n## DIAG-R10-01 / P3：DOM 节点预算生效前，先完整枚举宽子树的 children collection\n\n- **位置**：`packages/browser-devtools/src/inspector.ts:167–172`。`Array.from(element.children)` 和 shadow children 的 `Array.from(...)` 先完整生成数组，随后 `for` 内才检查 1000 项 queue cap。`:134` 的 visited 上限和返回节点 limit 不会限制这次枚举。\n- **合同**：包 README `:43–44` 明确说明 DOM traversal 有界；已有设计记录 `docs/todo/browser-automation-library-reuse.md:81` 说明 DOM 遍历另有节点上限。源码 `:132–134` 也设定独立遍历预算。因此，本项针对遍历工作量，不把“返回最多 100 个 nodes”误读为“输出超限”。\n- **正常触发**：大表格、列表或普通自定义元素的容器拥有很多直接子节点；调用 `inspect({mode:\"dom\",maxEntries:1})`。开放 shadow root 下同样可达。每个子节点均是普通元素，不需要畸形记录或适配器异常。\n- **实际执行**：实际 page-evaluation callback 在 VM 内运行。代表可迭代 DOM collectio",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/16/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/18/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/24/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/26/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:137–138`；`visibility:hidden` 与 `display:none` 共用 `continue`，在后续 `children`/shadow children 入队（`:167–173`）前终止整棵子树。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/27/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/35/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/36/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/43/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/47/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/49/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/55/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/61/context",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/8/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/8/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/8/currentSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/8/mainSha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/15/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/15/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/43/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/43/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+          "location": "/currentByteOnlyChecks/21/path",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+          "location": "/currentByteOnlyChecks/21/sha256",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/0/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/3/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:167–172`。`Array.from(element.children)` 和 shadow children 的 `Array.from(...)` 先完整生成数组，随后 `for` 内才检查 1000 项 queue cap。`:134` 的 visited 上限和返回节点 limit 不会限制这次枚举。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/8/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/9/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/10/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/13/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "- **位置**：`packages/browser-devtools/src/inspector.ts:137–138`；`visibility:hidden` 与 `display:none` 共用 `continue`，在后续 `children`/shadow children 入队（`:167–173`）前终止整棵子树。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/14/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/17/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/48/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/50/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/51/excerpt",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/52/excerpt",
+          "matched": [
+            "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+          ],
+          "value": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/54/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/55/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts:132-134",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1inspector.ts/56/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/inspector.ts"
+          ],
+          "value": "packages/browser-devtools/src/inspector.ts",
+          "truncatedValue": false
+        }
+      ]
+    },
+    "packages/browser-devtools/src/contracts.ts": {
+      "query": [
+        "packages/browser-devtools/src/contracts.ts",
+        "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+      ],
+      "totalMatches": 235,
+      "retainedHits": [
+        {
+          "document": "docs/audit-2026-10-16/inventory.json",
+          "location": "/source_inventory/50",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/5/text",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/26/text",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+          "location": "/matches/73/text",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+          "location": "/files/3/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+          "location": "/files/3/frozenSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+          "location": "/files/3/currentSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+          "location": "/files/10/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+          "location": "/files/10/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "location": "/files/30/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "location": "/files/30/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "location": "/files/30/claims/0/sourceSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+          "location": "/rankedCandidates/170/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+          "location": "/rankedCandidates/170/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/59/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/59/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+          "location": "/files/8/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+          "location": "/files/8/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/source-manifest.json",
+          "location": "/files/30/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round3/source-manifest.json",
+          "location": "/files/30/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/initial-pins.json",
+          "location": "/files/1/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/initial-pins.json",
+          "location": "/files/1/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+          "location": "/files/1/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+          "location": "/files/1/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+          "location": "/files/1/initialSemanticReadSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/1/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/15/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/26/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/30/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/34/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+          "location": "/hits/exact-inspector/48/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/initial-pins.json",
+          "location": "/files/3/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/initial-pins.json",
+          "location": "/files/3/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+          "location": "/checks/2/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+          "location": "/checks/2/oldR10FrozenSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+          "location": "/checks/2/independentCurrentReadStartSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/1/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/1/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/1/initialFilesystemSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/1/finishFilesystemSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/files/1/initialSemanticReadSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/priorVersionComparison/checks/2/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/priorVersionComparison/checks/2/oldR10FrozenSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+          "location": "/priorVersionComparison/checks/2/independentCurrentReadStartSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/1/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/22/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/33/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/37/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/41/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+          "location": "/hits/devtools/58/context",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/5/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/5/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/5/currentSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/files/5/mainSha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/16/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/16/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/44/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+          "location": "/workerSourceChecks/44/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+          "location": "/currentByteOnlyChecks/22/path",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+          "location": "/currentByteOnlyChecks/22/sha256",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/3/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/6/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/7/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/8/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/9/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/10/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/11/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/12/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/13/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/16/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/17/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/18/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/20/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/21/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/22/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/23/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/25/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/26/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/27/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/28/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/29/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/30/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/31/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/32/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/33/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/34/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/35/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/36/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/37/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/38/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/39/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/40/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/41/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/42/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/43/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/44/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/45/excerpt",
+          "matched": [
+            "packages/browser-devtools/src/contracts.ts"
+          ],
+          "value": "packages/browser-devtools/src/contracts.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/46/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/47/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+          "location": "/hits/packages~1browser-devtools~1src~1contracts.ts/48/excerpt",
+          "matched": [
+            "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+          ],
+          "value": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+          "truncatedValue": false
+        }
+      ]
+    }
+  },
+  "actualRead": "Machine projection only; values retained are not all semantically read. Original canonical rows/MD separately recorded."
+}

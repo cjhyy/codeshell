@@ -1,0 +1,62 @@
+[
+  {
+    "path": "packages/core/src/model-traces/store.ts",
+    "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+    "displayedLineRanges": [
+      [
+        49,
+        59
+      ],
+      [
+        137,
+        170
+      ],
+      [
+        227,
+        338
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T18:45:05.889190+00:00"
+  },
+  {
+    "path": "packages/core/src/model-traces/types.ts",
+    "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+    "displayedLineRanges": [
+      [
+        94,
+        125
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T18:45:05.889576+00:00"
+  },
+  {
+    "path": "packages/core/src/model-traces/store.test.ts",
+    "sha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+    "displayedLineRanges": [
+      [
+        119,
+        139
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T18:45:05.889840+00:00"
+  },
+  {
+    "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+    "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+    "displayedLineRanges": [
+      [
+        295,
+        313
+      ],
+      [
+        365,
+        385
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T18:45:05.890243+00:00"
+  }
+]

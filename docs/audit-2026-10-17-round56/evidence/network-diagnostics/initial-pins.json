@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T18:44:07.705505+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lines": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "lines": 36,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "rootReportedBaselineOnly": "ae7bd786f133f9c42d212d41110b54eb18c4a9e4",
+  "ownGitOperations": 0,
+  "targetBodyReadAtPin": false,
+  "instructionStatus": "Prior AGENTS5/CODESHELL217 actual reading carried under unchanged SHA; repeat hash not new semantic reading."
+}

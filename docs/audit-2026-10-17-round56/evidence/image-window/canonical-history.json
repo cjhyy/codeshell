@@ -1,0 +1,31 @@
+{
+  "createdAt": "2026-10-17T18:45:00.063299+00:00",
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+      "bytes": 5181,
+      "sha256": "b47d0fdb20539eaec3a263cf477d1a36c8440e7f31451d3af0590c7d8fefa18d",
+      "pointer": "/files/10",
+      "row": {
+        "path": "packages/core/src/context/image-history-window.ts",
+        "bytes": 3033,
+        "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+        "scope": "Full static source only; compaction/retention/image bytes not imported or exercised.",
+        "lineCount": 86,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "bytes": 5207,
+      "sha256": "a58f2101e51d4d5ca0523e4fd3fece4270f290626b64e62c6759382b06bbdad6",
+      "pointer": "/sources/5",
+      "row": {
+        "path": "packages/core/src/context/image-history-window.ts",
+        "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+        "review": "full"
+      }
+    }
+  ]
+}

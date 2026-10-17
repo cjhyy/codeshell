@@ -1,0 +1,25 @@
+{
+  "baseline": "ae7bd786f133f9c42d212d41110b54eb18c4a9e4",
+  "mainHead": "ae7bd786f133f9c42d212d41110b54eb18c4a9e4",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 29,
+  "activeSourceChecks": 27,
+  "incidentalSourceChecks": 0,
+  "hashOnlyChecks": 7,
+  "unboundNavigationReferences": 0,
+  "missingDeclaredByteCounts": 0,
+  "receiptChecks": 152,
+  "verbatimCopies": 78,
+  "frozenWhitespaceArtifacts": 0,
+  "datedCoverageReference": "Frozen121 conservative migration of original45 to product bytes0d2d (same00c):4643 TS/TSX,304full/168selected/4171unknown;46–53 DEFERRED_UNPARSED,54–56 not backfilled. Not exact unread or remaining work count.",
+  "historicalFormalRecords": 116,
+  "priorities": {
+    "P2": 44,
+    "P3": 72
+  },
+  "changedFromFrozenSourcePaths": [],
+  "productRuns": 0,
+  "goalStillActive": true
+}

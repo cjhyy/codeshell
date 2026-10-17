@@ -1,0 +1,65 @@
+{
+  "expectedCount": 12,
+  "checks": [
+    {
+      "path": "evidence/trace-history/report.md",
+      "bytes": 3057,
+      "sha256": "8fb7f29c37a39dfef4125479400e45908fa8a29e848e5b94735bc702a918e3a1"
+    },
+    {
+      "path": "evidence/trace-history/source-manifest.json",
+      "bytes": 10607,
+      "sha256": "90ed52f8c985d3d6e50196b1e1670aa05cf1ccb09b8dcef44d48c6c47f555a63"
+    },
+    {
+      "path": "evidence/trace-history/reviewer-receipt.json",
+      "bytes": 4848,
+      "sha256": "bbadcf2e6c49512fd47f08cfdc9851870a01965a5b2bda8138c00dfd1c155f74"
+    },
+    {
+      "path": "evidence/network-diagnostics/report.md",
+      "bytes": 5199,
+      "sha256": "1e61136a2cddc7f069db8e60b673417a0e51404536db7dfb87c73ba178887db6"
+    },
+    {
+      "path": "evidence/network-diagnostics/source-manifest.json",
+      "bytes": 17430,
+      "sha256": "b5442a8b9cbdbeab8e817969407c87292eb1974fe4d3a5eff96c2efa7a18bc0e"
+    },
+    {
+      "path": "evidence/network-diagnostics/reviewer-receipt.json",
+      "bytes": 3173,
+      "sha256": "330cfb3ba6cb04712a7334e641ab6959310855bdf0fd7b8daf1a43b9216ecb1c"
+    },
+    {
+      "path": "evidence/image-window/report.md",
+      "bytes": 3132,
+      "sha256": "b4206894d52d83f28c451b82570d8b4273e972fc0607c890efae79e934de1718"
+    },
+    {
+      "path": "evidence/image-window/source-manifest.json",
+      "bytes": 9720,
+      "sha256": "39cef09c4ef573b0e7c82d07bd26e9f3a40870ec8b42c8438870827825f71ea5"
+    },
+    {
+      "path": "evidence/image-window/artifact-receipt.json",
+      "bytes": 2844,
+      "sha256": "1816e49677c6a5172f2558dfaa0435466ba9289981eca4f4e8d1f16b9afae79e"
+    },
+    {
+      "path": "evidence/root-tool-results/report.md",
+      "bytes": 2831,
+      "sha256": "e2c246543a59ee691e347dcf1226432d3379899a3537c26723bd94dce72f080a"
+    },
+    {
+      "path": "evidence/root-tool-results/source-manifest.json",
+      "bytes": 7441,
+      "sha256": "8360d79ee4d6849cb40df1759a36a9c86e5e5e54aca92a9758bea09aa6411c8e"
+    },
+    {
+      "path": "evidence/root-tool-results/author-receipt.json",
+      "bytes": 2426,
+      "sha256": "e139b957c95962e4a4eb7a0f9d89b22f2e93e31014afa0ef3f9ba405e7d00bb8"
+    }
+  ]
+}

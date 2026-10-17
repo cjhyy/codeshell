@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/context/image-history-window.test.ts",
+      "bytes": 4760,
+      "lines": 99,
+      "sha256": "606acebf485d9b3117143b532fe5061ce90fe25ea07961d06b12de874796385a",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:44:30.116105+00:00"
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "lines": 867,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:44:30.119278+00:00"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:44:30.120639+00:00"
+    }
+  ]
+}

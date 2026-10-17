@@ -1,0 +1,34 @@
+[
+  {
+    "path": "packages/core/src/model-traces/store.ts",
+    "bytes": 23181,
+    "lines": 624,
+    "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+    "pinAt": "2026-10-17T18:45:05.884931+00:00",
+    "coverage": "hash-only before current source body/navigation"
+  },
+  {
+    "path": "packages/core/src/model-traces/types.ts",
+    "bytes": 6231,
+    "lines": 214,
+    "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+    "pinAt": "2026-10-17T18:45:05.886851+00:00",
+    "coverage": "hash-only before current source body/navigation"
+  },
+  {
+    "path": "packages/core/src/model-traces/store.test.ts",
+    "bytes": 14622,
+    "lines": 332,
+    "sha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+    "pinAt": "2026-10-17T18:45:05.887456+00:00",
+    "coverage": "hash-only before current source body/navigation"
+  },
+  {
+    "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+    "bytes": 36755,
+    "lines": 925,
+    "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+    "pinAt": "2026-10-17T18:45:05.888490+00:00",
+    "coverage": "hash-only before current source body/navigation"
+  }
+]

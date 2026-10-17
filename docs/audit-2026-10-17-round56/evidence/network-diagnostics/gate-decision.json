@@ -1,0 +1,178 @@
+{
+  "createdUTC": "2026-10-17T18:46:47.807537+00:00",
+  "canonicalRows": [
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "jsonPointer": "/files/3",
+      "row": {
+        "path": "packages/browser-devtools/src/contracts.ts",
+        "frozenSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "currentSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "currentEqualsFrozen": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "jsonPointer": "/files/5",
+      "row": {
+        "path": "packages/browser-devtools/src/inspector.ts",
+        "frozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "currentSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "currentEqualsFrozen": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "row": {
+        "path": "packages/browser-devtools/src/inspector.ts",
+        "bytes": 8534,
+        "lineCount": 227,
+        "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "pinBeforeSemanticRead": true,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            227
+          ]
+        ],
+        "semanticLines": 227,
+        "initialSemanticReadSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "row": {
+        "path": "packages/browser-devtools/src/contracts.ts",
+        "bytes": 1183,
+        "lineCount": 36,
+        "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "pinBeforeSemanticRead": true,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            36
+          ]
+        ],
+        "semanticLines": 36,
+        "initialSemanticReadSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "row": {
+        "path": "packages/browser-devtools/src/inspector.ts",
+        "bytes": 8534,
+        "lineCount": 227,
+        "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "initialFilesystemSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "finishFilesystemSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "initialEqualsFinish": true,
+        "captureRecord": "initial-pins.json",
+        "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+        "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            227
+          ]
+        ],
+        "coveredLineCount": 227,
+        "initialSemanticReadSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "pinTimingLimitation": null
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "row": {
+        "path": "packages/browser-devtools/src/contracts.ts",
+        "bytes": 1183,
+        "lineCount": 36,
+        "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "initialFilesystemSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "finishFilesystemSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "initialEqualsFinish": true,
+        "captureRecord": "initial-pins.json",
+        "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+        "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            36
+          ]
+        ],
+        "coveredLineCount": 36,
+        "initialSemanticReadSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "pinTimingLimitation": null
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+      "jsonPointer": "/priorVersionComparison/checks/2",
+      "row": {
+        "path": "packages/browser-devtools/src/contracts.ts",
+        "oldR10FrozenSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "independentCurrentReadStartSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+      "jsonPointer": "/priorVersionComparison/checks/4",
+      "row": {
+        "path": "packages/browser-devtools/src/inspector.ts",
+        "oldR10FrozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "independentCurrentReadStartSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+        "sameSha256": true,
+        "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+      }
+    }
+  ],
+  "canonicalRead": "Original R10/R3 reports matching lines and three selected original JSON metadata containers; R33 original review matched lines5/7 and3/9/11/15/17/19/21/25/27. No whole prior-report semantic-read claim.",
+  "oldFull": "R10 explicitly package src/README/tests full, original same-SHA pins; R33 original inspector1–227 andcontracts1–36 full plus independent review identical ranges. New task is explicit directed network limit/projection hypothesis, so these reads repeat old full; not new unique frontier.",
+  "ownTargetedSearch": {
+    "fileCount": 46,
+    "method": "Exact raw text path/SHA filename navigation; not whole history value rescan, escape-complete JSON coverage or semantic reading. Root shared batch will own larger scope.",
+    "allRawHitDocumentsSemanticallyRead": false
+  },
+  "sharedRootBatch": {
+    "pin": {
+      "path": "/tmp/codeshell-audit-round131-tool-results/history-batch.json",
+      "bytes": 1362192,
+      "sha256": "03e45f55e814fedcbeed4c19e47f75c1263a24c23af220a5c398463585b1880c",
+      "capturedUTC": "2026-10-17T18:45:00.218671+00:00",
+      "role": "Root shared machine batch metadata, not own full-corpus semantic read"
+    },
+    "scope": {
+      "historyFiles": 5584,
+      "excludedFormalAtOrAbove": 56,
+      "jsonValueScalarsVisited": 4182993,
+      "capPerTarget": 100,
+      "errors": []
+    },
+    "targets": {
+      "packages/browser-devtools/src/inspector.ts": {
+        "totalMatches": 329,
+        "retainedHits": 100
+      },
+      "packages/browser-devtools/src/contracts.ts": {
+        "totalMatches": 235,
+        "retainedHits": 100
+      }
+    },
+    "role": "Root machine counts/projection only; cap100 pertarget, no own million-scalar rerun or semantic claim to all values."
+  },
+  "canonicalPriority": "Original scope/range/SHA and MD limitations control; no-row/unknown/hash not unread proof; derived copies/index not new source evidence."
+}

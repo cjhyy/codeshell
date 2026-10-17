@@ -1,0 +1,10 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/core/src/model-traces"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/core/src/model-traces/store.ts\npackages/core/src/model-traces/index.ts\npackages/core/src/model-traces/classification.ts\npackages/core/src/model-traces/capture.test.ts\npackages/core/src/model-traces/classification.test.ts\npackages/core/src/model-traces/native-process.test.ts\npackages/core/src/model-traces/types.ts\npackages/core/src/model-traces/sessions.test.ts\npackages/core/src/model-traces/native-frames.ts\npackages/core/src/model-traces/context.ts\npackages/core/src/model-traces/native-frames.test.ts\npackages/core/src/model-traces/tool-events.test.ts\npackages/core/src/model-traces/native-process.ts\npackages/core/src/model-traces/sanitize.test.ts\npackages/core/src/model-traces/sanitize.ts\npackages/core/src/model-traces/store.test.ts\n",
+  "stderr": ""
+}

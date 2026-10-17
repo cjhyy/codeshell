@@ -1,0 +1,35 @@
+{
+  "firstNavigationError": {
+    "toolChunk": "57917f",
+    "cellExitCode": 0,
+    "subcommandExitCode": null,
+    "actualSearchArgv": [
+      "rg",
+      "-l",
+      "BrowserInspect|browser_inspect|createBrowserInspector",
+      "packages/capability-coding/src",
+      "packages/core/src",
+      "packages/desktop/src/browser-library",
+      "packages/desktop/src/main/browser-driver"
+    ],
+    "stderr": "rg: packages/capability-coding/src: No such file or directory (os error 2)",
+    "meaning": "Guessed auxiliary package directory was missing; existing-path matches still listed. Last README filename command succeeded, so cell exit0; numeric rg subexit not captured separately and not claimed observed. No retry of missing path or product execution."
+  },
+  "truncations": [],
+  "manualCanonicalRowPrintCap": 1200,
+  "capExceededRows": [],
+  "lateSourcePins": [],
+  "productFailures": [],
+  "originalToolTranscriptAuthoritative": true,
+  "metadataWarning": {
+    "toolChunk": "568376",
+    "exitCode": 0,
+    "message": "SyntaxWarning: invalid decimal literal",
+    "cause": "Own metadata final count expression used >1200for without separating whitespace; Python accepted it and wrote all metadata.",
+    "firstScript": "finalize-metadata.first.py",
+    "firstScriptSha256": "93d8be851de7b9acca1fe6815db67c02164f957f183567789133acf05623d034",
+    "stderrTranscription": "metadata-warning.txt (explicit transcription of warning portion, not pre-captured raw stderr)",
+    "action": "Added separating whitespace in active metadata script only, no rerun, no source/fixture/test/artifact scope changes.",
+    "inactiveFirstNotAdditionalReading": true
+  }
+}

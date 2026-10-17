@@ -1,0 +1,31 @@
+[
+  {
+    "path": "packages/core/src/model-traces/store.ts",
+    "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+    "displayedLineRanges": [
+      [
+        492,
+        510
+      ],
+      [
+        511,
+        528
+      ]
+    ],
+    "beforeReadPinReference": "adjacent-initial-pins.json or producer-initial-pin.json",
+    "displayAt": "2026-10-17T18:46:15.160663+00:00",
+    "additionalDisplayAt": "2026-10-17T18:46:23.125707+00:00"
+  },
+  {
+    "path": "packages/core/src/model-traces/context.ts",
+    "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+    "displayedLineRanges": [
+      [
+        255,
+        273
+      ]
+    ],
+    "beforeReadPinReference": "adjacent-initial-pins.json or producer-initial-pin.json",
+    "displayAt": "2026-10-17T18:46:15.162846+00:00"
+  }
+]

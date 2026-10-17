@@ -1,0 +1,135 @@
+{
+  "createdAt": "2026-10-17T18:46:53.827429+00:00",
+  "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+  "bytes": 39768,
+  "sha256": "42c8f884357a6a97714b0e5da7504428b2d6e1f5823b91f7863d2e7a16f83d2b",
+  "selectedLineRanges": [
+    [
+      22,
+      22
+    ],
+    [
+      240,
+      267
+    ]
+  ],
+  "selectedLines": [
+    {
+      "line": 22,
+      "text": "1. **P1 bug：历史图片编号在 compaction 后会错位。** 工作消息的编号从当前切片重新计算，"
+    },
+    {
+      "line": 240,
+      "text": "`packages/core/src/tool-system/builtin/view-image-by-number.test.ts:117-135,216-230`。"
+    },
+    {
+      "line": 241,
+      "text": ""
+    },
+    {
+      "line": 242,
+      "text": "### C.2 compaction 后会错位：明确 bug"
+    },
+    {
+      "line": 243,
+      "text": ""
+    },
+    {
+      "line": 244,
+      "text": "TurnLoop 在每轮 model call 前先把已消费图片降级，然后调用 context manager；context manager 可做"
+    },
+    {
+      "line": 245,
+      "text": "window/snip/summary 等裁剪。`packages/core/src/engine/turn-loop.ts:680-704`。窗口策略明确可能只保留首"
+    },
+    {
+      "line": 246,
+      "text": "消息和尾部 N 条，删除中间的旧图片占位符。"
+    },
+    {
+      "line": 247,
+      "text": "`packages/core/src/context/compaction.ts:343-356`。"
+    },
+    {
+      "line": 248,
+      "text": ""
+    },
+    {
+      "line": 249,
+      "text": "此后新 `view_image` 结果才被追加到工作 messages 并标为 fresh。"
+    },
+    {
+      "line": 250,
+      "text": "`packages/core/src/engine/turn-loop.ts:1076-1129`。下一轮 collector 若已看不到任何旧占位符，就会从"
+    },
+    {
+      "line": 251,
+      "text": "1 给新图编号。`packages/core/src/context/compaction.ts:52-66`。"
+    },
+    {
+      "line": 252,
+      "text": ""
+    },
+    {
+      "line": 253,
+      "text": "但 `viewHistoricalImage(#N)` 不查这份 compacted working messages；它重新"
+    },
+    {
+      "line": 254,
+      "text": "`resume(sessionId).transcript.toMessages()`，在完整 transcript 中从头编号。"
+    },
+    {
+      "line": 255,
+      "text": "`packages/core/src/tool-system/builtin/view-image.ts:154-170`。图片 contentBlocks 会原样写入 transcript，"
+    },
+    {
+      "line": 256,
+      "text": "`toMessages()` 也会从事件重建它们。"
+    },
+    {
+      "line": 257,
+      "text": "`packages/core/src/engine/turn-loop.ts:1086-1092`、"
+    },
+    {
+      "line": 258,
+      "text": "`packages/core/src/session/transcript.ts:89-102,149-212`。"
+    },
+    {
+      "line": 259,
+      "text": ""
+    },
+    {
+      "line": 260,
+      "text": "因此可出现："
+    },
+    {
+      "line": 261,
+      "text": ""
+    },
+    {
+      "line": 262,
+      "text": "```text"
+    },
+    {
+      "line": 263,
+      "text": "完整 transcript:  old image (#1) ... fresh image (#2)"
+    },
+    {
+      "line": 264,
+      "text": "compacted working: first text ... fresh image -> 被降级成占位符 #1"
+    },
+    {
+      "line": 265,
+      "text": "模型调用 view_image({imageNumber: 1})"
+    },
+    {
+      "line": 266,
+      "text": "实际从完整 transcript 返回 old image"
+    },
+    {
+      "line": 267,
+      "text": "```"
+    }
+  ],
+  "scope": "Finite original old-cause context only; no reload/provider/runtime experiment"
+}

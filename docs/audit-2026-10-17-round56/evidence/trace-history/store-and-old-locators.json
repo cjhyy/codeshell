@@ -1,0 +1,28 @@
+[
+  {
+    "command": [
+      "rg",
+      "--files",
+      "packages/core/src",
+      "-g",
+      "*model-trace*"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/engine/engine.model-traces.test.ts\npackages/core/src/engine/model-trace-scope.ts\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      "packages/server/src/model-trace-history.ts",
+      "docs/audit-2026-10-17-round50",
+      "--glob",
+      "*source-manifest.json"
+    ],
+    "exitCode": 0,
+    "stdout": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json\ndocs/audit-2026-10-17-round50/source-manifest.json\n",
+    "stderr": ""
+  }
+]

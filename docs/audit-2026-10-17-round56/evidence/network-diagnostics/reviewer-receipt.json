@@ -1,0 +1,101 @@
+{
+  "frozenUTC": "2026-10-17T18:47:34.887507+00:00",
+  "root": "/tmp/codeshell-audit-round129-network-diagnostics",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "canonical-gate-rows.json",
+      "bytes": 6324,
+      "sha256": "f05cabab6b477d8655c913490e6e5c6b40df1899b0fc14e222be90d8308b2280"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1903,
+      "sha256": "83c4c77ce700e85355688cd86bee9d13c8a4ea3aa4ba077c48eef7404b40af93"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1662,
+      "sha256": "6c73ebd9f9d69f9948a4bca94ce294fe11dfd9712cfcc5957302b8406d5359ac"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 14431,
+      "sha256": "94d1ee94e39b74b391fb6591497668f3b12a1b751b98f4d0895689a74c43da04"
+    },
+    {
+      "path": "finalize-metadata.first.py",
+      "bytes": 12608,
+      "sha256": "93d8be851de7b9acca1fe6815db67c02164f957f183567789133acf05623d034"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 12610,
+      "sha256": "563feab625468eff00f9899589e9f42a85755d33c7b29a32f3cfe060f2d286f3"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 5114,
+      "sha256": "767e19b2534c8fd7d307de92e8a2a71431fc2af71cc267d643a8fa9e966cec6e"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 7936,
+      "sha256": "2cf3104c3422c910bd5361729c4bb3c85c4dfac1e5f934f9c734f3eba4c6c041"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1229,
+      "sha256": "2f12942e469121ce9e9195b9817152f79c45cb1539591ffd46257382950c194a"
+    },
+    {
+      "path": "metadata-warning.txt",
+      "bytes": 486,
+      "sha256": "f8d741164c183e9a7015b1868ce4f4e289fa0b80549a4abc754ce3c3a9e68eb3"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5199,
+      "sha256": "1e61136a2cddc7f069db8e60b673417a0e51404536db7dfb87c73ba178887db6"
+    },
+    {
+      "path": "shared-history-pin.json",
+      "bytes": 314,
+      "sha256": "aec6c6506339f04cc69d8e098042a2625ebc160f65df662ae8fe5ae1cfc05367"
+    },
+    {
+      "path": "shared-history-targets.json",
+      "bytes": 82548,
+      "sha256": "02ae3529def32b5e616668efa2d9283cc2cf96f9d34d64668859f3eb0c83ff53"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 38288,
+      "sha256": "550c73358e5ed33fe48d2cfa10e574eb7336ac6a97e4a6ebc0a89dd93b661ab0"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 17430,
+      "sha256": "b5442a8b9cbdbeab8e817969407c87292eb1974fe4d3a5eff96c2efa7a18bc0e"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 1560,
+      "sha256": "a0b092338654506dafa91c19a9a787aa09a82d0fb79d94071a519ac326b06325"
+    },
+    {
+      "path": "targeted-history-hits.json",
+      "bytes": 10353,
+      "sha256": "541a621602457c1cf0f0b1e4e48817f045d0f3d9c012bf839f386b3551229214"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1455,
+      "sha256": "2a6eeab8ecb7d80dfca318021c3f41561e82f1edddd2b863437d74a8b722efde"
+    }
+  ],
+  "fileCountExcludingReceipt": 18,
+  "role": "Directed static network data/projection source review with canonical old-full overlap and Root shared history projection",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

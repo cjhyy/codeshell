@@ -1,0 +1,14 @@
+{
+  "kind": "metadata guessed source filename missing",
+  "toolChunkId": "254d7e",
+  "exitCode": 1,
+  "exception": "FileNotFoundError",
+  "path": "packages/core/src/model-traces/recorder.ts",
+  "message": "[Errno 2] No such file or directory: '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/model-traces/recorder.ts'",
+  "cause": "Guessed recorder.ts instead of choosing an actual rg inventory result; error occurred at read_bytes before source pin/body and before subsequent planned filter display. Existing producer-filenames.json had already been saved.",
+  "rawStdoutStderrSeparatelyCaptured": false,
+  "representation": "Actual exception and tool chunk reference transcribed; full raw stdout/stderr not fabricated.",
+  "productFailure": false,
+  "productExecution": 0,
+  "correction": "Only locate actual ordinary producer filenames in existing inventory; do not run any product or failed dynamic direction."
+}

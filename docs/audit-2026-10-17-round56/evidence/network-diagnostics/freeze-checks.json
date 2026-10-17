@@ -1,0 +1,185 @@
+{
+  "checkedUTC": "2026-10-17T18:47:34.855179+00:00",
+  "role": "Own-author metadata finalization, not independent extra source review",
+  "files": [],
+  "sourceRangeChecks": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    },
+    {
+      "path": "packages/browser-devtools/README.md",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "initialPinBeforeNavBody": true
+    }
+  ],
+  "links": [
+    {
+      "label": "分类",
+      "target": "classification.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "pre-body pins",
+      "target": "initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "精确path/SHA定位",
+      "target": "targeted-history-hits.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "三个原metadata容器的递归值记录",
+      "target": "canonical-gate-rows.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "批量历史投影",
+      "target": "shared-history-targets.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "原件pin",
+      "target": "shared-history-pin.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "gate decision",
+      "target": "gate-decision.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "source manifest",
+      "target": "source-manifest.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "support pins",
+      "target": "support-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "摘录",
+      "target": "source-excerpts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "诊断",
+      "target": "diagnostics.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "first脚本",
+      "target": "finalize-metadata.first.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "warning转录",
+      "target": "metadata-warning.txt",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "metadata脚本",
+      "target": "finalize-metadata.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最后核对",
+      "target": "freeze-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "self-excluded receipt",
+      "target": "reviewer-receipt.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    }
+  ],
+  "linkCount": 18,
+  "allLinksValid": true,
+  "productRuns": 0,
+  "GitOperations": 0
+}
