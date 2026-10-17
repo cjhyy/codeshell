@@ -1,0 +1,55 @@
+{
+  "parentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/finish-hash-checks.json",
+      "bytes": 23747,
+      "sha256": "e635bc3aaae17eafea5686aa2deedd86e67d355e434a3bf9245b812459225270"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/history-decisions.json",
+      "bytes": 14593,
+      "sha256": "24c861289c2c4ea219688236c0fdd4b701c37e8c79c1f4968112e03913841975"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/history.json",
+      "bytes": 550759,
+      "sha256": "e822b7d52bff615856aa54e4d11d1ea6667f107af392174f712f8e6c43f571b6"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/initial-pins.json",
+      "bytes": 15619,
+      "sha256": "1247ef64ab537593fb183380bffcf4ae16f44704d385b3c0bbccdca3f4f13db7"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/inventory.json",
+      "bytes": 2632,
+      "sha256": "b5baac7823869ec3a0f9d655630f76d7f2fea5c70def4b374d6d7abd4665791c"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/prior-source-metadata.json",
+      "bytes": 18262,
+      "sha256": "aa3815fd2b6ff38042797c3c1fec3ca03dfe28158076bfe0f8d01c4bc58093f4"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/proposal.json",
+      "bytes": 1408,
+      "sha256": "342adf47873141272051b64bc9e09b734d872011ac16b8e44c0beb6ff7ed1d8d"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/source-manifest.json",
+      "bytes": 10520,
+      "sha256": "cd85fdbc4f61b5348e6bf84c0c55698ab7124f74cedb2d554caebc27515a998a"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-lab-frontier/validation.json",
+      "bytes": 671,
+      "sha256": "18575f2f55db5922b2fcdbbd33568b45a981c1314ee54d442a49908d25cb2db1"
+    }
+  ],
+  "artifactCount": 9,
+  "selfExcluded": true,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "round27Included": false
+}

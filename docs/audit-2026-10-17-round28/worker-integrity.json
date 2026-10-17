@@ -1,0 +1,371 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "artifactChecks": [
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/root-report.md",
+      "bytes": 3291,
+      "sha256": "d725f18ae4cf1808c82fe5829b4f751eafbbc5b68ef2f95d01ca0da98326d6aa"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-initial-source-pins.json",
+      "bytes": 924,
+      "sha256": "aab39c18cc5230c361ee530923cdef0086c3f31691f77b0667ec5e28db2d82ad"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-source-manifest.json",
+      "bytes": 7720,
+      "sha256": "9bea4906b52528aa9af718d7503ff0d0de8b12b8e44eb1238e37661c3eaf4d12"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-findings.json",
+      "bytes": 93,
+      "sha256": "37516c2657a768d91388b014a2a2d38f2407972f75835f7c928c719d9e82fa13"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-candidates.json",
+      "bytes": 95,
+      "sha256": "0930c20db4bc3030d263aa03f0064574931b3f520abaf9611504ba037f940e6a"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-related.json",
+      "bytes": 97,
+      "sha256": "ff29a7e92c71594d17d82e3376da43a5d2b979ad8631885c2a50a17a8ca9988c"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-validation.json",
+      "bytes": 663,
+      "sha256": "548c411f72149febe49bb406fb3631c7e38a32067cf4c9fc3b86fdf11faef1e3"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/root-dedup.json",
+      "bytes": 564551,
+      "sha256": "6dd9926b4c94761f1ea92c4bec33b5015bf55940aaeb1c0630a62ef783cb55b3"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep-copy-receipt.json",
+      "bytes": 3649,
+      "sha256": "62fc0b6290b9486008272569c4b01305dd53ffaeed45748ee78fa2e5adbed28c"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-related.json",
+      "bytes": 253,
+      "sha256": "b069e401b3702fd340092a391a26a30eb8adb62dabe2090e2ac2d07f786c70ac"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-source-manifest.json",
+      "bytes": 15867,
+      "sha256": "98a573be9bb4279b817aec7a54ff960e8c41c75c4c4b9638c015c5df4685dc12"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-validation.json",
+      "bytes": 1869,
+      "sha256": "eaed95aa89d2b63122262b2f81427937032f823cc9233cab3e48bac5810bc738"
+    },
+    {
+      "receipt": "lab-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/lab-report.md",
+      "bytes": 4980,
+      "sha256": "18e987265e6add281317bf139e7c517f3a64dfc15aa4b7d8b635471c18674e1b"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+      "bytes": 3880,
+      "sha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-candidates.json",
+      "bytes": 109,
+      "sha256": "418b8bf198504fa972d10e3b78258aa0c9d374a23edc8ecfc5c0b728877ec8a0"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-consumer-initial-pins.json",
+      "bytes": 2017,
+      "sha256": "4f0dbdbfe20ae95ff55f461f5da697568a1929730efddf85abd56d1f312ed3c9"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "bytes": 678040,
+      "sha256": "7a3a4b406f6bf358e89bde4d3f0ed857628fd2158986019e3b471cab24073392"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.py",
+      "bytes": 3328,
+      "sha256": "cba729f0829b983851d516c72f92ce21e3c6e2c98c7ba2984b0d7ad3aeb0d32c"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-findings.json",
+      "bytes": 107,
+      "sha256": "358b88035f820608d25ef584677900676becffcd13df2e848f9a4f4caed230da"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-history-decisions.json",
+      "bytes": 1548,
+      "sha256": "cc3e51691cae8f6c09bed03346126965d4f4ad410a92cbe71dda6029f8931f20"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-initial-source-pins.json",
+      "bytes": 1234,
+      "sha256": "5604e9a498a12122718466a6b8169793fa90a99c9f8cda8b41607071bde7778c"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-related.json",
+      "bytes": 111,
+      "sha256": "2cf40643b2d1e62bbfd59c84485bf00019b6862ae46748df243b7c596b0d6d25"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+      "bytes": 6585,
+      "sha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72"
+    },
+    {
+      "receipt": "dialog-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-validation.json",
+      "bytes": 643,
+      "sha256": "3364f2cb78d06225f2ad4af3fb6787f9424e22390ddd0713f8cf439581515ba1"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-author-checks.json",
+      "bytes": 2918,
+      "sha256": "3380970c4320649f33e648b85c6d05dd88e1d23f78e63d459dba8973daabc6cb"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-dedup.json",
+      "bytes": 598824,
+      "sha256": "b3d271365b3e4b5960aebe068c2304a9d96b9fa9907499a70b7358fde52ec414"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-dedup.py",
+      "bytes": 3612,
+      "sha256": "40b98ed575751086c7edab4c7691224d5acf412b6dce7f949c7999b77940be32"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-findings.json",
+      "bytes": 5131,
+      "sha256": "61a1b2a54da3db559a77ad707215774c5c73c3ed349679607290fb324123797d"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-history-decisions.json",
+      "bytes": 2349,
+      "sha256": "cccd8fa354200c606f3d119c452f55dd09f41469f77d12ab0b3761d39f3dcd81"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-initial-source-pins.json",
+      "bytes": 4295,
+      "sha256": "e4d33cb6c6705b61cffff2224832056bdc043ac82f6175f3a03003fdbaf5f546"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-metadata-notes.json",
+      "bytes": 881,
+      "sha256": "e19191a1745440aa059e4b505ae637097af159b292476858111bd91ccd814975"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-source-manifest.json",
+      "bytes": 10912,
+      "sha256": "e215126d8d5a159a0447ec07b131f0f9c12c2bb33576c2ebc4b64ba1e7e521a7"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-validation.json",
+      "bytes": 1009,
+      "sha256": "596daf45c448991ce1f449e14d5875aa5e196751228a48d90970cea254bb229e"
+    },
+    {
+      "receipt": "streaming-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/streaming-report.md",
+      "bytes": 6622,
+      "sha256": "9b58f8e86a18e917a3a8c01124ff1bd5216ef3af61f8b556d4cf184f4b3ae643"
+    },
+    {
+      "receipt": "coverage-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/coverage-report.md",
+      "bytes": 2898,
+      "sha256": "6e863a1d908f6da7436e50f55b488cbc237a16b3340b7160996cc6a4567dc5f9"
+    },
+    {
+      "receipt": "coverage-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep-copy-receipt.json",
+      "bytes": 2937,
+      "sha256": "37435070c818688a6992788db4f682694b2ca7527725cc4156ad38582558041a"
+    },
+    {
+      "receipt": "coverage-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-current-recheck.json",
+      "bytes": 473,
+      "sha256": "8ff073eedb24e7a97b901c8a2224f785ad14936d6f2e3a04c46f9de13093bdac"
+    },
+    {
+      "receipt": "coverage-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-validation.json",
+      "bytes": 346,
+      "sha256": "cc722bd565c2cff258592a56e8d6ec2df281fbf3a3ce917c0244e05dd8bb8ef4"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/artifact-receipt.json",
+      "bytes": 1967,
+      "sha256": "6027863ef4cc4b706996537950a198d651284f32b97f471f0c63a69d042d3ca6"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/finish-hash-checks.json",
+      "bytes": 23747,
+      "sha256": "e635bc3aaae17eafea5686aa2deedd86e67d355e434a3bf9245b812459225270"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/history-decisions.json",
+      "bytes": 14593,
+      "sha256": "24c861289c2c4ea219688236c0fdd4b701c37e8c79c1f4968112e03913841975"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/history.json",
+      "bytes": 550759,
+      "sha256": "e822b7d52bff615856aa54e4d11d1ea6667f107af392174f712f8e6c43f571b6"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/initial-pins.json",
+      "bytes": 15619,
+      "sha256": "1247ef64ab537593fb183380bffcf4ae16f44704d385b3c0bbccdca3f4f13db7"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/inventory.json",
+      "bytes": 2632,
+      "sha256": "b5baac7823869ec3a0f9d655630f76d7f2fea5c70def4b374d6d7abd4665791c"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/prior-source-metadata.json",
+      "bytes": 18262,
+      "sha256": "aa3815fd2b6ff38042797c3c1fec3ca03dfe28158076bfe0f8d01c4bc58093f4"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/proposal.json",
+      "bytes": 1408,
+      "sha256": "342adf47873141272051b64bc9e09b734d872011ac16b8e44c0beb6ff7ed1d8d"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/source-manifest.json",
+      "bytes": 10520,
+      "sha256": "cd85fdbc4f61b5348e6bf84c0c55698ab7124f74cedb2d554caebc27515a998a"
+    },
+    {
+      "receipt": "lab-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/validation.json",
+      "bytes": 671,
+      "sha256": "18575f2f55db5922b2fcdbbd33568b45a981c1314ee54d442a49908d25cb2db1"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/README.md",
+      "bytes": 4471,
+      "sha256": "583dd8022a324ba7eb36e463a53fd4ba2d240cba3e0e292ca0daa74641ae67da"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-method.py",
+      "bytes": 9287,
+      "sha256": "669b17c5a61fd5d166659b7b30386678a5b2031a3de640172609c19bcb0af5e0"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "bytes": 129321,
+      "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/receipt.json",
+      "bytes": 2937,
+      "sha256": "238fd5448217c1cda329ba00afe1ae579cdbf0b0509ebf37ef0d91730225ee96"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+      "bytes": 507177,
+      "sha256": "01c11771bcfb550707e63be5c9df654cea4fe8300068f1165e2dd3afa7575779"
+    },
+    {
+      "receipt": "coverage-prep-copy-receipt.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/source-manifest-inventory.json",
+      "bytes": 33231,
+      "sha256": "96e49468479f3fe23f25180e245f9e16636ca5a97fe62409886862e654133e6e"
+    }
+  ],
+  "sourceCheckCount": 65,
+  "prepHashOnlyCheckCount": 51,
+  "authorArtifactCount": 42,
+  "prepCopyCount": 18,
+  "packageInventoryHashOnlyChecks": 4087,
+  "productTestsRerun": false
+}

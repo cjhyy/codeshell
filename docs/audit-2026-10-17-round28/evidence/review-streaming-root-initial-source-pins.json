@@ -1,0 +1,33 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "lineCount": 124,
+      "initialFilesystemSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coverage": "Root before-read pin only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 6319,
+      "lineCount": 173,
+      "initialFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "coverage": "Root before-read pin only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "lineCount": 98,
+      "initialFilesystemSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coverage": "Root before-read pin only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "bytes": 3302,
+      "lineCount": 83,
+      "initialFilesystemSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "coverage": "Root before-read pin only"
+    }
+  ]
+}

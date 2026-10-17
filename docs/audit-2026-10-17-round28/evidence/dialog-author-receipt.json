@@ -1,0 +1,64 @@
+{
+  "baselineProvidedByRoot": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "sourcePins": 8,
+  "productContractReadLines": 653,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "files": [
+    {
+      "path": "dialog-report.md",
+      "bytes": 3880,
+      "sha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f"
+    },
+    {
+      "path": "evidence/dialog-candidates.json",
+      "bytes": 109,
+      "sha256": "418b8bf198504fa972d10e3b78258aa0c9d374a23edc8ecfc5c0b728877ec8a0"
+    },
+    {
+      "path": "evidence/dialog-consumer-initial-pins.json",
+      "bytes": 2017,
+      "sha256": "4f0dbdbfe20ae95ff55f461f5da697568a1929730efddf85abd56d1f312ed3c9"
+    },
+    {
+      "path": "evidence/dialog-dedup.json",
+      "bytes": 678040,
+      "sha256": "7a3a4b406f6bf358e89bde4d3f0ed857628fd2158986019e3b471cab24073392"
+    },
+    {
+      "path": "evidence/dialog-dedup.py",
+      "bytes": 3328,
+      "sha256": "cba729f0829b983851d516c72f92ce21e3c6e2c98c7ba2984b0d7ad3aeb0d32c"
+    },
+    {
+      "path": "evidence/dialog-findings.json",
+      "bytes": 107,
+      "sha256": "358b88035f820608d25ef584677900676becffcd13df2e848f9a4f4caed230da"
+    },
+    {
+      "path": "evidence/dialog-history-decisions.json",
+      "bytes": 1548,
+      "sha256": "cc3e51691cae8f6c09bed03346126965d4f4ad410a92cbe71dda6029f8931f20"
+    },
+    {
+      "path": "evidence/dialog-initial-source-pins.json",
+      "bytes": 1234,
+      "sha256": "5604e9a498a12122718466a6b8169793fa90a99c9f8cda8b41607071bde7778c"
+    },
+    {
+      "path": "evidence/dialog-related.json",
+      "bytes": 111,
+      "sha256": "2cf40643b2d1e62bbfd59c84485bf00019b6862ae46748df243b7c596b0d6d25"
+    },
+    {
+      "path": "evidence/dialog-source-manifest.json",
+      "bytes": 6585,
+      "sha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72"
+    },
+    {
+      "path": "evidence/dialog-validation.json",
+      "bytes": 643,
+      "sha256": "3364f2cb78d06225f2ad4af3fb6787f9424e22390ddd0713f8cf439581515ba1"
+    }
+  ]
+}

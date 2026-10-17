@@ -1,0 +1,23 @@
+{
+  "productRuns": 0,
+  "productReruns": 0,
+  "notes": [
+    {
+      "chunk": "262751",
+      "outerExitCode": 0,
+      "innerExitNotCaptured": true,
+      "diagnostic": "rg: docs/audit-2026-10-17-round19/review-prompt.md: IO error for operation on docs/audit-2026-10-17-round19/review-prompt.md: No such file or directory (os error 2)",
+      "capture": "Manually transcribed diagnostic excerpt from tool response, not product raw.",
+      "action": "Use inventory-returned reviewprompt-report.md for static old-cause inspection; no product attempt or retry."
+    },
+    {
+      "source": "Independent reviewer aggregator_round27_resume message",
+      "kind": "Root metadata range beyond actual EOF",
+      "diagnostic": "reviewprompt-report.md lineCount27 but selectedLineRanges[1,30]/coveredLineCount30; active review total671 corrected to668.",
+      "capture": "Manually transcribed reviewer diagnostic; original first metadata saved verbatim separately, not a product raw response.",
+      "firstVersion": "review-streaming-root-source-manifest.first.json",
+      "firstVersionSha256": "eda8ff3ac719fcb6f498421aa375bb265640d297fba8f8e02f0b87a3e311797e",
+      "action": "Correct only active declared range1-27 and covered count, preserving file bytes/SHA. No product/import/test/fixture/native/parser rerun."
+    }
+  ]
+}

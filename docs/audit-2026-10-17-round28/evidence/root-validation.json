@@ -1,0 +1,19 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "runs": [],
+  "guardedRuns": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesAuthored": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "nativeExperiments": 0,
+  "gitBusinessCalls": 0,
+  "notes": [
+    "Root only read declared source/test ranges, captured filesystem hashes and independently bound audit baseline Git bytes.",
+    "No canonicalJson/crypto/realpath/codeShellHome/store/React/App function invoked. FS and unit fixture definitions were not executed.",
+    "No old failed direction reopened; R27 focused fixture/raw untouched."
+  ]
+}

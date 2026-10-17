@@ -1,0 +1,19 @@
+{
+  "authorProductRuns": 0,
+  "authorGitCommands": 0,
+  "metadataFailures": 0,
+  "notes": [
+    {
+      "kind": "Source pin timing",
+      "detail": "The initial inventory/coverage prep read the leaf and later body/tests before dedicated author source pins. Dedicated manifest explicitly keeps firstSemanticReadSha256 null for these rows; earlier package inventory is byte provenance only."
+    },
+    {
+      "kind": "No parse/renderer execution",
+      "detail": "Existing component tests were read as text despite their ReactMarkdown/server imports. No runtime import, module evaluation, AST/VM/eval, tests, HTML render or fake replacement validator occurred."
+    },
+    {
+      "kind": "Scope",
+      "detail": "Selected Markdown.tsx props/classname navigation is not a full Markdown/authority/security audit. Findings only concern source-level chunk boundaries."
+    }
+  ]
+}

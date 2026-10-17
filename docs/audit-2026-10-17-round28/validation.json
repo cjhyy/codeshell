@@ -1,0 +1,22 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "totals": {
+    "firstBunShards": 0,
+    "completedCleanShards": 0,
+    "failedBunShards": 0,
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "runtimeImports": 0,
+    "fixturesAuthored": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "failedTests": 0,
+    "productReruns": 0
+  },
+  "runs": [],
+  "notes": [
+    "All findings and counterevidence static source contracts; zero product/React/parser/fixture/native/model runtime.",
+    "Existing test declarations were read only. No raw/exit exists to fabricate.",
+    "R27 failed compose direction and all earlier skipped groups remain un-retried."
+  ]
+}

@@ -1,0 +1,1676 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "mainHead": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentBytes": 339166,
+      "currentSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "mainBytes": 339166,
+      "mainSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "bytes": 29720,
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "currentBytes": 29720,
+      "currentSha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "mainBytes": 29720,
+      "mainSha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "currentBytes": 38155,
+      "currentSha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "mainBytes": 38155,
+      "mainSha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-navigation-skip.md",
+      "bytes": 1076,
+      "sha256": "cc3fa55002d7a97ac3845f623929df918a58992df61602d3438a455fe6adf9d4",
+      "currentBytes": 1076,
+      "currentSha256": "cc3fa55002d7a97ac3845f623929df918a58992df61602d3438a455fe6adf9d4",
+      "mainBytes": 1076,
+      "mainSha256": "cc3fa55002d7a97ac3845f623929df918a58992df61602d3438a455fe6adf9d4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-preflight-skip.md",
+      "bytes": 1212,
+      "sha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "currentBytes": 1212,
+      "currentSha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "mainBytes": 1212,
+      "mainSha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "bytes": 6054,
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "currentBytes": 6054,
+      "currentSha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "mainBytes": 6054,
+      "mainSha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentBytes": 7063,
+      "currentSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "mainBytes": 7063,
+      "mainSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentBytes": 122863,
+      "currentSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "mainBytes": 122863,
+      "mainSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/Markdown.tsx",
+      "bytes": 33964,
+      "sha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "currentBytes": 33964,
+      "currentSha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "mainBytes": 33964,
+      "mainSha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/digital-humans/profileRequirements.ts",
+      "bytes": 3749,
+      "sha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "currentBytes": 3749,
+      "currentSha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "mainBytes": 3749,
+      "mainSha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts",
+      "bytes": 6015,
+      "sha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "currentBytes": 6015,
+      "currentSha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "mainBytes": 6015,
+      "mainSha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "currentBytes": 5799,
+      "currentSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "mainBytes": 5799,
+      "mainSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "currentBytes": 3880,
+      "currentSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "mainBytes": 3880,
+      "mainSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "bytes": 3302,
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "currentBytes": 3302,
+      "currentSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "mainBytes": 3302,
+      "mainSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 6319,
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "currentBytes": 6319,
+      "currentSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "mainBytes": 6319,
+      "mainSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.test.ts",
+      "bytes": 1238,
+      "sha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "currentBytes": 1238,
+      "currentSha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "mainBytes": 1238,
+      "mainSha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "bytes": 813,
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "currentBytes": 813,
+      "currentSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "mainBytes": 813,
+      "mainSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "currentBytes": 86699,
+      "currentSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "mainBytes": 86699,
+      "mainSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ConfirmDialog.tsx",
+      "bytes": 838,
+      "sha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "currentBytes": 838,
+      "currentSha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "mainBytes": 838,
+      "mainSha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.interaction.test.tsx",
+      "bytes": 689,
+      "sha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "currentBytes": 689,
+      "currentSha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "mainBytes": 689,
+      "mainSha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.tsx",
+      "bytes": 11284,
+      "sha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "currentBytes": 11284,
+      "currentSha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "mainBytes": 11284,
+      "mainSha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.test.ts",
+      "bytes": 2338,
+      "sha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "currentBytes": 2338,
+      "currentSha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "mainBytes": 2338,
+      "mainSha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "currentBytes": 2385,
+      "currentSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "mainBytes": 2385,
+      "mainSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.test.ts",
+      "bytes": 977,
+      "sha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "currentBytes": 977,
+      "currentSha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "mainBytes": 977,
+      "mainSha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "bytes": 1739,
+      "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "currentBytes": 1739,
+      "currentSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "mainBytes": 1739,
+      "mainSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.test.ts",
+      "bytes": 1370,
+      "sha256": "999e911c204704e1ea8bb91d76c3c3965014342408d42eff0533b878223fd18d",
+      "currentBytes": 1370,
+      "currentSha256": "999e911c204704e1ea8bb91d76c3c3965014342408d42eff0533b878223fd18d",
+      "mainBytes": 1370,
+      "mainSha256": "999e911c204704e1ea8bb91d76c3c3965014342408d42eff0533b878223fd18d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "bytes": 2689,
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "currentBytes": 2689,
+      "currentSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "mainBytes": 2689,
+      "mainSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.test.ts",
+      "bytes": 2330,
+      "sha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "currentBytes": 2330,
+      "currentSha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "mainBytes": 2330,
+      "mainSha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "bytes": 2142,
+      "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "currentBytes": 2142,
+      "currentSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "mainBytes": 2142,
+      "mainSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset-freeze.test.ts",
+      "bytes": 8156,
+      "sha256": "b7b31e4c8ef44587aaa8f24d8a39497f98fe3b5637576baeb73da27c0afb16cf",
+      "currentBytes": 8156,
+      "currentSha256": "b7b31e4c8ef44587aaa8f24d8a39497f98fe3b5637576baeb73da27c0afb16cf",
+      "mainBytes": 8156,
+      "mainSha256": "b7b31e4c8ef44587aaa8f24d8a39497f98fe3b5637576baeb73da27c0afb16cf",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset-loader.test.ts",
+      "bytes": 2733,
+      "sha256": "eb47b7ae5f954efd686cf9e4556c4d7dfeec73e1d6e3c6bb1dec1ce3938e7d30",
+      "currentBytes": 2733,
+      "currentSha256": "eb47b7ae5f954efd686cf9e4556c4d7dfeec73e1d6e3c6bb1dec1ce3938e7d30",
+      "mainBytes": 2733,
+      "mainSha256": "eb47b7ae5f954efd686cf9e4556c4d7dfeec73e1d6e3c6bb1dec1ce3938e7d30",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.test.ts",
+      "bytes": 7194,
+      "sha256": "19cee8a37958c58e1996dc787987457485d2772c1bdabc52fd5884d7617eb314",
+      "currentBytes": 7194,
+      "currentSha256": "19cee8a37958c58e1996dc787987457485d2772c1bdabc52fd5884d7617eb314",
+      "mainBytes": 7194,
+      "mainSha256": "19cee8a37958c58e1996dc787987457485d2772c1bdabc52fd5884d7617eb314",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "bytes": 12327,
+      "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "currentBytes": 12327,
+      "currentSha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "mainBytes": 12327,
+      "mainSha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "bytes": 2526,
+      "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "currentBytes": 2526,
+      "currentSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "mainBytes": 2526,
+      "mainSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.test.ts",
+      "bytes": 5721,
+      "sha256": "64a2b69d3cc3ce2dd62234cc9d798b3f7ceac668b98b4bbb12c28a25f6ab651e",
+      "currentBytes": 5721,
+      "currentSha256": "64a2b69d3cc3ce2dd62234cc9d798b3f7ceac668b98b4bbb12c28a25f6ab651e",
+      "mainBytes": 5721,
+      "mainSha256": "64a2b69d3cc3ce2dd62234cc9d798b3f7ceac668b98b4bbb12c28a25f6ab651e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.ts",
+      "bytes": 9285,
+      "sha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "currentBytes": 9285,
+      "currentSha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "mainBytes": 9285,
+      "mainSha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/grant.ts",
+      "bytes": 2217,
+      "sha256": "92fb976e6442b0c29f6a90568474c369842f47a4ed3915730e7a4336a1a28bb5",
+      "currentBytes": 2217,
+      "currentSha256": "92fb976e6442b0c29f6a90568474c369842f47a4ed3915730e7a4336a1a28bb5",
+      "mainBytes": 2217,
+      "mainSha256": "92fb976e6442b0c29f6a90568474c369842f47a4ed3915730e7a4336a1a28bb5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.test.ts",
+      "bytes": 676,
+      "sha256": "da172fa5437e13f8b7e481a4c4ae0297642b77ef50b02316418f600919c6489d",
+      "currentBytes": 676,
+      "currentSha256": "da172fa5437e13f8b7e481a4c4ae0297642b77ef50b02316418f600919c6489d",
+      "mainBytes": 676,
+      "mainSha256": "da172fa5437e13f8b7e481a4c4ae0297642b77ef50b02316418f600919c6489d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "bytes": 943,
+      "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "currentBytes": 943,
+      "currentSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "mainBytes": 943,
+      "mainSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.test.ts",
+      "bytes": 29293,
+      "sha256": "41ded2db3bd389a8286fedb18aa805aca942300bbb9cdb322e03a3db9a275d43",
+      "currentBytes": 29293,
+      "currentSha256": "41ded2db3bd389a8286fedb18aa805aca942300bbb9cdb322e03a3db9a275d43",
+      "mainBytes": 29293,
+      "mainSha256": "41ded2db3bd389a8286fedb18aa805aca942300bbb9cdb322e03a3db9a275d43",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "bytes": 54060,
+      "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "currentBytes": 54060,
+      "currentSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "mainBytes": 54060,
+      "mainSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.test.ts",
+      "bytes": 2828,
+      "sha256": "d6fc890ce0975885e93485f9409468dc197c788a8b45396b5e8b3d8da073a367",
+      "currentBytes": 2828,
+      "currentSha256": "d6fc890ce0975885e93485f9409468dc197c788a8b45396b5e8b3d8da073a367",
+      "mainBytes": 2828,
+      "mainSha256": "d6fc890ce0975885e93485f9409468dc197c788a8b45396b5e8b3d8da073a367",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.ts",
+      "bytes": 9821,
+      "sha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "currentBytes": 9821,
+      "currentSha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "mainBytes": 9821,
+      "mainSha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "bytes": 3460,
+      "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "currentBytes": 3460,
+      "currentSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "mainBytes": 3460,
+      "mainSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "bytes": 7764,
+      "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "currentBytes": 7764,
+      "currentSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "mainBytes": 7764,
+      "mainSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/index.capability.ts",
+      "bytes": 59,
+      "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "currentBytes": 59,
+      "currentSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "mainBytes": 59,
+      "mainSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/index.exports.test.ts",
+      "bytes": 997,
+      "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "currentBytes": 997,
+      "currentSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "mainBytes": 997,
+      "mainSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "bytes": 587,
+      "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "currentBytes": 587,
+      "currentSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "mainBytes": 587,
+      "mainSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/lease.test.ts",
+      "bytes": 2414,
+      "sha256": "f311be11cf98502e206a3aef61f20e9067cabe6543bb066a29361c6af14240dd",
+      "currentBytes": 2414,
+      "currentSha256": "f311be11cf98502e206a3aef61f20e9067cabe6543bb066a29361c6af14240dd",
+      "mainBytes": 2414,
+      "mainSha256": "f311be11cf98502e206a3aef61f20e9067cabe6543bb066a29361c6af14240dd",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/lease.ts",
+      "bytes": 2687,
+      "sha256": "7f4d0d52e07328c8357034fb6be79afbf89ce41403e5059c88c0aee79c45e452",
+      "currentBytes": 2687,
+      "currentSha256": "7f4d0d52e07328c8357034fb6be79afbf89ce41403e5059c88c0aee79c45e452",
+      "mainBytes": 2687,
+      "mainSha256": "7f4d0d52e07328c8357034fb6be79afbf89ce41403e5059c88c0aee79c45e452",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/ledger.test.ts",
+      "bytes": 22184,
+      "sha256": "1a3209d966839b6fe2fbdaaba6d294467a595b3539f96e17a98920a374ae80ec",
+      "currentBytes": 22184,
+      "currentSha256": "1a3209d966839b6fe2fbdaaba6d294467a595b3539f96e17a98920a374ae80ec",
+      "mainBytes": 22184,
+      "mainSha256": "1a3209d966839b6fe2fbdaaba6d294467a595b3539f96e17a98920a374ae80ec",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/ledger.ts",
+      "bytes": 35702,
+      "sha256": "df96da0bd64ab10b4e4cadfda97656ea9de43efaf10570533c5d75005f850247",
+      "currentBytes": 35702,
+      "currentSha256": "df96da0bd64ab10b4e4cadfda97656ea9de43efaf10570533c5d75005f850247",
+      "mainBytes": 35702,
+      "mainSha256": "df96da0bd64ab10b4e4cadfda97656ea9de43efaf10570533c5d75005f850247",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/module.test.ts",
+      "bytes": 534,
+      "sha256": "2cc50a5e8a171d10576a1670518999957986f4638d3ecf77e6f83e4eb8735753",
+      "currentBytes": 534,
+      "currentSha256": "2cc50a5e8a171d10576a1670518999957986f4638d3ecf77e6f83e4eb8735753",
+      "mainBytes": 534,
+      "mainSha256": "2cc50a5e8a171d10576a1670518999957986f4638d3ecf77e6f83e4eb8735753",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/module.ts",
+      "bytes": 714,
+      "sha256": "7ed10c722ec4f0ab733ddfbcb18e0d2b70bdb0e4aa5d9f822c75f3ed15436ac1",
+      "currentBytes": 714,
+      "currentSha256": "7ed10c722ec4f0ab733ddfbcb18e0d2b70bdb0e4aa5d9f822c75f3ed15436ac1",
+      "mainBytes": 714,
+      "mainSha256": "7ed10c722ec4f0ab733ddfbcb18e0d2b70bdb0e4aa5d9f822c75f3ed15436ac1",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.test.ts",
+      "bytes": 1601,
+      "sha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "currentBytes": 1601,
+      "currentSha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "mainBytes": 1601,
+      "mainSha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "bytes": 1518,
+      "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "currentBytes": 1518,
+      "currentSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "mainBytes": 1518,
+      "mainSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/connection.ts",
+      "bytes": 7181,
+      "sha256": "e43df524e5b902ad4a69f5316c2fd261c3a6fa95108206e5fae81760ebf5948e",
+      "currentBytes": 7181,
+      "currentSha256": "e43df524e5b902ad4a69f5316c2fd261c3a6fa95108206e5fae81760ebf5948e",
+      "mainBytes": 7181,
+      "mainSha256": "e43df524e5b902ad4a69f5316c2fd261c3a6fa95108206e5fae81760ebf5948e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/metered-fetch.ts",
+      "bytes": 10404,
+      "sha256": "4a6b2ae5aa390800f26ba5330d81d921270466814b2487f301885e7e73ade716",
+      "currentBytes": 10404,
+      "currentSha256": "4a6b2ae5aa390800f26ba5330d81d921270466814b2487f301885e7e73ade716",
+      "mainBytes": 10404,
+      "mainSha256": "4a6b2ae5aa390800f26ba5330d81d921270466814b2487f301885e7e73ade716",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/transport.test.ts",
+      "bytes": 14574,
+      "sha256": "c05504e51d745dcff24b697216383fd27718b0c728b530e008974fff605eef09",
+      "currentBytes": 14574,
+      "currentSha256": "c05504e51d745dcff24b697216383fd27718b0c728b530e008974fff605eef09",
+      "mainBytes": 14574,
+      "mainSha256": "c05504e51d745dcff24b697216383fd27718b0c728b530e008974fff605eef09",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.test.ts",
+      "bytes": 3412,
+      "sha256": "5554bc3c335fa2ad8edb94e37897dbe941a80ddd9f505a62b2c2bc7ea9e33c16",
+      "currentBytes": 3412,
+      "currentSha256": "5554bc3c335fa2ad8edb94e37897dbe941a80ddd9f505a62b2c2bc7ea9e33c16",
+      "mainBytes": 3412,
+      "mainSha256": "5554bc3c335fa2ad8edb94e37897dbe941a80ddd9f505a62b2c2bc7ea9e33c16",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.ts",
+      "bytes": 5243,
+      "sha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "currentBytes": 5243,
+      "currentSha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "mainBytes": 5243,
+      "mainSha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "bytes": 12438,
+      "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "currentBytes": 12438,
+      "currentSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "mainBytes": 12438,
+      "mainSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "bytes": 23091,
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "currentBytes": 23091,
+      "currentSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "mainBytes": 23091,
+      "mainSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/runner.ts",
+      "bytes": 8349,
+      "sha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "currentBytes": 8349,
+      "currentSha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "mainBytes": 8349,
+      "mainSha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.test.ts",
+      "bytes": 1128,
+      "sha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "currentBytes": 1128,
+      "currentSha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "mainBytes": 1128,
+      "mainSha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "bytes": 574,
+      "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "currentBytes": 574,
+      "currentSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "mainBytes": 574,
+      "mainSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store.test.ts",
+      "bytes": 6331,
+      "sha256": "1235b260a590ed47f02a23708c0b167bcbc0896a9d6e918daf03e1b572dc015c",
+      "currentBytes": 6331,
+      "currentSha256": "1235b260a590ed47f02a23708c0b167bcbc0896a9d6e918daf03e1b572dc015c",
+      "mainBytes": 6331,
+      "mainSha256": "1235b260a590ed47f02a23708c0b167bcbc0896a9d6e918daf03e1b572dc015c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store.ts",
+      "bytes": 18264,
+      "sha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "currentBytes": 18264,
+      "currentSha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "mainBytes": 18264,
+      "mainSha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "bytes": 1761,
+      "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "currentBytes": 1761,
+      "currentSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "mainBytes": 1761,
+      "mainSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "bytes": 3656,
+      "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "currentBytes": 3656,
+      "currentSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "mainBytes": 3656,
+      "mainSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/optimization-lab/src/test-fixtures/foundation.ts",
+      "bytes": 4460,
+      "sha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "currentBytes": 4460,
+      "currentSha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "mainBytes": 4460,
+      "mainSha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentBytes": 3723,
+      "currentSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "mainBytes": 3723,
+      "mainSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/optimization-lab/src/contracts/canonical-json.test.ts",
+      "sha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/optimization-lab/src/store-paths.test.ts",
+      "sha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/sessionStatus.test.ts",
+      "sha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/optimization-lab/src/report.ts",
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/overfit-hints.test.ts",
+      "sha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/assertions.test.ts",
+      "sha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/grading.ts",
+      "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/report.ts",
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/test-fixtures/foundation.ts",
+      "sha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "lab-source-manifest.json",
+      "path": "packages/optimization-lab/src/controller.ts",
+      "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/dialogState.test.ts",
+      "sha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.tsx",
+      "sha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.interaction.test.tsx",
+      "sha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/ConfirmDialog.tsx",
+      "sha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "dialog-source-manifest.json",
+      "path": "packages/desktop/src/renderer/digital-humans/profileRequirements.ts",
+      "sha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts",
+      "sha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "packages/desktop/src/renderer/Markdown.tsx",
+      "sha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-preflight-skip.md",
+      "sha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "streaming-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-navigation-skip.md",
+      "sha256": "cc3fa55002d7a97ac3845f623929df918a58992df61602d3438a455fe6adf9d4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-root-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts",
+      "sha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "packages/desktop/src/renderer/Markdown.tsx",
+      "sha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    },
+    {
+      "manifest": "review-streaming-independent-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-preflight-skip.md",
+      "sha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original author read-time timing and no-Git flags retained. Root binding does not retroactively prove read-start SHA or whole-source semantic reading."
+    }
+  ],
+  "priorPrepHashOnlyChecks": [
+    {
+      "path": "packages/optimization-lab/src/store.ts",
+      "sha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.test.ts",
+      "sha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/runner.ts",
+      "sha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/test-fixtures/foundation.ts",
+      "sha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.test.ts",
+      "sha256": "d6fc890ce0975885e93485f9409468dc197c788a8b45396b5e8b3d8da073a367",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/ledger.ts",
+      "sha256": "df96da0bd64ab10b4e4cadfda97656ea9de43efaf10570533c5d75005f850247",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/module.test.ts",
+      "sha256": "2cc50a5e8a171d10576a1670518999957986f4638d3ecf77e6f83e4eb8735753",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/lease.test.ts",
+      "sha256": "f311be11cf98502e206a3aef61f20e9067cabe6543bb066a29361c6af14240dd",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.exports.test.ts",
+      "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.test.ts",
+      "sha256": "41ded2db3bd389a8286fedb18aa805aca942300bbb9cdb322e03a3db9a275d43",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/ledger.test.ts",
+      "sha256": "1a3209d966839b6fe2fbdaaba6d294467a595b3539f96e17a98920a374ae80ec",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.capability.ts",
+      "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/transport.test.ts",
+      "sha256": "c05504e51d745dcff24b697216383fd27718b0c728b530e008974fff605eef09",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/connection.ts",
+      "sha256": "e43df524e5b902ad4a69f5316c2fd261c3a6fa95108206e5fae81760ebf5948e",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/metered-fetch.ts",
+      "sha256": "4a6b2ae5aa390800f26ba5330d81d921270466814b2487f301885e7e73ade716",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.test.ts",
+      "sha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/store.test.ts",
+      "sha256": "1235b260a590ed47f02a23708c0b167bcbc0896a9d6e918daf03e1b572dc015c",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.test.ts",
+      "sha256": "5554bc3c335fa2ad8edb94e37897dbe941a80ddd9f505a62b2c2bc7ea9e33c16",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.test.ts",
+      "sha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.ts",
+      "sha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.test.ts",
+      "sha256": "999e911c204704e1ea8bb91d76c3c3965014342408d42eff0533b878223fd18d",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/lease.ts",
+      "sha256": "7f4d0d52e07328c8357034fb6be79afbf89ce41403e5059c88c0aee79c45e452",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/module.ts",
+      "sha256": "7ed10c722ec4f0ab733ddfbcb18e0d2b70bdb0e4aa5d9f822c75f3ed15436ac1",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.ts",
+      "sha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset-freeze.test.ts",
+      "sha256": "b7b31e4c8ef44587aaa8f24d8a39497f98fe3b5637576baeb73da27c0afb16cf",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.test.ts",
+      "sha256": "da172fa5437e13f8b7e481a4c4ae0297642b77ef50b02316418f600919c6489d",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset-loader.test.ts",
+      "sha256": "eb47b7ae5f954efd686cf9e4556c4d7dfeec73e1d6e3c6bb1dec1ce3938e7d30",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.test.ts",
+      "sha256": "19cee8a37958c58e1996dc787987457485d2772c1bdabc52fd5884d7617eb314",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.test.ts",
+      "sha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.ts",
+      "sha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.test.ts",
+      "sha256": "64a2b69d3cc3ce2dd62234cc9d798b3f7ceac668b98b4bbb12c28a25f6ab651e",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/grant.ts",
+      "sha256": "92fb976e6442b0c29f6a90568474c369842f47a4ed3915730e7a4336a1a28bb5",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "coverage": "Lab prep inventory hash-only current-baseline Git binding, not an additional semantic read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coverage": "Coverage shortlist hash-only recheck; active semantic scope separately listed by assigned author"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "coverage": "Coverage shortlist hash-only recheck; active semantic scope separately listed by assigned author"
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "coverage": "Coverage shortlist hash-only recheck; active semantic scope separately listed by assigned author"
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "packageInventoryHashOnlyRecheck": "evidence/coverage-current-recheck.json",
+  "note": "4087 package inventory hashes are not semantic coverage or individual Root Git binding; frozen source/current/main and semantic scopes remain separate. Erroneous first range metadata retained only as diagnostic, not active contributor."
+}

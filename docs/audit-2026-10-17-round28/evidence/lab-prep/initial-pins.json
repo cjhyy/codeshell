@@ -1,0 +1,392 @@
+{
+  "parentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "packages/optimization-lab/src/store.ts",
+      "bytes": 18264,
+      "lineCount": 496,
+      "firstFilesystemSha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "bytes": 12438,
+      "lineCount": 301,
+      "firstFilesystemSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.test.ts",
+      "bytes": 1128,
+      "lineCount": 30,
+      "firstFilesystemSha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/runner.ts",
+      "bytes": 8349,
+      "lineCount": 238,
+      "firstFilesystemSha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "bytes": 54060,
+      "lineCount": 1394,
+      "firstFilesystemSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "bytes": 7764,
+      "lineCount": 240,
+      "firstFilesystemSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "bytes": 1518,
+      "lineCount": 37,
+      "firstFilesystemSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "bytes": 587,
+      "lineCount": 13,
+      "firstFilesystemSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "bytes": 1761,
+      "lineCount": 56,
+      "firstFilesystemSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "bytes": 3460,
+      "lineCount": 110,
+      "firstFilesystemSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/test-fixtures/foundation.ts",
+      "bytes": 4460,
+      "lineCount": 151,
+      "firstFilesystemSha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.test.ts",
+      "bytes": 2828,
+      "lineCount": 69,
+      "firstFilesystemSha256": "d6fc890ce0975885e93485f9409468dc197c788a8b45396b5e8b3d8da073a367",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/ledger.ts",
+      "bytes": 35702,
+      "lineCount": 972,
+      "firstFilesystemSha256": "df96da0bd64ab10b4e4cadfda97656ea9de43efaf10570533c5d75005f850247",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "bytes": 574,
+      "lineCount": 14,
+      "firstFilesystemSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "bytes": 3656,
+      "lineCount": 91,
+      "firstFilesystemSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/module.test.ts",
+      "bytes": 534,
+      "lineCount": 15,
+      "firstFilesystemSha256": "2cc50a5e8a171d10576a1670518999957986f4638d3ecf77e6f83e4eb8735753",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/lease.test.ts",
+      "bytes": 2414,
+      "lineCount": 50,
+      "firstFilesystemSha256": "f311be11cf98502e206a3aef61f20e9067cabe6543bb066a29361c6af14240dd",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.exports.test.ts",
+      "bytes": 997,
+      "lineCount": 24,
+      "firstFilesystemSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "bytes": 1739,
+      "lineCount": 48,
+      "firstFilesystemSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.test.ts",
+      "bytes": 29293,
+      "lineCount": 713,
+      "firstFilesystemSha256": "41ded2db3bd389a8286fedb18aa805aca942300bbb9cdb322e03a3db9a275d43",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/ledger.test.ts",
+      "bytes": 22184,
+      "lineCount": 575,
+      "firstFilesystemSha256": "1a3209d966839b6fe2fbdaaba6d294467a595b3539f96e17a98920a374ae80ec",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.capability.ts",
+      "bytes": 59,
+      "lineCount": 1,
+      "firstFilesystemSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/transport.test.ts",
+      "bytes": 14574,
+      "lineCount": 440,
+      "firstFilesystemSha256": "c05504e51d745dcff24b697216383fd27718b0c728b530e008974fff605eef09",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/connection.ts",
+      "bytes": 7181,
+      "lineCount": 197,
+      "firstFilesystemSha256": "e43df524e5b902ad4a69f5316c2fd261c3a6fa95108206e5fae81760ebf5948e",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/providers/metered-fetch.ts",
+      "bytes": 10404,
+      "lineCount": 284,
+      "firstFilesystemSha256": "4a6b2ae5aa390800f26ba5330d81d921270466814b2487f301885e7e73ade716",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.test.ts",
+      "bytes": 977,
+      "lineCount": 24,
+      "firstFilesystemSha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/store.test.ts",
+      "bytes": 6331,
+      "lineCount": 158,
+      "firstFilesystemSha256": "1235b260a590ed47f02a23708c0b167bcbc0896a9d6e918daf03e1b572dc015c",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.test.ts",
+      "bytes": 3412,
+      "lineCount": 98,
+      "firstFilesystemSha256": "5554bc3c335fa2ad8edb94e37897dbe941a80ddd9f505a62b2c2bc7ea9e33c16",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.test.ts",
+      "bytes": 1601,
+      "lineCount": 31,
+      "firstFilesystemSha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.ts",
+      "bytes": 9821,
+      "lineCount": 255,
+      "firstFilesystemSha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.test.ts",
+      "bytes": 1370,
+      "lineCount": 28,
+      "firstFilesystemSha256": "999e911c204704e1ea8bb91d76c3c3965014342408d42eff0533b878223fd18d",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/lease.ts",
+      "bytes": 2687,
+      "lineCount": 78,
+      "firstFilesystemSha256": "7f4d0d52e07328c8357034fb6be79afbf89ce41403e5059c88c0aee79c45e452",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "bytes": 2689,
+      "lineCount": 81,
+      "firstFilesystemSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/module.ts",
+      "bytes": 714,
+      "lineCount": 15,
+      "firstFilesystemSha256": "7ed10c722ec4f0ab733ddfbcb18e0d2b70bdb0e4aa5d9f822c75f3ed15436ac1",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.ts",
+      "bytes": 5243,
+      "lineCount": 129,
+      "firstFilesystemSha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "bytes": 23091,
+      "lineCount": 544,
+      "firstFilesystemSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset-freeze.test.ts",
+      "bytes": 8156,
+      "lineCount": 258,
+      "firstFilesystemSha256": "b7b31e4c8ef44587aaa8f24d8a39497f98fe3b5637576baeb73da27c0afb16cf",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "bytes": 943,
+      "lineCount": 18,
+      "firstFilesystemSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.test.ts",
+      "bytes": 676,
+      "lineCount": 15,
+      "firstFilesystemSha256": "da172fa5437e13f8b7e481a4c4ae0297642b77ef50b02316418f600919c6489d",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset-loader.test.ts",
+      "bytes": 2733,
+      "lineCount": 75,
+      "firstFilesystemSha256": "eb47b7ae5f954efd686cf9e4556c4d7dfeec73e1d6e3c6bb1dec1ce3938e7d30",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.test.ts",
+      "bytes": 7194,
+      "lineCount": 191,
+      "firstFilesystemSha256": "19cee8a37958c58e1996dc787987457485d2772c1bdabc52fd5884d7617eb314",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.test.ts",
+      "bytes": 2330,
+      "lineCount": 58,
+      "firstFilesystemSha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "bytes": 2526,
+      "lineCount": 69,
+      "firstFilesystemSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.ts",
+      "bytes": 9285,
+      "lineCount": 245,
+      "firstFilesystemSha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.test.ts",
+      "bytes": 5721,
+      "lineCount": 185,
+      "firstFilesystemSha256": "64a2b69d3cc3ce2dd62234cc9d798b3f7ceac668b98b4bbb12c28a25f6ab651e",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/grant.ts",
+      "bytes": 2217,
+      "lineCount": 49,
+      "firstFilesystemSha256": "92fb976e6442b0c29f6a90568474c369842f47a4ed3915730e7a4336a1a28bb5",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "bytes": 12327,
+      "lineCount": 345,
+      "firstFilesystemSha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "bytes": 2142,
+      "lineCount": 58,
+      "firstFilesystemSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "semanticRead": false,
+      "scope": "inventory/hash only; no code reading at this point"
+    }
+  ],
+  "note": "First filesystem hashes captured before any selected lab source semantic reading. Git comparison not performed; head is parent-provided context only.",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

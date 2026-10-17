@@ -1,0 +1,222 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "lineCount": 217,
+      "coveredLineCount": 217,
+      "role": "instruction",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "lineCount": 5,
+      "coveredLineCount": 5,
+      "role": "instruction",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "bytes": 2142,
+      "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "initialFilesystemSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "finishFilesystemSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "firstPinTiming": "Before declared semantic read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          58
+        ]
+      ],
+      "lineCount": 58,
+      "coveredLineCount": 58,
+      "role": "product",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.test.ts",
+      "bytes": 2330,
+      "sha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "927bdf9190419b018c57bc070688f804d9713154879e05dc48e4506e809a40e8",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          58
+        ]
+      ],
+      "lineCount": 58,
+      "coveredLineCount": 58,
+      "role": "test source only",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "bytes": 574,
+      "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "initialFilesystemSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "finishFilesystemSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "firstPinTiming": "Before declared semantic read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "lineCount": 14,
+      "coveredLineCount": 14,
+      "role": "product static only; native/home dependency not loaded",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.test.ts",
+      "bytes": 1128,
+      "sha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "1c2fbc05d3118e9959a74c52f12831a0699bcdb392254a2e58e085ecee1f62e2",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "lineCount": 30,
+      "coveredLineCount": 30,
+      "role": "test/FS fixture definitions only, not executed",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "bytes": 813,
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "initialFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "finishFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "firstPinTiming": "Before declared semantic read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "lineCount": 26,
+      "coveredLineCount": 26,
+      "role": "product",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.test.ts",
+      "bytes": 1238,
+      "sha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "lineCount": 41,
+      "coveredLineCount": 41,
+      "role": "test source only",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "bytes": 23091,
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          38,
+          70
+        ],
+        [
+          461,
+          489
+        ]
+      ],
+      "lineCount": 544,
+      "coveredLineCount": 62,
+      "role": "selected canonical serialization consumer",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "bytes": 2689,
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          65,
+          81
+        ]
+      ],
+      "lineCount": 81,
+      "coveredLineCount": 17,
+      "role": "selected ordinary candidate serialization consumer",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          678,
+          730
+        ]
+      ],
+      "lineCount": 2924,
+      "coveredLineCount": 53,
+      "role": "selected status badge consumer only",
+      "rootFrozenGitBlobBound": true
+    }
+  ],
+  "sourcePinCount": 11,
+  "semanticReadLines": 581,
+  "productExecution": false,
+  "scope": "Whole-file bytes do not extend declared selected semantic ranges. Initial3 pins captured before their read; other first durable hashes after read are explicitly null-initial."
+}
