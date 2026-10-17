@@ -419,6 +419,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-cache-inventory-after.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-source-payload-permissions-before.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-source-payload-permissions-after.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-extracted-payload-permissions-before.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-cache-payload-permissions-before.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-cache-payload-permissions-after.json
             ${{ env.ACCEPTANCE_ROOT }}/dmg.log

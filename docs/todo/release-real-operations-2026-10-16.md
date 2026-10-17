@@ -90,6 +90,7 @@ main, tags and publication remain outside that authorization. The branch is
 | [39004577231](https://github.com/cjhyy/codeshell/actions/runs/39004577231), source `ccaed3142`, manual `suite=web` | Web ServiceWorker 11 and authentication 4 pass in hosted Linux Chromium under Xvfb. The login tab reports `focused=false` before an actual trusted focus event, with no status read during its pending login. Native jobs are intentionally skipped in this diagnostic run; it is not a complete matrix pass. |
 | [39007288837](https://github.com/cjhyy/codeshell/actions/runs/39007288837), source `34553b747`, manual `suite=web` | The expanded browser job passes: ServiceWorker 11, authentication 4, child-state/send/stop/tool display 8 and multiline CommentBox/save/display 8. New receipts bind clean source `34553b747`, normal browser exits and ten observed incarnations cleaned with zero remaining. Narrow screenshots were independently inspected. Native jobs are skipped while the Windows transport is repaired; this is not a full matrix pass. |
 | [39008016212](https://github.com/cjhyy/codeshell/actions/runs/39008016212), source `1b4b3340f` | Web passes all 31 operations again. The complete macOS job passes, including updater and DMG, with 78 independent receipt checks. Windows now passes three cold Main launches/reloads/second-window and Review 8, then exposes a real Files UI defect: the comment title displays the full Windows path instead of `alpha.txt`. Main exits normally with zero remaining owned processes and no transport fallback. Linux passes all six source suites, sandbox-requested directory UI and the actual AppImage build; its updater fixture fails after successful extraction because a LICENSE file's mode changes from 0600 to 0644 while bytes match. No AppImage Main or updater request starts. Both first failures are retained, and neither incomplete platform is counted as fully accepted. |
+| [39009261349](https://github.com/cjhyy/codeshell/actions/runs/39009261349), source `ec17b2054` | Web 31 and the complete macOS job pass again. Linux source suites, directory UI and real AppImage build pass; extraction passes the previous LICENSE comparison but now fails its stricter directory check at `locales`. Source mode is 0755; this receipt omitted the extracted mode, so no new directory conversion is assumed. Main/update requests remain zero. Windows fails in its first Main evaluation with “Resulting promise was garbage collected”, before any of the seven startup operations. Its final exit is 1/no signal, observed 32 incarnations settle cleaned/zero remaining with no query/transport/deny/worker failures, and HOME remains. The receipt does not establish whether that exit precedes fixture cleanup. Windows UI repairs and real AppImage runtime acceptance remain pending. |
 
 Artifacts are downloaded as ZIPs under the private operation evidence root,
 with individual reports inspected directly. First-failure Main logs missing from
@@ -146,6 +147,58 @@ The corrected preload shard passes ten tests/46 assertions. Scoped lint/format
 pass; the updated workflow parses as two jobs and all 32 Bash run blocks pass
 syntax checks. The system Python lacks PyYAML, so this syntax check uses the
 already-installed Bun YAML parser without installing another dependency.
+
+Run `39009261349` is a failed overall matrix. Its Web artifact `12092276562`
+has SHA256 `589f65fc3b0fb8120f2b61807221b1e46068c497eaee55df741246a17370e5e4`;
+independent inspection binds both new browser families to clean `ec17b2054`,
+normal exits, ten observed identities cleaned/zero remaining and empty failure
+ledgers, with actual trusted authentication focus preserved. The Windows ZIP and
+first-failure logs remain under `ci-39009261349-windows-20261017`; actual guard
+and loadFile receipts exist for Main 5784 with no missing Pet handlers. A later
+undefined `proof.guard` is a secondary failure after the first evaluation failed
+to return, not evidence that the guard was absent. GPU/network-service stderr
+and the final exit code alone do not establish the first failure's cause.
+The Linux ZIP remains `ci-39009261349-linux.zip`: successful extraction code 0,
+observed identity cleaned/zero remaining, no Main/update/native-storage calls,
+and retained HOME. The next diagnostic must capture source/extracted modes
+before validation and distinguish Windows first-error phase and pre-cleanup
+state. No retry, sandbox/normal-exit relaxation or speculative product fix is
+justified by the incomplete evidence.
+Mac artifact `12092362559` has ZIP SHA256
+`e58dc9ed79b93485d8481037360981f16a569933e553f7cf5ff41b6d88791fdc`;
+78 independent receipt checks pass for the same startup/Review/preferences/
+packaged UI/updater/DMG operation and normal-exit boundaries as the preceding
+macOS run. Its actual 390px dark UI and Review screenshots were also inspected.
+
+During local integration another task added only round-nine audit records at
+`6966dc0f9`; the expected-head guard refused synchronization before mutation.
+After reviewing and retaining those records, local `main` fast-forwarded to
+`3f9fcfdaf`, preserving the same five pre-existing paths exactly. Its product
+source is identical to remote acceptance commit `ec17b2054`; only audit documents
+are added. Those separate audit findings remain recorded and are not claimed
+fixed by this UI/native-path wave.
+
+The AppImage follow-up retains complete source and extracted 07777 permission
+triples before the current validator runs, with a 20,000-entry/4 MiB limit and
+exclusive 0600 evidence files. A rejected normalization records both numeric
+and octal modes in the runtime receipt. Privilege/write-bit rejection still
+fails under the same policy, with both inventories retained. Eight focused
+runtime tests and the three build-contract tests pass together; no new directory
+conversion is allowed. The workflow explicitly uploads the extracted inventory.
+
+The Windows follow-up shares one bounded diagnostic timeline between the startup
+driver and source harness. It records fixed phases, the first error's owned
+stack frames, ChildProcess state before the harness's own termination, cleanup
+requests, observed watcher-authorized signal requests and exit/close order.
+Recording errors cannot replace the original error or skip custody. Fake
+Windows controls separately model an exit observed before evaluation rejection
+and exit code 1 appearing only during cleanup; neither is automatically called
+a native crash or accepted as a pass. No launch argument, GPU switch, sandbox,
+timeout, retry, guard, normal-exit or final transport gate changes. Independent
+review passes; the combined source-harness/startup/direct-transport/AppImage
+Node shard passes 46 tests, with scoped lint/format and workflow parsing passing.
+These are diagnostic contracts; actual Windows failure classification and
+AppImage Main/updater execution still require the next CI.
 
 Windows file fixes use Main's explicit platform for basename and dirname, with
 POSIX backslashes/filename whitespace preserved. Real React regressions retain
