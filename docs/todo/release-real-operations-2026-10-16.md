@@ -11,7 +11,7 @@ Cross-platform fixture tests alone are not native acceptance.
 The latest completed run, CI30, **FAILED** overall: three jobs pass and two fail.
 See the [CI30 actual record](#ci30--actual-five-job-results-and-pending-follow-ups).
 The subsequent Goal, diagnostic-clock and attachment fixes have finite local
-regressions, but native CI31 and combined source gates are still pending.
+regressions; native CI31 is still pending.
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -3621,3 +3621,20 @@ or a source-bound CI31 run at this documentation checkpoint. Original budgets,
 identity/custody/normal-exit, OS/cache/HOME and all existing acceptance gates
 remain required. No release, signing, publication, retry or guard relaxation is
 approved by this record. CI29 and all older unknown failures remain unchanged.
+
+### Subsequent combined static checkpoint
+
+After the preceding documentation checkpoint, Root source
+`97909db793d2714f52a2e0ac3ea9402485e61b9d` includes the three follow-ups and passes
+all seventeen finite static commands. The dependency build emits twelve
+non-Desktop package declarations, Web static assets and the root shim;
+fourteen workspace commands cover sixteen no-emit TypeScript checks; separate
+renderer and mobile browser bundles also exit zero. This is not a complete
+Desktop native build, package or native UI run, and no tests are inferred from
+these static commands. The actual result at
+`/private/tmp/codeshell-ci31-combined-static-root-20261018/verified-final-static-result.json`
+has SHA-256 `579b7bf1a14784afb902d6e36bafb1243ecaf762bd84958068d9a2267fcf4fcb`.
+Existing bundle-size warnings remain: Web 773.23 kB and mobile 741.23 kB exceed
+500 kB; renderer index 1,468.78 kB exceeds 1,000 kB. This is not a zero-warning
+result. The earlier pending statement remains its historical checkpoint;
+source-bound native CI31 is still pending and CI30 remains failed.
