@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/pet-search-json-text.test.ts:
+{"observation":"quoted-content-search-false-negative","query":"console.log(\"hello\")","result":{"matches":[],"scannedSessions":1,"truncated":false}}
+(pass) Pet disclosure raw JSON prefilter rejects valid quoted code query [12.34ms]
+{"observation":"backslash-content-search-false-negative","query":"C:\\work\\notes.txt","result":{"matches":[],"scannedSessions":1,"truncated":false}}
+(pass) Pet disclosure raw JSON prefilter rejects valid path with backslashes [7.75ms]
+(pass) Pet disclosure plain substring normal control locates decoded message [9.17ms]
+
+ 3 pass
+ 0 fail
+ 7 expect() calls
+Ran 3 tests across 1 file. [100.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

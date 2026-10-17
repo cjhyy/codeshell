@@ -1,0 +1,151 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "owner": "operations_memory_round2",
+  "productionSources": [
+    {
+      "path": "packages/core/src/session/memory.ts",
+      "sha256": "85e08e3b5e19eddf620d426ed567ef489738832a58bc585f1781871f3844b9df",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory.ts",
+      "sha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/memory-orchestrator.ts",
+      "sha256": "9b52686ae047420cd8ce22328ec9801ae40370681aaa1bc19cae1acbea2be28c",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/global-dream-promotion.ts",
+      "sha256": "6d70aaa5de61151f93bd9481ef3d983549827fdf9daecad4da68970ef2b2e5a9",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-progress.ts",
+      "sha256": "44a9a3ec0920562f10b25d5b0329fccd47f4938326b585f55ebfd7f4aa648158",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/archive.ts",
+      "sha256": "fa238397e29f49ac0d6b20542ff8b4aff430db96df212d9e9fd4b7c2fc35126d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/ledger.ts",
+      "sha256": "35e7d33c0695a242459f128e405b70268466880a07eb696bd64f79395124ac07",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/recovery.ts",
+      "sha256": "9519e5339aa8d62a60de672599cf284756567ac74b81abd39ccd1196016692d7",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/controller.ts",
+      "sha256": "1d477304988af568ccae3dbbd92c93b37edfba59959ceb9551ac08b82aa33409",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/resolver.ts",
+      "sha256": "501021f2b7a680dd84700806a3ab36193acc450ca0c15a098b7c5356868a338d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/run/FileRunStore.ts",
+      "sha256": "ad7b0f314a93e3a31700e75b28beab0ee3b707c60b7675589fd371eca401ecf5",
+      "matchesFrozenGitBlob": true
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-memory-data-round1.log",
+      "sha256": "89391520ce6e4dcc1b5f921048b29d9b2a89c927d2e0dea1fb3a09020900c94d"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-memory-data-round1.test.ts",
+      "sha256": "3ccec4e5a5194656a85dbe98da103fd67e175bc767dd9615eaf9e1bb36724307"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-memory-project-key-round4.log",
+      "sha256": "35d25682e2730722a2f2e41016570e00354f68a82b099ad9e7dc60bb224d1cb2"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-memory-project-key-round4.test.ts",
+      "sha256": "b8e6b93767f0b149cfc291ade108c5b452622d140996acda7783b88cfaa3f322"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-memory-promotion-round2.log",
+      "sha256": "9a1a61a299b359cd5dda28478cd9615e7f16a719d965ae3d065e6225b92e44d0"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-memory-promotion-round2.test.ts",
+      "sha256": "7a4f1d5f1a9b491272b3e4e1490a69e0acd84845cc36a5b27631ae1c261420f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-operations-baseline-round1.log",
+      "sha256": "38c5ff96f701639ff078886f57005de65d7f99efe5f523ab8138d822e80063a9"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-progress-recovery-round3.log",
+      "sha256": "5d6924b6c4d755e72e4fa240d7b8e9644ac57a95c5d00b09d539017c859d591f"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-progress-recovery-round3.test.ts",
+      "sha256": "abb957190e30be5624132ad0d58c9bf95c33d818e0a4263b1a486aab5ef3143b"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ops-state-baseline-round3.log",
+      "sha256": "0824e19c5452e3f08ee5dba8850e6b1f31a44cdb295b52252a6afcb30ae28582"
+    }
+  ],
+  "confirmed": {
+    "total": 4,
+    "P2": 2,
+    "P3": 2,
+    "ids": [
+      "OM1",
+      "OM3",
+      "OM4",
+      "OM5"
+    ]
+  },
+  "completedRuns": {
+    "actualExecutedTests": 31,
+    "expectCalls": 155,
+    "failures": 0,
+    "filteredOut": 26
+  },
+  "firstFailedRunExcludedFromCompleted": {
+    "file": "evidence/ops-memory-data-round1.log",
+    "passed": 1,
+    "failed": 3,
+    "expectCalls": 7,
+    "completed": false,
+    "rerun": false
+  },
+  "scope": {
+    "realNetwork": false,
+    "realModel": false,
+    "realAccount": false,
+    "productEdits": false,
+    "nativeToolExecution": false,
+    "ownedTemporaryFiles": true
+  }
+}

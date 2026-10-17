@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/chat-discord-chunks.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'discord.js' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/evidence/chat-discord-chunks.test.ts'
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [88.00ms]
+Bun test process failed (1)

@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ui-history-window.test.ts:
+{"observation":"durable-prefix-interrupted-reply","messageIds":["prefix","d-one","interrupted","d-two","d-answer"]}
+(pass) round 1: durable window prefix and cached interruption stay in their turns [2.20ms]
+(pass) round 1: unrelated repeated legacy text cannot import a cached prefix [0.46ms]
+
+ 2 pass
+ 0 fail
+ 3 expect() calls
+Ran 2 tests across 1 file. [163.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

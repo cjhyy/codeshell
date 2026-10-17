@@ -1,0 +1,17 @@
+bun test v1.3.11 (af24e281)
+
+packages/coding/src/cc-orchestrator/external-agent-changes.test.ts:
+(pass) extractChangedFilesFromClaudeLines > extracts Write/Edit/MultiEdit/NotebookEdit file paths, deduped [1.04ms]
+(pass) extractChangedFilesFromClaudeLines > skips malformed / non-tool lines without throwing [0.44ms]
+(pass) extractChangedFilesFromClaudeLines > empty input → empty list
+(pass) extractChangedFilesFromCodexLines > extracts file paths from write/edit function calls [0.15ms]
+(pass) extractChangedFilesFromCodexLines > extracts file paths from an apply_patch header block [0.03ms]
+(pass) extractChangedFilesFromCodexLines > malformed / non-response lines skipped [0.05ms]
+(pass) readClaudeChangedFiles (locates the transcript by cwd + sid) > reads <claudeHome>/projects/<encodeCwd>/<sid>.jsonl and returns changed files [4.92ms]
+(pass) readClaudeChangedFiles (locates the transcript by cwd + sid) > missing transcript → empty list (no throw) [0.37ms]
+
+ 8 pass
+ 0 fail
+ 8 expect() calls
+Ran 8 tests across 1 file. [382.00ms]
+Completed Bun shard: 8 tests, 0 skipped; 0 failures.

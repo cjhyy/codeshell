@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ops-memory-promotion-round2.test.ts:
+{"observation":"global-add-overwrites","decision":"ADD","calls":2,"result":{"extracted":1,"dreamTriggered":false,"pruned":[]},"remaining":[{"id":"original","content":"Retry read requests twice after a temporary error."}],"pending":["Retry read requests twice after a temporary error."]}
+(pass) observation: an explicit global ADD decision overwrites project dream by name [40.83ms]
+{"observation":"pending-stale-approval","first":{"promoted":false,"pendingSuggested":true,"originProjects":["/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-promotion-DBCmki/project"],"evidenceCount":1,"projectEvidenceSaved":true,"promotionReason":"candidate suggested global dream approval"},"second":{"promoted":false,"pendingSuggested":false,"originProjects":["/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-promotion-DBCmki/project"],"evidenceCount":1,"projectEvidenceSaved":true,"promotionReason":"candidate suggested global dream approval"},"project":["Display lengths in meters."],"queued":["Display lengths in centimeters."],"approved":"mem_7e95b0d42fa44e44a0184230b309604e.md","global":["Display lengths in centimeters."]}
+(pass) observation: repeated candidate refreshes project evidence but approval lands old pending text [27.28ms]
+
+ 2 pass
+ 0 fail
+ 13 expect() calls
+Ran 2 tests across 1 file. [170.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

@@ -1,0 +1,283 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "bytes": 339166,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "docs/todo/workspace-upload-document-index-delivery.md",
+      "sha256": "dc759b46d580179a282d55b4f523cb15f9463bca095684e6a7c801d1cec6e0c2",
+      "bytes": 11843,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "package.json",
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "bytes": 7063,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "bytes": 9244,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "bytes": 5782,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "sha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "bytes": 8844,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/external-agent-changes.ts",
+      "sha256": "ab83d44a75517e131dca7842b0aa4cd3d47f470d61b50dba59f71960774e8e2d",
+      "bytes": 7735,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/session-discovery.ts",
+      "sha256": "d36387168a2d572b65edbf769a403a890d5d74d7b0ec7b6ef23bb5ac16b79848",
+      "bytes": 13220,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/session-history.ts",
+      "sha256": "b6912012938b8ccaee6447e64baa5ea59b4ea8fd63366cc80dc5cca6c817c9f0",
+      "bytes": 6352,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/drive-agent.ts",
+      "sha256": "7e64fa7df67103bc83510c05dc03068f0cd848d17cd04991c2b2354f0004976d",
+      "bytes": 72074,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/cron-expr.test.ts",
+      "sha256": "05eb2d10833520218cd8df091ea3ab0426ef74674399974c42308564bdc865d4",
+      "bytes": 7079,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/cron-expr.ts",
+      "sha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "bytes": 7034,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/parse-schedule.test.ts",
+      "sha256": "3a7d40058d8219e4882e6e25772b1bc52dffd54246d847f60fbbb537023b61db",
+      "bytes": 1506,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/scheduler-absolute-once.test.ts",
+      "sha256": "c4e0ef7755680b375ca792a25eabab6cb0da4dec5263db93d7d28fd68a1e9f88",
+      "bytes": 10738,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/scheduler-timer-overflow.test.ts",
+      "sha256": "1d97aa29712da0139e7d1111dea8c534c53144f52c52258f859fa795bf1183f7",
+      "bytes": 5496,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/query.ts",
+      "sha256": "074b342616085afc0fb527b916aeafe6af640298bbc5a5e9840735a3f7622953",
+      "bytes": 4572,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/archive.test.ts",
+      "sha256": "596d9334f648065a15e3d62e335a69acd20cb463c7c0fa0b4bae735604aa7398",
+      "bytes": 27930,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/operations/controller.test.ts",
+      "sha256": "a01f68413b92762c200fa0a0e8207a46ae02f8bb4d375f32650ad0f262ac0d02",
+      "bytes": 18608,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/run/FileRunStore.list-pagination.test.ts",
+      "sha256": "6f4888a238e066f0947bb4203a30e839173935b31db5c6f53c79b7dce6da3e21",
+      "bytes": 2786,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/run/RunManager.recover.test.ts",
+      "sha256": "66d374ed0622b12b7798915647f5e1944bb30bbb92e98fac3fb26b900e700dd7",
+      "bytes": 8209,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "bytes": 2451,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/global-dream-promotion.ts",
+      "sha256": "6d70aaa5de61151f93bd9481ef3d983549827fdf9daecad4da68970ef2b2e5a9",
+      "bytes": 5542,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/memory-orchestrator.ts",
+      "sha256": "9b52686ae047420cd8ce22328ec9801ae40370681aaa1bc19cae1acbea2be28c",
+      "bytes": 29011,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "bytes": 523,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory.ts",
+      "sha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "bytes": 7686,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/session/memory.ts",
+      "sha256": "85e08e3b5e19eddf620d426ed567ef489738832a58bc585f1781871f3844b9df",
+      "bytes": 42480,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/sources/documents/parse.ts",
+      "sha256": "2e8e5f386c02dbacc1e1405df44cfd86aa3aa1e760755a220adf6947507239c1",
+      "bytes": 14075,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-progress.test.ts",
+      "sha256": "290b483dd57e3e893daa810898dc925900be6753d81eb360b167210fd8e30857",
+      "bytes": 2188,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-progress.ts",
+      "sha256": "44a9a3ec0920562f10b25d5b0329fccd47f4938326b585f55ebfd7f4aa648158",
+      "bytes": 3066,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "bytes": 62377,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/cron.ts",
+      "sha256": "8971b2edcc7de99541f6b662f9307ba7abb1592c7df57963c671d417f97281d5",
+      "bytes": 11102,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/sources.ts",
+      "sha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "bytes": 27850,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/workspace/canonical-key.ts",
+      "sha256": "fbd8ece34e23633d262308c9458d5c9bb88807d2b2db9242f121f3156b467df0",
+      "bytes": 1585,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "47a8bb813848cddbd56e1a53dd4b2f67feb01377c102e8b834c82f5e717e7b41",
+      "bytes": 37186,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchors.ts",
+      "sha256": "86a07a32e2d47824870af71d0decaf71cccc798b4f287ae0cff603790ca5a440",
+      "bytes": 6651,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "sha256": "61dbbdf6e567dc6330512268055fcc0886fffe519357e92a9c3bd8470fdeb505",
+      "bytes": 3834,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/stripMarkdown.ts",
+      "sha256": "461ef4477c3a2b94d424a5f3dd9238d96603cdbe6b0a1d495b9c5490b4314881",
+      "bytes": 1799,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "bytes": 3880,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/disclosure/search.ts",
+      "sha256": "cb82b97d6e4451150260bec768e066622392d4bc475501d0ce29f0c006ee580c",
+      "bytes": 4948,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/export-md.ts",
+      "sha256": "0b14df8ae14acc0222afe076c509090eb8a35b666d957c1ce718169ee81bd5db",
+      "bytes": 5002,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/MessageContent.tsx",
+      "sha256": "fb459dce2e91caefd8c3cb6018dc82f37fc400d95393f4440333008f7e942dfa",
+      "bytes": 22194,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "sha256": "30d3656434f2d2409e91ec51465be8bb35fb1b6643fa6fef29d006269e5fa318",
+      "bytes": 21905,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/web/app/HubSessions.tsx",
+      "sha256": "ba90415e1a7e30b42fe478fc9a525423da949f31c45906429559bb3e73ee005f",
+      "bytes": 29167,
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+      "bytes": 4480,
+      "matchesFrozenGitBlob": true
+    }
+  ],
+  "unresolvedReferences": [],
+  "note": "Hash list proves cited/selected files match frozen blobs; it is not a list of fully reviewed files."
+}

@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/time-cron-data-round1.test.ts:
+{"observation":"malformed-cron-accepted","expected":"reject malformed separators before any update","actual":[{"expression":"0-1-59 9 * * *","minutes":[0,1],"next":"2026-10-17T09:01:00.000Z"},{"expression":"*/5/0 9 * * *","minutes":[0,5,10,15,20,25,30,35,40,45,50,55],"next":"2026-10-17T09:05:00.000Z"}],"updatedSchedule":"0-1-59 9 * * *","updatedPrompt":"updated"}
+(pass) observation: malformed cron separators pass validation and replace a valid definition [15.26ms]
+{"observation":"cron-create-timezone-label","hostTimezone":"UTC","jobTimezone":"Asia/Tokyo","next":"2026-10-18T00:00:00.000Z","hostText":"10/18/2026, 12:00:00 AM","expectedJobZoneText":"10/18/2026, 9:00:00 AM","actualOutput":"Cron job #1 \"timezone display\" created. Schedule: 0 9 * * * (Asia/Tokyo). Next run: 10/18/2026, 12:00:00 AM."}
+(pass) observation: CronCreate labels Host-local nextRun text with a different job timezone [5.89ms]
+
+ 2 pass
+ 0 fail
+ 12 expect() calls
+Ran 2 tests across 1 file. [83.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

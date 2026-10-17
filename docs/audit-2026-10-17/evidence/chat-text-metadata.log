@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/chat-text-metadata.test.ts:
+{"case":"attachment-name-unicode-truncation","inputCodepoints":255,"outputCodeUnits":255,"lastCodeUnit":55357,"encodedNameTail":"a�"}
+(pass) observation: truncating a valid 255-codepoint attachment label creates a lone surrogate [5.29ms]
+(pass) normal channel text splits preserve Unicode and all whitespace exactly [2.58ms]
+
+ 2 pass
+ 0 fail
+ 16 expect() calls
+Ran 2 tests across 1 file. [128.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

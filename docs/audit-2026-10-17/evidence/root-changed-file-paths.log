@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/root-changed-file-paths.test.ts:
+{"case":"rename","patch":"*** Begin Patch\n*** Update File: src/old.ts\n*** Move to: src/new.ts\n@@\n-old\n+new\n*** End Patch","files":["src/old.ts"]}
+(pass) R2-08 patch rename attribution includes removed source but omits new file [3.67ms]
+(pass) R2-08 ordinary Update/Add/Delete header extraction normal control [0.07ms]
+{"case":"json-args","files":["src/a.ts\\n@@\\n-old\\n+new\\n*** End Patch\"}"]}
+(pass) candidate JSON arguments apply_patch is parsed as a literal escaped suffix [0.11ms]
+
+ 3 pass
+ 0 fail
+ 6 expect() calls
+Ran 3 tests across 1 file. [423.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

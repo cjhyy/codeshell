@@ -1,0 +1,57 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "issues": [
+    {
+      "id": "UI-01",
+      "priority": "P3",
+      "title": "多行本地评论发送后只显示首行，带冒号续行被显示为定位字段",
+      "file": "packages/desktop/src/renderer/chat/anchors.ts",
+      "line": 146,
+      "conditional": false,
+      "evidenceLevel": "source-pure-function-dynamic-ui-static-wiring",
+      "tests": "evidence/ui-annotation-roundtrip.test.ts",
+      "receipt": "evidence/ui-annotation-roundtrip.log",
+      "history": "no-matching-item-found-in-limited-deduplication",
+      "report": "desktop-data.md",
+      "reportLine": 20,
+      "fixed": false
+    },
+    {
+      "id": "UI-02",
+      "priority": "P2",
+      "title": "Web/Mobile 无条件 lowercase cwd，在大小写敏感 Host 将不同项目合并并构建错误项目目标",
+      "file": "packages/web/src/lib/format.ts",
+      "line": 18,
+      "conditional": true,
+      "condition": "Host 文件系统大小写敏感，存在相同字母但大小写不同的独立项目根",
+      "evidenceLevel": "source-pure-function-dynamic-creation-target-static-wiring",
+      "tests": "evidence/ui-web-project-case.test.ts",
+      "receipt": "evidence/ui-web-project-case.log",
+      "history": "no-matching-item-found-in-limited-deduplication",
+      "report": "desktop-data.md",
+      "reportLine": 34,
+      "fixed": false
+    },
+    {
+      "id": "UI-03",
+      "priority": "P2",
+      "title": "聊天 tail 窗口按零基索引匹配更完整 raw turns，选择可见新任务却获得旧任务打包范围",
+      "file": "packages/desktop/src/renderer/MessageStream.tsx",
+      "line": 710,
+      "conditional": true,
+      "condition": "合法 legacy 无 output journal 会话，初始 tail 未包括开头且未加载更早历史",
+      "evidenceLevel": "real-owned-temp-readers-and-pure-functions-fork-static-wiring",
+      "tests": "evidence/ui-context-tail-selection.test.ts",
+      "receipt": "evidence/ui-context-tail-selection.log",
+      "history": "no-matching-item-found-in-limited-deduplication",
+      "report": "desktop-data.md",
+      "reportLine": 48,
+      "fixed": false
+    }
+  ],
+  "counts": {
+    "P2": 2,
+    "P3": 1
+  },
+  "total": 3
+}

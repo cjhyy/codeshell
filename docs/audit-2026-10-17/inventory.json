@@ -1,0 +1,21 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "trackedFiles": 7154,
+  "packageFileCounts": {
+    "arena": 63,
+    "browser-devtools": 7,
+    "cdp": 13,
+    "chat": 67,
+    "coding": 126,
+    "core": 1341,
+    "desktop": 1923,
+    "host": 8,
+    "link": 19,
+    "optimization-lab": 53,
+    "pet": 85,
+    "server": 286,
+    "tui": 264,
+    "web": 175
+  },
+  "note": "Repository inventory only; read depth/coverage is in coverage.md and individual reports."
+}

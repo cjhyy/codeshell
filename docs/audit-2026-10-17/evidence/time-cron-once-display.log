@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/time-cron-once-display.test.ts:
+{"observation":"once-wrong-zone-confirmation","hostTimezone":"UTC","jobTimezone":"Asia/Tokyo","next":"2026-10-18T00:00:00.000Z","expectedTime":"10/18/2026, 9:00:00 AM","actualHostText":"10/18/2026, 12:00:00 AM","actualOutput":"一次性任务 #1 \"once date\" 已创建。将于 10/18/2026, 12:00:00 AM (Asia/Tokyo) 执行一次后自动删除。"}
+(pass) one-shot confirmation appends the job timezone directly to the Host-local clock time [26.32ms]
+
+ 1 pass
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [180.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

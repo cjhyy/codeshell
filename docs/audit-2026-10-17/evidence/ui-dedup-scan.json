@@ -1,0 +1,38 @@
+{
+  "terms": [
+    "extractAnnotations",
+    "encodeAnchorsForWire",
+    "projectForCwd",
+    "selectionTurns[index]",
+    "多行评论",
+    "context tail",
+    "case-sensitive project"
+  ],
+  "results": [
+    {
+      "file": "docs/archive/review-2026-05-30/findings.json",
+      "available": true,
+      "matches": []
+    },
+    {
+      "file": "docs/archive/review-2026-05-30/confirmed.json",
+      "available": true,
+      "matches": []
+    },
+    {
+      "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "available": true,
+      "matches": []
+    },
+    {
+      "file": "docs/review-remaining-2026-10-12/findings.json",
+      "available": true,
+      "matches": []
+    },
+    {
+      "file": "docs/audit-2026-10-16/findings.json",
+      "available": true,
+      "matches": []
+    }
+  ]
+}

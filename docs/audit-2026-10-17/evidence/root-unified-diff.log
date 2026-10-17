@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/root-unified-diff.test.ts:
+{"case":"header-like-content","raw":"diff --git a/sample.txt b/sample.txt\nindex 4b8d0c5..f014f2f 100644\n--- a/sample.txt\n+++ b/sample.txt\n@@ -1,2 +1,2 @@\n--- before\n+++ after\n context\n","files":[{"oldPath":"before","newPath":"after","status":"modified","hunks":[{"header":"@@ -1,2 +1,2 @@","oldStart":1,"oldCount":2,"newStart":1,"newCount":2,"lines":[{"kind":"ctx","text":"context","oldLine":1,"newLine":1},{"kind":"ctx","text":"","oldLine":2,"newLine":2}]}]}]}
+(pass) R2-09 changed content beginning -- or ++ is misread as a file header [201.31ms]
+{"case":"pure-rename","raw":"diff --git a/old.txt b/new.txt\nsimilarity index 100%\nrename from old.txt\nrename to new.txt\n","files":[{"oldPath":null,"newPath":null,"status":"renamed","hunks":[]}]}
+(pass) R2-10 pure rename has neither old nor new path in the parsed result [217.52ms]
+{"case":"unicode-path","raw":"diff --git \"a/\\344\\270\\255\\346\\226\\207.txt\" \"b/\\344\\270\\255\\346\\226\\207.txt\"\nindex 3367afd..3e75765 100644\n--- \"a/\\344\\270\\255\\346\\226\\207.txt\"\n+++ \"b/\\344\\270\\255\\346\\226\\207.txt\"\n@@ -1 +1 @@\n-old\n+new\n","files":[{"oldPath":"\"a/\\344\\270\\255\\346\\226\\207.txt\"","newPath":"\"b/\\344\\270\\255\\346\\226\\207.txt\"","status":"modified","hunks":[{"header":"@@ -1 +1 @@","oldStart":1,"oldCount":1,"newStart":1,"newCount":1,"lines":[{"kind":"del","text":"old","oldLine":1,"newLine":null},{"kind":"add","text":"new","oldLine":null,"newLine":1},{"kind":"ctx","text":"","oldLine":2,"newLine":2}]}]}]}
+(pass) R2-11 default git quoted Unicode filenames are not decoded [250.77ms]
+(pass) ordinary ASCII content normal control retains paths and line numbers [0.17ms]
+
+ 4 pass
+ 0 fail
+ 13 expect() calls
+Ran 4 tests across 1 file. [733.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.
