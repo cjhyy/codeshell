@@ -296,11 +296,13 @@ export function assertNormalNsisProcess(operation) {
   assert.ok(Array.isArray(owned) && owned.length > 0 && owned.length <= 512);
   assert.equal(operation.settlement.ownedCount, owned.length);
   assert.deepEqual(operation.settlement.remaining, []);
-  assert.equal(new Set(owned.map((row) => `${row.pid}:${row.birth}`)).size, owned.length);
+  assert.equal(new Set(owned.map((row) => row.pid)).size, owned.length);
   for (const row of owned) {
     assert.ok(Number.isSafeInteger(row.pid) && row.pid > 0);
     assert.ok(Number.isSafeInteger(row.ppid) && row.ppid >= 0);
     assert.match(row.birth, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/);
+    const milliseconds = `${row.birth.slice(0, 23)}Z`;
+    assert.equal(new Date(milliseconds).toISOString(), milliseconds);
   }
   const root = operation.child;
   assert.ok(Number.isSafeInteger(root?.pid) && root.pid > 0);
