@@ -239,7 +239,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       - name: Review first-error and cleanup observation contracts
         timeout-minutes: 2
@@ -551,6 +551,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
             ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/first-error.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/operations.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/launcher-receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/launcher.*.log
@@ -660,6 +661,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
             ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/first-error.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/operations.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/launcher-receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/launcher.*.log
