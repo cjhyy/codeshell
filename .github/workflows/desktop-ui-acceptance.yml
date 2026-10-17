@@ -241,6 +241,12 @@ jobs:
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
+      - name: Review first-error and cleanup observation contracts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/review-operation-diagnostics.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/review-diagnostic-contracts.log"
+
       - name: verify local package authority and output ownership
         run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
 
@@ -456,8 +462,11 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/startup/cost-gui-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/startup/real-keyring-bootstrap.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/review.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review/*.png
             ${{ env.ACCEPTANCE_ROOT }}/review/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/review/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/review/diagnostics.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/review/owned-git.diff
             ${{ env.ACCEPTANCE_ROOT }}/review/main.*.log
             ${{ env.ACCEPTANCE_ROOT }}/review/denied-attempts.jsonl
