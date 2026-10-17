@@ -1,0 +1,16 @@
+{
+  "productReruns": 0,
+  "notes": [
+    {
+      "chunk": "52ec10",
+      "exitCode": 1,
+      "kind": "metadata author receipt locator changed concurrently",
+      "diagnostic": "FileNotFoundError: [Errno 2] No such file or directory: '.../evidence/aggregator-artifact-receipt.json'",
+      "capture": "Manually transcribed abbreviated diagnostic excerpt from recorded tool response, not original product raw.",
+      "partialWrites": [
+        "Root review source manifest already appended2 prior-report ranges."
+      ],
+      "action": "Inspect current author receipt inventory and confirm freeze; do not duplicate source rows or rerun any product."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "attempt": 1,
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+    "docs/audit-2026-10-17-round27/evidence/root-containment.test.ts"
+  ],
+  "approvedScope": "Direct production composeFileEdits and parser leaf used by existing tests; short ASCII strings only. Owned exact-replacement model establishes fixture uniqueness; real Edit tool is static only.",
+  "scope": [
+    "One guarded shard, existing compose tests plus 3 focused tests: 1 owned-model contract control, 1 wrong-behavior characterization, 1 actual overlapping-context control.",
+    "Capture merged stdout/stderr and exit before reading. On any failure skip the whole direction without repair or retry. No new runtime direction or test expansion after completion."
+  ],
+  "exclusions": [
+    "No product modifications, actual Edit/FS mutation, aggregator/UI/React/viewer/Engine/provider imports, native Git/shell/business filesystem, network/model/account/security/permission/identity/custody experiments.",
+    "No old failed/skipped groups; no CRLF, parser edge cases, capacity/stress or dynamic package/runtime import alternatives."
+  ],
+  "productReruns": 0,
+  "fixtureSha256": "9f38f940423daf3877d3aa9bfd390af7949aac802ca29b68272a4a2cb8d464fe"
+}

@@ -1,0 +1,178 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "lineCount": 217,
+      "coveredLineCount": 217,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": false,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "lineCount": 5,
+      "coveredLineCount": 5,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": false,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+      "bytes": 8020,
+      "sha256": "48a279cc6c2ebe3e4ee5333b3bea1e14d930180855b5f8518848419e0977edb8",
+      "frozenSha256": "48a279cc6c2ebe3e4ee5333b3bea1e14d930180855b5f8518848419e0977edb8",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          245
+        ]
+      ],
+      "lineCount": 245,
+      "coveredLineCount": 245,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": true,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+      "bytes": 8578,
+      "sha256": "242400f40f6994f82af49270cdcbfb76f97851e378ccb92f20e5b139bf624c56",
+      "frozenSha256": "242400f40f6994f82af49270cdcbfb76f97851e378ccb92f20e5b139bf624c56",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          203
+        ]
+      ],
+      "lineCount": 203,
+      "coveredLineCount": 203,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": true,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "bytes": 8028,
+      "sha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "frozenSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          265
+        ]
+      ],
+      "lineCount": 265,
+      "coveredLineCount": 265,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": true,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/edit.ts",
+      "bytes": 5412,
+      "sha256": "4805f3667953f9f41cb81d98a010ead6318ed80595774ab9ab349591e0aa61ce",
+      "frozenSha256": "4805f3667953f9f41cb81d98a010ead6318ed80595774ab9ab349591e0aa61ce",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          139
+        ]
+      ],
+      "lineCount": 139,
+      "coveredLineCount": 139,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": false,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "bytes": 13565,
+      "sha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "frozenSha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          396
+        ]
+      ],
+      "lineCount": 396,
+      "coveredLineCount": 396,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": false,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "lineCount": 8,
+      "coveredLineCount": 8,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": true,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "bytes": 6518,
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "lineCount": 152,
+      "coveredLineCount": 152,
+      "semanticRead": true,
+      "note": "Root fully read; Edit and aggregator remain static only. Existing tests runtime includes their direct parser leaf. Workflow scripts inspected, not business source.",
+      "runtimeInFirstAttempt": true,
+      "runtimeMeaning": "Existing compose suite imported actual compose/parser leaves; focused fixture failed before module import; Edit/aggregator/CODESHELL/AGENTS static only."
+    }
+  ],
+  "gitBlobBoundByRoot": true,
+  "hashOnlyIsNotFullSemanticCoverage": true
+}

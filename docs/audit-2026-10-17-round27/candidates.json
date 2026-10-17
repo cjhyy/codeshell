@@ -1,0 +1,116 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "count": 1,
+  "candidates": [
+    {
+      "id": "COMPOSE-R27-C1",
+      "status": "candidate-static-direction-skipped",
+      "title": "Outer containment is insufficient proof that two successful edits touch the same location",
+      "suspectedPriority": 2,
+      "formal": false,
+      "location": {
+        "path": "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+        "start": 139,
+        "end": 147
+      },
+      "cause": "uniqueIndex(edit.oldText, snippet.newText) checks uniqueness within the later old snippet, not uniqueness/location of the prior after fragment in the whole file.",
+      "ordinaryInputContract": "Edit allows new_string to duplicate existing text; old_string alone must uniquely match the current file. The second old_string is two lines of ordinary necessary context.",
+      "staticCase": {
+        "initialFile": "before();\n// later\nshared();\n",
+        "operations": [
+          {
+            "kind": "edit",
+            "oldText": "before();",
+            "newText": "shared();",
+            "replaceAll": false
+          },
+          {
+            "kind": "edit",
+            "oldText": "// later\nshared();",
+            "newText": "// later\nfinal();",
+            "replaceAll": false
+          }
+        ],
+        "afterFirstEdit": "shared();\n// later\nshared();\n",
+        "intendedFinalFile": "shared();\n// later\nfinal();\n",
+        "alternateSameLocationInitialFile": "// later\nbefore();\n",
+        "alternateSameLocationFinalFile": "// later\nfinal();\n",
+        "sourceDerivedComposedOldSnippet": "// later\nbefore();",
+        "sourceDerivedComposedNewSnippet": "// later\nfinal();",
+        "sourceDerivedAdded": 1,
+        "sourceDerivedRemoved": 1,
+        "expectedSeparatePayloadAdded": 2,
+        "expectedSeparatePayloadRemoved": 2,
+        "note": "All literal strings and values are static source derivation, not captured product observations or executed owned-model output."
+      },
+      "producerConsumerAnchors": [
+        {
+          "path": "packages/core/src/tool-system/builtin/edit.ts",
+          "ranges": [
+            [
+              19,
+              45
+            ],
+            [
+              82,
+              108
+            ]
+          ]
+        },
+        {
+          "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+          "ranges": [
+            [
+              155,
+              205
+            ],
+            [
+              338,
+              361
+            ],
+            [
+              375,
+              395
+            ]
+          ]
+        },
+        {
+          "path": "packages/desktop/src/renderer/types.ts",
+          "ranges": [
+            [
+              290,
+              316
+            ],
+            [
+              629,
+              642
+            ]
+          ]
+        },
+        {
+          "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+          "ranges": [
+            [
+              83,
+              90
+            ]
+          ]
+        }
+      ],
+      "impact": "Source-derived preview can discard a separate changed location and replace it with a before-context that never occurred in that position; per-file added/removed and downstream review snapshot share that same composed result. Original tool payloads and on-disk file are not mutated by this helper.",
+      "counterevidence": [
+        "The same payload sequence can describe a truly overlapping edit with expanding context, so banning every such sequence is not implied. Current existing test57–69 intentionally exercises a valid overlap.",
+        "Inner replay checks that later old text occurs in a known after snippet; the finding is only the outer-context branch141–147.",
+        "Write fullContent blocks outer expansion; replace_all and opaque operations create barriers; ambiguous multiple matches retain separate hunks.",
+        "Synthetic preview line numbers are declared snippet coordinates, not real file coordinates. This candidate concerns lost distinct content, not those declared synthetic numbers."
+      ],
+      "validation": "Root first focused fixture failed to resolve its incorrect relative import before any of its3 test bodies or owned-model helper executed. Entire direction SKIP, no fixture repair/rerun/alternate validation. Existing16pass54expect from the failed shard do not validate this candidate.",
+      "rootAttemptRaw": "evidence/root-containment-first.raw.log",
+      "rootAttemptExit": "evidence/root-containment-first.exit.json",
+      "reproduced": false,
+      "bugOutputObserved": false,
+      "productFix": false,
+      "recommendation": "If revisited separately, require actual location evidence before outer composition or conservatively retain unresolved operations as separate hunks. No implementation change in this audit."
+    }
+  ]
+}

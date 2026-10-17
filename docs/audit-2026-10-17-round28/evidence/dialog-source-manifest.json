@@ -1,0 +1,166 @@
+{
+  "baselineProvidedByRoot": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "branchProvidedByRoot": "codex/audit/data-frontier-round28-20261017",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "firstFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCount": 5,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "lineCount": 78,
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "firstFilesystemSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "finishFilesystemSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          78
+        ]
+      ],
+      "coveredLineCount": 78,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.test.ts",
+      "bytes": 2338,
+      "lineCount": 72,
+      "sha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "firstFilesystemSha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "finishFilesystemSha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          72
+        ]
+      ],
+      "coveredLineCount": 72,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.tsx",
+      "bytes": 11284,
+      "lineCount": 342,
+      "sha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "firstFilesystemSha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "finishFilesystemSha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          342
+        ]
+      ],
+      "coveredLineCount": 342,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.interaction.test.tsx",
+      "bytes": 689,
+      "lineCount": 27,
+      "sha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "firstFilesystemSha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "finishFilesystemSha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "coveredLineCount": 27,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ConfirmDialog.tsx",
+      "bytes": 838,
+      "lineCount": 19,
+      "sha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "firstFilesystemSha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "finishFilesystemSha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "coveredLineCount": 19,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/digital-humans/profileRequirements.ts",
+      "bytes": 3749,
+      "lineCount": 115,
+      "sha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "firstFilesystemSha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "finishFilesystemSha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          115
+        ]
+      ],
+      "coveredLineCount": 115,
+      "firstPinTiming": "Before semantic source reading in this Round28 task; import/path locator alone preceded consumer pins.",
+      "frozenGitCompared": false,
+      "runtimeExecuted": false
+    }
+  ],
+  "sourcePinCount": 8,
+  "fullSourceCount": 8,
+  "productContractReadLines": 653,
+  "instructionLines": 222,
+  "finishedUtc": "2026-10-17T11:27:13.293486+00:00",
+  "gitCommands": 0,
+  "productAttempts": 0,
+  "readCoverageNote": "All six target/test/consumer files fully read, 2 instruction files previously fully read and current identical pinned bytes. Full hash is filesystem provenance; Root must independently bind frozen Git. Browser fixture referenced by interaction test was not opened or executed."
+}

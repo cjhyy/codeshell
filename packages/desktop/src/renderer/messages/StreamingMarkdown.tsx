@@ -8,7 +8,10 @@ import {
   streamingMarkdownClassName,
   type MarkdownRootStatus,
 } from "../Markdown";
-import { splitStreamingMarkdown } from "../markdown/splitStreamingMarkdown";
+import {
+  splitStreamingMarkdown,
+  splitStreamingMarkdownChunks,
+} from "../markdown/splitStreamingMarkdown";
 
 interface StreamingMarkdownProps {
   text: string;
@@ -121,7 +124,7 @@ function StreamingMarkdownBody({ text }: { text: string }) {
     [throttledText],
   );
 
-  const chunks = useMemo(() => splitIntoChunks(stablePrefix), [stablePrefix]);
+  const chunks = useMemo(() => splitStreamingMarkdownChunks(stablePrefix), [stablePrefix]);
 
   return (
     <div className={markdownBodyClassName}>
@@ -135,17 +138,6 @@ function StreamingMarkdownBody({ text }: { text: string }) {
       )}
     </div>
   );
-}
-
-/** Split a stable prefix on blank-line boundaries into independently-parseable
- *  chunks. Each chunk is a self-contained block group (paragraphs, lists, closed
- *  code blocks) so parsing them separately matches parsing them together. */
-function splitIntoChunks(prefix: string): string[] {
-  if (prefix === "") return [];
-  return prefix
-    .split(/\n{2,}/)
-    .map((c) => c.trim())
-    .filter((c) => c !== "");
 }
 
 /**

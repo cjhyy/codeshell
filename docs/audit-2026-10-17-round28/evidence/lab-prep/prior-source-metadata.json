@@ -1,0 +1,494 @@
+{
+  "rows": [
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "location": "$[\"files\"][31]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.ts",
+        "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+        "bytes": 587
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "location": "$[\"files\"][102]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.capability.ts",
+        "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+        "bytes": 59
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "location": "$[\"files\"][103]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.exports.test.ts",
+        "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+        "bytes": 997
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "location": "$[\"sources\"][93]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.capability.ts",
+        "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim",
+        "bytes": 59
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "location": "$[\"sources\"][94]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.exports.test.ts",
+        "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim",
+        "bytes": 997
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "location": "$[\"sources\"][95]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.ts",
+        "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim",
+        "bytes": 587
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "location": "$[\"checks\"][93]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.capability.ts",
+        "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf"
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "location": "$[\"checks\"][94]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.exports.test.ts",
+        "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec"
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "location": "$[\"checks\"][95]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.ts",
+        "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac"
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "location": "$[\"files\"][117]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.capability.ts",
+        "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+        "bytes": 59
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "location": "$[\"files\"][118]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.exports.test.ts",
+        "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+        "bytes": 997
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "location": "$[\"files\"][119]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.ts",
+        "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+        "bytes": 587
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "location": "$[\"priorPrepHashOnlyChecks\"][93]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.capability.ts",
+        "sha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf"
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "location": "$[\"priorPrepHashOnlyChecks\"][94]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.exports.test.ts",
+        "sha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec"
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "location": "$[\"priorPrepHashOnlyChecks\"][95]",
+      "record": {
+        "path": "packages/optimization-lab/src/index.ts",
+        "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac"
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][26]",
+      "record": {
+        "path": "packages/optimization-lab/src/candidate.ts",
+        "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+        "bytes": 2689
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][27]",
+      "record": {
+        "path": "packages/optimization-lab/src/strategy.ts",
+        "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+        "bytes": 3656
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][28]",
+      "record": {
+        "path": "packages/optimization-lab/src/grading.ts",
+        "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+        "bytes": 7764
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][29]",
+      "record": {
+        "path": "packages/optimization-lab/src/assertions.ts",
+        "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+        "bytes": 1739
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][30]",
+      "record": {
+        "path": "packages/optimization-lab/src/report.ts",
+        "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+        "bytes": 23091
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][31]",
+      "record": {
+        "path": "packages/optimization-lab/src/queries.ts",
+        "sha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+        "bytes": 5243
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][32]",
+      "record": {
+        "path": "packages/optimization-lab/src/controller.ts",
+        "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+        "bytes": 54060
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][33]",
+      "record": {
+        "path": "packages/optimization-lab/src/runner.ts",
+        "sha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+        "bytes": 8349
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][34]",
+      "record": {
+        "path": "packages/optimization-lab/src/store.ts",
+        "sha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+        "bytes": 18264
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][35]",
+      "record": {
+        "path": "packages/optimization-lab/src/store-paths.ts",
+        "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+        "bytes": 574
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][36]",
+      "record": {
+        "path": "packages/optimization-lab/src/evidence.ts",
+        "sha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+        "bytes": 9821
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][37]",
+      "record": {
+        "path": "packages/optimization-lab/src/overfit-hints.ts",
+        "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+        "bytes": 1518
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][38]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+        "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+        "bytes": 2526
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][39]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/dataset.ts",
+        "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+        "bytes": 12327
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][40]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+        "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+        "bytes": 2142
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][41]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/experiment.ts",
+        "sha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+        "bytes": 9285
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][42]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+        "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+        "bytes": 943
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][43]",
+      "record": {
+        "path": "packages/optimization-lab/src/grading.test.ts",
+        "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+        "bytes": 3460
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][44]",
+      "record": {
+        "path": "packages/optimization-lab/src/report.test.ts",
+        "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+        "bytes": 12438
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "location": "$[\"files\"][45]",
+      "record": {
+        "path": "packages/optimization-lab/src/strategy.test.ts",
+        "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+        "bytes": 1761
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][73]",
+      "record": {
+        "path": "packages/optimization-lab/src/assertions.ts",
+        "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+        "bytes": 1739
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][74]",
+      "record": {
+        "path": "packages/optimization-lab/src/candidate.ts",
+        "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+        "bytes": 2689
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][75]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+        "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+        "bytes": 2142
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][76]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/dataset.ts",
+        "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+        "bytes": 12327
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][77]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+        "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+        "bytes": 2526
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][78]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/experiment.ts",
+        "sha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+        "bytes": 9285
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][79]",
+      "record": {
+        "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+        "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+        "bytes": 943
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][80]",
+      "record": {
+        "path": "packages/optimization-lab/src/controller.ts",
+        "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+        "bytes": 54060
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][81]",
+      "record": {
+        "path": "packages/optimization-lab/src/evidence.ts",
+        "sha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+        "bytes": 9821
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][82]",
+      "record": {
+        "path": "packages/optimization-lab/src/grading.test.ts",
+        "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+        "bytes": 3460
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][83]",
+      "record": {
+        "path": "packages/optimization-lab/src/grading.ts",
+        "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+        "bytes": 7764
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][84]",
+      "record": {
+        "path": "packages/optimization-lab/src/overfit-hints.ts",
+        "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+        "bytes": 1518
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][85]",
+      "record": {
+        "path": "packages/optimization-lab/src/queries.ts",
+        "sha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+        "bytes": 5243
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][86]",
+      "record": {
+        "path": "packages/optimization-lab/src/report.test.ts",
+        "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+        "bytes": 12438
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][87]",
+      "record": {
+        "path": "packages/optimization-lab/src/report.ts",
+        "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+        "bytes": 23091
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][88]",
+      "record": {
+        "path": "packages/optimization-lab/src/runner.ts",
+        "sha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+        "bytes": 8349
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][89]",
+      "record": {
+        "path": "packages/optimization-lab/src/store-paths.ts",
+        "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+        "bytes": 574
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][90]",
+      "record": {
+        "path": "packages/optimization-lab/src/store.ts",
+        "sha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+        "bytes": 18264
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][91]",
+      "record": {
+        "path": "packages/optimization-lab/src/strategy.test.ts",
+        "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+        "bytes": 1761
+      }
+    },
+    {
+      "history": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "location": "$[\"files\"][92]",
+      "record": {
+        "path": "packages/optimization-lab/src/strategy.ts",
+        "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+        "bytes": 3656
+      }
+    }
+  ],
+  "note": "Extracted old dictionaries, not assertions of current semantic reading; inspect explicit coverage/ranges before treating as prior coverage."
+}

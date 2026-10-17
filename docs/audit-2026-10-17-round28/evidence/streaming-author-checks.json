@@ -1,0 +1,78 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "atUTC": "2026-10-17T11:24:10.758366+00:00",
+  "sourceFinishChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2"
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995"
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts",
+      "bytes": 6015,
+      "sha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 6319,
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "bytes": 3302,
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f"
+    },
+    {
+      "path": "packages/desktop/src/renderer/Markdown.tsx",
+      "bytes": 33964,
+      "sha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "bytes": 29720,
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac"
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "bytes": 6054,
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-preflight-skip.md",
+      "bytes": 1212,
+      "sha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-navigation-skip.md",
+      "bytes": 1076,
+      "sha256": "cc3fa55002d7a97ac3845f623929df918a58992df61602d3438a455fe6adf9d4"
+    }
+  ],
+  "sourcePins": 13,
+  "localReportLinksChecked": 19,
+  "authorReceiptLinkDeferredUntilCreation": true,
+  "productRuns": 0,
+  "gitCommands": 0,
+  "productReruns": 0,
+  "limitations": "File/hash/declared-range and Markdown local-link checks only; not product parse/render/test or Git blob binding."
+}

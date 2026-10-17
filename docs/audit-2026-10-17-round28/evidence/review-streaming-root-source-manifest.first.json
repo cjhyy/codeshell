@@ -1,0 +1,139 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "initialFilesystemSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "finishFilesystemSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "firstPinTiming": "before source read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          124
+        ]
+      ],
+      "lineCount": 124,
+      "coveredLineCount": 124,
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 6319,
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "initialFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "finishFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "firstPinTiming": "before source read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "lineCount": 173,
+      "coveredLineCount": 173,
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "bytes": 3302,
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "initialFilesystemSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "finishFilesystemSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "firstPinTiming": "before source read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          83
+        ]
+      ],
+      "lineCount": 83,
+      "coveredLineCount": 83,
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "initialFilesystemSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "finishFilesystemSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "firstPinTiming": "before source read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          98
+        ]
+      ],
+      "lineCount": 98,
+      "coveredLineCount": 98,
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "firstPinTiming": "first durable hash after selected source read; initial stays null",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1068,
+          1110
+        ],
+        [
+          1178,
+          1210
+        ],
+        [
+          1807,
+          1872
+        ]
+      ],
+      "lineCount": 2289,
+      "coveredLineCount": 142,
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "initialFilesystemSha256": null,
+      "firstPinTiming": "after selected prior-document source read",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          608,
+          628
+        ]
+      ],
+      "lineCount": 667,
+      "coveredLineCount": 21,
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "bytes": 6054,
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "initialFilesystemSha256": null,
+      "firstPinTiming": "after selected prior-document source read",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "lineCount": 27,
+      "coveredLineCount": 30,
+      "rootFrozenGitBlobBound": true
+    }
+  ],
+  "productExecution": false,
+  "productReruns": 0
+}

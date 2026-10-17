@@ -1,7 +1,60 @@
 import { expect, test, describe } from "bun:test";
-import { splitStreamingMarkdown } from "./splitStreamingMarkdown";
+import { splitStreamingMarkdown, splitStreamingMarkdownChunks } from "./splitStreamingMarkdown";
 
 const split = splitStreamingMarkdown;
+
+describe("stable-prefix chunks", () => {
+  test("empty or separator-only prefixes have no chunks", () => {
+    expect(splitStreamingMarkdownChunks("")).toEqual([]);
+    expect(splitStreamingMarkdownChunks("\n \n\n")).toEqual([]);
+  });
+
+  test("ordinary settled paragraphs keep stable chunk strings when later content grows", () => {
+    const before = splitStreamingMarkdownChunks("# Title\n\nFirst paragraph\n\nSecond");
+    const after = splitStreamingMarkdownChunks("# Title\n\nFirst paragraph\n\nSecond grows");
+    expect(before).toEqual(["# Title", "First paragraph", "Second"]);
+    expect(after).toEqual(["# Title", "First paragraph", "Second grows"]);
+    expect(after.slice(0, 2)).toEqual(before.slice(0, 2));
+  });
+
+  for (const fence of ["```", "~~~", "````"]) {
+    test(`${fence} code keeps all internal blank lines and indentation`, () => {
+      const code = `${fence}ts\n  first\n\n\n\tsecond😀\n${fence}`;
+      expect(splitStreamingMarkdownChunks(`Before\n\n${code}\n\nAfter`)).toEqual([
+        "Before",
+        code,
+        "After",
+      ]);
+    });
+  }
+
+  test("shorter or different fences and nonempty closing info stay inside the same chunk", () => {
+    const code = "````js\nfirst\n\n```\n\n~~~\n\n```` nope\n\nlast\n````";
+    expect(splitStreamingMarkdownChunks(`${code}\n\nAfter`)).toEqual([code, "After"]);
+  });
+
+  test("three-space fence indentation and surrounding source whitespace stay unchanged", () => {
+    const code = "   ~~~\n   first\n\n   second\n   ~~~";
+    expect(splitStreamingMarkdownChunks(`  Before  \n \n${code}\n\nAfter  `)).toEqual([
+      "  Before  ",
+      code,
+      "After  ",
+    ]);
+  });
+
+  test("a CRLF fence keeps its literal internal newline and whitespace bytes", () => {
+    const code = "```ts\r\nfirst\r\n \t\r\nsecond\r\n```";
+    expect(splitStreamingMarkdownChunks(`${code}\r\n\r\nAfter`)).toEqual([`${code}\r`, "After"]);
+  });
+
+  test("the actual stable split and chunk split agree about a closed fence", () => {
+    const code = "```js\nconst a = 1;\n\nconst b = 2;\n```";
+    const { stablePrefix, activeTail } = split(`Intro\n\n${code}\n\nStill typing`);
+    expect(splitStreamingMarkdownChunks(stablePrefix)).toEqual(["Intro", code]);
+    expect(activeTail).toBe("\nStill typing");
+    expect(split(`Intro\n\n${code.slice(0, -3)}`).stablePrefix).toBe("Intro");
+  });
+});
 
 describe("empty / trivial", () => {
   test("empty string", () => {

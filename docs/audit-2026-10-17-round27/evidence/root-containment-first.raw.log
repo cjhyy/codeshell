@@ -1,0 +1,34 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round27/evidence/root-containment.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module '../../../../packages/desktop/src/renderer/diff/composeFileEdits' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round27/evidence/root-containment.test.ts'
+-------------------------------
+
+
+packages/desktop/src/renderer/diff/composeFileEdits.test.ts:
+(pass) composeFileEdits > composes a replacement chain into the initial and final snippets [3.54ms]
+(pass) composeFileEdits > cancels a reverted edit while retaining its baseline for the next edit [0.05ms]
+(pass) composeFileEdits > retains unrelated snippets as multiple hunks under one file header [0.04ms]
+(pass) composeFileEdits > replays a unique replacement within the known after-snippet [0.04ms]
+(pass) composeFileEdits > extends the baseline when a later old-snippet uniquely encloses the known after [0.05ms]
+(pass) composeFileEdits > does not guess when a replacement or enclosing context has multiple matches [0.16ms]
+(pass) composeFileEdits > does not locate an insertion by an empty string after a deletion [0.06ms]
+(pass) composeFileEdits > only replays the most recent segment after an unresolved operation
+(pass) composeFileEdits > edits the full known content supplied by Write and keeps its addition status [0.30ms]
+(pass) composeFileEdits > consecutive Writes keep the final content, including edits between Writes [0.05ms]
+(pass) composeFileEdits > does not expand a complete Write with contradictory outer context [0.07ms]
+(pass) composeFileEdits > opaque patches preserve their original hunk coordinates and stop composition [0.37ms]
+(pass) composeFileEdits > opaque input with repeated file headers still produces only one file block [0.11ms]
+(pass) composeFileEdits > replace_all remains an independent preview and prevents later replay across it [0.05ms]
+(pass) composeFileEdits > preserves explicit opaque added, deleted, and empty-file metadata [0.06ms]
+(pass) composeFileEdits > limits synthetic unchanged context to three lines on either side [0.08ms]
+
+ 16 pass
+ 1 fail
+ 1 error
+ 54 expect() calls
+Ran 17 tests across 2 files. [167.00ms]
+Bun test process failed (1)

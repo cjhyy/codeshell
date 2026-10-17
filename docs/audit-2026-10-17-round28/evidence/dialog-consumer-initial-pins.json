@@ -1,0 +1,48 @@
+{
+  "baselineProvidedByRoot": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "initialUtc": "2026-10-17T11:20:29.132029+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.test.ts",
+      "bytes": 2338,
+      "lineCount": 72,
+      "firstFilesystemSha256": "d024af68f377f81cf156e88d2b4fd9f29586fcca4b671334037410c26826cfda",
+      "captureTiming": "After rg inventory/import-locator, before source semantic read for this task",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.tsx",
+      "bytes": 11284,
+      "lineCount": 342,
+      "firstFilesystemSha256": "0bcdf8504255991972ca948b5bca4ba37d2d9d0f81df0fe3a1a7c66a60db998d",
+      "captureTiming": "After rg inventory/import-locator, before source semantic read for this task",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/DialogProvider.interaction.test.tsx",
+      "bytes": 689,
+      "lineCount": 27,
+      "firstFilesystemSha256": "d3dfadab8796ef75548b67b6bd5cf293a5744e2aa3d9077222691943daad8199",
+      "captureTiming": "After rg inventory/import-locator, before source semantic read for this task",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ConfirmDialog.tsx",
+      "bytes": 838,
+      "lineCount": 19,
+      "firstFilesystemSha256": "b937bdca86e34393d1a816d25888ac5a9398d486391dd298645ad3f1ebbba765",
+      "captureTiming": "After rg inventory/import-locator, before source semantic read for this task",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/digital-humans/profileRequirements.ts",
+      "bytes": 3749,
+      "lineCount": 115,
+      "firstFilesystemSha256": "a00fe5bb17bb12adec606305c264fa853dd97a66be1f9f804474e7ca3b169f57",
+      "captureTiming": "After rg inventory/import-locator, before source semantic read for this task",
+      "gitBlobCompared": false
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

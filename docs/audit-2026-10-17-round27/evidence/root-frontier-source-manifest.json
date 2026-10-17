@@ -1,0 +1,172 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "packages/core/src/utils/semver.ts",
+      "bytes": 398,
+      "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "lineCount": 17,
+      "coveredLineCount": 17,
+      "note": "Thin wrappers only; delegated library behavior not tested."
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "bytes": 1329,
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "lineCount": 35,
+      "coveredLineCount": 35,
+      "note": "Explicit has() preserves cached undefined; synchronous throw occurs before cache.set."
+    },
+    {
+      "path": "packages/core/src/utils/task-sanitizer.ts",
+      "bytes": 963,
+      "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "lineCount": 34,
+      "coveredLineCount": 34,
+      "note": "Noise heuristic read; no new ANSI/grapheme/sanitizer tests."
+    },
+    {
+      "path": "packages/core/src/utils/cwd-normalize.ts",
+      "bytes": 475,
+      "sha256": "f7dbeb74f60c4d3c7381c7787ba34a32239efb89fd25c49f766951be324eaabe",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          20
+        ]
+      ],
+      "lineCount": 20,
+      "coveredLineCount": 20,
+      "note": "FS/path calls source only; no actual realpath/stat experiment."
+    },
+    {
+      "path": "packages/link/src/file-selection.ts",
+      "bytes": 3645,
+      "sha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          92
+        ]
+      ],
+      "lineCount": 92,
+      "coveredLineCount": 92,
+      "note": "Trim and UTF16 label old HL-01/HL-02; no revalidation run."
+    },
+    {
+      "path": "packages/link/src/file-selection.test.ts",
+      "bytes": 3564,
+      "sha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          106
+        ]
+      ],
+      "lineCount": 106,
+      "coveredLineCount": 106,
+      "note": "Declarations read only, zero tests executed."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1668,
+          1705
+        ]
+      ],
+      "lineCount": 5072,
+      "coveredLineCount": 38,
+      "note": "Selected noise result consumer; no Engine import."
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "bytes": 11605,
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          198,
+          225
+        ]
+      ],
+      "lineCount": 361,
+      "coveredLineCount": 28,
+      "note": "Selected resolver/invalidation only; no scan."
+    },
+    {
+      "path": "packages/core/src/skills/scanner.ts",
+      "bytes": 16891,
+      "sha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          356,
+          395
+        ]
+      ],
+      "lineCount": 477,
+      "coveredLineCount": 40,
+      "note": "Selected resolver/invalidation docs only; old failed skills direction not reopened."
+    },
+    {
+      "path": "packages/desktop/src/main/linked-file-sources-service.ts",
+      "bytes": 10555,
+      "sha256": "13a34056e542a6427ec1c68bd04bf57caea16b3291ae7f57552c61a7fc1ebdd0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          86,
+          140
+        ]
+      ],
+      "lineCount": 264,
+      "coveredLineCount": 55,
+      "note": "Selected selectedFiles/source identity consumer only; no connection/account/permission execution."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "bytes": 8421,
+      "sha256": "53c4eb98275b007dc9c72c3b65e74d9b0b46c5e74e709e466bf5cf0cc8ec3b03",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          48
+        ]
+      ],
+      "lineCount": 48,
+      "coveredLineCount": 48,
+      "note": "Prior issue report full read; existing HL-01/02 not new finding."
+    }
+  ],
+  "rootBoundToFrozenGit": true,
+  "productExecution": false
+}

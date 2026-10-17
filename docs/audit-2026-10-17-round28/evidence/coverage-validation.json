@@ -1,0 +1,12 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "runs": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesAuthored": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "note": "Only repository inventory, JSON metadata and byte hashes; no declared coverage implies a product run."
+}

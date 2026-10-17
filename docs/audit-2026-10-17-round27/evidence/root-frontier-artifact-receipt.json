@@ -1,0 +1,48 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "root-frontier-report.md",
+      "bytes": 2697,
+      "sha256": "6362141e446993b0e4b123eaf9eab06b8f874090701c93a362deeaf4cb448111"
+    },
+    {
+      "path": "evidence/root-frontier-source-manifest.json",
+      "bytes": 4807,
+      "sha256": "b3c4ce27b371d1d0ef4f76337d352dd2141aaff04e5ffdaa725354e1b7e007bb"
+    },
+    {
+      "path": "evidence/root-frontier-dedup.json",
+      "bytes": 574904,
+      "sha256": "20b43c537dda3bf4948a95523f528dc951fa903ae05243cda733e79dd0ed7739"
+    },
+    {
+      "path": "evidence/root-frontier-metadata-notes.json",
+      "bytes": 588,
+      "sha256": "e441c5dbeb33a8f1b092d63cbcbfcdb0b3f3403b541bb0560daab4a8548de20c"
+    },
+    {
+      "path": "evidence/root-frontier-findings.json",
+      "bytes": 93,
+      "sha256": "abb7c17440f9c35a19b797f27001a9eb89ba046162427979960f42a28031aff4"
+    },
+    {
+      "path": "evidence/root-frontier-candidates.json",
+      "bytes": 95,
+      "sha256": "874a6d01a9ede5afbe5490e6fbaa127eeea84f5ba6b148d63ebeae1488fe9c6e"
+    },
+    {
+      "path": "evidence/root-frontier-related.json",
+      "bytes": 524,
+      "sha256": "241c2e9a6854e4de681b73d46b3db54a86a3f4020d3e73306a55513deadeff77"
+    },
+    {
+      "path": "evidence/root-frontier-validation.json",
+      "bytes": 278,
+      "sha256": "bb33c57515a83417f6631c509377d4dd9f52ed3ea5fa8e47b8891fa9d487b88b"
+    }
+  ],
+  "sourceChecks": 11,
+  "sourceReadLines": 513,
+  "productExecution": false
+}

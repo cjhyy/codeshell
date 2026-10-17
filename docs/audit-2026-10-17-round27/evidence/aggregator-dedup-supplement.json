@@ -1,0 +1,98 @@
+{
+  "base": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "searchedHistoricalSnapshotFiles": 2596,
+  "patterns": {
+    "identity": "identityForToolPath|externalIdentities|externalCwds|displayExternalPath|external.{0,100}(?:same.{0,15}path|same.{0,15}file|different.{0,20}cwd|relative.{0,15}path)|(?:same.{0,10}path|relative.{0,10}path).{0,100}(?:external|worktree)|(?:不同|多个).{0,15}(?:cwd|worktree|工作树).{0,100}(?:文件|path|归并|合并)",
+    "external-producer": "normalizeChangedFiles|fileChangeAggregator.{0,100}(?:external|DriveAgent)|(?:DriveAgent|external).{0,80}(?:归组|合并|相对路径|display.path)"
+  },
+  "matchCounts": {
+    "identity": 5,
+    "external-producer": 8
+  },
+  "retainedContexts": {
+    "identity": 5,
+    "external-producer": 8
+  },
+  "contextCapPerGroup": 120,
+  "matches": {
+    "identity": [
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "location": "68",
+        "excerpt": "driver.ts:54`, `packages/core/src/cc-orchestrator/external-agent-driver.ts:57`, `packages/core/src/cc-orchestrator/external-agent-driver.ts:65`, `packages/core/src/cc-orchestrator/external-agent-driver.ts:74`). CLI availability probes use the same PATH fix for `claude --version` and `codex --version` (`packages/core/src/cc-orchestrator/cc-capability.ts:13`, `packages/core/src/cc-orchestrator/cc-capability.ts:37`, `packages/core/src/cc-orchestrator/cc-capability.ts:50`, `packages/core/src/cc-orchestrator/cc-capability.ts:58`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17/sources.md",
+        "location": "44",
+        "excerpt": "- 辅助静态跟进了 Desktop `source-collections-service.ts` 的 create/pick/refresh/view 保存及 revision 流程，确认显式 refresh 保留 entry ID、local relativePath，并由新 revision 替换；没有执行 Desktop 产品行为或 external URL 验证。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/cross-review-plugins.md",
+        "location": "7",
+        "excerpt": "`GIT-R8-01` is supported as P3. `WorktreeDiffSummary.changedFiles` explicitly promises unique files across committed and dirty sources. `changedFilesSinceBase` retains the external quotation marks, while `statusFileSet` passes the same quoted path through `unquoteGitPath`. Their union therefore has two distinct string identities for the one physical path. This is separate from A03's status trimming and A04's commit-message separator parsing; those duplicates remain excluded. I read the parsed dedup receipts, including the prior A04 records, without rerunning those old reproductions."
+      },
+      {
+        "path": "docs/review-2026-10-12/panels-round6.md",
+        "location": "70",
+        "excerpt": "检查权威，冻结 environment/project/execution root，失败后不可复活。scope 不包含 Session ID，不授予额外权限。现有测试验证 native/paired 同环境同项目同 root 的字段完全一致；不同环境、注册 root、execution worktree 不混同；普通 root 内容变化不改变 scope；same-path mount、环境文件、注册 ID 的真实改变撤销旧 proof。有效 linked Git worktree 与 main 共 projectId、异 rootId；未发现正常 Git linked worktree 被新 resolver 误拒绝。"
+      },
+      {
+        "path": "docs/todo/bug-status-core.md",
+        "location": "39",
+        "excerpt": "- 测试覆盖：`tool-system/builtin/drive-claude-code.test.ts:246-265` 不同 cwd 强制 stored cwd；`:271-289` 相对/绝对同目录视为相同；`:296-333` stored cwd 缺失或变成文件时报错且 runner 不执行。"
+      }
+    ],
+    "external-producer": [
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "location": "76",
+        "excerpt": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "location": "$[\"hits\"][46][\"excerpt\"]",
+        "excerpt": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "location": "$[\"hits\"][130][\"excerpt\"]",
+        "excerpt": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+        "location": "$[\"hits\"][9][\"text\"]",
+        "excerpt": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+        "location": "$[\"hits\"][15][\"text\"]",
+        "excerpt": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+        "location": "$[\"hits\"][34][\"text\"]",
+        "excerpt": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+      },
+      {
+        "path": "docs/core-deep-dive/v2-05-protocol-hosts-orchestration-deep-dive.md",
+        "location": "183",
+        "excerpt": "TUI 自己的重头不在 core,而在两个 UI 工程化设计:用**外部 store**(`useSyncExternalStore`)而非 React state 装聊天条目,追加一条消息不重渲整棵树;用 **50ms 缓冲**把 LLM 每秒吐的几十到几百 token 合并成约 20 次/秒重渲。再加上一个手写的、行级 diff 的 ~14K 行终端渲染器(刻意不用 stock Ink 的增量渲染器,因为它会闪、会丢更新)。这些细节属于 UI 层,不展开;要点是:**渲染率与 token 率被解耦,无论模型多快吐字,重渲都有上限。**"
+      },
+      {
+        "path": "docs/nightly-2026-07-10/goal.md",
+        "location": "123",
+        "excerpt": "| A1 | task-driveagent-inspect | fb839656+eb439725 | BLOCK→修复→复审 SHIP | 437 pass | ✅ 已合并、worktree 已清 |"
+      }
+    ]
+  },
+  "totals": {
+    "files": 2596,
+    "stringLeaves": 468104,
+    "scalarLeaves": 676635
+  },
+  "parseErrors": [],
+  "changedSinceInitialSnapshot": [],
+  "productAttempts": 0,
+  "runtimeImports": 0,
+  "note": "Same full2596-path history snapshot, value scalars recursively searched. No semantic-exhaustion claim; no current27 or compose runtime evidence borrowed."
+}

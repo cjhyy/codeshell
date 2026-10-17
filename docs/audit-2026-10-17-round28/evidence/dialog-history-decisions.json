@@ -1,0 +1,32 @@
+{
+  "baselineProvidedByRoot": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "historyCases": [
+    {
+      "kind": "Coverage provenance",
+      "meaning": "Structured coverage-prep lacking dialogState is not historical unread proof; full prior value scan actually has54exact occurrences including source inventories, old test receipts and DialogProvider consumers."
+    },
+    {
+      "kind": "Prior harness failure",
+      "meaning": "Older search-routing round11 mentioned two DialogProvider identities caused by copied trailing-slash module paths. This is old harness history, not a new dialogState reducer issue or permission to rerun."
+    },
+    {
+      "kind": "Consumer failures",
+      "meaning": "Old plugin settings/session routing findings mention actual DialogProvider as a confirmation surface; their settings/storage/navigation causes do not imply a new dialog queue defect."
+    },
+    {
+      "kind": "No normal trigger",
+      "meaning": "Arbitrary manually supplied throwing resolver/reentrant state or corrupt queue object is not a normal producer: DialogProvider stores native Promise resolver and guards close by request identity. No artificial mutation or race experiment."
+    },
+    {
+      "kind": "Unproven lifecycle",
+      "meaning": "No ordinary full provider teardown/continuation contract was established, so pending-promises-on-unmount speculation was not registered or tested."
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}
