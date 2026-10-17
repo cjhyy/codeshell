@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { classifyBashLines, parsedArgs } from "./utils";
+import { classifyBashLines, parsedArgs, truncate } from "./utils";
 import type { ToolMessage } from "../types";
 
 function toolMsg(partial: Partial<ToolMessage>): ToolMessage {
@@ -11,6 +11,30 @@ function toolMsg(partial: Partial<ToolMessage>): ToolMessage {
     ...partial,
   } as ToolMessage;
 }
+
+describe("truncate Unicode summaries", () => {
+  test.each([70, 80, 90])("does not split a surrogate pair at the real %i-unit limit", (max) => {
+    const input = "x".repeat(max - 2) + "😀tail";
+    const output = truncate(input, max);
+    expect(output).toBe("x".repeat(max - 2) + "…");
+    expect(output.isWellFormed()).toBe(true);
+    expect(output.length).toBeLessThanOrEqual(max);
+    expect(new TextDecoder().decode(new TextEncoder().encode(output))).toBe(output);
+  });
+
+  test("retains complete supplementary characters at and before the boundary", () => {
+    expect(truncate("x".repeat(67) + "😀tail", 70)).toBe("x".repeat(67) + "😀…");
+    expect(truncate("x".repeat(68) + "😀", 70)).toBe("x".repeat(68) + "😀");
+    expect(truncate("😀短文本", 70)).toBe("😀短文本");
+  });
+
+  test("keeps the existing ASCII and BMP text budgets", () => {
+    expect(truncate("abcdef", 5)).toBe("abcd…");
+    expect(truncate("中文摘要文本", 5)).toBe("中文摘要…");
+    expect(truncate("abcd", 5)).toBe("abcd");
+    expect(truncate("", 70)).toBe("");
+  });
+});
 
 /**
  * parsedArgs is the single source the tool cards must read for args — it prefers

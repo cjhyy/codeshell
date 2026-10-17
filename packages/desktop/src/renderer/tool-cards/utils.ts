@@ -10,7 +10,12 @@ export function prettyJson(s: string): string {
 
 export function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
-  return s.slice(0, max - 1) + "…";
+  let end = max - 1;
+  // Keep the existing UTF-16 display budget without cutting a valid pair in half.
+  const before = s.charCodeAt(end - 1);
+  const after = s.charCodeAt(end);
+  if (before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff) end--;
+  return s.slice(0, end) + "…";
 }
 
 /**
