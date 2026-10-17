@@ -2985,3 +2985,73 @@ It rehashes eighteen source-bound proof references. Final API records bind all f
 jobs and their artifact digests. These are overlapping provenance checks, not
 additional tests or native operations. The run remains failed; no publication or
 full current release acceptance is established.
+
+## CI27 — thin-image dimensions and packaged crash diagnostics (local preparation)
+
+The local candidate checkpoint `0d0210d5cc6fbf00d38485e4e567c001ed71ec16`
+combines product fix `14e897228e3b2d33095e6b06165943806536125e` and diagnostic
+commit `32f3efc296228c7a9a5fb9be984c4061dc2d5760` with the CI26 actual record.
+CI27 has not been pushed or run at this preparation checkpoint. CI26 remains
+failed, and its Windows packaged-launch cause is not established or repaired by
+this local preparation.
+
+The R52 image-dimension fix clamps each rounded short side to at least one for
+positive source dimensions. Its six numeric regressions fail on the old helper:
+17 cases contain eleven controls passing and six failing, with 25 expectations.
+The fixed helper passes all seventeen/25. The earlier R52-only local checkpoint
+passes 445/3,550 across 32 Bun files, fourteen workspace typechecks and renderer/
+mobile static bundles. These are numeric/source checks, without DOM, canvas,
+image-encoding or actual thin-image runtime validation. The source-bound local
+summary `codeshell-thin-image-dimensions-proof-20261018/verified-local-combined-summary.json`
+has SHA-256 `01c7ab6f9f121bb23f0ed8141c07b1bdf2c12e505041d3495fa8f4cae6c119fb`.
+
+The six-path diagnostic change preserves the original thirteen packaged UI
+operation bodies, normal-exit, custody, HOME, transport and timeout gates. Only
+`GITHUB_RUN_ID`, `RUNNER_ENVIRONMENT` and `ImageOS` are added to the existing
+isolation allowlist, through both isolation layers; credential filtering and
+private-HOME construction stay unchanged. An eligible actual failed, hosted
+Windows Main still requires the exact source/package, PID/parent/full birth,
+durable first error, complete settled custody and empty observed signal requests.
+Its passive query uses the existing fixed PowerShell transport, nine private-HOME
+fields, 30 seconds, 64 KiB and at most eight event records per provider, with one
+query at most. Missing proof produces unknown with no query. No query result
+changes the original error, cleanup authority, acceptance gates or failed status.
+
+The first caught error is recorded before that catch's first await. This does not
+establish an order across the SDK connection, the owned first-instruction inspector,
+independent startup cleanup or the native fault. Original CI26 evidence and
+unknowns remain unchanged. No local Windows EventLog, PowerShell, browser,
+installer, process query or provider is executed for the diagnostic's tests.
+
+The initial eighteen-test diagnostic attempt contains sixteen passes and two
+assertion-authoring errors, not a product RED. Corrected/formatted v2 passes all
+eighteen. Its v3 changes only explanatory text; final v3 execution belongs to the
+new combined Node result below. Four new/wiring MJS files pass ESLint; the extra
+wrapper check retains one unchanged `preserve-caught-error` violation on both
+immutable 14e and the candidate. It is not an all-files lint pass. Six-file format,
+five-file syntax, 71 literal workflow paths and diff checks pass separately.
+
+The diagnostic author proof `final-source-review-v3.json` has SHA-256
+`e7ed1b206bf29c888c658ecb4a3b564d6503b5ea3c6f550e7b8402eb8d648ba6`;
+Root's source review has SHA-256
+`ceea2ae89b6c1a2e85ab767e8113726a47dd37f50e297d375632a131b2953141`,
+independent Panel source peer has SHA-256
+`be83f7b6b2d2efc5a6ff2f872ae8110e22ef6c756ace7dc93993f9ff50bced2f`,
+and committed-content mapping has SHA-256
+`8ec62c8054652173f487d5e7f97b0d92ee5a33017f26b1065e5be242f88839f1`.
+All four are retained in `codeshell-packaged-main-crash-evidence-proof-20261018`.
+
+Root's final checkpoint executes 445 Bun tests/3,550 expectations across 32 files
+and 158 pure Node tests across ten files, with zero failures, skips or cancellations.
+The collector's final v3 eighteen cases are included in 158, not added again.
+The final `ci27-frozen-combined-local-gates-20261018.json` has SHA-256
+`67c3e18e25516fbea6faf3ab39531319d49ffb04dcd689b4bd2f25bc9633c8c1`.
+The fourteen typechecks and renderer/mobile bundles remain actual 14e results,
+reused because all later TypeScript/build inputs are byte-identical; they are not
+fresh typechecks or bundle runs at 0d021. The combined-freeze writer first stops
+on a bytes/string metadata TypeError before writing its final proof. Its retained
+correction changes only the writer; no source, raw log, runtime gate or test run
+is changed or repeated.
+These local checks are not a new native launch, a repaired Windows failure or
+current full release acceptance. Three-platform and Web runtime validation at this
+new candidate, plus the Windows installer lifecycle, remain pending.
