@@ -1999,3 +1999,52 @@ must preserve all test cases and platform-valid filename coverage. None of
 those corrections establishes native recovery until a fresh run completes.
 No local browser, Electron, Keychain, PowerShell, installer or provider is run
 for this audit. The operation-audit goal remains active.
+
+## CI21 — local frozen preparation
+
+Candidate `5b353ba81579cff4fa318c864d4fc9978eed5e63` combines the three scoped
+corrections below. Its frozen local receipt
+`ci21-frozen-local-source-gates-proof-20261017.json`, SHA-256
+`26e09a9c2ea1ae335459531b4c080c111448edf7c98ce5afbe0b0122d231b518`,
+binds eight source/workflow paths and compiled/tested checkpoint
+`13edfb6bf2dcd0809a5db69c1ce2bb1951468312`; all package sources, scripts and
+build manifests remain unchanged through the candidate.
+
+- `efe9482d84a4251300eda53b5799f8e42976eb63` scopes the draft fixture's panel
+  controls to one active, visible, non-inert Session dock. It retains strict
+  rejection of missing or duplicate controls and the entire three-operation
+  body. Actual extracted-helper locator contracts reproduce three failures with
+  28 passing controls against the old helper; the fixed 31 pass. Proof
+  `codeshell-review-draft-visible-scope-proof-20261017/verified-source-summary.json`
+  has SHA-256 `beadb4ef62b4a0ac0887e34f0edd12fc9034d60897902bfb539cec00ebfd9440`.
+- `fb6d04a183a093d763c138a83d70261b3efef923` changes only three test fixtures:
+  native canonical owned paths, exact omission-path equality and a Windows-valid
+  Unicode/space filename. POSIX quote/tab coverage and all test counts stay.
+  CI20 supplies the actual Windows thirteen-failure evidence; the local Mac
+  control passes 39/1,727, including six unchanged case-alias tests. This is not
+  a Windows green run. Proof
+  `codeshell-turn-diff-platform-proof-cy_7vmjn/verified-summary.json` has SHA-256
+  `0cc97b2a90a492c6294ef6ce098fc874b1ccd8ac4b8151082795c24726b2aaef`.
+- `38494198cf56098f82d471f4ab1ad24e771b596b` keeps an incomplete UTF-8 suffix
+  at the same raw incremental-output cursor while output is live. Owned-file
+  RingFile/BashOutput leaves reproduce thirteen failures with seven controls;
+  the fixed related shard passes 50/710 across four files. Process status and
+  the local instance registry are mocked; no actual shell or pipe timing is
+  tested. Proof `codeshell-utf8-frontier-fix-proof-52mnt060/verified-summary.json`
+  has SHA-256 `b8502a5481d1699ca69b6011c9cdab071696021e52cf9a312dc0c77270b0cd23`.
+
+Root's final combined guarded shard passes 344 tests/3,256 assertions across
+23 files. Node contracts pass 75 across six files (31 NSIS/signal, 13 original
+Review, 31 draft), with zero failure/skip in both shards. Safe full workspace
+build, all fourteen workspace typechecks, four Desktop static bundles,
+seven-source lint with zero warnings and eight-path format checks pass.
+Overlapping author and earlier counts are not added; assertion totals can vary
+with explicit filesystem controls. The workflow adds only three test arguments
+within its existing budgets and artifact/permission/native gates.
+
+All evidence above is local source, owned-file or compiler validation. Actual
+native draft acceptance remains two of three on macOS/Linux; Windows has not
+rerun its corrected pure tests or reached native acceptance. Historical Windows
+Review GC and NSIS causes remain unknown, and installer revalidation is pending.
+No local native/browser, Keychain, PowerShell, installer or provider is run for
+this preparation. No CI21 dispatch or runtime result is asserted.
