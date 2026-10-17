@@ -24,6 +24,7 @@ const {
   recordPackagedMainFirstError,
 } = await import("./windows-packaged-main-crash-evidence.mjs");
 const { createBunTestEnvironment } = await import("../../../scripts/bun-test-completion.mjs");
+const { createPackagedStartupObservation } = await import("./packaged-startup-observation.mjs");
 
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const birth = "2026-10-17T17:45:00.5206260Z";
@@ -623,15 +624,21 @@ const runCatch = new AsyncFunction(
   "captured",
   "terminateChild",
   "process",
+  "startupObservation",
+  "startupRecord",
   `
   let launchFailed = false, preloadFailure;
   const launchPhase = "playwright-launch";
-  try { ${actualCatch} } catch (caught) { return { caught, launchFailed }; }
+  try { ${actualCatch} } catch (caught) {
+    return { caught, launchFailed, startupObservation: startupObservation.snapshot() };
+  }
 `,
 );
 
 test("actual fixture catch persists original first cause before preload await and same captured cleanup", async () => {
   assert(marker >= 0 && catchStart > 0 && catchEnd > marker);
+  const startupObservation = createPackagedStartupObservation();
+  const startupRecord = startupObservation.captured(1928);
   const events = [],
     original = Error("first launch error"),
     child = { pid: 1928, exitCode: null, signalCode: null };
@@ -639,6 +646,7 @@ test("actual fixture catch persists original first cause before preload await an
     original,
     (error, detail) => {
       events.push("first-error-write");
+      assert.equal(startupObservation.snapshot().launches[0].atFailure, null);
       assert.equal(error, original);
       assert.deepEqual(detail, { phase: "playwright-launch", pid: 1928, ppid: 1772 });
     },
@@ -654,14 +662,26 @@ test("actual fixture catch persists original first cause before preload await an
       events.push("same-custody-cleanup");
     },
     { pid: 1772 },
+    startupObservation,
+    startupRecord,
   );
   assert.deepEqual(events, ["first-error-write", "preload-await", "same-custody-cleanup"]);
   assert.equal(result.caught.cause, original);
   assert.equal(result.caught.errors[0], original);
   assert.equal(result.launchFailed, true);
+  assert.equal(result.startupObservation.recordingFailed, false);
+  assert.equal(result.startupObservation.launches[0].failurePhase, "playwright-launch");
+  assert.equal(result.startupObservation.launches[0].sdkLaunchReturned, false);
+  assert.deepEqual(result.startupObservation.launches[0].atFailure, {
+    sdkLaunchReturned: false,
+    preloadResultObserved: false,
+    privateReceiptWrite: "not-attempted",
+  });
 });
 
 test("actual fixture catch retains callback IO failure second and still performs original cleanup", async () => {
+  const startupObservation = createPackagedStartupObservation();
+  const startupRecord = startupObservation.captured(1928);
   const events = [],
     original = Error("original"),
     secondary = Error("recording IO");
@@ -669,6 +689,7 @@ test("actual fixture catch retains callback IO failure second and still performs
     original,
     () => {
       events.push("first-write-failed");
+      assert.equal(startupObservation.snapshot().launches[0].atFailure, null);
       throw secondary;
     },
     {
@@ -682,10 +703,20 @@ test("actual fixture catch retains callback IO failure second and still performs
       events.push("cleanup");
     },
     { pid: 1772 },
+    startupObservation,
+    startupRecord,
   );
   assert.deepEqual(events, ["first-write-failed", "preload-await", "cleanup"]);
   assert.equal(result.caught.cause, original);
   assert.deepEqual(result.caught.errors, [original, secondary]);
+  assert.equal(result.startupObservation.recordingFailed, false);
+  assert.equal(result.startupObservation.launches[0].failurePhase, "playwright-launch");
+  assert.equal(result.startupObservation.launches[0].sdkLaunchReturned, false);
+  assert.deepEqual(result.startupObservation.launches[0].atFailure, {
+    sdkLaunchReturned: false,
+    preloadResultObserved: false,
+    privateReceiptWrite: "not-attempted",
+  });
 });
 
 test("actual driver diagnostic call is after settlement; success and unavailable durable flag never query", () => {
