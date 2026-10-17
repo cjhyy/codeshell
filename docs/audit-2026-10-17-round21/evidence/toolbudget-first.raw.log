@@ -1,0 +1,29 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts:
+(pass) round21 actual tool-output-budget leaf controls > text extraction joins only valid text slots in their original order [1.03ms]
+(pass) round21 actual tool-output-budget leaf controls > empty text slots participate in positional metadata and separators [1.34ms]
+(pass) round21 actual tool-output-budget leaf controls > the exact char and heuristic token limits are inclusive [0.10ms]
+(pass) round21 actual tool-output-budget leaf controls > a small positive char allowance does not add an oversized notice [0.02ms]
+(pass) round21 actual tool-output-budget leaf controls > small scalar head-tail output fits the actual joined budget and is deterministic [0.73ms]
+(pass) round21 actual tool-output-budget leaf controls > short positional slots survive while long owned ASCII slots share allowance [0.57ms]
+(pass) round21 actual tool-output-budget leaf controls > explicit replacement metadata cannot reorder or remove nontext blocks
+(pass) round21 actual tool-output-budget leaf controls > under-budget arrays retain each original text and media block identity
+(pass) round21 actual tool-output-budget leaf controls > 301 small slots can shrink to the exact real backstop char cap [1.22ms]
+(pass) round21 actual tool-output-budget leaf controls > old budget-floor concern: 302 handcrafted slots retain 602 separators under the real 600 char backstop [0.60ms]
+
+packages/core/src/context/tool-output-budget.test.ts:
+(pass) tool output text budgets > a CJK heuristic boundary cannot report truncation while retaining all input [6.01ms]
+(pass) tool output text budgets > a string result needs no positional replacement metadata [0.05ms]
+(pass) tool output text budgets > head/tail truncation retains diagnostics without splitting Unicode characters [0.29ms]
+(pass) tool output text budgets > tiny budgets shrink rather than adding an oversized notice
+(pass) tool output text budgets > media and every text slot retain order, identity and their own head/tail [0.90ms]
+(pass) tool output text budgets > short slots stay intact while large slots share the remaining budget [0.17ms]
+(pass) tool output text budgets > legacy scalar replacements cannot collapse multiple text slots [0.03ms]
+(pass) tool output text budgets > untouched slots and media-only results preserve their blocks
+
+ 18 pass
+ 0 fail
+ 94 expect() calls
+Ran 18 tests across 2 files. [143.00ms]
+Completed Bun shard: 18 tests, 0 skipped; 0 failures.

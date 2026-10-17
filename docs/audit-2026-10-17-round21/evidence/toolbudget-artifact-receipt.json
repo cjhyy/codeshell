@@ -1,0 +1,112 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "report": "docs/audit-2026-10-17-round21/tool-budget.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 1,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-classify.py",
+      "sha256": "9d76cb0e6d45289ce0c5f5c03cf6246ce28e11e7c2996508f60e318cc3aed6f1",
+      "bytes": 7905
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup-decisions.json",
+      "sha256": "066b7322fbe20474025801933d3fcf96385557d7ea60ac5e2e2611fb32741a71",
+      "bytes": 2068
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+      "sha256": "9c4d7d10e4bc9add88446a5de34c3a7fedb501ccbe05ef94d3aca057df5fd9f9",
+      "bytes": 540699
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.py",
+      "sha256": "712082f17736b47546930a923052dada48252dec79624e555f44013add67fc01",
+      "bytes": 3116
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-first.exit.json",
+      "sha256": "910ea38795c90789a6eae0c70185b02bf747bc6280a1e64e483c045dc3536998",
+      "bytes": 729
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-first.raw.log",
+      "sha256": "c677be4ad27bb301af61e9fff7ac72a7a0c1d6f6ad796a575985364f951953e8",
+      "bytes": 2506
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts",
+      "sha256": "6ad349e52df3e2af488b65fbcfa9c502d4213a6d227677319c20d69541dbab9d",
+      "bytes": 7421
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-metadata-notes.json",
+      "sha256": "bbed7ae3d5c0ccb990ce94cb47b2d0eb266edbc7900ba935b7471c98783936c9",
+      "bytes": 1955
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-preflight.json",
+      "sha256": "8fb904331ab05a559e55c3b00d48748e4a696e194d760805fe1559889ab821a2",
+      "bytes": 1574
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-preflight.py",
+      "sha256": "26e1c93bc1b8ae827ca87d11785ae98fc62ee37db823983b57e1c0a0bd5d89a3",
+      "bytes": 4708
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-receipt.py",
+      "sha256": "a808aba313dabe4dcd4a95777eab34118bc9b581f6c64d8a7dd9dba7abcc296d",
+      "bytes": 3073
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-related.json",
+      "sha256": "06805a2ecb39850c324ed13091b66ecfd2b07c2d4a5ca05538998eee4089d0ee",
+      "bytes": 1948
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-run-first.py",
+      "sha256": "d2d211e33856c9982b1ce8fbed98ad8991bcc32790333a45a86e4274e97b65d6",
+      "bytes": 1274
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+      "sha256": "f8cf67f58f1f4e74a3fac46f295d10042ea5519615e777e57d86fe98f88a3d5a",
+      "bytes": 5655
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-validation.json",
+      "sha256": "d95eac3f6db64206591a7a0324263259f325fce1409184262bd316698f23caea",
+      "bytes": 2287
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+      "sha256": "ca051366f5c311fc9bdbf9230fb160b9146f54a2b01804e901ccf8ead22d6124",
+      "bytes": 6280
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogsPreservedVerbatim": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "metadataOnlyReview": {
+    "reportLinksChecked": 20,
+    "allTargetsExist": true,
+    "referencedLinesInBounds": true,
+    "sourceCurrentHashesChecked": 11,
+    "fixtureUnchangedSincePreflight": true,
+    "rawMatchesExitReceipt": true,
+    "artifactHashesChecked": 18
+  },
+  "limitations": "Receipt self excluded. Leaf and selected static coverage only; no product rerun."
+}

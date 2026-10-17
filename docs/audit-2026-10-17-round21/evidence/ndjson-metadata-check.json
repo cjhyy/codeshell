@@ -1,0 +1,70 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "reportLinks": [
+    {
+      "target": "../../packages/tui/src/cli/input/ndjson-reader.ts#L1",
+      "exists": true
+    },
+    {
+      "target": "../../packages/tui/src/cli/input/ndjson-reader.test.ts#L1",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-first.raw.log",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-first.exit.json",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-focused.test.ts",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-navigation.json",
+      "exists": true
+    },
+    {
+      "target": "../../packages/tui/src/cli/main.ts#L87",
+      "exists": true
+    },
+    {
+      "target": "../../packages/tui/src/cli/commands/run.ts#L38",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-dedup.json",
+      "exists": true
+    },
+    {
+      "target": "../archive/review-2026-05-30/round2_section.md#L34",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-history-selected.json",
+      "exists": true
+    },
+    {
+      "target": "../review-remaining-2026-10-12/coding-tui-chat.md#L217",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-dedup-decisions.json",
+      "exists": true
+    },
+    {
+      "target": "evidence/ndjson-validation.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 15,
+  "ownJsonParsed": true,
+  "sourcePinsMatch": true,
+  "fixtureAndRawPreserved": "sha256 metadata only, no product rerun",
+  "productReruns": 0
+}

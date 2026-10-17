@@ -1,0 +1,29 @@
+[
+  {
+    "id": "BUDGET-R21-R1",
+    "title": "Structured text-slot separators retain a floor above the real backstop allowance; concrete helper edge related to prior budget-floor concern",
+    "classification": "related prior source concern, no new formal/candidate count",
+    "file": "packages/core/src/context/tool-output-budget.ts",
+    "lines": [
+      78,
+      106
+    ],
+    "oldRecord": "docs/audit-2026-10-17-round4/context.md:41",
+    "oldRecordStatus": "source concern only; no prior formal finding or candidate ID",
+    "ordinaryCallerSource": "packages/core/src/context/compaction.ts:773-776 supplies600 chars/200 heuristic tokens only after aggregate pressure",
+    "actualObservation": "Actual createToolTextReplacement/replaceToolResultText,302 owned text slots containing x: joined original904chars, final302 empty slots joined as602 newlines,151 heuristic tokens, exceeds600char budget=true.301slot control final600chars,150heuristic tokens, exceeds=false.",
+    "inputProvenance": "Handcrafted valid ContentBlock array, not an observed normal302-slot tool producer. No image bytes, tool invocation, provider or authority input.",
+    "limitations": [
+      "Actual compaction/ContextManager/storage/Engine not imported or run",
+      "Ordinary302-slot producer and aggregate gate reachability not established",
+      "No real provider token count/context overflow/UI impact proven",
+      "No0/negative/NaN budget inputs; exact real positive600/200 helper allowance only"
+    ],
+    "evidence": [
+      "docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts",
+      "docs/audit-2026-10-17-round21/evidence/toolbudget-first.raw.log",
+      "docs/audit-2026-10-17-round21/evidence/toolbudget-first.exit.json"
+    ],
+    "correctionDirection": "If later confirmed ordinary, preserve positional slot metadata while bounding the materialized joined view or explicitly represent an unavoidable floor; no fix made."
+  }
+]

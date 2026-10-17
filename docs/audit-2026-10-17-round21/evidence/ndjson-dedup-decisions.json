@@ -1,0 +1,30 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "historyScan": "ndjson-dedup.json",
+  "selectedFullRecords": "ndjson-history-selected.json",
+  "decisions": [
+    {
+      "prior": "docs/archive/review-2026-05-30/backlog_confirmed.json $[27] / round2_section.md:34",
+      "mechanism": "start() never retained/closed readline, repeated starts leaked. Historical note already says no code callers were found.",
+      "currentSource": "Reader now retains private rl, start() guard and stop(); existing tests include fixed lifecycle controls.",
+      "classification": "Existing mechanism, no new issue/related item. The current no-timer lifecycle controls passed; this does not prove all resource paths or native stdin behavior."
+    },
+    {
+      "prior": "docs/review-remaining-2026-10-12/coding-tui-chat.md:217 and copied source-report:217",
+      "coverage": "Prior report names CLI ndjson reader in source-directed static coverage.",
+      "classification": "Acknowledged prior selected source coverage; no claim this is a newly discovered module or exhaustive review."
+    },
+    {
+      "candidateDirection": "unchecked JSON schema/types; callback exceptions or multiple-handler effects; stop/restart and dual start/messages coordination",
+      "classification": "Not probed or classified; no ordinary runtime consumer established. No invented contract or user-impact assertion."
+    },
+    {
+      "direction": "CLI data/read-stdin, approval/auth/security, default stdin/PTY, real consumers",
+      "classification": "Excluded; former failed directions remain skipped; no recovery via this separate leaf."
+    }
+  ],
+  "limitations": [
+    "35 exact and 53 mechanism matches are navigation, not semantic exhaustion.",
+    "Prior matching dedup JSON strings can copy the same original May30 record many times; they are not independent bugs."
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "report": "docs/audit-2026-10-17-round21/ndjson.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-dedup-decisions.json",
+      "bytes": 1863,
+      "sha256": "db792001afe37b985dd3cdc976b9470cf6de0e79a8c798b92ae512de2708635f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-dedup.json",
+      "bytes": 527382,
+      "sha256": "ec3660d02501fb64fcb6de1301493b67d88d8554f3f0519b1b0792d30349ff08"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-dedup.py",
+      "bytes": 2663,
+      "sha256": "b85f2d4a35e755bfa64c26d6c296ecad0f514425496a977a8e930aafdbbd34da"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-first.exit.json",
+      "bytes": 543,
+      "sha256": "6c2ec57a28832a0c34bd7f4b5347031b7a3ea871146d9b302cdeed19e40e7c70"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-first.raw.log",
+      "bytes": 2032,
+      "sha256": "66b5c30a498d68b0aee0cf443220aff93f104350f44dbf99ad6c3dfe19ce56a8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-focused.test.ts",
+      "bytes": 7031,
+      "sha256": "3bb0193837bbe9e0a2a3bbff3bfdceca4c8b9b508741b174119b4bf8bf90d7a3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-history-selected.json",
+      "bytes": 4553,
+      "sha256": "c1847105b17d971d0266a217729bffca2b49ac18de89c55766704a2827fb1fa6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-metadata-check.json",
+      "bytes": 1638,
+      "sha256": "e76cde7b3b5963e755947d46f56a9823a4c67a1a2a7199cb4b3ffed55b26e4aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-navigation.json",
+      "bytes": 1947,
+      "sha256": "719bd094aa4ac1057b7bb55aa2bb9130108136e58cf03dfb4540bcbe0ee18606"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-preflight.json",
+      "bytes": 703,
+      "sha256": "2463f38a327aa8909b59822822f223b84c27b189ed734d42fefc450440a09d18"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-source-manifest.json",
+      "bytes": 2195,
+      "sha256": "ceadbef8b85adaed5b792b2c066da673ed36b22c1dc0625c8fe538735a65b73c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/ndjson-validation.json",
+      "bytes": 4535,
+      "sha256": "a38cc05b01a9b82a2dd04aefb20862a250a5abdcd4a06900ff916c42201f417c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/ndjson.md",
+      "bytes": 4829,
+      "sha256": "c1427ad4ff04aeab42227365d41f8823b591da6fb4d98d2b7b35f2242095f153"
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true,
+  "rawLogs": [
+    "docs/audit-2026-10-17-round21/evidence/ndjson-first.raw.log"
+  ],
+  "sourceChecks": 4,
+  "guardedRuns": 1,
+  "productReruns": 0
+}

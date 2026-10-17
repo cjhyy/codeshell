@@ -1,0 +1,70 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "sources": [
+    {
+      "path": "packages/tui/src/cli/input/ndjson-reader.ts",
+      "readScope": "full source, actual leaf import",
+      "selectedLineRanges": [
+        [
+          1,
+          79
+        ]
+      ],
+      "lineCount": 79,
+      "frozenSha256": "72bf81860af854bab65e8e3f3318205b815252a72ce1294d761e618a6ae4febc",
+      "currentSha256": "72bf81860af854bab65e8e3f3318205b815252a72ce1294d761e618a6ae4febc",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/input/ndjson-reader.test.ts",
+      "readScope": "full existing tests static only; timer helper excluded from execution",
+      "selectedLineRanges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "lineCount": 36,
+      "frozenSha256": "ae1ec1bf8cc4a8c91e007e955a67cf7d923d1d0a9fcfd05d6eba36717104d2b6",
+      "currentSha256": "ae1ec1bf8cc4a8c91e007e955a67cf7d923d1d0a9fcfd05d6eba36717104d2b6",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "readScope": "selected static CLI options/task route",
+      "selectedLineRanges": [
+        [
+          1,
+          18
+        ],
+        [
+          50,
+          115
+        ],
+        [
+          185,
+          210
+        ]
+      ],
+      "lineCount": 265,
+      "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "readScope": "selected static imports/options/bootstrap header; no runtime",
+      "selectedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "lineCount": 314,
+      "frozenSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "currentSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "matchesFrozen": true
+    }
+  ],
+  "runtimeScope": "Actual NdjsonReader leaf and node readline on explicitly owned memory streams only; no CLI/PTY/default stdin/timers/approval/auth/security/producer execution."
+}

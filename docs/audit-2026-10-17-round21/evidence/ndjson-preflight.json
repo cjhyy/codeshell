@@ -1,0 +1,12 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "head": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "sourceMatchesFrozen": true,
+  "fixture": "docs/audit-2026-10-17-round21/evidence/ndjson-focused.test.ts",
+  "fixtureBytes": 7031,
+  "fixtureSha256": "3bb0193837bbe9e0a2a3bbff3bfdceca4c8b9b508741b174119b4bf8bf90d7a3",
+  "absoluteLeafImportExists": true,
+  "existingTestsNotRun": "Existing test tick() uses setTimeout(5); timer direction excluded. Two static tests inform independent no-timer focused controls.",
+  "dependencyResolution": "No root package paths guessed. Only node builtins, bun:test and the exact production leaf will resolve on first guarded run.",
+  "metadataOnly": true
+}
