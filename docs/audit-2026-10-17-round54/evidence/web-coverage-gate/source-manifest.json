@@ -1,0 +1,200 @@
+{
+  "createdAt": "2026-10-17T18:08:18.808943+00:00",
+  "parentContext": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "parentContextSource": "Root-provided frozen context; no Git query",
+  "files": [],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "bytes": 5644,
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "lineCount": 168,
+      "coverage": "hash-only; explicit same-SHA canonical old-full exclusion before body",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstPinUTC": "2026-10-17T18:06:40.732574+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "endingSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/src/lib/uiLanguage.ts",
+      "bytes": 1366,
+      "sha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+      "lineCount": 36,
+      "coverage": "hash-only; explicit same-SHA canonical old-full exclusion before body",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstPinUTC": "2026-10-17T18:07:04.867036+00:00",
+      "initialPinArtifact": "fallback-before-pin.json",
+      "endingSha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+      "matchesInitial": true
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedBeforeBodyUTC": "2026-10-17T18:06:40.731185+00:00",
+      "coverage": "hash-only in this packet; same SHA as prior full instruction reading, reused",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedBeforeBodyUTC": "2026-10-17T18:06:40.731967+00:00",
+      "coverage": "hash-only in this packet; same SHA as prior full instruction reading, reused",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0
+    }
+  ],
+  "gateDecisions": [
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "disposition": "old-full-excluded-before-product-body",
+      "originalDocument": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "pointer": "/files/0",
+      "coverage": "full",
+      "originalSelectedLineRanges": [
+        [
+          1,
+          168
+        ]
+      ],
+      "qualifiers": "Static source only; no cursor/epoch/identity/journal/reconnect/auth or runtime validation"
+    },
+    {
+      "path": "packages/web/src/lib/uiLanguage.ts",
+      "sha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+      "disposition": "old-full-excluded-before-product-body",
+      "originalDocument": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "pointer": "/sources/10",
+      "readScope": "full",
+      "originalReadRanges": null,
+      "originalFrozenAndInspectedMainShaMatch": true,
+      "qualifiers": "Original full declaration activated only for this exact leaf; no assertion about all locale text, components or language-switch behavior"
+    }
+  ],
+  "originalCanonicalObjects": [
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "bytes": 7245,
+      "sha256": "4a7da67b11c3d9f9ef57e363b2189e3745de8b3e3a3eafff70f1e68a7a6c48fb",
+      "pointer": "/files/0",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "lineCount": 168,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            168
+          ]
+        ],
+        "coveredLineCount": 168,
+        "role": "product",
+        "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "pinTiming": "Before semantic source reading; earlier wc/rg navigation only.",
+        "finishFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "matchesFirstDurablePin": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "bytes": 11910,
+      "sha256": "c1de0091382dc45f82f9c5424a495bb71374f34423012827a019f98e13e074a9",
+      "pointer": "/sources/10",
+      "row": {
+        "path": "packages/web/src/lib/uiLanguage.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 1366,
+        "lines": 36,
+        "frozenSourceSha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+        "inspectedMainMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "historicalMarkdownSelected": [
+    {
+      "path": "docs/audit-2026-10-17-round29/root-report.md",
+      "bytes": 3525,
+      "sha256": "70c60a8e2d4bc2117ff7ee637a9dce32cb23be606b71d007f872993f52b63aae",
+      "selectedLineRanges": [
+        [
+          5,
+          5
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 5,
+          "text": "[outputCoverage.ts](../../packages/web/src/lib/outputCoverage.ts) 168行与 [mobileOutputRecovery.ts](../../packages/web/src/lib/mobileOutputRecovery.ts) 161行完整阅读。coverage 的有界输入集合溢出会保留 incomplete 屏障，copy 独立复制集合；带游标事件不会自行消除历史屏障。这里遇到的身份、epoch和journal字段仅静态核对，不做权限、身份、认证或持久化实验，也不声称已经验证整个协议。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/review-root-runtime.md",
+      "bytes": 6760,
+      "sha256": "f9b89fc25bc1adfa402c4dc2a10f231064ecdc77f88940e34738ff7a273313b6",
+      "selectedLineRanges": [
+        [
+          11,
+          11
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 11,
+          "text": "- [outputCoverage.ts](../../../packages/web/src/lib/outputCoverage.ts) 全文 168 行：copy 新建实例并逐项复制输入 Set；128 条/32 KiB 上限触发 discard 后维持 overflow/incomplete。cursor 观察不清除旧 blocked barrier。这里只认可显式边界存在，没有实验 cursor、身份或 journal 协议。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "selectedLineRanges": [
+        [
+          11,
+          11
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 11,
+          "text": "读取了 `packages/desktop/src/renderer/i18n/translate.ts`、`I18nProvider.tsx`、现有 translate/dict 测试、`uiLanguage.ts`、`dict.ts` 的 namespace 组装入口，以及 Web 的 `i18n/translate.ts`、`lib/uiLanguage.ts` 和 mobile 的选定条目。插值使用 callback 返回字面字符串，普通 `$` 替换 token 不会在这一层被再次解释；fallback 顺序从源码可见。没有据此断言所有文案、placeholder、组件 caller 或语言切换行为正确。"
+        }
+      ]
+    }
+  ],
+  "productSemanticLineCount": 0,
+  "productDisplayedLineCount": 0,
+  "testDeclarationLineCount": 0,
+  "newFullCoverageClaims": 0,
+  "globalCoverageUpdates": 0,
+  "limits": [
+    "No ordinary new concrete issue was supplied or discovered before the same-SHA full gate, so neither product body nor ordinary consumer/test was reopened.",
+    "Hash/unknown/no-row/rank are not unread evidence; precise original whole-file/full scope and same-object SHA required.",
+    "No broader protocol, current correctness, runtime pass or global whole-repository coverage conclusion."
+  ]
+}

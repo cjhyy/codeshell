@@ -1,0 +1,1299 @@
+{
+  "createdUTC": "2026-10-17T18:14:35.615981+00:00",
+  "role": "Independent static selected fallback source reviewer; recipes target body excluded by prior full. Not a first-ever/unique-coverage claim.",
+  "rootReportedBaselineOnly": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/link/src/operations.ts",
+      "bytes": 17020,
+      "lines": 584,
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          43
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          98,
+          105
+        ],
+        [
+          107,
+          121
+        ],
+        [
+          123,
+          146
+        ],
+        [
+          148,
+          180
+        ],
+        [
+          569,
+          584
+        ]
+      ],
+      "semanticLines": 133,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          43
+        ],
+        [
+          81,
+          87
+        ],
+        [
+          98,
+          182
+        ],
+        [
+          569,
+          584
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        3,
+        6,
+        8,
+        13,
+        15,
+        16,
+        17,
+        22,
+        26,
+        30,
+        32,
+        44,
+        53,
+        69,
+        82,
+        83,
+        84,
+        91,
+        96,
+        99,
+        101,
+        108,
+        110,
+        111,
+        135,
+        142,
+        150,
+        154,
+        162,
+        164,
+        165,
+        166,
+        270,
+        278,
+        286,
+        300,
+        332,
+        355,
+        382,
+        394,
+        402,
+        436,
+        444,
+        451,
+        462,
+        463,
+        474,
+        485,
+        498,
+        518,
+        519,
+        526,
+        527,
+        534,
+        535,
+        539,
+        553,
+        569,
+        570,
+        576,
+        577,
+        579,
+        582,
+        583
+      ],
+      "uniqueDisplayedLines": 181,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          7
+        ],
+        [
+          44,
+          44
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          81,
+          81
+        ],
+        [
+          83,
+          87
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          122,
+          122
+        ],
+        [
+          147,
+          147
+        ],
+        [
+          181,
+          182
+        ],
+        [
+          270,
+          270
+        ],
+        [
+          278,
+          278
+        ],
+        [
+          286,
+          286
+        ],
+        [
+          300,
+          300
+        ],
+        [
+          332,
+          332
+        ],
+        [
+          355,
+          355
+        ],
+        [
+          382,
+          382
+        ],
+        [
+          394,
+          394
+        ],
+        [
+          402,
+          402
+        ],
+        [
+          436,
+          436
+        ],
+        [
+          444,
+          444
+        ],
+        [
+          451,
+          451
+        ],
+        [
+          462,
+          463
+        ],
+        [
+          474,
+          474
+        ],
+        [
+          485,
+          485
+        ],
+        [
+          498,
+          498
+        ],
+        [
+          518,
+          519
+        ],
+        [
+          526,
+          527
+        ],
+        [
+          534,
+          535
+        ],
+        [
+          539,
+          539
+        ],
+        [
+          553,
+          553
+        ]
+      ],
+      "purpose": "Only ordinary schema/catalog data construction, reviewed default/normalization/content/executor labels, required owner/repo and starred boolean result schema, freeze/map lookup. Resource policy constructors44–80/91–97 not body-read; displayed references106/122/147 are navigation boundary. Executor/effect labels are data only, not mechanism certification.",
+      "initialSemanticReadSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "finishSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "finishBytes": 17020,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "bytes": 4215,
+      "lines": 118,
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2,
+          18
+        ],
+        [
+          43,
+          51
+        ],
+        [
+          53,
+          67
+        ]
+      ],
+      "semanticLines": 41,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          43,
+          67
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        2,
+        4,
+        7,
+        17,
+        18,
+        43,
+        50,
+        51,
+        57,
+        66
+      ],
+      "uniqueDisplayedLines": 45,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          19,
+          20
+        ],
+        [
+          52,
+          52
+        ]
+      ],
+      "purpose": "Portable schema/operation DTO and normalization comment: adapters canonicalize after structural validation. Resource policy field52 navigation only; no authority behavior.",
+      "initialSemanticReadSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "finishSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "finishBytes": 4215,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/links/runtime/operation.ts",
+      "bytes": 1162,
+      "lines": 32,
+      "sha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          13
+        ],
+        [
+          16,
+          24
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          30,
+          32
+        ]
+      ],
+      "semanticLines": 18,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          9,
+          32
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        4,
+        12,
+        13,
+        17,
+        18,
+        20,
+        21,
+        24,
+        27,
+        30
+      ],
+      "uniqueDisplayedLines": 25,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          28,
+          29
+        ]
+      ],
+      "purpose": "Actual generic lookup/snapshot input/execute callback/result assertion and return boundary. snapshot/validate implementation belongs to other review and is not opened; signal/authorization14–15/25–26/28–29 navigation only.",
+      "initialSemanticReadSha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "finishSha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "finishBytes": 1162,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/core/src/links/link-action-tool.ts",
+      "bytes": 31326,
+      "lines": 771,
+      "sha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          400,
+          400
+        ],
+        [
+          404,
+          416
+        ],
+        [
+          688,
+          688
+        ],
+        [
+          695,
+          695
+        ],
+        [
+          698,
+          699
+        ]
+      ],
+      "semanticLines": 18,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          398,
+          418
+        ],
+        [
+          684,
+          699
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        27,
+        36,
+        37,
+        51,
+        64,
+        82,
+        141,
+        276,
+        362,
+        366,
+        367,
+        370,
+        371,
+        400,
+        404,
+        406,
+        411,
+        413,
+        415,
+        416,
+        419,
+        431,
+        434,
+        470,
+        545,
+        559,
+        575,
+        590,
+        607,
+        613,
+        614,
+        626,
+        640,
+        654,
+        688,
+        695
+      ],
+      "uniqueDisplayedLines": 64,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          27,
+          27
+        ],
+        [
+          36,
+          37
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          141,
+          141
+        ],
+        [
+          276,
+          276
+        ],
+        [
+          362,
+          362
+        ],
+        [
+          366,
+          367
+        ],
+        [
+          370,
+          371
+        ],
+        [
+          398,
+          399
+        ],
+        [
+          401,
+          403
+        ],
+        [
+          417,
+          419
+        ],
+        [
+          431,
+          431
+        ],
+        [
+          434,
+          434
+        ],
+        [
+          470,
+          470
+        ],
+        [
+          545,
+          545
+        ],
+        [
+          559,
+          559
+        ],
+        [
+          575,
+          575
+        ],
+        [
+          590,
+          590
+        ],
+        [
+          607,
+          607
+        ],
+        [
+          613,
+          614
+        ],
+        [
+          626,
+          626
+        ],
+        [
+          640,
+          640
+        ],
+        [
+          654,
+          654
+        ],
+        [
+          684,
+          687
+        ],
+        [
+          689,
+          694
+        ],
+        [
+          696,
+          697
+        ]
+      ],
+      "purpose": "Actual ordinary detached params/operation validation call boundary and returned operationId/content/data metadata. Credentials/authorization/approval/provider execution only adjacent/navigation; no lifecycle or execution certification.",
+      "initialSemanticReadSha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "finishSha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "finishBytes": 31326,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/core/src/links/remote-adapters.ts",
+      "bytes": 20634,
+      "lines": 571,
+      "sha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          221,
+          226
+        ],
+        [
+          237,
+          244
+        ],
+        [
+          265,
+          265
+        ],
+        [
+          271,
+          272
+        ],
+        [
+          294,
+          295
+        ],
+        [
+          394,
+          400
+        ],
+        [
+          411,
+          412
+        ],
+        [
+          417,
+          418
+        ],
+        [
+          443,
+          448
+        ],
+        [
+          457,
+          459
+        ]
+      ],
+      "semanticLines": 39,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          221,
+          296
+        ],
+        [
+          394,
+          442
+        ],
+        [
+          440,
+          465
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        24,
+        35,
+        79,
+        83,
+        84,
+        87,
+        103,
+        152,
+        161,
+        187,
+        221,
+        237,
+        238,
+        271,
+        294,
+        356,
+        394,
+        411,
+        412,
+        417,
+        420,
+        425,
+        431,
+        457,
+        570
+      ],
+      "uniqueDisplayedLines": 160,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          24,
+          24
+        ],
+        [
+          35,
+          35
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          83,
+          84
+        ],
+        [
+          87,
+          87
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          152,
+          152
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          227,
+          236
+        ],
+        [
+          245,
+          264
+        ],
+        [
+          266,
+          270
+        ],
+        [
+          273,
+          293
+        ],
+        [
+          296,
+          296
+        ],
+        [
+          356,
+          356
+        ],
+        [
+          401,
+          410
+        ],
+        [
+          413,
+          416
+        ],
+        [
+          419,
+          442
+        ],
+        [
+          449,
+          456
+        ],
+        [
+          460,
+          465
+        ],
+        [
+          570,
+          570
+        ]
+      ],
+      "purpose": "Only ordinary get_starred owner/repo selection and boolean result projection; list_repositories empty prepare counterevidence is post-filter limit slicing of original params. requireResource/selected/permitted admission and all authorization logic excluded even when adjacent displayed. Helper pathSegmentParam/intParam/pick implementations not opened.",
+      "initialSemanticReadSha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "finishSha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "finishBytes": 20634,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/core/src/links/remote.ts",
+      "bytes": 36309,
+      "lines": 1022,
+      "sha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "beforeBodyOrLineNavigation": true,
+      "initialSemanticReadSha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "note": "Before any body or line navigation.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          794,
+          794
+        ],
+        [
+          952,
+          952
+        ],
+        [
+          1008,
+          1013
+        ]
+      ],
+      "semanticLines": 8,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          773,
+          806
+        ],
+        [
+          968,
+          1022
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        19,
+        22,
+        639,
+        663,
+        794,
+        853,
+        952,
+        1008,
+        1012
+      ],
+      "uniqueDisplayedLines": 95,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          639,
+          639
+        ],
+        [
+          663,
+          663
+        ],
+        [
+          773,
+          793
+        ],
+        [
+          795,
+          806
+        ],
+        [
+          853,
+          853
+        ],
+        [
+          968,
+          1007
+        ],
+        [
+          1014,
+          1022
+        ]
+      ],
+      "purpose": "Only actual prepare call and normalization call passing original input.params. Credential parsing, auth/preflight/secret/transport/connection logic is navigation boundary, not mechanism semantic review; no request executed.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "finishSha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "finishBytes": 36309,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/links/providers/defaults.ts",
+      "bytes": 44168,
+      "lines": 1199,
+      "sha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "beforeBodyOrLineNavigation": false,
+      "initialSemanticReadSha256": null,
+      "note": "Late pin: tool51441e had already rg-n displayed matching lines before this dedicated pin; first SHA at that navigation is unknown. This pin precedes subsequent selected display only.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          235,
+          236
+        ],
+        [
+          241,
+          254
+        ]
+      ],
+      "semanticLines": 16,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          225,
+          257
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        1,
+        183,
+        186,
+        218,
+        230,
+        235,
+        343,
+        350,
+        416,
+        423,
+        587,
+        609,
+        775,
+        855,
+        912,
+        921,
+        946,
+        961,
+        966,
+        1109,
+        1136,
+        1155,
+        1190
+      ],
+      "uniqueDisplayedLines": 54,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          183,
+          183
+        ],
+        [
+          186,
+          186
+        ],
+        [
+          218,
+          218
+        ],
+        [
+          225,
+          234
+        ],
+        [
+          237,
+          240
+        ],
+        [
+          255,
+          257
+        ],
+        [
+          343,
+          343
+        ],
+        [
+          350,
+          350
+        ],
+        [
+          416,
+          416
+        ],
+        [
+          423,
+          423
+        ],
+        [
+          587,
+          587
+        ],
+        [
+          609,
+          609
+        ],
+        [
+          775,
+          775
+        ],
+        [
+          855,
+          855
+        ],
+        [
+          912,
+          912
+        ],
+        [
+          921,
+          921
+        ],
+        [
+          946,
+          946
+        ],
+        [
+          961,
+          961
+        ],
+        [
+          966,
+          966
+        ],
+        [
+          1109,
+          1109
+        ],
+        [
+          1136,
+          1136
+        ],
+        [
+          1155,
+          1155
+        ],
+        [
+          1190,
+          1190
+        ]
+      ],
+      "purpose": "Only ordinary list-repositories per_page/default and returned field projection as corroboration. request/token/headers and all other provider operations matched by navigation are excluded. Late first navigation pin explicitly null; selected display followed dedicated pin.",
+      "initialPinBeforeBodyOrLineNavigation": false,
+      "dedicatedSelectedDisplaySha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "finishSha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "finishBytes": 44168,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "bytes": 8281,
+      "lines": 212,
+      "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          27,
+          38
+        ],
+        [
+          40,
+          42
+        ],
+        [
+          197,
+          198
+        ]
+      ],
+      "semanticLines": 17,
+      "sourceKind": "test-declarations",
+      "displayedLineRanges": [
+        [
+          26,
+          42
+        ],
+        [
+          180,
+          201
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        3,
+        19,
+        26,
+        27,
+        29,
+        31,
+        33,
+        36,
+        37,
+        38,
+        39,
+        40,
+        43,
+        44,
+        45,
+        46,
+        47,
+        50,
+        62,
+        63,
+        64,
+        66,
+        72,
+        79,
+        85,
+        90,
+        95,
+        100,
+        101,
+        104,
+        111,
+        117,
+        118,
+        121,
+        132,
+        156,
+        157,
+        168,
+        179,
+        181,
+        182,
+        184,
+        192,
+        195,
+        197,
+        198,
+        200,
+        203
+      ],
+      "uniqueDisplayedLines": 69,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          43,
+          47
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          62,
+          64
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          72,
+          72
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          90,
+          90
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          100,
+          101
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          117,
+          118
+        ],
+        [
+          121,
+          121
+        ],
+        [
+          132,
+          132
+        ],
+        [
+          156,
+          157
+        ],
+        [
+          168,
+          168
+        ],
+        [
+          179,
+          196
+        ],
+        [
+          199,
+          201
+        ],
+        [
+          203,
+          203
+        ]
+      ],
+      "purpose": "Two partial existing test declaration intents: catalog snapshot/key/freeze and a valid starred boolean result versus wrong type. Resource-policy39 and security/prototype/endpoint/boundary assertions only adjacent navigation, not reviewed or executed. Nine test titles navigation only.",
+      "initialSemanticReadSha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "dedicatedSelectedDisplaySha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "finishSha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "finishBytes": 8281,
+      "finishMatchesDedicatedPin": true,
+      "fullFileReadingClaimed": false
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/link/src/recipes.ts",
+      "bytes": 4162,
+      "lines": 122,
+      "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "hash-only-before-body-old-full-exclusion",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "uniqueDisplayedLines": 0,
+      "fullFileReadingClaimedThisPrep": false
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionReadStatus": "Prior AGENTS5/CODESHELL217 actual reading carried unchanged; no new instruction body read.",
+  "totals": {
+    "semanticFiles": 8,
+    "full": 0,
+    "selected": 8,
+    "productSemanticLines": 273,
+    "testDeclarationSemanticLines": 17,
+    "semanticLines": 290,
+    "uniqueDisplayedLinesSummedAcrossFiles": 693,
+    "sourceHashOnlyFiles": 1,
+    "sourceAndInstructionPins": 11,
+    "testTitlesNavigationOnly": 9,
+    "partialExistingTestDeclarationsRead": 2,
+    "testsExecuted": 0
+  },
+  "firstPinLimitation": "server providers/defaults.ts had rg-n navigation51441e before dedicated pin31293f; initialSemanticReadSha256=null preserved. Dedicated pin before selected display, ending equality does not retroactively prove unknown first-nav SHA.",
+  "coverageBoundary": "No full file claim from hashing or broad regex navigation. Mechanism-adjacent display excluded from ordinary semantics. Prior R3 chain coverage of operations remains unknown selection overlap, not declared absent."
+}

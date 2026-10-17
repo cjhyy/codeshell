@@ -1,0 +1,138 @@
+{
+  "createdUTC": "2026-10-17T18:14:35.618356+00:00",
+  "canonicalRowsActuallyRead": [
+    {
+      "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/9",
+      "row": {
+        "path": "packages/link/src/recipes.ts",
+        "bytes": 4162,
+        "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+        "scope": "Full exploratory static only; no auth recipe/host boundary execution.",
+        "lineCount": 122,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "jsonPointer": "/sources/7",
+      "row": {
+        "path": "packages/link/src/recipes.ts",
+        "lines": 122,
+        "bytes": 4162,
+        "currentSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+        "frozenReferenceSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+        "readHeadSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+        "matchesFrozenReference": true,
+        "matchesReadHead": true,
+        "readScope": "full",
+        "selectedLineRanges": null,
+        "note": "Read-only metadata compatibility projection; no record/store/access execution."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "jsonPointer": "/paths/23",
+      "row": {
+        "path": "packages/link/src/operations.ts",
+        "lines": 584,
+        "bytes": 17020,
+        "currentSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+        "frozenSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+        "matchesFrozen": true,
+        "scope": "inventory-only until explicitly listed in proposal.readScope"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "jsonPointer": "/sources/5",
+      "row": {
+        "path": "packages/link/src/operations.ts",
+        "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+        "bytes": 17020,
+        "lines": 584
+      }
+    }
+  ],
+  "targetDecision": "R23 original scope Full exploratory static plus MD explicit actual file reading; R25 original same-SHA readScope full supports ordinary target exclusion before body. Does not certify all contracts/dependencies/providers/auth execution.",
+  "canonicalMarkdownRangesActuallyRead": [
+    {
+      "path": "docs/audit-2026-10-17-round23/frontier-selection.md",
+      "lines": [
+        5,
+        13
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/frontier-selection.md",
+      "lines": [
+        9,
+        15
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/root-qc.md",
+      "lines": [
+        9,
+        11,
+        15,
+        17
+      ]
+    }
+  ],
+  "fallbackDecision": "R3 original pin contains no full/ranges; R25 inventory explicitly scope inventory-only until proposal.readScope and no operations entry in original sources. R3 MD says ordinary operation contracts selectively, no explicit full. No canonical same-SHA complete read established; enter bounded ordinary fallback selection, not claim previously unread.",
+  "actualGateReading": "All42 target objects compact qualification list, 2 decisive target raw rows and canonical MD lines; all17 fallback raw objects read in bounded output, plus old HL01 contexts. Entire retained context bodies were not read. Derived claims counted as JSON machine metadata but never new semantic evidence.",
+  "aliasesChecked": [
+    "coverage",
+    "scope",
+    "purpose",
+    "readScope",
+    "reviewMode",
+    "inspectionScope",
+    "review",
+    "sha256",
+    "currentSha256",
+    "frozenSha256",
+    "readHeadSha256"
+  ],
+  "historicalCause": "HL01 file-selection trim and HL02 UTF16 label known; R27 exact old linkage contexts read, no duplicate promotion. No external provider specification inferred.",
+  "history": {
+    "targetCounts": {
+      "md": 1500,
+      "json": 3811,
+      "objects": 1106467,
+      "scalars": 3824469,
+      "strings": 2575070,
+      "arrays": 89689
+    },
+    "targetMatches": {
+      "targetPath": 60,
+      "targetFilename": 78,
+      "oldCause": 42,
+      "targetSHA": 39
+    },
+    "targetRetained": {
+      "targetPath": 60,
+      "targetSHA": 39,
+      "targetFilename": 78,
+      "oldCause": 42
+    },
+    "fallbackMatches": {
+      "targetPath": 19,
+      "targetFilename": 19,
+      "oldCause": 35,
+      "targetSHA": 17
+    },
+    "fallbackRetained": {
+      "targetPath": 19,
+      "targetSHA": 17,
+      "targetFilename": 19,
+      "oldCause": 35
+    },
+    "capPerQuery": 100,
+    "sameInventoryRows": true,
+    "combinedUniqueFileCount": 5311,
+    "notSummedAsTwoUniqueHistories": true
+  }
+}

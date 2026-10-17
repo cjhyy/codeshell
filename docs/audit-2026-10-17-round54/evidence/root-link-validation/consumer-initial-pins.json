@@ -1,0 +1,33 @@
+{
+  "atUTC": "2026-10-17T18:11:13.469542+00:00",
+  "files": [
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "bytes": 4215,
+      "lines": 118,
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "beforeCurrentBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "bytes": 17020,
+      "lines": 584,
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "beforeCurrentBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "bytes": 8281,
+      "lines": 212,
+      "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "beforeCurrentBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/links/link-action-tool.ts",
+      "bytes": 31326,
+      "lines": 771,
+      "sha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "beforeCurrentBodyAndLineNavigation": true
+    }
+  ]
+}

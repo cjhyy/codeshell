@@ -1,0 +1,12 @@
+{
+  "productRuns": 0,
+  "metadataErrors": [],
+  "truncations": [],
+  "navigationCaps": [
+    {
+      "tool": "c1f687",
+      "cause": "Intentional head100 broad return/params locator stopped before validation callee; not all candidate lines read. Later exactcallee queryf4ff4f closed limitedcall boundary."
+    }
+  ],
+  "sourceTiming": "All current five source pins before body/line navigation. Historicalmetadata firstReadSHA null; laterhash not backfilled as pre-read."
+}

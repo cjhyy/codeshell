@@ -1,0 +1,104 @@
+{
+  "createdUTC": "2026-10-17T18:08:31.109774+00:00",
+  "role": "History gate reader; no fresh product source semantics or request-route verification",
+  "rootReportedBaselineOnly": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "ownGitOperations": 0,
+  "files": [],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/host/src/host-requests.ts",
+      "bytes": 4880,
+      "lines": 151,
+      "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "hash-only-before-body-old-full-exclusion",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 0,
+      "fullFileReadingClaimedThisPrep": false,
+      "exclusionEvidence": {
+        "document": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "jsonPointer": "/files/2",
+        "row": {
+          "path": "packages/host/src/host-requests.ts",
+          "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+          "bytes": 4880,
+          "currentEqualsFrozen": true,
+          "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+        }
+      }
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "bytes": 4014,
+      "lines": 117,
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "hash-only-before-body-old-full-exclusion",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 0,
+      "fullFileReadingClaimedThisPrep": false,
+      "exclusionEvidence": {
+        "document": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "jsonPointer": "/files/1",
+        "row": {
+          "path": "packages/host/src/runtime.ts",
+          "frozenSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+          "bytes": 4014,
+          "currentEqualsFrozen": true,
+          "readScope": "full; ordinary capability declarations and synchronous lifecycle; no request dispatch experiments"
+        }
+      }
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Prior actual AGENTS5/CODESHELL217 reading carried by same SHA, no new instruction body read in prep117.",
+  "totals": {
+    "freshSemanticFiles": 0,
+    "freshFull": 0,
+    "freshSelected": 0,
+    "freshSemanticLines": 0,
+    "productBodyDisplayLines": 0,
+    "sourceNavigationSnippetLines": 0,
+    "sourceHashOnlyFiles": 2,
+    "sourceAndInstructionHashPins": 4,
+    "testBodyRead": 0,
+    "testTitlesRead": 0,
+    "testsExecuted": 0
+  },
+  "canonicalMetadataDocuments": [
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "bytes": 3462,
+      "sha256": "66fe3d8510535f753bfebfcc7b84b602a11aaccfd6b1d836bbde3a64301a0eaf",
+      "hashCaptureTiming": "After actual metadata reading in 0ce7cf/cbb961; not product pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "bytes": 3985,
+      "sha256": "f9d2b070debafc22f69006e2db7f0cb2e4261de045c802379bad3efb02eaf005",
+      "hashCaptureTiming": "After actual metadata reading in 0ce7cf/cbb961; not product pre-read pin."
+    }
+  ],
+  "scopeBoundary": "Existing canonical ordinary full coverage is used to avoid duplicate body reading, not recounted as current full/selected reading or correctness proof. Only filenames and whole-byte hashes touched current product files."
+}

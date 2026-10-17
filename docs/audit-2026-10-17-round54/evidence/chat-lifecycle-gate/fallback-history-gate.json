@@ -1,0 +1,2157 @@
+{
+  "createdAt": "2026-10-17T18:10:15.613461+00:00",
+  "pin": {
+    "path": "packages/chat/src/attachments.ts",
+    "bytes": 3512,
+    "lines": 93,
+    "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+    "pinnedBeforeBodyUTC": "2026-10-17T18:10:10.404564+00:00"
+  },
+  "cohort": "Original history-inventory.json5311; all original bytes checked unchanged before fallback gate",
+  "capPerQuery": 100,
+  "contextCapCharacters": 2000,
+  "queryTotals": {
+    "exact-path": 45,
+    "sha256": 45,
+    "basename": 875
+  },
+  "hits": {
+    "exact-path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/60",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/21/hits/1/text",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/48/hits/1/text",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/5/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "pointer": "/files/6/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/6/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/8/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/workerSourceChecks/10/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/41/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/73/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+        "pointer": "/currentByteOnlyChecks/26/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/21/excerpt",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/32/excerpt",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/34/excerpt",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/35/excerpt",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/38/excerpt",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/12/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/16/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/22/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/24/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/28/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/38/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/45/object/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-pins.json",
+        "pointer": "/files/5/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "pointer": "/files/20/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history-decisions.json",
+        "pointer": "/boundedSelectionDecisions/6/paths/3",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/20/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "pointer": "/files/9/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "pointer": "/hashOnlyChecks/20/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/523/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/523/directSourcePathsInObject/0",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/524/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/524/directSourcePathsInObject/0",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/525/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/525/directSourcePathsInObject/0",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/526/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/526/directSourcePathsInObject/0",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/527/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/527/directSourcePathsInObject/0",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/528/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/528/directSourcePathsInObject/0",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/381/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/381/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/376",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/381/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      }
+    ],
+    "sha256": [
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/5/frozenSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/5/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "pointer": "/files/6/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/6/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/8/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/8/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/8/mainSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/workerSourceChecks/10/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/41/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/41/claims/0/sourceSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/73/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+        "pointer": "/currentByteOnlyChecks/26/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/36/excerpt",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/37/excerpt",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/hits/packages~1chat~1src~1attachments.ts/39/excerpt",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/12/object/frozenSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/12/object/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/16/object/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/22/object/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/24/object/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/24/object/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/24/object/mainSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/28/object/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/38/object/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/38/object/claims/0/sourceSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "pointer": "/directSourceObjects/45/object/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-pins.json",
+        "pointer": "/files/5/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "pointer": "/files/20/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "pointer": "/files/20/firstSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/20/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/20/firstSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "pointer": "/files/9/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "pointer": "/files/9/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "pointer": "/files/9/mainSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "pointer": "/hashOnlyChecks/20/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/525/sourceHashFields/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/526/sourceHashFields/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/526/sourceHashFields/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/526/sourceHashFields/mainSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/527/sourceHashFields/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/528/sourceHashFields/frozenSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/528/sourceHashFields/currentSha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/381/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/381/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/381/sha256",
+        "text": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "originalCharacters": 64,
+        "originalValueSha256": "cf6d87add7501f66c25bddf2c613825cbb88f3f7e0c520dc42a0e2d71fa6e5e6",
+        "contextCapCharacters": 2000
+      }
+    ],
+    "basename": [
+      {
+        "document": "bugs/2026-07-13-repo-audit.md",
+        "line": 335,
+        "text": "- **证据**：Desktop 在 `packages/desktop/src/main/image-read-service.ts:31-37` lstat/realpath/containment 后再按路径 readFile；Core 在 `packages/core/src/engine/input-attachments.ts:145-180,303-340` 校验 realPath 后稍后 reopen 读取 bytes。",
+        "originalCharacters": 220,
+        "originalValueSha256": "8cf2ead4a49f07980f01769254f7d76d205815c9185446aec4df109088ea4bbf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "bugs/2026-07-13-repo-audit.md",
+        "line": 342,
+        "text": "- **证据**：`packages/core/src/engine/input-attachments.ts:101-180` 校验 session/path，但没有比较 `attachment.sha256`；image bytes 只在 `input-attachments.ts:319-340` 重算新 hash 并继续发送。",
+        "originalCharacters": 168,
+        "originalValueSha256": "5fcf6b80a5ef665c5b86c07f67a53f2908a7c3c6883fa1c2a77a097bb8481774",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/electron-image-input-design.md",
+        "line": 19,
+        "text": "- `packages/desktop/src/renderer/chat/attachments.ts` — wire 格式定义在 `encodeAttachmentsForWire`：",
+        "originalCharacters": 94,
+        "originalValueSha256": "6b104208934b375e6f474c4fe63dce9fdb93f46cf40af764ecee43a3b4e36bd0",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 11,
+        "text": "- `packages/desktop/src/renderer/chat/attachments.ts:1` 到 `packages/desktop/src/renderer/chat/attachments.ts:7` 明确说明当前图片附件是 renderer-only，不碰磁盘，发送时以内联 wire format 进入 engine。",
+        "originalCharacters": 172,
+        "originalValueSha256": "0396331b469b471a68b31487531e43d2d9e9c40656e702cb44775d2f7aef492e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 12,
+        "text": "- `ImageAttachment` 只有 `id/name/mime/dataUrl/size`，没有 path/hash/origin/sessionId，见 `packages/desktop/src/renderer/chat/attachments.ts:17` 到 `packages/desktop/src/renderer/chat/attachments.ts:28`。",
+        "originalCharacters": 195,
+        "originalValueSha256": "4e1b78137addd05822ce8ba46cc3de38788aff9bfe353d356ea2bade76c25d1c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 13,
+        "text": "- 普通粘贴/OS drop 图片通过 `FileReader.readAsDataURL` 读成 data URL，见 `packages/desktop/src/renderer/chat/attachments.ts:62` 到 `packages/desktop/src/renderer/chat/attachments.ts:68`；`buildAttachments` 只做 MIME、数量、大小校验后把 data URL 放入内存对象，见 `packages/desktop/src/renderer/chat/attachments.ts:77` 到 `packages/desktop/src/renderer/chat/attachments.ts:123`。",
+        "originalCharacters": 341,
+        "originalValueSha256": "f7e1ebced07d57c1266c3cc9bec2b97341e8d90ee2e4f1b42b1b6aa26a712d93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 14,
+        "text": "- 支持的图片 MIME 是 png/jpeg/jpg/webp/gif，单张 UI 上限 10MB、每条消息最多 6 张，见 `packages/desktop/src/renderer/chat/attachments.ts:37` 到 `packages/desktop/src/renderer/chat/attachments.ts:49`。",
+        "originalCharacters": 176,
+        "originalValueSha256": "b94977885803dd8a61b8deb099dc7c6b08a6f7c4a8feb7a3dcbf22621ac77bd6",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 15,
+        "text": "- 文件面板拖入的 on-disk 图片已有半个路径化流程：`buildPathAttachment` 保留绝对路径作为 `name`，并要求调用方通过 `images:readDataUrl` 读 bytes，见 `packages/desktop/src/renderer/chat/attachments.ts:150` 到 `packages/desktop/src/renderer/chat/attachments.ts:190`。这不适用于普通粘贴/OS drop，因为 browser `File` 没有稳定工作区 path。",
+        "originalCharacters": 271,
+        "originalValueSha256": "e1214485d4d23ef6b295412e05d2c9a8bfdb604fe028076ce7f76221a63a65ed",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 16,
+        "text": "- 当前发送 wire format 是把每张图片编码成 `<codeshell-image mime=\"...\" name=\"...\">dataUrl</codeshell-image>` 拼进单个 `task` 字符串，见 `packages/desktop/src/renderer/chat/attachments.ts:194` 到 `packages/desktop/src/renderer/chat/attachments.ts:213`。",
+        "originalCharacters": 228,
+        "originalValueSha256": "970233510b4955b359f4e1bbd7e816a356401852376eb78c8182b3800748cae4",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 17,
+        "text": "- 展示侧会把 `<codeshell-image>` 从用户气泡中解回缩略图，避免显示 base64，见 `packages/desktop/src/renderer/chat/attachments.ts:263` 到 `packages/desktop/src/renderer/chat/attachments.ts:289`。",
+        "originalCharacters": 168,
+        "originalValueSha256": "35e6d061479bf8f908a3b267da8a15d2c8711b9fa00caa7b9d9b20bbc312e233",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 18,
+        "text": "- 粘贴只提取 clipboard 中 `kind === \"file\"` 且 `type.startsWith(\"image/\")` 的项，见 `packages/desktop/src/renderer/chat/attachments.ts:292` 到 `packages/desktop/src/renderer/chat/attachments.ts:307`；drop 同样只过滤图片文件，见 `packages/desktop/src/renderer/chat/attachments.ts:310` 到 `packages/desktop/src/renderer/chat/attachments.ts:324`。",
+        "originalCharacters": 318,
+        "originalValueSha256": "5c79e2c78e8e7060acd47ade6919367051bda7dc65941ad5ad4410a8c0cd694f",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 118,
+        "text": "- 推测：普通 OS drop 的 browser `File` 在当前 renderer 中没有可用、可靠、跨平台的真实文件 path。代码没有读取 `file.path`，只读 data URL，见 `packages/desktop/src/renderer/chat/attachments.ts:77` 到 `packages/desktop/src/renderer/chat/attachments.ts:123`。方案按「OS drop/paste 必须复制落盘」设计。",
+        "originalCharacters": 243,
+        "originalValueSha256": "4b1518264c4e2cb400fbcd8f19f1e146ad7a346541b8d603edd2f1e843e7a432",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 313,
+        "text": "- `packages/desktop/src/renderer/chat/attachments.ts`",
+        "originalCharacters": 53,
+        "originalValueSha256": "0a9a4af7eecdeb3f81c5a6367c2c37997a20c49dda5664c802a8b6a7b6bc5370",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 449,
+        "text": "- 新增 `packages/core/src/engine/input-attachments.ts`",
+        "originalCharacters": 52,
+        "originalValueSha256": "f80bbf22424e801e714f2f712be35a5269de89988f3d9b7bd863bba233d9ab6d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "line": 454,
+        "text": "- `packages/desktop/src/renderer/chat/attachments.ts`",
+        "originalCharacters": 53,
+        "originalValueSha256": "0a9a4af7eecdeb3f81c5a6367c2c37997a20c49dda5664c802a8b6a7b6bc5370",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog.json",
+        "pointer": "/96/file",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "pointer": "/71/file",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "pointer": "/96/file",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/findings.json",
+        "pointer": "/263/file",
+        "text": "packages/desktop/src/renderer/chat/attachments.ts",
+        "originalCharacters": 49,
+        "originalValueSha256": "f499d6e89cbb6d223a8679ecd52dc1bc7e929bdc90f4d215c63b82f16bb7b0a4",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/findings.json",
+        "pointer": "/287/file",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "pointer": "/40/file",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/low_section.md",
+        "line": 48,
+        "text": "| ⬜ | 正确性 | `desktop/renderer/tool-cards/attachments.ts:74-76` | Write success detection relies on fragile result string heuristic | Add an explicit check for truthy result before adding the attachment: `const lc … |",
+        "originalCharacters": 216,
+        "originalValueSha256": "c88f592eb4e885d09e664af3a53e37861c4ef912c0f85930f80323d4d6779171",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+        "line": 27,
+        "text": "- 锚点：`packages/core/src/engine/input-attachments.ts:47`、`input-attachments.ts:104`、`packages/core/src/engine/engine.ts:1048`。",
+        "originalCharacters": 125,
+        "originalValueSha256": "447378bd7c00b8a9b854baf8670e85641af451b2fbc7e7d8e11787add9f815aa",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/60",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/242",
+        "text": "packages/core/src/engine/input-attachments.ts",
+        "originalCharacters": 45,
+        "originalValueSha256": "619deda69323fa89f873e226b2d63d0ed04cf1e51955e2d60e95b438a30741e7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1393",
+        "text": "packages/desktop/src/renderer/chat/attachments.ts",
+        "originalCharacters": 49,
+        "originalValueSha256": "f499d6e89cbb6d223a8679ecd52dc1bc7e929bdc90f4d215c63b82f16bb7b0a4",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1789",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1847",
+        "text": "packages/desktop/src/shared/pet-chat-attachments.ts",
+        "originalCharacters": 51,
+        "originalValueSha256": "3bc2136b14046973db0dd0363186034a22e192d729c1dd49293fcaad2fa63484",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2006",
+        "text": "packages/server/src/mobile-remote/mobile-attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "c8828886cda670c064b45dd3c5d32b85f7ab1e735396d83ac836520ca1b9a4eb",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "pointer": "/matches/43/hits/0/excerpt",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "pointer": "/matches/45/hits/2/excerpt",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/14/hits/2/text",
+        "text": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+        "originalCharacters": 163,
+        "originalValueSha256": "a7c6af6a5b8301904aac8dc58e11ef6e5a7cce6a566eff9e52bda86f58a807e8",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/21/hits/1/text",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/19/hits/2/text",
+        "text": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+        "originalCharacters": 163,
+        "originalValueSha256": "a7c6af6a5b8301904aac8dc58e11ef6e5a7cce6a566eff9e52bda86f58a807e8",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/48/hits/1/text",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/5/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "pointer": "/files/6/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "pointer": "/hits/header_only/6/snippet",
+        "text": "片落盘 / 附件路径化」「主 agent 本地图片视觉读取」「通用输入接入总线」合并为一条可串行落地的 input-attachment pipeline 方案。\n\n推荐 MVP 边界：先做「图片附件路径化闭环」，即桌面粘贴/OS drop/文件面板图片统一落盘到工作区 `.code-shell/attachments/`，发送给模型时同时提供可引用路径和 vision image part；`@dir`、通用二进制附件、DriveAgent 直接透传 CLI 图片参数放到后续 stage。\n\n## 1. 现状事实\n\n### 1.1 已确证：桌面 composer 图片附件\n\n- `packages/desktop/src/renderer/chat/attachments.ts:1` 到 `packages/desktop/src/renderer/chat/attachments.ts:7` 明确说明当前图片附件是 renderer-only，不碰磁盘，发送时以内联 wire format 进入 engine。\n- `Im",
+        "originalCharacters": 470,
+        "originalValueSha256": "f633f463c238a090850fb698902db99ee2049b548ae43cbe9dc40fb439cee723",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "pointer": "/hits/truncate_unicode/1/snippet",
+        "text": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |\n\nSlack 官方 `chat.postMessag",
+        "originalCharacters": 380,
+        "originalValueSha256": "51ea0c033829e49a88667ae28a2c95d4ff1313f26fd5780bc93f3697648b9186",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "pointer": "/hits/truncate_unicode/12/snippet",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "pointer": "/hits/truncate_unicode/13/snippet",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "pointer": "/hits/truncate_unicode/20/snippet",
+        "text": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 315,
+        "originalValueSha256": "f914be328a55d2e1b4184bdfffa1d4d13d6a7644dfad6ea2bb1524b1272d0539",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "pointer": "/hits/4/excerpt",
+        "text": "、不带明文。\n- **B2** vision gate：`engine.ts:1067` legacy+structured 合并；`:1077` 非视觉遇图 image_error（LLM 前）；`input-attachments.ts:141` 只 `kind===\"image\"` 才设 hasStructuredImageAttachments（普通文件不误判）；测试断言不调 LLM + 视觉模型 legacy+structured 都进请求。\n- **B3** notice：THIRD_PARTY_NOTICES.md 覆盖 ApplyPatch/Apache + Yoga/MIT + browser-use/MIT；package.json:52 extraResources 路径正确；测试通过。\n",
+        "originalCharacters": 360,
+        "originalValueSha256": "137910d728be0563623c8e5df4c282329bcad2cbc272cda7e395cca0fc1be2d2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "pointer": "/hits/5/excerpt",
+        "text": "、不带明文。\n- **B2** vision gate：`engine.ts:1067` legacy+structured 合并；`:1077` 非视觉遇图 image_error（LLM 前）；`input-attachments.ts:141` 只 `kind===\"image\"` 才设 hasStructuredImageAttachments（普通文件不误判）；测试断言不调 LLM + 视觉模型 legacy+structured 都进请求。\n- **B3** notice：THIRD_PARTY_NOTICES.md 覆盖 ApplyPatch/Apache + Yoga/MIT + browser-use/MIT；package.json:52 extraResources 路径正确；测试通过。\n",
+        "originalCharacters": 360,
+        "originalValueSha256": "137910d728be0563623c8e5df4c282329bcad2cbc272cda7e395cca0fc1be2d2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/addressed-sources.json",
+        "pointer": "/sourceChanges/1/source",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/baseline-refresh.md",
+        "line": 8,
+        "text": "- **ATT-R9-01**: commit `3d6a1ec35` changes `packages/desktop/src/renderer/tool-cards/attachments.ts` to retain the complete generated-image result tail as an exact path and avoid inventing a scraped suffix. The same change handles structured Write targets exactly and declines ambiguous delimiters. Root inspected the diff only; current fix verification from the other task is not reclassified as this audit's runtime evidence.",
+        "originalCharacters": 428,
+        "originalValueSha256": "39d4b268fa7ecac2b172567a520b72b11d7d802c217a1f3f51890c55f518e7c0",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+        "pointer": "/hits/addressed_old_sources/9/context",
+        "text": "403105f1b1f`。本方向确认 **1 项 P3**；首次 guarded shards 合计 **45 pass / 103 expect / 0 fail / 0 skip**，其中 5 项是本轮路径投影/元数据测试和对照，40 项为既有基线。未修改产品代码。\n\n## ATT-R9-01 — [P3] 工作区路径含空格时，生成产物被投影成错误的附件路径\n\n- **位置**：[tool-cards/attachments.ts:56](../../packages/desktop/src/renderer/tool-cards/attachments.ts:56) 的 `PATH_TOKEN_RE` 不包含空白；结果扫描在 `:115–119` 把每个分段交给 `push`，`:85–89` 接受带目录和已知扩展名的残余片段。\n- **正常触发**：用户在 `project with spaces` 这样的普通工作区中生成图片。真实生产 ",
+        "originalCharacters": 429,
+        "originalValueSha256": "dee5a348f7364d3d79dc5893247a24ed55b48701e2ed671ec0e3e99acc0c0ca2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/root-source-manifest.json",
+        "pointer": "/files/12/path",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/108/text",
+        "text": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 315,
+        "originalValueSha256": "f914be328a55d2e1b4184bdfffa1d4d13d6a7644dfad6ea2bb1524b1272d0539",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/121/text",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/124/text",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/170/text",
+        "text": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |\n\nSlack 官方 `chat.postMessag",
+        "originalCharacters": 380,
+        "originalValueSha256": "51ea0c033829e49a88667ae28a2c95d4ff1313f26fd5780bc93f3697648b9186",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/171/text",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/172/text",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 300,
+        "originalValueSha256": "3944e93d7c5583075b110e9afcb7f53bf1e63ee466c39abb9afb7861b91c63bf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/174/text",
+        "text": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 315,
+        "originalValueSha256": "f914be328a55d2e1b4184bdfffa1d4d13d6a7644dfad6ea2bb1524b1272d0539",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/198/text",
+        "text": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |",
+        "originalCharacters": 315,
+        "originalValueSha256": "f914be328a55d2e1b4184bdfffa1d4d13d6a7644dfad6ea2bb1524b1272d0539",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "pointer": "/files/10/path",
+        "text": "packages/core/src/engine/input-attachments.ts",
+        "originalCharacters": 45,
+        "originalValueSha256": "619deda69323fa89f873e226b2d63d0ed04cf1e51955e2d60e95b438a30741e7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/files/11/path",
+        "text": "packages/core/src/engine/input-attachments.ts",
+        "originalCharacters": 45,
+        "originalValueSha256": "619deda69323fa89f873e226b2d63d0ed04cf1e51955e2d60e95b438a30741e7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/files/35/path",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/workerSourceChecks/10/path",
+        "text": "packages/core/src/engine/input-attachments.ts",
+        "originalCharacters": 45,
+        "originalValueSha256": "619deda69323fa89f873e226b2d63d0ed04cf1e51955e2d60e95b438a30741e7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "pointer": "/workerSourceChecks/44/path",
+        "text": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+        "originalCharacters": 55,
+        "originalValueSha256": "5ff538c98032b039094b5f0d12594db896daec5635eb098b57584fd0572151cf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/web.md",
+        "line": 17,
+        "text": "真实 engine 目录格式还带 `entries`、`truncated` 并由 input-attachments.ts 生成；图片路径提示由 run-image-input.ts 与真实 image content blocks 配套生成。`data.displayText` 字符串会覆盖最终正文，因此有明确 clean displayText 的生产者不能被概括为正文必丢。候选只关乎展示字符串与摘要，不声称 transcript 原件、输入、图片文件或模型收到的内容丢失，不涉及授权或文件访问。",
+        "originalCharacters": 253,
+        "originalValueSha256": "c7e31f4392e4b79e2d5c8227199083e617becf9cfb26ce899116de591f62e712",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/5/matches/0/match",
+        "text": "UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like `$(command)` or backtick substitution could still execute arbitrary commands. Example: a title conta",
+        "originalCharacters": 146567,
+        "originalValueSha256": "ee6610beca63bb39e0eb8a6ff67a78cc72499aa097aa03062bd88853fef6406e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/5/matches/0/context",
+        "text": "maxBytes: number, truncated: boolean): [string, boolean]` to reduce duplication.\"}, {\"file\": \"packages/core/src/runtime/safe-spawn.ts\", \"line\": \"286-301\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The ",
+        "originalCharacters": 146947,
+        "originalValueSha256": "a13609909fd5b7a320a4997f18a45a9e268585ea20d1fff31333e32b12513c49",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/9/matches/0/match",
+        "text": "UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like `$(command)` or backtick substitution could still execute arbitrary commands. Example: a title conta",
+        "originalCharacters": 146567,
+        "originalValueSha256": "ee6610beca63bb39e0eb8a6ff67a78cc72499aa097aa03062bd88853fef6406e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/9/matches/0/context",
+        "text": "maxBytes: number, truncated: boolean): [string, boolean]` to reduce duplication.\"}, {\"file\": \"packages/core/src/runtime/safe-spawn.ts\", \"line\": \"286-301\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The ",
+        "originalCharacters": 146947,
+        "originalValueSha256": "a13609909fd5b7a320a4997f18a45a9e268585ea20d1fff31333e32b12513c49",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/13/matches/0/match",
+        "text": "UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like `$(command)` or backtick substitution could still execute arbitrary commands. Example: a title conta",
+        "originalCharacters": 146567,
+        "originalValueSha256": "ee6610beca63bb39e0eb8a6ff67a78cc72499aa097aa03062bd88853fef6406e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/13/matches/0/context",
+        "text": "maxBytes: number, truncated: boolean): [string, boolean]` to reduce duplication.\"}, {\"file\": \"packages/core/src/runtime/safe-spawn.ts\", \"line\": \"286-301\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The ",
+        "originalCharacters": 146947,
+        "originalValueSha256": "a13609909fd5b7a320a4997f18a45a9e268585ea20d1fff31333e32b12513c49",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/direct_sources/52/context",
+        "text": "通用 prose fallback 应避免把残余路径片段误当完整文件路径，并保留现有长 base64 输入的线性处理特性。未实现修复。\n\n## 其余覆盖与未计入项\n\n- 完整读取 Core `input-attachments.ts`、`run-image-input.ts`、`parse-task.ts`、`image-policy.ts`，以及 Desktop `attachmentSession.ts`、composer 附件编解码、tool-card detector、`AttachmentCard`、`GenericToolCard` 和卡片 dispatcher。App 中附件 session 准备/路径转换、ChatView 中附件 metadata/提交构造仅选择性阅读，没有据此声明完整 App 生命周期覆盖。\n- `resolveAttachmentSessionId` 的 engine/UI id 映射、普通 wire name",
+        "originalCharacters": 430,
+        "originalValueSha256": "b74d1a5b9739e803d264f6d22f4512b045dd40fa763eb3edc77f3e98b9afcd8c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/17/context",
+        "text": "符串里，发送给 agent worker。\n\nUI 半完成后 commit 是 `3e235ab feat(desktop+core): image input UI with vision-capability gating`。\n\n剩下的工作是 **engine 侧实际把 `<codeshell-image>` 块还原成 LLM 协议里的 image content block**，并端到端跑通。本文档把这块工作拆开，给 subagent 用。\n\n## 涉及的代码位置\n\n- `packages/desktop/src/renderer/chat/attachments.ts` — wire 格式定义在 `encodeAttachmentsForWire`：\n  ```\n  <codeshell-image mime=\"image/png\" name=\"screenshot.png\">\n  data:image/png;base64,iVBORw0KGgo…",
+        "originalCharacters": 435,
+        "originalValueSha256": "0e983b301e42d14e7a6dc6eb6f53140366ec1dc4f5fd9c966b4e4fabaea194af",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/18/context",
+        "text": "档把这块工作拆开，给 subagent 用。\n\n## 涉及的代码位置\n\n- `packages/desktop/src/renderer/chat/attachments.ts` — wire 格式定义在 `encodeAttachmentsForWire`：\n  ```\n  <codeshell-image mime=\"image/png\" name=\"screenshot.png\">\n  data:image/png;base64,iVBORw0KGgo…\n  </codeshell-image>\n  ```\n- `packages/core/src/protocol/server.ts` — `handleRun` 接 RPC，调用 `engine.run(params.task, …)`。\n- `packages/core/src/engine/engine.ts` — `async run(task: string, …)` 把 task 喂给 `",
+        "originalCharacters": 435,
+        "originalValueSha256": "b8b6ca02fa2fcb9a02dad928990305b1b6e95f5b525ce463c7efccc7cafbc40b",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/19/context",
+        "text": "derer/chat/attachments.ts` — wire 格式定义在 `encodeAttachmentsForWire`：\n  ```\n  <codeshell-image mime=\"image/png\" name=\"screenshot.png\">\n  data:image/png;base64,iVBORw0KGgo…\n  </codeshell-image>\n  ```\n- `packages/core/src/protocol/server.ts` — `handleRun` 接 RPC，调用 `engine.run(params.task, …)`。\n- `packages/core/src/engine/engine.ts` — `async run(task: string, …)` 把 task 喂给 `engine` 主循环。\n- `packages/core/src/llm/client-base.ts` & `package",
+        "originalCharacters": 436,
+        "originalValueSha256": "ef546a29e924b1da7e6a4296ee612996540dd9369c18050f4a63004e5e3b58e2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/40/context",
+        "text": "行落地的 input-attachment pipeline 方案。\n\n推荐 MVP 边界：先做「图片附件路径化闭环」，即桌面粘贴/OS drop/文件面板图片统一落盘到工作区 `.code-shell/attachments/`，发送给模型时同时提供可引用路径和 vision image part；`@dir`、通用二进制附件、DriveAgent 直接透传 CLI 图片参数放到后续 stage。\n\n## 1. 现状事实\n\n### 1.1 已确证：桌面 composer 图片附件\n\n- `packages/desktop/src/renderer/chat/attachments.ts:1` 到 `packages/desktop/src/renderer/chat/attachments.ts:7` 明确说明当前图片附件是 renderer-only，不碰磁盘，发送时以内联 wire format 进入 engine。\n- `ImageAttachment` 只有 `id/name/mime/dataUrl/size`，没有 path/ha",
+        "originalCharacters": 479,
+        "originalValueSha256": "1b3cf3ba5159eb1353b68503c8545709cbb187f12de4c65f042acd2ae1f2cbcf",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/41/context",
+        "text": " 到 `packages/desktop/src/renderer/chat/attachments.ts:190`。这不适用于普通粘贴/OS drop，因为 browser `File` 没有稳定工作区 path。\n- 当前发送 wire format 是把每张图片编码成 `<codeshell-image mime=\"...\" name=\"...\">dataUrl</codeshell-image>` 拼进单个 `task` 字符串，见 `packages/desktop/src/renderer/chat/attachments.ts:194` 到 `packages/desktop/src/renderer/chat/attachments.ts:213`。\n- 展示侧会把 `<codeshell-image>` 从用户气泡中解回缩略图，避免显示 base64，见 `packages/desktop/src/renderer/chat/attachm",
+        "originalCharacters": 435,
+        "originalValueSha256": "0ad2d5c628f5e79561eb35841670f75294a3ab9196b2992d42a812613e78ca5e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/42/context",
+        "text": "nts.ts:190`。这不适用于普通粘贴/OS drop，因为 browser `File` 没有稳定工作区 path。\n- 当前发送 wire format 是把每张图片编码成 `<codeshell-image mime=\"...\" name=\"...\">dataUrl</codeshell-image>` 拼进单个 `task` 字符串，见 `packages/desktop/src/renderer/chat/attachments.ts:194` 到 `packages/desktop/src/renderer/chat/attachments.ts:213`。\n- 展示侧会把 `<codeshell-image>` 从用户气泡中解回缩略图，避免显示 base64，见 `packages/desktop/src/renderer/chat/attachments.ts:263` 到 `packages/desktop/src/renderer/c",
+        "originalCharacters": 435,
+        "originalValueSha256": "d40bb53da1f08ac49995c2725bcb27630e685c6f26e3f9eeb27b24fb0eec6b23",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/43/context",
+        "text": "个 `task` 字符串，见 `packages/desktop/src/renderer/chat/attachments.ts:194` 到 `packages/desktop/src/renderer/chat/attachments.ts:213`。\n- 展示侧会把 `<codeshell-image>` 从用户气泡中解回缩略图，避免显示 base64，见 `packages/desktop/src/renderer/chat/attachments.ts:263` 到 `packages/desktop/src/renderer/chat/attachments.ts:289`。\n- 粘贴只提取 clipboard 中 `kind === \"file\"` 且 `type.startsWith(\"image/\")` 的项，见 `packages/desktop/src/renderer/chat/attachments.ts:292` 到 `pack",
+        "originalCharacters": 435,
+        "originalValueSha256": "ed577f40918c1c53db4ea1e51a0fc29a31c3a786fe9fd92ff3fec0c908e4affe",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/63/context",
+        "text": "-attachments.ts:104`、`packages/core/src/engine/engine.ts:1048`。\n- 问题：新入口只检查「inside cwd」，没有复用 `path-policy` 的敏感路径规则（如 `.code-shell` 内其它敏感文件）；图片在 vision gate 与 image-policy size gate 之前就直接 `readFile()` + base64。\n- 建议：先 `stat` → path-policy/sensitive 判定 → size cap，再决定是否读字节；非 vision 模型根本不要读 bytes。\n\n### M-2 busy queue / steer 只存字符串，结构化 attachments 被静默丢弃\n\n- 锚点：`packages/desktop/src/renderer/ChatView.tsx:724`、`ChatView.tsx:728`、`packages/desktop/src/renderer/App.tsx:2397`、`App.tsx:2389`。\n- ",
+        "originalCharacters": 488,
+        "originalValueSha256": "067e3bf955bf1ff224218fe503f1445f7d3130c42cdd956ead5c094c6d73a3cd",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/86/context",
+        "text": "行落地的 input-attachment pipeline 方案。\n\n推荐 MVP 边界：先做「图片附件路径化闭环」，即桌面粘贴/OS drop/文件面板图片统一落盘到工作区 `.code-shell/attachments/`，发送给模型时同时提供可引用路径和 vision image part；`@dir`、通用二进制附件、DriveAgent 直接透传 CLI 图片参数放到后续 stage。\n\n## 1. 现状事实\n\n### 1.1 已确证：桌面 composer 图片附件\n\n- `packages/desktop/src/renderer/chat/attachments.ts:1` 到 `packages/desktop/src/renderer/chat/attachments.ts:7` 明确说明当前图片附件是 renderer-only，不碰磁盘，发送时以内联 wire format 进入 engine。\n- `Im",
+        "originalCharacters": 423,
+        "originalValueSha256": "75b8ffacf42bd79ca929be51d8a8f70f00f449cfe739fbbb17339e344a372f13",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/125/context",
+        "text": "-attachments.ts:104`、`packages/core/src/engine/engine.ts:1048`。\n- 问题：新入口只检查「inside cwd」，没有复用 `path-policy` 的敏感路径规则（如 `.code-shell` 内其它敏感文件）；图片在 vision gate 与 image-policy size gate 之前就直接 `readFile()` + base64。\n- 建议：先 `stat` → pat",
+        "originalCharacters": 229,
+        "originalValueSha256": "fc1e23e798ef8a01506a5f9c81ab5c00f99577d514ae067575fcfa3389e1f69e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/126/context",
+        "text": "-attachments.ts:104`、`packages/core/src/engine/engine.ts:1048`。\n- 问题：新入口只检查「inside cwd」，没有复用 `path-policy` 的敏感路径规则（如 `.code-shell` 内其它敏感文件）；图片在 vision gate 与 image-policy size gate 之前就直接 `readFile()` + base64。\n- 建议：先 `stat` → path-policy/sensitive 判定 → si",
+        "originalCharacters": 255,
+        "originalValueSha256": "11958ede231893868a209912bf99518200ee6c401031a4c88dd6d04827168b46",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/127/context",
+        "text": "Apache + Yoga/MIT + browser-use/MIT；package.json:52 extraResources 路径正确；测试通过。\n- **M1** 附件绑 session：`input-attachments.ts:58` 先校验 expectedSessionId、`:82` stat/read 前拒 cross-session、`:219` staged realpath 限 `.code-shell/attachments/<sessionId>/`（拒 `..`/symlink）；`engine.ts:1052` 传当前 run sessionId；`chat-session.ts:220` protocol path 传 ChatSession.id。\n- **M2** mi",
+        "originalCharacters": 360,
+        "originalValueSha256": "23aa9b50d5897048ccee0578a75c6ef5675ec2e73d5d31c5172f348c316c5258",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/128/context",
+        "text": " parent 与84740 blob同为 `4a28a57c65b7748820c207b3ece2c7031687865f`；input-attachments.ts 同为 `c49f0dd6e9db2876111bd0473b9812af9af4478b`。当前 `run-image-input.ts:194–224` 确实用实际 staged path 生成 wrapper 与 image blocks。无需手造 XML。\n\n因此应限定**旧 paired native chat.send**，不扩为所有 Desktop、TUI、Room 或 external runtime 旧输入。fixture 的 `origin:\"mobile",
+        "originalCharacters": 325,
+        "originalValueSha256": "3f86cc852cf45d3cb3ad8470d457f552166c3a88e3e4bedf1cafcc674631c051",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-source-manifest.json",
+        "pointer": "/sources/13/path",
+        "text": "packages/desktop/src/renderer/chat/attachments.ts",
+        "originalCharacters": 49,
+        "originalValueSha256": "f499d6e89cbb6d223a8679ecd52dc1bc7e929bdc90f4d215c63b82f16bb7b0a4",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/review-injection.md",
+        "line": 8,
+        "text": "- IMAGE-R15-C1 的实际 parser 首次日志证明逆序但数量相同的手工标签没有抛错，以及正常 block 后相同逆序尾巴留下文本。源码 `parse-task.ts:142–175` 的数量检查与非重叠 regex 支持此观察；`attachments.ts:250–255` 正常 encoder 静态生成完整 blocks，不证明能产生该逆序输入。报告保留 malformed wire / 无普通生产者的限制，不声称真实 PNG、decode、provider 或用户图片丢失，等级恰当。",
+        "originalCharacters": 254,
+        "originalValueSha256": "74dcee0735e670e3bbca806737402131de4fd08fb91866398ea6c9bc0a01c9c2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/injection.md",
+        "line": 25,
+        "text": "这两种逆序字符串是**自造 malformed wire**；[attachments.ts:250](../../packages/desktop/src/renderer/chat/attachments.ts#L250) 的正常 encoder 静态上生成完整 opener/body/closer，目前未建立普通 encoder 或真实传输损坏会产生逆序 wire 的链。因此不升级为正式 bug。`YQ==` 只用于 base64 语法，不代表真实可解码 PNG。没有执行图片解码、staged 文件读取、压缩、Engine、provider，也不声称真实图片字节丢失或用户可见故障。",
+        "originalCharacters": 297,
+        "originalValueSha256": "af3b921142384b6a1f807c1eebb72e2e7509a4bfc020362407a3f8f8c04dcb43",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "pointer": "/files/51/path",
+        "text": "packages/desktop/src/renderer/chat/attachments.ts",
+        "originalCharacters": 49,
+        "originalValueSha256": "f499d6e89cbb6d223a8679ecd52dc1bc7e929bdc90f4d215c63b82f16bb7b0a4",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/source-manifest.json",
+        "pointer": "/workerSourceChecks/25/path",
+        "text": "packages/desktop/src/renderer/chat/attachments.ts",
+        "originalCharacters": 49,
+        "originalValueSha256": "f499d6e89cbb6d223a8679ecd52dc1bc7e929bdc90f4d215c63b82f16bb7b0a4",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.json",
+        "pointer": "/contexts/unicode_truncation/8/context",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 br",
+        "originalCharacters": 247,
+        "originalValueSha256": "c1114ff74a16b35c1e96a24124815f5f254448fb987004526c0b2ca0e859e70d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.json",
+        "pointer": "/contexts/unicode_truncation/9/context",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 br",
+        "originalCharacters": 247,
+        "originalValueSha256": "c1114ff74a16b35c1e96a24124815f5f254448fb987004526c0b2ca0e859e70d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.json",
+        "pointer": "/contexts/unicode_truncation/18/context",
+        "text": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 br",
+        "originalCharacters": 300,
+        "originalValueSha256": "b17c0c96f9e53e9b157f541d2480f5a5997cb817ff0d9f63df912d0ac6cf390e",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "pointer": "/hits/media_kind/1/context",
+        "text": "线程/editReply 查重未找到同根因条目，日志 `chat-slack-dedup.log`（rg 1 代表无匹配）。\n\n## CHD02 — [P3，长标签触发] 附件名按 UTF-16 生切，产生破损 Unicode 元数据\n\n- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。\n- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Matter",
+        "originalCharacters": 457,
+        "originalValueSha256": "f18e243bfe23ae38e6c7a540cc5a1c75a17603dace6c566a93b6d1ef9e9eb9eb",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "pointer": "/hits/media_kind/7/context",
+        "text": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+        "originalCharacters": 163,
+        "originalValueSha256": "a7c6af6a5b8301904aac8dc58e11ef6e5a7cce6a566eff9e52bda86f58a807e8",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "pointer": "/hits/media_kind/14/context",
+        "text": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+        "originalCharacters": 163,
+        "originalValueSha256": "a7c6af6a5b8301904aac8dc58e11ef6e5a7cce6a566eff9e52bda86f58a807e8",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/6/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/8/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/workerSourceChecks/10/path",
+        "text": "packages/chat/src/attachments.ts",
+        "originalCharacters": 32,
+        "originalValueSha256": "93d4ebecedae9dce7645ec9dd6d7d953c55a65b5cd96a428a6b9b96f81d68e25",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "pointer": "/contexts/unicode/2/context",
+        "text": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现",
+        "originalCharacters": 312,
+        "originalValueSha256": "289c56407ba40584718f568c138bcac034afd46682f943ef481f0aab4f52ae17",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "pointer": "/contexts/unicode/12/context",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现",
+        "originalCharacters": 297,
+        "originalValueSha256": "04589ff344782564f4e65242e9585668fe8dabc64ef55ebf03b392acb2877126",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "pointer": "/contexts/unicode/13/context",
+        "text": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现",
+        "originalCharacters": 297,
+        "originalValueSha256": "04589ff344782564f4e65242e9585668fe8dabc64ef55ebf03b392acb2877126",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "pointer": "/contexts/unicode/20/context",
+        "text": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现",
+        "originalCharacters": 350,
+        "originalValueSha256": "3f7dfe6d13cf8774af0f5af8b8a86d971bd7c3ae5b37d9124d922d7abbdee356",
+        "contextCapCharacters": 2000
+      }
+    ]
+  },
+  "directSourceRows": [
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "pointer": "/matches/21/hits/1",
+      "row": {
+        "location": "$.source_inventory[60]",
+        "text": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "pointer": "/matches/48/hits/1",
+      "row": {
+        "location": "$.source_inventory[60]",
+        "text": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "pointer": "/files/5",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "frozenSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentMatchesFrozen": true,
+        "scope": "full ordinary metadata helper read; no bytes loading execution"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/6",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "pointer": "/files/6",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "scope": "Read command up to line120 displayed complete 93-line file; static only, no loader/bytes/materialization run.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 93
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "pointer": "/files/8",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "mainSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "pointer": "/workerSourceChecks/10",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/chat/src/attachments.ts",
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/41",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "lines": 93,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+                "jsonLocation": "$[\"files\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][10]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/73",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "lines": 93,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+      "pointer": "/currentByteOnlyChecks/26",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "matchesFirstPin": true,
+        "byteOnlyNow": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1chat~1src~1attachments.ts/21",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][60]",
+        "excerpt": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1chat~1src~1attachments.ts/32",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "location": "$[\"matches\"][21][\"hits\"][1][\"text\"]",
+        "excerpt": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1chat~1src~1attachments.ts/34",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$[\"matches\"][48][\"hits\"][1][\"text\"]",
+        "excerpt": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1chat~1src~1attachments.ts/35",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "location": "$[\"files\"][5][\"path\"]",
+        "excerpt": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1chat~1src~1attachments.ts/38",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "location": "$[\"files\"][6][\"path\"]",
+        "excerpt": "packages/chat/src/attachments.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/12/object",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "frozenSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentMatchesFrozen": true,
+        "scope": "full ordinary metadata helper read; no bytes loading execution"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/16/object",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/22/object",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "scope": "Read command up to line120 displayed complete 93-line file; static only, no loader/bytes/materialization run.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 93
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/24/object",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "mainSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/28/object",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/chat/src/attachments.ts",
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/38/object",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "lines": 93,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+                "jsonLocation": "$[\"files\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][10]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/directSourceObjects/45/object",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "lines": 93,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-pins.json",
+      "pointer": "/files/5",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "lines": 93,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "semanticRead": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+      "pointer": "/files/20",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "firstSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "matchesFirstPin": true,
+        "firstPinArtifact": "data-selection-pins.json"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/20",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "firstSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "matchesFirstPin": true,
+        "firstPinArtifact": "data-selection-pins.json",
+        "coverage": "hash-only; no product body semantic reading",
+        "firstPinCapturedAtUTC": "2026-10-17T14:34:49.891698+00:00"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "pointer": "/files/9",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentBytes": 3512,
+        "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "mainBytes": 3512,
+        "mainSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "pointer": "/hashOnlyChecks/20",
+      "row": {
+        "manifest": "dataset-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/chat/src/attachments.ts",
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "coverage": "hash-only; no product body semantic reading",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/523",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/attachments.ts"
+        ],
+        "origin": "list-scalar",
+        "provenance": [
+          {
+            "historyRow": 198,
+            "jsonPointer": "/source_inventory/60"
+          }
+        ],
+        "claimId": "C000524"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/524",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/attachments.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 266,
+            "jsonPointer": "/matches/21/hits/1"
+          },
+          {
+            "historyRow": 270,
+            "jsonPointer": "/matches/48/hits/1"
+          }
+        ],
+        "claimId": "C000525"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/525",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "sourceHashFields": {
+          "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/attachments.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 316,
+            "jsonPointer": "/files/6"
+          },
+          {
+            "historyRow": 824,
+            "jsonPointer": "/workerSourceChecks/10"
+          },
+          {
+            "historyRow": 1348,
+            "jsonPointer": "/files/41"
+          },
+          {
+            "historyRow": 1350,
+            "jsonPointer": "/files/73"
+          }
+        ],
+        "claimId": "C000526"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/526",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "sourceHashFields": {
+          "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+          "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+          "mainSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/attachments.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 824,
+            "jsonPointer": "/files/8"
+          }
+        ],
+        "claimId": "C000527"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/527",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "sourceHashFields": {
+          "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "scope": "Read command up to line120 displayed complete 93-line file; static only, no loader/bytes/materialization run."
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/attachments.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 797,
+            "jsonPointer": "/files/6"
+          }
+        ],
+        "claimId": "C000528"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/528",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "sourceHashFields": {
+          "frozenSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+          "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "scope": "full ordinary metadata helper read; no bytes loading execution"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/attachments.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 276,
+            "jsonPointer": "/files/5"
+          }
+        ],
+        "claimId": "C000529"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/381",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "lines": 93,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C000524",
+          "C000525",
+          "C000526",
+          "C000527",
+          "C000528",
+          "C000529"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 4,
+          "scope-unknown": 2
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/381",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "lines": 93
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/381",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "lines": 93,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    }
+  ],
+  "allMarkdownExactPathHits": []
+}

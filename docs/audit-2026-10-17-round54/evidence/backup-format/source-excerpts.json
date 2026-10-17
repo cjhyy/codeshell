@@ -1,0 +1,223 @@
+[
+  {
+    "path": "packages/core/src/session/output-journal-backup-format.ts",
+    "sourceSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+    "coverage": "selected excerpts captured after actual display; no repeated semantic read",
+    "ranges": [
+      {
+        "from": 6,
+        "to": 11,
+        "text": "export const OUTPUT_REPAIR_PENDING = \"output-journal-repair-pending.json\";\nexport const OUTPUT_BACKUP_MANIFEST = \"output-journal-backup.json\";\nexport const OUTPUT_ANCHOR = \"output-journal.jsonl\";\nexport const OUTPUT_HEAD = \"output-journal-head.json\";\nexport const OUTPUT_SEGMENTS = \"output-journal-segments.json\";\nexport const MAX_OUTPUT_REPAIR_BYTES = 512 * 1024 * 1024;\n",
+        "textSha256": "cc74cc889b5e24f7a59de8a9af46d6a8d8d1609c651d344cf6cec2d0e3f9a105"
+      },
+      {
+        "from": 32,
+        "to": 56,
+        "text": "export interface BackupFile extends FileIdentity {\n  name: string;\n  bytes: number;\n  sha256: string;\n}\nexport interface OutputJournalBackupManifest {\n  format: \"codeshell-output-journal-backup\";\n  version: 1;\n  authority: RepairAuthority;\n  floor: OutputPosition;\n  files: BackupFile[];\n}\nexport interface RepairSegment extends FileIdentity {\n  name: string;\n  start: OutputPosition;\n  end?: OutputPosition;\n}\nexport interface RepairStorageManifest {\n  version: 1;\n  identity: string;\n  origin: OutputPosition;\n  floor: OutputPosition;\n  anchor: { end: OutputPosition; retained: boolean };\n  segments: RepairSegment[];\n}\n",
+        "textSha256": "da2157d4c6d9e1eb6a7e3d48571e561555e7534f7db81665869fd499fd58d778"
+      },
+      {
+        "from": 57,
+        "to": 69,
+        "text": "export class OutputJournalRepairError extends Error {\n  constructor(\n    readonly code: string,\n    message: string,\n    options?: ErrorOptions,\n  ) {\n    super(message, options);\n    this.name = \"OutputJournalRepairError\";\n  }\n}\nexport function requireRepair(value: unknown, code: string, message: string): asserts value {\n  if (!value) throw new OutputJournalRepairError(code, message);\n}\n",
+        "textSha256": "c231d0889e6c53123194e927a787194b053d3c2525c0d56a18f14a92d1260097"
+      },
+      {
+        "from": 79,
+        "to": 96,
+        "text": "export function validPosition(value: OutputPosition): boolean {\n  return Boolean(\n    value &&\n    Number.isSafeInteger(value.sequence) &&\n    value.sequence >= 0 &&\n    Number.isSafeInteger(value.offset) &&\n    value.offset >= 0 &&\n    /^[a-f0-9]{64}$/.test(value.hash),\n  );\n}\nexport function decodeJson(data: Buffer): any {\n  return JSON.parse(new TextDecoder(\"utf-8\", { fatal: true }).decode(data));\n}\nexport function segmentBarrier(identity: string): Buffer {\n  return Buffer.from(\n    JSON.stringify({ storage: \"codeshell-output-segments\", version: 1, identity }) + \"\\n\",\n  );\n}\n",
+        "textSha256": "47917c615e7822ab5e84bc7eb878051a5571582bbbbf84ecdb81c24388067ac6"
+      },
+      {
+        "from": 120,
+        "to": 126,
+        "text": "      validPosition(manifest.floor) &&\n      validPosition(manifest.anchor?.end) &&\n      typeof manifest.anchor.retained === \"boolean\" &&\n      Array.isArray(manifest.segments) &&\n      manifest.segments.length > 0 &&\n      manifest.segments.length <= 16 &&\n      value.sha256 === sha256(JSON.stringify(manifest)),\n",
+        "textSha256": "3f8df7f0c9c947f1f364d3b1e145b0fffbeb1b8d69cd442e62014927c0542891"
+      },
+      {
+        "from": 130,
+        "to": 150,
+        "text": "  let expected = manifest.anchor.retained ? manifest.anchor.end : manifest.floor;\n  const seen = new Set<string>();\n  for (let index = 0; index < manifest.segments.length; index++) {\n    const segment = manifest.segments[index]!;\n    requireRepair(\n      /^output-segment-[a-f0-9-]{36}\\.jsonl$/.test(segment.name) &&\n        !seen.has(segment.name) &&\n        validIdentity(segment) &&\n        validPosition(segment.start) &&\n        samePosition(segment.start, expected) &&\n        (index === manifest.segments.length - 1\n          ? segment.end === undefined\n          : validPosition(segment.end!) &&\n            segment.end!.sequence >= segment.start.sequence &&\n            segment.end!.offset >= segment.start.offset),\n      \"manifest_unproved\",\n      \"Segment manifest continuity is damaged\",\n    );\n    seen.add(segment.name);\n    if (segment.end) expected = segment.end;\n  }\n",
+        "textSha256": "71f15241fc539d0c263148fc9ccb4288725955f396188795b2e11795420d64f9"
+      },
+      {
+        "from": 160,
+        "to": 172,
+        "text": "export function encodeRepairStorage(manifest: RepairStorageManifest): Buffer {\n  const data = Buffer.from(JSON.stringify({ manifest, sha256: sha256(JSON.stringify(manifest)) }));\n  requireRepair(data.length <= 32768, \"manifest_unproved\", \"Segment manifest exceeds its bound\");\n  const result = Buffer.alloc(32768, 0x20);\n  data.copy(result);\n  return result;\n}\nexport function logicalStorage(manifest: RepairStorageManifest): string {\n  return JSON.stringify({\n    ...manifest,\n    segments: manifest.segments.map(({ dev: _dev, ino: _ino, ...s }) => s),\n  });\n}\n",
+        "textSha256": "73948754d961003345331d61faec9c2c2f6bb0e356b8e69b08c5eeefe1761ce2"
+      },
+      {
+        "from": 212,
+        "to": 214,
+        "text": "  const entries = new Map(manifest.files.map((file) => [file.name, file]));\n  requireRepair(entries.size === manifest.files.length, \"bundle_invalid\", \"Duplicate backup file\");\n  const anchor = entries.get(OUTPUT_ANCHOR);\n",
+        "textSha256": "1ff853794025f3f7f3d05cd7b9c11fc91c8c078d7f61f71cbf124a71fde50d2d"
+      },
+      {
+        "from": 248,
+        "to": 251,
+        "text": "  const start = { sequence: 0, offset: newline + 1, hash: authority.identityPin };\n  const regions: { name: string; base: number; from: number; to: number; end?: OutputPosition }[] =\n    [];\n  let storage: RepairStorageManifest | undefined;\n",
+        "textSha256": "05b08fa70ddf85ab875209b5b108d974d7c8f15ebf4d96c4927f984e01ccbce0"
+      },
+      {
+        "from": 281,
+        "to": 285,
+        "text": "    let bytes = Buffer.alloc(0);\n    read(OUTPUT_SEGMENTS, 0, item.bytes, (chunk) => {\n      bytes = Buffer.concat([bytes, chunk]);\n    });\n    storage = parseRepairStorage(bytes, authority);\n",
+        "textSha256": "50af5077928ee76561ea73f778310a95423c493fe5d812779a3f9b6a657c2ee6"
+      },
+      {
+        "from": 308,
+        "to": 318,
+        "text": "      regions.push({\n        name: OUTPUT_ANCHOR,\n        base: 0,\n        from: start.offset,\n        to: storage.anchor.end.offset,\n        end: storage.anchor.end,\n      });\n    }\n    for (const segment of storage.segments) {\n      const item = entries.get(segment.name);\n      requireRepair(\n",
+        "textSha256": "9096b8915fec33369bdd0b98333e86c7b765ad3bd0e36e262e15c1b29f82372a"
+      },
+      {
+        "from": 322,
+        "to": 354,
+        "text": "          item.bytes <= 32 * 1024 * 1024 &&\n          (!segment.end || item.bytes === segment.end.offset - segment.start.offset),\n        \"bundle_invalid\",\n        \"Backup segment is missing or incomplete\",\n      );\n      regions.push({\n        name: segment.name,\n        base: segment.start.offset,\n        from: 0,\n        to: item.bytes,\n        end: segment.end,\n      });\n    }\n  } else {\n    requireRepair(\n      samePosition(manifest.floor, start) && anchor.bytes === authority.head.offset,\n      \"bundle_invalid\",\n      \"Single-file backup includes an unpublished tail or a gap\",\n    );\n    regions.push({ name: OUTPUT_ANCHOR, base: 0, from: start.offset, to: anchor.bytes });\n  }\n  const expectedNames = [\n    \"state.json\",\n    OUTPUT_ANCHOR,\n    OUTPUT_HEAD,\n    ...(storage ? [OUTPUT_SEGMENTS, ...storage.segments.map((s) => s.name)] : []),\n  ].sort();\n  requireRepair(\n    [...entries.keys()].sort().join() === expectedNames.join(),\n    \"bundle_invalid\",\n    \"Backup inventory is incomplete or ambiguous\",\n  );\n  let current: OutputPosition = manifest.floor;\n",
+        "textSha256": "8c8355c52b710bafbaa2cf3df6982d2eff60bc22901cc48aafbf4c02a82a9a8f"
+      },
+      {
+        "from": 355,
+        "to": 432,
+        "text": "  let fragment: { id: string; index: number; total: number } | undefined;\n  for (const region of regions) {\n    let pending = Buffer.alloc(0),\n      physical = region.from;\n    read(region.name, region.from, region.to, (chunk) => {\n      pending = Buffer.concat([pending, chunk]);\n      for (;;) {\n        const end = pending.indexOf(10);\n        if (end < 0) break;\n        requireRepair(end <= 256 * 1024, \"chain_invalid\", \"Backup record exceeds its bound\");\n        const stored = decodeJson(pending.subarray(0, end)),\n          { hash, ...value } = stored;\n        const producer = value.producer;\n        const validProducer =\n          producer &&\n          [\"protocol\", \"host\"].includes(producer.kind) &&\n          typeof producer.id === \"string\" &&\n          /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/.test(producer.id);\n        requireRepair(\n          value.sequence === current.sequence + 1 &&\n            value.previousHash === current.hash &&\n            hash === sha256(JSON.stringify(value)) &&\n            !!value.event !== !!value.fragment &&\n            ((value.version === undefined &&\n              !value.run &&\n              ((typeof value.runId === \"string\" && !producer) ||\n                (value.runId === undefined && validProducer))) ||\n              (value.version === 2 &&\n                value.runId === undefined &&\n                ((typeof value.run?.id === \"string\" && !!value.run.id && !producer) ||\n                  (!value.run && validProducer)))),\n          \"chain_invalid\",\n          \"Backup record continuity failed\",\n        );\n        if (value.event)\n          requireRepair(\n            typeof value.event === \"object\" && typeof value.event.type === \"string\" && !fragment,\n            \"chain_invalid\",\n            \"Backup whole event interrupted a fragment group\",\n          );\n        const part = value.fragment;\n        if (part) {\n          requireRepair(\n            typeof part.id === \"string\" &&\n              Number.isSafeInteger(part.index) &&\n              Number.isSafeInteger(part.total) &&\n              part.total >= 2 &&\n              part.total <= 256 &&\n              part.index >= 0 &&\n              part.index < part.total &&\n              typeof part.data === \"string\" &&\n              part.data.length <= Math.ceil(65536 / 3) * 4 &&\n              (fragment\n                ? part.id === fragment.id &&\n                  part.total === fragment.total &&\n                  part.index === fragment.index + 1\n                : part.index === 0),\n            \"chain_invalid\",\n            \"Backup fragment continuity failed\",\n          );\n          fragment = part.index === part.total - 1 ? undefined : part;\n        }\n        physical += end + 1;\n        current = { sequence: value.sequence, offset: region.base + physical, hash };\n        pending = pending.subarray(end + 1);\n      }\n      requireRepair(\n        pending.length <= 256 * 1024,\n        \"chain_invalid\",\n        \"Backup record exceeds its bound\",\n      );\n    });\n    requireRepair(\n      pending.length === 0 && !fragment && (!region.end || samePosition(current, region.end)),\n      \"chain_invalid\",\n      \"Backup segment is not a complete event boundary\",\n    );\n  }\n",
+        "textSha256": "af091dd040e9caaa12eb41d69a2d69e0bf9451779decfc3dd62fc2549a530656"
+      },
+      {
+        "from": 438,
+        "to": 439,
+        "text": "  return { headerEnd: start.offset, storage };\n}\n",
+        "textSha256": "f25a79310e79c6e4365845d9f6c42145af46a0b7740f53417004ecc450244cfd"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/session/output-journal-manual-repair.ts",
+    "sourceSha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+    "coverage": "selected excerpts captured after actual display; no repeated semantic read",
+    "ranges": [
+      {
+        "from": 401,
+        "to": 410,
+        "text": "  const text = readBytes(join(dir, OUTPUT_BACKUP_MANIFEST), 128 * 1024),\n    manifest = decodeJson(text) as OutputJournalBackupManifest;\n  requireRepair(\n    manifest?.format === \"codeshell-output-journal-backup\" &&\n      manifest.version === 1 &&\n      Array.isArray(manifest.files) &&\n      manifest.files.length >= 3 &&\n      manifest.files.length <= 20,\n    \"bundle_invalid\",\n    \"Unsupported or incomplete output backup\",\n",
+        "textSha256": "f4c4365140f54e4700f24e2e337ae7564aa4630726f1042261ca59f9e762b837"
+      },
+      {
+        "from": 412,
+        "to": 417,
+        "text": "  requireRepair(\n    fs.readdirSync(dir).sort().join() ===\n      [OUTPUT_BACKUP_MANIFEST, ...manifest.files.map((f) => f.name)].sort().join(),\n    \"bundle_invalid\",\n    \"Backup contains unexpected or missing files\",\n  );\n",
+        "textSha256": "5a8b6525807023e9419597c7c8648d92bbdf0a8747a871062bda475a1fe0129e"
+      },
+      {
+        "from": 462,
+        "to": 465,
+        "text": "    const checked = verifyBackupChain(manifest, (name, start, end, consume) =>\n      readRange(fds.get(name)!, start, end, consume),\n    );\n    return { directory: dir, manifest, digest: sha256(text), fds, storage: checked.storage };\n",
+        "textSha256": "546b006eb42203b5db48f510ad4e3b133c1684646a1ccb200a16d7509ae24433"
+      },
+      {
+        "from": 524,
+        "to": 539,
+        "text": "      files: BackupFile[] = [];\n    let total = 0;\n    for (const name of inventory(storage)) {\n      const source = openFile(join(at.directory, name));\n      try {\n        const item = copyFile(source, join(target, name), name);\n        total += item.bytes;\n        files.push(item);\n      } finally {\n        fs.closeSync(source);\n      }\n      requireRepair(\n        total <= MAX_OUTPUT_REPAIR_BYTES,\n        \"file_budget\",\n        \"Backup exceeds its total bound\",\n      );\n",
+        "textSha256": "51eab86a8e69ee5b174c875dfe8e7d0e4d2d673c9983956bcf40dd242ce2fae8"
+      },
+      {
+        "from": 548,
+        "to": 558,
+        "text": "    const manifest: OutputJournalBackupManifest = {\n      format: \"codeshell-output-journal-backup\",\n      version: 1,\n      authority: at.authority,\n      floor,\n      files,\n    };\n    writePrivate(\n      join(target, OUTPUT_BACKUP_MANIFEST),\n      Buffer.from(JSON.stringify(manifest) + \"\\n\"),\n    );\n",
+        "textSha256": "b42d4a937b46ac530c7d7b094920286ed42bc051717ad23d6486ba7dc8796d8e"
+      },
+      {
+        "from": 561,
+        "to": 562,
+        "text": "    const bundle = openBundle(target);\n    try {\n",
+        "textSha256": "aad577d7eed8d963880bce3e9da6f810183dd5d2a6ce3898d3eb62a30baa29f9"
+      },
+      {
+        "from": 979,
+        "to": 979,
+        "text": "        if (updated) {\n",
+        "textSha256": "ba96f7b6e04cac34a98b0ba040b3b12b1f87502603e279af5f9ab8af7b7627a9"
+      },
+      {
+        "from": 986,
+        "to": 989,
+        "text": "          const data = encodeRepairStorage(updated);\n          writeAll(fd, data, 0);\n          fs.ftruncateSync(fd, data.length);\n          fs.fsyncSync(fd);\n",
+        "textSha256": "b876d757545e0c4f9e13c793dc81028185af97a44e34f62501e9cf9d7c09ee6d"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/session/output-journal.ts",
+    "sourceSha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+    "coverage": "selected excerpts captured after actual display; no repeated semantic read",
+    "ranges": [
+      {
+        "from": 44,
+        "to": 47,
+        "text": "const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;\nconst MAX_RECORD_BYTES = 256 * 1024;\nconst MAX_EVENT_BYTES = 16 * 1024 * 1024;\nconst CHUNK_BYTES = 64 * 1024;\n",
+        "textSha256": "88fad05c4a44249196d5fa4e46a11ef744cdb3c7081416119702731eda3e4805"
+      },
+      {
+        "from": 104,
+        "to": 113,
+        "text": "interface RecordValue {\n  version?: 2;\n  sequence: number;\n  runId?: string;\n  run?: { id: string };\n  producer?: OutputJournalProducer;\n  event?: StreamEvent;\n  fragment?: Fragment;\n  previousHash: string;\n}\n",
+        "textSha256": "15a2d8ba40fb248cfb26cc653f0043c2b632794d9b6bf5f65afbe98ac951bd15"
+      },
+      {
+        "from": 1101,
+        "to": 1139,
+        "text": "  append(event: StreamEvent): string {\n    return this.appendBatch([event])[0];\n  }\n  /** All cursors become publishable only after the entire batch and head are durable. */\n  appendBatch(events: readonly StreamEvent[]): string[] {\n    if (!events.length || events.length > 64) throw new Error(\"Invalid output batch bound\");\n    const values: Array<Pick<RecordValue, \"event\" | \"fragment\"> & { eventEnd: boolean }> = [];\n    let bytes = 0;\n    for (const event of events) {\n      const serialized = JSON.stringify({\n        ...event,\n        outputCursor: undefined,\n        outputRecovery: undefined,\n      });\n      const data = Buffer.from(serialized);\n      bytes += data.length;\n      if (data.length > MAX_EVENT_BYTES)\n        throw new JournalError(\"incomplete\", \"Output event exceeds the 16 MiB recovery bound\");\n      if (events.length > 1 && bytes > 256 * 1024)\n        throw new JournalError(\"incomplete\", \"Output batch exceeds its 256 KiB recovery bound\");\n      if (data.length <= CHUNK_BYTES)\n        values.push({ event: JSON.parse(serialized), eventEnd: true });\n      else {\n        const id = randomUUID();\n        const total = Math.ceil(data.length / CHUNK_BYTES);\n        for (let index = 0; index < total; index++)\n          values.push({\n            fragment: {\n              id,\n              index,\n              total,\n              data: data\n                .subarray(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES)\n                .toString(\"base64\"),\n            },\n            eventEnd: index === total - 1,\n          });\n      }\n    }\n",
+        "textSha256": "5b4a6dee2c2f108ff244cd5663899d85505849d17238221aca88d3877c12238e"
+      },
+      {
+        "from": 1186,
+        "to": 1205,
+        "text": "      let next = this.position;\n      const linesToWrite: string[] = [];\n      const cursors: string[] = [];\n      for (const { eventEnd, ...payload } of values) {\n        const value: RecordValue = {\n          version: 2,\n          sequence: next.sequence + 1,\n          ...(typeof this.owner === \"string\"\n            ? { run: { id: this.owner } }\n            : { producer: this.owner }),\n          ...payload,\n          previousHash: next.hash,\n        };\n        const hash = digest(JSON.stringify(value));\n        const line = JSON.stringify({ ...value, hash }) + \"\\n\";\n        next = { sequence: value.sequence, offset: next.offset + Buffer.byteLength(line), hash };\n        linesToWrite.push(line);\n        if (eventEnd) cursors.push(token(this.identity, next));\n      }\n      const nextBytes = next.offset - this.position.offset;\n",
+        "textSha256": "b4cc317707214ac571b8fd0052e809a8007e2d084a0416e2b4fe32530403ac8a"
+      },
+      {
+        "from": 1225,
+        "to": 1233,
+        "text": "      } else if (\n        storage &&\n        rotateOutputStorage(\n          storage,\n          current.directory,\n          loaded.start.offset,\n          this.position,\n          nextBytes,\n        )\n",
+        "textSha256": "62a5dd169a118a12ab7ec31ff7ad41dd199b32f72a110e4835c1ab285fddd880"
+      },
+      {
+        "from": 1247,
+        "to": 1254,
+        "text": "      let target = fd,\n        offset = this.position.offset;\n      if (storage) {\n        const active = storage.active();\n        activeFd = target = active.fd;\n        offset -= active.start.offset;\n      }\n      this.write(target, linesToWrite.join(\"\"), offset);\n",
+        "textSha256": "5bbbf0c4eed0bfdb34275f84420a4a1c119c378af373ac5d0745f2aa069bc85d"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/session/output-publisher.ts",
+    "sourceSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+    "coverage": "selected excerpts captured after actual display; no repeated semantic read",
+    "ranges": [
+      {
+        "from": 11,
+        "to": 15,
+        "text": "export {\n  backupOutputJournal,\n  restoreOutputJournalBackup,\n  inspectOutputJournalRepair,\n} from \"./output-journal-manual-repair.js\";\n",
+        "textSha256": "d42c16f2ec62d6ae9735f9d7807eef73d589fa49c913b09027b4960fd1f34f29"
+      }
+    ]
+  },
+  {
+    "path": "tests/output-journal-manual-repair.test.ts",
+    "sourceSha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+    "coverage": "selected excerpts captured after actual display; no repeated semantic read",
+    "ranges": [
+      {
+        "from": 200,
+        "to": 229,
+        "text": "test(\"explicit full backup repairs damaged bytes on the same anchor inode and the actual Web consumer preserves old cursors\", () => {\n  const f = fixture(),\n    inode = fs.statSync(f.file).ino,\n    original = fs.readFileSync(f.file);\n  const snapshot = backupOutputJournal(f.root, f.id, f.backup);\n  expect(snapshot.through).toBe(f.through);\n  const damaged = corrupt(f.file);\n  expect(readOutputJournal(f.root, f.id).complete).toBe(false);\n  const repaired = restoreOutputJournalBackup(f.root, f.id, f.backup);\n  expect(repaired.coverage).toBe(\"ok\");\n  expect(fs.statSync(f.file).ino).toBe(inode);\n  expect(fs.readFileSync(f.file)).toEqual(original);\n  expect(readOutputJournal(f.root, f.id, { after: f.first, through: f.through }).through).toBe(\n    f.through,\n  );\n  const receipt = JSON.parse(\n    fs.readFileSync(join(repaired.evidenceDirectory, \"receipt.json\"), \"utf8\"),\n  ).value;\n  const source = receipt.files.find((x: any) => x.name === \"output-journal.jsonl\");\n  expect(source.sha256).toBe(hash(damaged));\n  expect(fs.readFileSync(join(repaired.evidenceDirectory, \"source/output-journal.jsonl\"))).toEqual(\n    damaged,\n  );\n  const events = fold(f);\n  expect(events.map((event) => event.text)).toEqual([\"first published body\", f.large]);\n  const restarted = new SessionOutputJournal(f.root, f.id, \"fixture-run\");\n  const next = restarted.append({ type: \"text_delta\", text: \"after repair\" });\n  expect(readOutputJournal(f.root, f.id, { after: f.through, through: next }).complete).toBe(true);\n});\n\n",
+        "textSha256": "52d59c829117262d6ae769311aec86ed56c6149f763e75151d765646083f3dfe"
+      },
+      {
+        "from": 290,
+        "to": 318,
+        "text": "test(\"segmented corruption and a truly missing retained segment recover with durable physical-pin receipts and unchanged cursors\", () => {\n  const f = fixture();\n  segment(f);\n  f.writer.append({ type: \"text_delta\", text: \"retained segment output\" });\n  const current = manifest(f),\n    name = current.segments[0].name,\n    old = fs.statSync(join(f.directory, name)).ino;\n  const through = readOutputJournal(f.root, f.id).through;\n  backupOutputJournal(f.root, f.id, f.backup);\n  const anchorInode = fs.statSync(f.file).ino,\n    manifestInode = fs.statSync(join(f.directory, \"output-journal-segments.json\")).ino;\n  fs.unlinkSync(join(f.directory, name));\n  expect(readOutputJournal(f.root, f.id).complete).toBe(false);\n  const repaired = restoreOutputJournalBackup(f.root, f.id, f.backup);\n  expect(manifest(f).segments[0].ino).not.toBe(old);\n  expect(fs.statSync(f.file).ino).toBe(anchorInode);\n  expect(fs.statSync(join(f.directory, \"output-journal-segments.json\")).ino).toBe(manifestInode);\n  expect(readOutputJournal(f.root, f.id).through).toBe(through);\n  expect(fold(f).at(-1).text).toBe(\"retained segment output\");\n  expect(fs.existsSync(join(repaired.evidenceDirectory, `created-${name}.json`))).toBe(true);\n  expect(oldRead(f.root, f.id).complete).toBe(false);\n  expect(() => new OldWriter(f.root, f.id, \"fixture-run\")).toThrow();\n  const next = new SessionOutputJournal(f.root, f.id, \"fixture-run\").append({\n    type: \"text_delta\",\n    text: \"after missing repair\",\n  });\n  expect(readOutputJournal(f.root, f.id, { after: through, through: next }).complete).toBe(true);\n});\n\n",
+        "textSha256": "0d0e8cfbecf6d2542504d08cbd18579e43937f5094757bb7cc99559d49352369"
+      }
+    ]
+  }
+]

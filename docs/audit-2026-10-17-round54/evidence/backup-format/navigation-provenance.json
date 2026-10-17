@@ -1,0 +1,56 @@
+{
+  "persistedRawNavigation": [
+    "writer-navigation.json",
+    "public-entry-navigation.json",
+    "adjacent-source-navigation.json"
+  ],
+  "transcribedNavigation": {
+    "toolChunk": "b92d34",
+    "manualRepairLineNumbers": [
+      11,
+      18,
+      21,
+      25,
+      28,
+      141,
+      147,
+      176,
+      285,
+      340,
+      393,
+      401,
+      402,
+      414,
+      462,
+      474,
+      548,
+      556,
+      557,
+      700,
+      716,
+      820,
+      837,
+      842,
+      863,
+      986,
+      1008
+    ],
+    "testLineNumbers": [
+      58,
+      63,
+      139,
+      281,
+      347,
+      678,
+      771
+    ],
+    "storedAs": "observed line-number transcription; not complete rawstdout"
+  },
+  "filenameOnlyInitialInventory": {
+    "toolChunk": "615bb1",
+    "outerExitCode": 0,
+    "individualExitCodes": null,
+    "purpose": "filenames only, no semantic body; no product executes"
+  },
+  "navigationSemantic": "No added ordinary behavior validation; each source pinned before rg source lines. Navigation counts separate from selected semantic count."
+}

@@ -1,0 +1,60 @@
+[
+  {
+    "path": "packages/core/src/session/output-journal-backup-format.ts",
+    "bytes": 16266,
+    "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+    "pinAt": "2026-10-17T18:07:29.837165+00:00",
+    "displayRanges": [
+      [
+        1,
+        240
+      ]
+    ],
+    "purpose": "ordinary format, encode/decode shape; mechanisms excluded"
+  },
+  {
+    "path": "packages/core/src/session/output-journal-backup-format.ts",
+    "bytes": 16266,
+    "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+    "pinAt": "2026-10-17T18:07:40.970821+00:00",
+    "displayRanges": [
+      [
+        241,
+        439
+      ]
+    ],
+    "purpose": "ordinary record framing and final file format checks; authority mechanism excluded"
+  },
+  {
+    "path": "packages/core/src/session/output-publisher.ts",
+    "bytes": 6300,
+    "sha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+    "lines": 176,
+    "pinAt": "2026-10-17T18:07:40.974839+00:00",
+    "coverage": "hash-only before source navigation"
+  },
+  {
+    "path": "packages/core/src/session/output-journal-manual-repair.ts",
+    "bytes": 37876,
+    "sha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+    "lines": 1128,
+    "pinAt": "2026-10-17T18:07:40.976059+00:00",
+    "coverage": "hash-only before source navigation"
+  },
+  {
+    "path": "tests/output-journal-manual-repair.test.ts",
+    "bytes": 31627,
+    "sha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+    "lines": 772,
+    "pinAt": "2026-10-17T18:07:40.977525+00:00",
+    "coverage": "hash-only before source navigation"
+  },
+  {
+    "path": "packages/core/src/session/output-journal.ts",
+    "bytes": 49679,
+    "sha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+    "lines": 1288,
+    "pinAt": "2026-10-17T18:07:53.384447+00:00",
+    "coverage": "hash-only before navigation"
+  }
+]

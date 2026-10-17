@@ -1,0 +1,53 @@
+{
+  "role": "Independent bounded static data source review; not runtime verifier",
+  "executions": {
+    "product": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "UI": 0,
+    "timers": 0,
+    "models": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0,
+    "realCredentialOrConfigurationData": 0
+  },
+  "productFilesNeverOpened": [
+    "packages/link/src/recipes.ts",
+    "packages/link/src/operation-validation.ts"
+  ],
+  "testIntent": "Two partial declaration selections, nine title-navigation lines, no tests executed. Security/prototype/auth assertions displayed adjacent but excluded.",
+  "sourceDisplayChunks": [
+    "787649",
+    "98c3f8",
+    "8928d0",
+    "66489f",
+    "30b196",
+    "ea2a05",
+    "847d10",
+    "51441e",
+    "31293f",
+    "3102c4",
+    "2e4e93",
+    "c986a3"
+  ],
+  "metadataOnlyOperations": "Own Python standard-library parsing/hash/range/search and filename navigation; no language fixture or product module evaluation.",
+  "firstDiagnostic": "Late server defaults navigation pin preserved; zero failed commands or truncated outputs in prep120.",
+  "scopeTotals": {
+    "semanticFiles": 8,
+    "full": 0,
+    "selected": 8,
+    "productSemanticLines": 273,
+    "testDeclarationSemanticLines": 17,
+    "semanticLines": 290,
+    "uniqueDisplayedLinesSummedAcrossFiles": 693,
+    "sourceHashOnlyFiles": 1,
+    "sourceAndInstructionPins": 11,
+    "testTitlesNavigationOnly": 9,
+    "partialExistingTestDeclarationsRead": 2,
+    "testsExecuted": 0
+  }
+}

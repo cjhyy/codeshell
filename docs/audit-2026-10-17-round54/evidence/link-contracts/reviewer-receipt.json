@@ -1,0 +1,131 @@
+{
+  "frozenUTC": "2026-10-17T18:15:46.869049+00:00",
+  "root": "/tmp/codeshell-audit-round120-link-recipes",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "adapter-initial-pins.json",
+      "bytes": 313,
+      "sha256": "8c0da1fa50f10ad0547375cea10527b112a7d09bf1d55c0ade97f3320d7075f7"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1869,
+      "sha256": "609fef354e4f15c552701f3983375f4f4ee9491881cc38939b2f76d6ce0aa5fe"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 29148,
+      "sha256": "73199ad5cb5bf10c5948e0eaa72b601b5390debaf655ca728d35ee812211fd28"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 947,
+      "sha256": "496504306b5e2d6ca58111b29b5fa10556c73cbc03a56f2bcfbb35eb9c0a3cbe"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 4229,
+      "sha256": "4d0b63ecbb33d34ab2360c7ca1d070fc23c86438136f9595008ad47badbc9e02"
+    },
+    {
+      "path": "fallback-coverage-gate-objects.json",
+      "bytes": 11376,
+      "sha256": "5f884d70c975c0f30279535c2fe36d63733a2ba1504098d69baf98e73e2bfb0d"
+    },
+    {
+      "path": "fallback-history-contexts.json",
+      "bytes": 38841,
+      "sha256": "fbfa9f1bf0caa7f5e0f31011dd17ddb21ce04d68672bf23856768597d346982e"
+    },
+    {
+      "path": "fallback-history-method.py",
+      "bytes": 3766,
+      "sha256": "ec0d743b2b9b3dc62b9a469f0e1055169271e22e9d34fddad0d08f32a3ace256"
+    },
+    {
+      "path": "fallback-history.json",
+      "bytes": 1183962,
+      "sha256": "f78053664c5615942bae99c2e7f99ab78b990c2075ee9c59d3029008e1eff504"
+    },
+    {
+      "path": "fallback-initial-pins.json",
+      "bytes": 365,
+      "sha256": "c6a44ff4630eb6b4491c0aa42e61c9988debdcf612bc7f26ad0754fbcbefd0af"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 15102,
+      "sha256": "7fafc264425f4d9bc5f28b4d21e8a38d0ab48393d3c9c89b8846ac7322f82977"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 6246,
+      "sha256": "f8b527550464a4b1eb252f95db7566778ae728ad7bf2c149dfc8d9fef59cb34c"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 4907,
+      "sha256": "ee82bb0370e6d440bb26d461128e5847884a97ebcf6dc11ef74af82afaf0ae0f"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 127488,
+      "sha256": "2eae98a8190d8d9f2df327439767953e61e452a48a54975faa735dcca64cd53d"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3787,
+      "sha256": "3e22c57ba336b38535e84e0ee6ac19b7682669f9404e09e32b88506b1f2a4057"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1183962,
+      "sha256": "96f4e8dd072ac271d9daedb7c2372fff98d101bd68be45ccc20614f623cae2c8"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 964,
+      "sha256": "172cbd24b3c3fa9f7a770792659adf650f4d3a629ede51da4543b18531a93c84"
+    },
+    {
+      "path": "report.md",
+      "bytes": 6980,
+      "sha256": "54361743f1b819abded2f4f15ba63385c03ac6a8a81143ea6a5845c8218149d3"
+    },
+    {
+      "path": "route-initial-pins.json",
+      "bytes": 949,
+      "sha256": "8229b022e64cd840f4c8cf551b7fa79de56d24757dc1d77422948ef6519f2812"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 71312,
+      "sha256": "ed1d6c05f5704e7147859fc69bcec5f0016d459a16c296873ce2f2001e9959b1"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 25491,
+      "sha256": "b8c21767a99fda1a8230add15c859b817564fa0cf6c6fec82c245890b3cb7f10"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 1022,
+      "sha256": "ed34bcb7ba80f7cea752f5b2ccf3915da677631e91560a8e036f6a4dbeedf1e1"
+    },
+    {
+      "path": "validation.first.json",
+      "bytes": 1527,
+      "sha256": "f2d4950a4e472da3f7c995522626c36a0a64270a8769ccdd4a807b2a51c6eba8"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1526,
+      "sha256": "7e689725c4a49252cce6b97a9f6107c25ccb677395c65dc97455e22cc29b9e45"
+    }
+  ],
+  "fileCountExcludingReceipt": 24,
+  "role": "Independent ordinary selected fallback static source review; recipes old-full body excluded; late initial pin disclosed",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

@@ -1,0 +1,25 @@
+{
+  "baseline": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "mainHead": "0d2d5418b0b4821fdb11dc87e328fce7e1f2433e",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 33,
+  "activeSourceChecks": 21,
+  "incidentalSourceChecks": 6,
+  "hashOnlyChecks": 20,
+  "unboundNavigationReferences": 0,
+  "missingDeclaredByteCounts": 0,
+  "receiptChecks": 228,
+  "verbatimCopies": 117,
+  "frozenWhitespaceArtifacts": 0,
+  "datedCoverageReference": "Round47 adapter through frozen45 only:4643 TS/TSX,304full/169selected/4170unknown;46+ source reads not recomputed. No new overall remaining/unread/full percentage inferred.",
+  "historicalFormalRecords": 116,
+  "priorities": {
+    "P2": 44,
+    "P3": 72
+  },
+  "changedFromFrozenSourcePaths": [],
+  "productRuns": 0,
+  "goalStillActive": true
+}

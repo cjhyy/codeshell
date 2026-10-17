@@ -1,0 +1,31 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+    "pointer": "/sources/9",
+    "bytes": 5012,
+    "sha256": "993bf07b5e4eb6754f62e9e9d8a56698c81cb099b241f76979216ef6a5280b90",
+    "readAt": "2026-10-17T18:07:19.457109+00:00",
+    "value": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "scope": "incidental full static source during inventory; no semantic review",
+      "note": "node:crypto plus type-only head/storage imports; repair authority/identity/security contract excluded, no candidate or test recommendation.",
+      "frozenSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentMatchesFrozen": true,
+      "bytes": 16266
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-decisions.json",
+    "pointer": "/decisions/0",
+    "bytes": 2659,
+    "sha256": "d69dd2f1b49a29061fc7c9b06a0252967845277adb3eda666e5f3a0c32922f48",
+    "readAt": "2026-10-17T18:07:19.458131+00:00",
+    "value": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "decision": "not-selected-before-product-body",
+      "reason": "Prior R23 explicit incidental full display, no semantic review; authority/identity/security contract was excluded. Root does not reopen this mechanism or decode its product body."
+    }
+  }
+]

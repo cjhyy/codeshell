@@ -1,0 +1,756 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "jsonPointer": "/matches/38",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1872]",
+        "text": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "jsonPointer": "/matches/44",
+      "row": {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+        "location": "$.sources[1].path",
+        "text": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "jsonPointer": "/matches/48",
+      "row": {
+        "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+        "location": "$.files[54].path",
+        "text": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "jsonPointer": "/files/2",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "bytes": 4880,
+        "currentEqualsFrozen": true,
+        "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "jsonPointer": "/files/57",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/1",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1872]",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/4",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[38].text",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/9",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[44].text",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/11",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[48].text",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/18",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "location": "$.files[2].path",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/21",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "location": "$.files[57].path",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/27",
+      "row": {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+        "location": "$.sources[1].path",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "jsonPointer": "/matches/host/29",
+      "row": {
+        "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+        "location": "$.files[54].path",
+        "context": "packages/host/src/host-requests.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "jsonPointer": "/records/1/value/1",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "bytes": 4880,
+        "lines": 151,
+        "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "currentMatchesPrior": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "jsonPointer": "/records/4/value/1",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "bytes": 4880,
+        "currentEqualsFrozen": true,
+        "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/26",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1872]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/56",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$[\"matches\"][38][\"text\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/62",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$[\"matches\"][44][\"text\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/64",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$[\"matches\"][48][\"text\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/75",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "location": "$[\"files\"][2][\"path\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/84",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "location": "$[\"files\"][57][\"path\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/89",
+      "row": {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "location": "$[\"matches\"][\"host\"][1][\"context\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/91",
+      "row": {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "location": "$[\"matches\"][\"host\"][4][\"context\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/96",
+      "row": {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "location": "$[\"matches\"][\"host\"][9][\"context\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/host-registry/97",
+      "row": {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "location": "$[\"matches\"][\"host\"][11][\"context\"]",
+        "excerpt": "packages/host/src/host-requests.ts",
+        "wholeValueCharacters": 34,
+        "currentRound24": false
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "jsonPointer": "/paths/4",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "lines": 151,
+        "bytes": 4880,
+        "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "matchesFrozen": true,
+        "scope": "inventory-only until explicitly listed in proposal.readScope"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/778",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "lines": 151,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-hash-or-inventory-only",
+            "rawCoverageLabel": "full static data shape and mapping inventory only; authority/approval/security semantics excluded",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+                "jsonLocation": "$[\"files\"][2]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+                "jsonLocation": "$[\"files\"][57]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+                "jsonLocation": "$[\"files\"][54]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/778/claims/0",
+      "row": {
+        "sourceSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "explicit-hash-or-inventory-only",
+        "rawCoverageLabel": "full static data shape and mapping inventory only; authority/approval/security semantics excluded",
+        "selectedLineRanges": [],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+            "jsonLocation": "$[\"files\"][2]"
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/778/claims/1",
+      "row": {
+        "sourceSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "scope-unknown-pin-only",
+        "rawCoverageLabel": null,
+        "selectedLineRanges": [],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+            "jsonLocation": "$[\"files\"][57]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+            "jsonLocation": "$[\"sources\"][1]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+            "jsonLocation": "$[\"files\"][54]"
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3274",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "lines": 151,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "jsonPointer": "/sources/1",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "bytes": 4880,
+        "lines": 151
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "jsonPointer": "/files/54",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13138",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sourceHashFields": {
+          "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/host/src/host-requests.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 297,
+            "jsonPointer": "/files/2"
+          },
+          {
+            "historyRow": 1128,
+            "jsonPointer": "/records/4/value/1"
+          }
+        ],
+        "claimId": "C013139"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13138/sourceHashFields",
+      "row": {
+        "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13139",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sourceHashFields": {
+          "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+          "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "scope": "inventory-only until explicitly listed in proposal.readScope"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/host/src/host-requests.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1130,
+            "jsonPointer": "/paths/4"
+          }
+        ],
+        "claimId": "C013140"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13139/sourceHashFields",
+      "row": {
+        "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13140",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/host/src/host-requests.ts"
+        ],
+        "origin": "list-scalar",
+        "provenance": [
+          {
+            "historyRow": 198,
+            "jsonPointer": "/source_inventory/1872"
+          },
+          {
+            "historyRow": 1119,
+            "jsonPointer": "/files/4"
+          }
+        ],
+        "claimId": "C013141"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13141",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/host/src/host-requests.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 294,
+            "jsonPointer": "/matches/38"
+          },
+          {
+            "historyRow": 294,
+            "jsonPointer": "/matches/44"
+          },
+          {
+            "historyRow": 294,
+            "jsonPointer": "/matches/48"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/1"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/4"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/9"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/11"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/18"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/21"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/27"
+          },
+          {
+            "historyRow": 616,
+            "jsonPointer": "/matches/host/29"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/26"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/56"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/62"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/64"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/75"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/84"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/89"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/91"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/96"
+          },
+          {
+            "historyRow": 1129,
+            "jsonPointer": "/hits/host-registry/97"
+          }
+        ],
+        "claimId": "C013142"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13142",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sourceHashFields": {
+          "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/host/src/host-requests.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 316,
+            "jsonPointer": "/files/57"
+          },
+          {
+            "historyRow": 1348,
+            "jsonPointer": "/files/778"
+          },
+          {
+            "historyRow": 1350,
+            "jsonPointer": "/files/3274"
+          },
+          {
+            "historyRow": 1520,
+            "jsonPointer": "/sources/1"
+          },
+          {
+            "historyRow": 1532,
+            "jsonPointer": "/files/54"
+          }
+        ],
+        "claimId": "C013143"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13142/sourceHashFields",
+      "row": {
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13143",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "sourceHashFields": {
+          "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+          "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/host/src/host-requests.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1128,
+            "jsonPointer": "/records/1/value/1"
+          }
+        ],
+        "claimId": "C013144"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "jsonPointer": "/claims/13143/sourceHashFields",
+      "row": {
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/3596",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "lines": 151,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C013139",
+          "C013140",
+          "C013141",
+          "C013142",
+          "C013143",
+          "C013144"
+        ],
+        "claimKindCounts": {
+          "explicit-nonsemantic-or-hash-only": 2,
+          "incidental-path-or-pin-object": 4
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/3596",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "lines": 151
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/3597",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "bytes": 4880,
+        "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "lines": 151,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    }
+  ],
+  "count": 45,
+  "scope": "Exact path/SHA same-object metadata; not all are semantic coverage. Original canonical metadata wins over derived indexes/copies."
+}

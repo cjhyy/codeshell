@@ -1,0 +1,269 @@
+{
+  "rootReportedReadBaseline": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "files": [
+    {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "lines": 278,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          146
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          278
+        ]
+      ],
+      "semanticLineCount": 138,
+      "bodyDisplayedLineCount": 278,
+      "endingSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "scope": "Ordinary JSON/schema/input/result DTO semantics and real validation call boundary. Authorization/filter/credential/HTTP/FS/native mechanisms not certified; existingR3ordinary source overlaps possible, not first/full/unique coverage. Tests declarations only."
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "bytes": 4215,
+      "lines": 118,
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2,
+          19
+        ],
+        [
+          43,
+          63
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          21
+        ],
+        [
+          43,
+          69
+        ]
+      ],
+      "semanticLineCount": 39,
+      "bodyDisplayedLineCount": 48,
+      "endingSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "scope": "Ordinary JSON/schema/input/result DTO semantics and real validation call boundary. Authorization/filter/credential/HTTP/FS/native mechanisms not certified; existingR3ordinary source overlaps possible, not first/full/unique coverage. Tests declarations only."
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "bytes": 17020,
+      "lines": 584,
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          29
+        ],
+        [
+          82,
+          90
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          109,
+          129
+        ],
+        [
+          286,
+          310
+        ],
+        [
+          333,
+          345
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          8,
+          30
+        ],
+        [
+          82,
+          97
+        ],
+        [
+          104,
+          131
+        ],
+        [
+          280,
+          310
+        ],
+        [
+          330,
+          349
+        ]
+      ],
+      "semanticLineCount": 93,
+      "bodyDisplayedLineCount": 118,
+      "endingSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "scope": "Ordinary JSON/schema/input/result DTO semantics and real validation call boundary. Authorization/filter/credential/HTTP/FS/native mechanisms not certified; existingR3ordinary source overlaps possible, not first/full/unique coverage. Tests declarations only."
+    },
+    {
+      "path": "packages/core/src/links/link-action-tool.ts",
+      "bytes": 31326,
+      "lines": 771,
+      "sha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          412,
+          416
+        ],
+        [
+          613,
+          615
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          412,
+          420
+        ],
+        [
+          609,
+          617
+        ]
+      ],
+      "semanticLineCount": 8,
+      "bodyDisplayedLineCount": 18,
+      "endingSha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "scope": "Ordinary JSON/schema/input/result DTO semantics and real validation call boundary. Authorization/filter/credential/HTTP/FS/native mechanisms not certified; existingR3ordinary source overlaps possible, not first/full/unique coverage. Tests declarations only."
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "bytes": 8281,
+      "lines": 212,
+      "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          27,
+          61
+        ],
+        [
+          85,
+          99
+        ],
+        [
+          181,
+          201
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          27,
+          61
+        ],
+        [
+          85,
+          99
+        ],
+        [
+          181,
+          201
+        ]
+      ],
+      "semanticLineCount": 71,
+      "bodyDisplayedLineCount": 71,
+      "endingSha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "scope": "Ordinary JSON/schema/input/result DTO semantics and real validation call boundary. Authorization/filter/credential/HTTP/FS/native mechanisms not certified; existingR3ordinary source overlaps possible, not first/full/unique coverage. Tests declarations only."
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "bytes": 8421,
+      "sha256": "53c4eb98275b007dc9c72c3b65e74d9b0b46c5e74e709e466bf5cf0cc8ec3b03",
+      "coverage": "selected historical metadata",
+      "selectedLineRanges": [],
+      "firstReadSha256": null,
+      "capturedAfterActualMetadataRead": true,
+      "scope": "R3 ordinary purpose and row6, R25 knownLimits/sourceManifest/futureleaves only; no full-metadata claim."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "bytes": 5777,
+      "sha256": "5f8b852d59fade9d6878e4af48bf5036f39a9f0d4264ecab051380f2a7bde352",
+      "coverage": "selected historical metadata",
+      "selectedLineRanges": [],
+      "firstReadSha256": null,
+      "capturedAfterActualMetadataRead": true,
+      "scope": "R3 ordinary purpose and row6, R25 knownLimits/sourceManifest/futureleaves only; no full-metadata claim."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/proposal.json",
+      "bytes": 8244,
+      "sha256": "4623b7229fd618a634eba85149368d0eacedba01a5ee37439efd6c42d44f2e42",
+      "coverage": "selected historical metadata",
+      "selectedLineRanges": [],
+      "firstReadSha256": null,
+      "capturedAfterActualMetadataRead": true,
+      "scope": "R3 ordinary purpose and row6, R25 knownLimits/sourceManifest/futureleaves only; no full-metadata claim."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only instruction carry-forward"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only instruction carry-forward"
+    }
+  ],
+  "counts": {
+    "full": 0,
+    "selected": 5,
+    "productSemanticLines": 278,
+    "testDeclarationLines": 71,
+    "bodyDisplayedLines": 533,
+    "testDeclarationsRead": 4,
+    "testsExecuted": 0
+  },
+  "historyReading": {
+    "files": 5311,
+    "markdown": 1500,
+    "json": 3811,
+    "stringValues": 2575070,
+    "scalarValues": 3824469,
+    "pathMatches": 21,
+    "shaMatches": 17,
+    "broadCauseMatches": 381,
+    "capEach": 60,
+    "compactScopeRowsRead": 13,
+    "allCauseWindowsRead": false,
+    "sameShaExplicitFullEstablished": false
+  },
+  "productRuns": 0,
+  "globalCoverageUpdated": false
+}

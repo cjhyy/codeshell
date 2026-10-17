@@ -1,0 +1,70 @@
+{
+  "at": "2026-10-17T18:09:45.757260+00:00",
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "same": true
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "initialSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "endingSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "bytes": 16266,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/session/output-storage-prototype/id-index.ts",
+      "initialSha256": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+      "endingSha256": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+      "bytes": 14929,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "initialSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "endingSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "bytes": 6300,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/session/output-journal-manual-repair.ts",
+      "initialSha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+      "endingSha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+      "bytes": 37876,
+      "same": true
+    },
+    {
+      "path": "tests/output-journal-manual-repair.test.ts",
+      "initialSha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+      "endingSha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+      "bytes": 31627,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/session/output-journal.ts",
+      "initialSha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+      "endingSha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+      "bytes": 49679,
+      "same": true
+    }
+  ],
+  "historyOriginalMembers": 5311,
+  "historyCurrentMembers": 5311,
+  "historyChanged": [],
+  "historyAdded": [],
+  "historyRemoved": [],
+  "inventoryExitCode": 0,
+  "noNewSemanticReads": true,
+  "rootReportedHead": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "gitVerification": "not independently performed; Git calls 0"
+}
