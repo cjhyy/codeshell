@@ -1,0 +1,425 @@
+{
+  "copies": [
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/checks.json",
+      "path": "evidence/coverage-adapter/checks.json",
+      "bytes": 15061,
+      "sha256": "75f7374848a708dc51e8308edf029ed630e13eb7be05d901a9ef8f35ab275a66"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/current-source-delta.json",
+      "path": "evidence/coverage-adapter/current-source-delta.json",
+      "bytes": 484,
+      "sha256": "e41a9ab67e90bec4a165c8d8533cce3724d8ca74959147141f87599c746b8e15"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/current-source-delta.scan1.json",
+      "path": "evidence/coverage-adapter/current-source-delta.scan1.json",
+      "bytes": 484,
+      "sha256": "e19caf40d0752917c6042e3a7a707997c08b7e2178aeae1f50c0176a289bbd76"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/field-adapter-delta.json",
+      "path": "evidence/coverage-adapter/field-adapter-delta.json",
+      "bytes": 22957,
+      "sha256": "7433e2db342fb477925669c885dc4fd65ec8335ca9202ce9575bbeb639b1d151"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/field-adapter-delta.scan1.json",
+      "path": "evidence/coverage-adapter/field-adapter-delta.scan1.json",
+      "bytes": 24840,
+      "sha256": "84499a14f758129d59f12fe5be325a6ee354b9ef75cd3e1dcc20a80af99e4a8c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/history-inventory.json",
+      "path": "evidence/coverage-adapter/history-inventory.json",
+      "bytes": 1179529,
+      "sha256": "979e641b3ecb0fe6992931e03847b5d16402281e255b812b8ebf03612535f6bd"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/history-inventory.scan1.json",
+      "path": "evidence/coverage-adapter/history-inventory.scan1.json",
+      "bytes": 1179529,
+      "sha256": "0080f4335e547390e6ec34894c935e642d7f2fbcee3774dd492d8227212b1464"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/initial-input-pins.json",
+      "path": "evidence/coverage-adapter/initial-input-pins.json",
+      "bytes": 3558,
+      "sha256": "7ce012e430114915548f23979922b7a61ba450edcb82218dfc6d43be3e13b854"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/metadata-corrections.json",
+      "path": "evidence/coverage-adapter/metadata-corrections.json",
+      "bytes": 1748,
+      "sha256": "806e5f92a3fac53dffa630b1a70038d873172a7bb705e58b35be76898a8e4998"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/method.first.exit.json",
+      "path": "evidence/coverage-adapter/method.first.exit.json",
+      "bytes": 743,
+      "sha256": "2e9237a6bd4869dd83df3d12a2b3c35990024a2bc508b58441b89bf73bb6fa55"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/method.first.py",
+      "path": "evidence/coverage-adapter/method.first.py",
+      "bytes": 21115,
+      "sha256": "2f304fff54ece3a42dc12cd5e926976322f78895e592c88439d7a7c86c367382"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/method.md",
+      "path": "evidence/coverage-adapter/method.md",
+      "bytes": 2879,
+      "sha256": "6f047e9ce17d2224684a00ec55f672729f22e355b549b1085b2e2cd14adceba9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/method.py",
+      "path": "evidence/coverage-adapter/method.py",
+      "bytes": 21503,
+      "sha256": "b4fc38e937b1d2dd1523c5fdf5f00e6cfdbcc71897ae744520b055711b6d274c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/method.scan1.py",
+      "path": "evidence/coverage-adapter/method.scan1.py",
+      "bytes": 21123,
+      "sha256": "7381b2591c77df3cabefd652ce41a931a6cd1e100e48fe5625b725b53c067787"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/method.scan2.py",
+      "path": "evidence/coverage-adapter/method.scan2.py",
+      "bytes": 21281,
+      "sha256": "9963b372a9c685a90c7fb167b508ac0b5f684eb877a7ffb89d959e6204fc5438"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/report.md",
+      "path": "evidence/coverage-adapter/report.md",
+      "bytes": 3940,
+      "sha256": "99f4356ec1ad48f9671c9dcfbdb9651bfdf40aecbbe73613dc696dd6ab9a41cb"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/reviewer-receipt.json",
+      "path": "evidence/coverage-adapter/reviewer-receipt.json",
+      "bytes": 4813,
+      "sha256": "aa511f1fb6c9b7de88447ee2f3a88f2fffff5979efce2815b940dfb55f8cb5ee"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/sha-validity-comparison.json",
+      "path": "evidence/coverage-adapter/sha-validity-comparison.json",
+      "bytes": 6007,
+      "sha256": "ae08fbf68d8302574dc5519230437229d063086217e6754cb8c4df85ce99f971"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/source-manifest.json",
+      "path": "evidence/coverage-adapter/source-manifest.json",
+      "bytes": 578,
+      "sha256": "a4d768cdfc27cdc6d6e7aef0602c3c985b9fb3130a26b9f92110919381884388"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/status-transitions.json",
+      "path": "evidence/coverage-adapter/status-transitions.json",
+      "bytes": 54654,
+      "sha256": "96105e210c3c48dbc209edc6e4e9e26c239bcd1bb98db90a158988403c679ed5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/status-transitions.scan1.json",
+      "path": "evidence/coverage-adapter/status-transitions.scan1.json",
+      "bytes": 40205,
+      "sha256": "f83fc99063468f1c459f87eb865769c5b71f636c2e32848a65df33bbc3caee84"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/status-transitions.scan2.json",
+      "path": "evidence/coverage-adapter/status-transitions.scan2.json",
+      "bytes": 52934,
+      "sha256": "fede4c78146ea6363749017f5e491bd38f18ba06087387886d992e8c193f75cd"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/summary.json",
+      "path": "evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/summary.scan1.json",
+      "path": "evidence/coverage-adapter/summary.scan1.json",
+      "bytes": 4961,
+      "sha256": "00df58ac7201ff9a7de8d3911c9abc52f28fc5ad21527d94dc5752f765f99ce6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round57-coverage-adapter/summary.scan2.json",
+      "path": "evidence/coverage-adapter/summary.scan2.json",
+      "bytes": 4928,
+      "sha256": "cd494166097d68427222e984a808e2d10caea60c89c95fe896303a959b4f5088"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/baseline-inspection-input-pins.json",
+      "path": "evidence/coverage-review/baseline-inspection-input-pins.json",
+      "bytes": 950,
+      "sha256": "2b04519a51ee4a7d8436ef372e13c94e6e404935628c915325003abf6bd53cb3"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/baseline-inspection-objects.json",
+      "path": "evidence/coverage-review/baseline-inspection-objects.json",
+      "bytes": 21641,
+      "sha256": "1a4694a70124fdbe8bf70374ca0df0909de0ea753b7da9b0436ea99086969ec4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/baseline-integrity-checks.json",
+      "path": "evidence/coverage-review/baseline-integrity-checks.json",
+      "bytes": 12655,
+      "sha256": "807f42013757cbe94ad6bb4e1c29fd1982c487dd9b6f99a170f9ef3152c5db46"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/baseline-positive.json",
+      "path": "evidence/coverage-review/baseline-positive.json",
+      "bytes": 805,
+      "sha256": "0d184df1a50c3bf41f496ce4f89a0bc5c38e740f5b14268b61c96fa1ee881719"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/baseline-set-checks.json",
+      "path": "evidence/coverage-review/baseline-set-checks.json",
+      "bytes": 51183,
+      "sha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/baseline-veto-controls.json",
+      "path": "evidence/coverage-review/baseline-veto-controls.json",
+      "bytes": 5201,
+      "sha256": "f107cb66b2bc8aeedbb63e1c9f83a98ac95c6b3a8f8988f443f1e0dc6712180b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/canonical-input-pins.json",
+      "path": "evidence/coverage-review/canonical-input-pins.json",
+      "bytes": 2683,
+      "sha256": "6923d86f54269386d24946c78622ddc5a483a54228c787538949ecfda90c3475"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/canonical-pointer-checks.first.json",
+      "path": "evidence/coverage-review/canonical-pointer-checks.first.json",
+      "bytes": 61237,
+      "sha256": "32e84851ab22a76a86962d2fe12e89b5e9203387c0106198a1a6645dd943cb7b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/canonical-pointer-checks.json",
+      "path": "evidence/coverage-review/canonical-pointer-checks.json",
+      "bytes": 65624,
+      "sha256": "c0d5e21075fa1ffe3440cf4759b6d018d8721f5161bcc306c60dbfa080b2c89c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/checks.json",
+      "path": "evidence/coverage-review/checks.json",
+      "bytes": 5621,
+      "sha256": "7a4f06e7301bbeb95028662ce103927c1512e1c86681763ae7bf1feef9533c9e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/dated-history-count-checks.json",
+      "path": "evidence/coverage-review/dated-history-count-checks.json",
+      "bytes": 1014,
+      "sha256": "80c8a86e29aed8b1ab246a0cd365f110e14eb917f446a8d6e8202d27f954f0aa"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/ending-input-checks.json",
+      "path": "evidence/coverage-review/ending-input-checks.json",
+      "bytes": 18563,
+      "sha256": "3530df9a64f84d8bac94bec103c7bd063ddd0e027dc5f15c19c81c4810fb7580"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/final57-input-pins.json",
+      "path": "evidence/coverage-review/final57-input-pins.json",
+      "bytes": 4130,
+      "sha256": "ba6cb4223b6c3e09424ad32a1d415b442c77fb6d86745bdc5949fc1a13ca30b2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/final57-integrity-checks.json",
+      "path": "evidence/coverage-review/final57-integrity-checks.json",
+      "bytes": 13974,
+      "sha256": "73849c3c980ff67e1bbe9c90d35ba18a1a730dcfe9665f60887aa79b751b38c3"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/independent-stage-checks.json",
+      "path": "evidence/coverage-review/independent-stage-checks.json",
+      "bytes": 162987,
+      "sha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/initial-diagnostic-notes.json",
+      "path": "evidence/coverage-review/initial-diagnostic-notes.json",
+      "bytes": 383,
+      "sha256": "3ff7acf6380ae8314f9fe15b9e3d602c2a3b794dae7e6b948d11e09fcac37f28"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/initial-input-pins.json",
+      "path": "evidence/coverage-review/initial-input-pins.json",
+      "bytes": 13719,
+      "sha256": "3b2a615d6fa6fe287bd2ef2e3c274feff0a9b8b26c7b809a7fa8c2855e1e09d1"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/inspection-decisions.json",
+      "path": "evidence/coverage-review/inspection-decisions.json",
+      "bytes": 29006,
+      "sha256": "814965c74fc403a4901a50941fc6161c73eab5c7de1dd973550c53c44e0e25d0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/inspection-object-set-checks.json",
+      "path": "evidence/coverage-review/inspection-object-set-checks.json",
+      "bytes": 6891,
+      "sha256": "fd7c5aa4825b6e9198026b3b26c489acee801eae1548f6b8c11cc977c0702983"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/provenance-clarification.json",
+      "path": "evidence/coverage-review/provenance-clarification.json",
+      "bytes": 21343,
+      "sha256": "0fb954c211fe620d412bd0061459d922f3b0c3041cf383c822e76dc635ca900f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/review.md",
+      "path": "evidence/coverage-review/review.md",
+      "bytes": 6180,
+      "sha256": "99c91341df6e5e9e9db13182d8987c9733e95aa440199868a947c0b5794dd08c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round60-coverage-review/reviewer-receipt.json",
+      "path": "evidence/coverage-review/reviewer-receipt.json",
+      "bytes": 4475,
+      "sha256": "5ee66a83954301da4d270ae725aa728629a541333f338964ab2aa275f595f7f2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/artifact-checks.json",
+      "path": "evidence/web-message-frontier/artifact-checks.json",
+      "bytes": 1343,
+      "sha256": "62c65eb631b62f75f6f29c97aa17bf5743eb32fa63e23d87070e253a0f9a6b16"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/artifact-receipt.json",
+      "path": "evidence/web-message-frontier/artifact-receipt.json",
+      "bytes": 3765,
+      "sha256": "08cf590d2ffde026bc2a9af83e505331fcd0556d4128c6b636dae59a2d02e2e8"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/body-initial-pins.json",
+      "path": "evidence/web-message-frontier/body-initial-pins.json",
+      "bytes": 585,
+      "sha256": "d14b2bcaaa36a7db09e138ec2f5f0c9e8d89557d97c64b8bca628b95ac818cc0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/build-final-metadata.py",
+      "path": "evidence/web-message-frontier/build-final-metadata.py",
+      "bytes": 8824,
+      "sha256": "667b0c39f2ddbf1b04dcbf36cb8e6d25db42d39049a62f15e42c933f914f3049"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/consumer-initial-pins.json",
+      "path": "evidence/web-message-frontier/consumer-initial-pins.json",
+      "bytes": 898,
+      "sha256": "613ae64cba2d911a168750dca65ccba052018357e00b41e2e7a144baeb428dfa"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/decisions.json",
+      "path": "evidence/web-message-frontier/decisions.json",
+      "bytes": 2071,
+      "sha256": "43884802ef046c92ea9534ba024cad4672ba17d9c2a93a35553a2b1dc66f43ae"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/ending-checks.json",
+      "path": "evidence/web-message-frontier/ending-checks.json",
+      "bytes": 2486,
+      "sha256": "af7a4e5c1dec94789465cf451824306fbc4d95d4924769232f98762ba3839294"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-cause-selected.json",
+      "path": "evidence/web-message-frontier/history-cause-selected.json",
+      "bytes": 4960,
+      "sha256": "3d436d47506547434cdbe488893c68f3efb78d5ae43036ef1e33602c25c6d325"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-contexts.json",
+      "path": "evidence/web-message-frontier/history-contexts.json",
+      "bytes": 165979,
+      "sha256": "cd4537e869a7f16d62d71686439effe4f8d49a08a6470020a043ebac57b2f2a1"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-display-causes.json",
+      "path": "evidence/web-message-frontier/history-display-causes.json",
+      "bytes": 63997,
+      "sha256": "cc6ee0416d2e23e55c77bdf3f94ef70e806a6eaa12a05edfba883a930fd990b2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-filename-scope-selected.json",
+      "path": "evidence/web-message-frontier/history-filename-scope-selected.json",
+      "bytes": 50091,
+      "sha256": "bd163d4eef1867a8cf2d68baeea6b9a9dd911bde5eb62b6348b13325f65fc312"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-gate-selected.json",
+      "path": "evidence/web-message-frontier/history-gate-selected.json",
+      "bytes": 6782,
+      "sha256": "a0f97df18af6dccbdd8a2cfa12dd4279cbad07dd4eac0a1cb908f47e5ed93463"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-initial-pins.json",
+      "path": "evidence/web-message-frontier/history-initial-pins.json",
+      "bytes": 917216,
+      "sha256": "ee315f0d84e7044a4f99e8680d0c05257133a7925de26bcaaeae550510794920"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history-inventory.raw.txt",
+      "path": "evidence/web-message-frontier/history-inventory.raw.txt",
+      "bytes": 270160,
+      "sha256": "8ef6e0f082ec6e8985325ca96bc4850df8aae4610cf9aa92a63d35dd50a7b3b3"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/history.json",
+      "path": "evidence/web-message-frontier/history.json",
+      "bytes": 918476,
+      "sha256": "2fe5857d259b74e147bd6f139d5e228686e4d010f74dd8ea8e1eda012ca9a45b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/initial-pins.json",
+      "path": "evidence/web-message-frontier/initial-pins.json",
+      "bytes": 1051,
+      "sha256": "615fd9b643ccd89a6bb1ffb85b35f2171cbe61cc2005ca241fc8d2ba1e5cf15f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/metadata-diagnostics.json",
+      "path": "evidence/web-message-frontier/metadata-diagnostics.json",
+      "bytes": 1153,
+      "sha256": "9ad1d2aaa879e39495d39a728cb5d9e5cc0fce0c9317c3b014f0ac5de96c4f17"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/report.md",
+      "path": "evidence/web-message-frontier/report.md",
+      "bytes": 5665,
+      "sha256": "0b8b392f53414293863efd31b346304d751031aa7cc203e28a2cbd01ac4f367b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/scan-display-causes.py",
+      "path": "evidence/web-message-frontier/scan-display-causes.py",
+      "bytes": 2484,
+      "sha256": "8f6cd7054216c701504a79c14378b808448252acc04fbaea4d40b75462b97b24"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/scan-history.py",
+      "path": "evidence/web-message-frontier/scan-history.py",
+      "bytes": 5568,
+      "sha256": "99716ed35dc3bd4b34cc9339134bbed193a02023cab7c0c43c695a46cdd4c4e6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/source-excerpts.json",
+      "path": "evidence/web-message-frontier/source-excerpts.json",
+      "bytes": 36469,
+      "sha256": "b0dcc53b637121807517474e01ee2ee8b0bc326344177a67aaa804ac8c76656e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/source-manifest.json",
+      "path": "evidence/web-message-frontier/source-manifest.json",
+      "bytes": 13259,
+      "sha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round59-web-message-content/validation.json",
+      "path": "evidence/web-message-frontier/validation.json",
+      "bytes": 511,
+      "sha256": "b8995dc9e47c219e8643640c52495776bf4b75dc352e638595ce557a9107ec8a"
+    }
+  ],
+  "productRuns": 0
+}

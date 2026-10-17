@@ -1,0 +1,82 @@
+{
+  "rootReportedContext": "ec1f6ae458d3646d07db20e876a2b9ce8c9939b9 docs-only45; no own Git",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/build-index.py",
+      "bytes": 15317,
+      "sha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c",
+      "pinUTC": "2026-10-17T15:29:29.278036+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/method.md",
+      "bytes": 5264,
+      "sha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df",
+      "pinUTC": "2026-10-17T15:29:29.280104+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "pinUTC": "2026-10-17T15:29:29.282215+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pinUTC": "2026-10-17T15:29:29.293420+00:00",
+      "purpose": "opaque prior claims hash only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "pinUTC": "2026-10-17T15:29:29.295116+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/history-inventory.json",
+      "bytes": 851237,
+      "sha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97",
+      "pinUTC": "2026-10-17T15:29:29.296466+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "bytes": 13255,
+      "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020",
+      "pinUTC": "2026-10-17T15:29:29.297318+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "pinUTC": "2026-10-17T15:29:29.299164+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "pinUTC": "2026-10-17T15:29:29.300125+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/report.md",
+      "bytes": 2319,
+      "sha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33",
+      "pinUTC": "2026-10-17T15:29:29.300980+00:00",
+      "purpose": "metadata before selective read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "bytes": 8637,
+      "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "pinUTC": "2026-10-17T15:29:29.301802+00:00",
+      "purpose": "metadata before selective read"
+    }
+  ]
+}

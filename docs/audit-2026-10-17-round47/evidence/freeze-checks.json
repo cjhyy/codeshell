@@ -1,0 +1,80 @@
+{
+  "expectedCount": 15,
+  "checks": [
+    {
+      "path": "evidence/coverage-adapter/report.md",
+      "bytes": 3940,
+      "sha256": "99f4356ec1ad48f9671c9dcfbdb9651bfdf40aecbbe73613dc696dd6ab9a41cb"
+    },
+    {
+      "path": "evidence/coverage-adapter/source-manifest.json",
+      "bytes": 578,
+      "sha256": "a4d768cdfc27cdc6d6e7aef0602c3c985b9fb3130a26b9f92110919381884388"
+    },
+    {
+      "path": "evidence/coverage-adapter/method.py",
+      "bytes": 21503,
+      "sha256": "b4fc38e937b1d2dd1523c5fdf5f00e6cfdbcc71897ae744520b055711b6d274c"
+    },
+    {
+      "path": "evidence/coverage-adapter/checks.json",
+      "bytes": 15061,
+      "sha256": "75f7374848a708dc51e8308edf029ed630e13eb7be05d901a9ef8f35ab275a66"
+    },
+    {
+      "path": "evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000"
+    },
+    {
+      "path": "evidence/coverage-adapter/field-adapter-delta.json",
+      "bytes": 22957,
+      "sha256": "7433e2db342fb477925669c885dc4fd65ec8335ca9202ce9575bbeb639b1d151"
+    },
+    {
+      "path": "evidence/coverage-adapter/status-transitions.json",
+      "bytes": 54654,
+      "sha256": "96105e210c3c48dbc209edc6e4e9e26c239bcd1bb98db90a158988403c679ed5"
+    },
+    {
+      "path": "evidence/coverage-adapter/reviewer-receipt.json",
+      "bytes": 4813,
+      "sha256": "aa511f1fb6c9b7de88447ee2f3a88f2fffff5979efce2815b940dfb55f8cb5ee"
+    },
+    {
+      "path": "evidence/coverage-review/review.md",
+      "bytes": 6180,
+      "sha256": "99c91341df6e5e9e9db13182d8987c9733e95aa440199868a947c0b5794dd08c"
+    },
+    {
+      "path": "evidence/coverage-review/independent-stage-checks.json",
+      "bytes": 162987,
+      "sha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+    },
+    {
+      "path": "evidence/coverage-review/provenance-clarification.json",
+      "bytes": 21343,
+      "sha256": "0fb954c211fe620d412bd0061459d922f3b0c3041cf383c822e76dc635ca900f"
+    },
+    {
+      "path": "evidence/coverage-review/reviewer-receipt.json",
+      "bytes": 4475,
+      "sha256": "5ee66a83954301da4d270ae725aa728629a541333f338964ab2aa275f595f7f2"
+    },
+    {
+      "path": "evidence/web-message-frontier/report.md",
+      "bytes": 5665,
+      "sha256": "0b8b392f53414293863efd31b346304d751031aa7cc203e28a2cbd01ac4f367b"
+    },
+    {
+      "path": "evidence/web-message-frontier/source-manifest.json",
+      "bytes": 13259,
+      "sha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95"
+    },
+    {
+      "path": "evidence/web-message-frontier/artifact-receipt.json",
+      "bytes": 3765,
+      "sha256": "08cf590d2ffde026bc2a9af83e505331fcd0556d4128c6b636dae59a2d02e2e8"
+    }
+  ]
+}

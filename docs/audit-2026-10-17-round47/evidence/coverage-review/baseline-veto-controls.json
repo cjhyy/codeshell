@@ -1,0 +1,112 @@
+{
+  "files": [],
+  "metadataInputPins": [
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/root-source-manifest.json",
+      "bytes": 10316,
+      "sha256": "984deb2321f81e0a8ec05cc886aad02ce7f8e36c5ae054b2bd4bbd5ef2a8a0be",
+      "matches49HistorySHA": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "bytes": 15380,
+      "sha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71",
+      "matches49HistorySHA": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-source-manifest.json",
+      "bytes": 7522,
+      "sha256": "d8c1c6f145d16bf1c3a562acc1bec37b4eaf67980bf768656f10b9d52dc13ce0",
+      "matches49HistorySHA": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/unread-preflight.json",
+      "bytes": 658,
+      "sha256": "4665ad822414e7fa50f11054e83957d60842df2760ae2ffe314ea61b3d911a9f",
+      "matches49HistorySHA": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/memoize-frontier/test-initial-pin.json",
+      "bytes": 348,
+      "sha256": "12974e2ff41e4ee92d1184e397cd1c02184bd0557f4ee1db6a490e77daf40b49",
+      "matches49HistorySHA": true
+    }
+  ],
+  "actualOriginalObjects": [
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/9",
+      "metadataFields": {
+        "path": "packages/coding/src/review/review-prompt.test.ts",
+        "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+        "frozenSha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            138
+          ]
+        ],
+        "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+      },
+      "index49ExpectedKind": "full-word-vetoed-or-conflicting-scope",
+      "independentFullDecision": false,
+      "reason": "No clear entire/full reading with valid ordinary same-object binding and no veto: preserve original selected/hash/nav/limited boundary."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "jsonPointer": "/files/2",
+      "metadataFields": {
+        "path": "packages/chat/src/channel.test.ts",
+        "selectedRanges": [
+          [
+            1,
+            93
+          ]
+        ],
+        "purpose": "Existing test declarations only; matrix and granular legacy compatibility, not executed."
+      },
+      "index49ExpectedKind": "explicit-selected",
+      "independentFullDecision": false,
+      "reason": "No clear entire/full reading with valid ordinary same-object binding and no veto: preserve original selected/hash/nav/limited boundary."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/evidence/injection-source-manifest.json",
+      "jsonPointer": "/sources/6",
+      "metadataFields": {
+        "path": "packages/core/src/engine/engine.ts",
+        "frozenSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "scope": "Selected consumer excerpts only (steer enqueue/unsteer/consume/restore, prompt-context assembly and static locators); never imported or executed."
+      },
+      "index49ExpectedKind": "explicit-navigation-only",
+      "independentFullDecision": false,
+      "reason": "No clear entire/full reading with valid ordinary same-object binding and no veto: preserve original selected/hash/nav/limited boundary."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round18/evidence/unread-preflight.json",
+      "jsonPointer": "",
+      "metadataFields": {
+        "sourceSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+        "frozenSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+        "scope": "Metadata only: actual source bytes and absolute import target; no dependency/resolver probing and no product import."
+      },
+      "index49ExpectedKind": "explicit-nonsemantic-or-hash-only",
+      "independentFullDecision": false,
+      "reason": "No clear entire/full reading with valid ordinary same-object binding and no veto: preserve original selected/hash/nav/limited boundary."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round34/evidence/memoize-frontier/test-initial-pin.json",
+      "jsonPointer": "",
+      "metadataFields": {
+        "path": "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts",
+        "sha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+        "timing": "Before direct existing test-source read; filename inventory only"
+      },
+      "index49ExpectedKind": "limited-or-not-full-scope-unknown",
+      "independentFullDecision": false,
+      "reason": "No clear entire/full reading with valid ordinary same-object binding and no veto: preserve original selected/hash/nav/limited boundary."
+    }
+  ],
+  "scope": "Selected actual49 conservative controls, metadata only; no author classifier executed"
+}

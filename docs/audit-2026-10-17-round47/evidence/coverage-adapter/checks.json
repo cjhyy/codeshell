@@ -1,0 +1,408 @@
+{
+  "createdUTC": "2026-10-17T15:38:42.641017+00:00",
+  "files": [],
+  "purpose": "Metadata checks only; no product semantic source rows",
+  "inputChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/build-index.py",
+      "beforeBytes": 15317,
+      "beforeSha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c",
+      "endingBytes": 15317,
+      "endingSha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/method.md",
+      "beforeBytes": 5264,
+      "beforeSha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df",
+      "endingBytes": 5264,
+      "endingSha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "beforeBytes": 2055917,
+      "beforeSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "endingBytes": 2055917,
+      "endingSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "beforeBytes": 12061422,
+      "beforeSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingBytes": 12061422,
+      "endingSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "beforeBytes": 958678,
+      "beforeSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "endingBytes": 958678,
+      "endingSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/history-inventory.json",
+      "beforeBytes": 851237,
+      "beforeSha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97",
+      "endingBytes": 851237,
+      "endingSha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "beforeBytes": 13255,
+      "beforeSha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020",
+      "endingBytes": 13255,
+      "endingSha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "beforeBytes": 1643022,
+      "beforeSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "endingBytes": 1643022,
+      "endingSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "beforeBytes": 280965,
+      "beforeSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "endingBytes": 280965,
+      "endingSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/report.md",
+      "beforeBytes": 2319,
+      "beforeSha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33",
+      "endingBytes": 2319,
+      "endingSha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "beforeBytes": 8637,
+      "beforeSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "endingBytes": 8637,
+      "endingSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "unchanged": true
+    }
+  ],
+  "allPinnedInputsUnchanged": true,
+  "sourceHashOnlyEnding": {
+    "count": 4643,
+    "pathSetSame": true,
+    "mismatches": [],
+    "reconstruction": "51 inventory + current-source-delta.json, no identical full inventory copy"
+  },
+  "historyEnding": {
+    "count": 4162,
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "realCorpusCalibration": {
+    "R13RequiredPositive": {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "pointer": "/files/8",
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "sameUniqueSHA": true,
+      "singleDirectPath": true,
+      "noLocatorOrVeto": true,
+      "rawScope": {
+        "inspectionScope": "entire file; query producer/error consumer static only"
+      }
+    },
+    "adaptedFullObjectChecks": [
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/1",
+        "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; production pure functions executed"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/2",
+        "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; 11 existing tests executed once"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/3",
+        "path": "packages/desktop/src/renderer/modelSelection.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; production callback helper executed"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/4",
+        "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; 2 existing tests executed once"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/5",
+        "path": "packages/desktop/src/renderer/shell/searchFocus.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; static only, no DOM/runtime test"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/6",
+        "path": "packages/desktop/src/renderer/shell/SearchDialog.tsx",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; focus wiring static only"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/7",
+        "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; focus wiring static only"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/8",
+        "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; query producer/error consumer static only"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/9",
+        "path": "packages/desktop/src/renderer/shell/useSessionContentSearch.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; request producer and invalidation static only"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/10",
+        "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; static only, historical failed direction remains SKIP"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/11",
+        "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; static only, no React/DOM test run"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "pointer": "/files/13",
+        "path": "packages/desktop/src/shared/session-catalog.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; local/engine identity contract static only"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+        "pointer": "/1/rows/0",
+        "path": "packages/desktop/src/renderer/modelSelection.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; production callback helper executed"
+        }
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+        "pointer": "/1/rows/1",
+        "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+        "sameUniqueSHA": true,
+        "singleDirectPath": true,
+        "noLocatorOrVeto": true,
+        "rawScope": {
+          "inspectionScope": "entire file; 2 existing tests executed once"
+        }
+      }
+    ],
+    "allNewFullBindingsValid": true,
+    "limitedInspectionObjects": 6,
+    "limitedRemainNotFull": true,
+    "guardsNotAllExercised": "Corpus has6leading-label/limited examples. No synthetic fixtures executed for every quoted/multi-path/false/hash edge; inherited/new veto code and limitations remain reviewable."
+  },
+  "currentCountsReconstructedFrom51PlusTransitions": {
+    "unknown": 4170,
+    "full": 304,
+    "selected": 169
+  },
+  "transitionBaseErrors": [],
+  "round45RepresentativeProvenance": [
+    {
+      "path": "packages/core/src/context/compaction.ratios.test.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.json",
+          "pointer": "/files/11"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+          "pointer": "/files/7"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+          "pointer": "/files/11"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "pointer": "/files/2"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "pointer": "/files/5"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "pointer": "/files/0"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+          "pointer": "/files/0"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.json",
+          "pointer": "/files/10"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+          "pointer": "/files/1"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "pointer": "/files/3"
+        }
+      ],
+      "allCanonical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "refs": [
+        {
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "pointer": "/files/1"
+        }
+      ],
+      "allCanonical": true
+    }
+  ],
+  "all45RepresentativesCanonical": true,
+  "provenanceRefPolicy": "Representative minimum one exact document SHA/pointer per activation, not all occurrences or semantic reads. Field delta preserves all20recognized objects.",
+  "runtime": {
+    "productSemanticRead": 0,
+    "productImportsOrFunctions": 0,
+    "testsOrFixtures": 0,
+    "uiNativeNetwork": 0,
+    "git": 0
+  }
+}

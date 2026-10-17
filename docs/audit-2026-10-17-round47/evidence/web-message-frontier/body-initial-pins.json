@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/web/app/MessageContent.tsx",
+      "bytes": 9846,
+      "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "lineCount": 295,
+      "pinUTC": "2026-10-17T15:35:31.795642+00:00",
+      "beforeSemanticRead": true
+    },
+    {
+      "path": "packages/web/app/MessageContent.test.tsx",
+      "bytes": 5526,
+      "sha256": "aa4590f3e190b592eb2afa1d806e338ce4f0d80b6960fc7fab9074682c943111",
+      "lineCount": 131,
+      "pinUTC": "2026-10-17T15:35:31.797416+00:00",
+      "beforeSemanticRead": true
+    }
+  ]
+}

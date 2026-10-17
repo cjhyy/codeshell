@@ -1,0 +1,28 @@
+{
+  "createdUTC": "2026-10-17T15:43:58.898552+00:00",
+  "files": [],
+  "inputHistoryInventorySHA": "979e641b3ecb0fe6992931e03847b5d16402281e255b812b8ebf03612535f6bd",
+  "datedMemberCount": 4162,
+  "recheckedMemberMetadataDigestAlgorithm": "SHA256(sorted historical row order path NUL bytes NUL sha LF UTF8)",
+  "recheckedMemberMetadataDigest": "1dc6424ef3b780850f050811019281d0d3560f35b9ce233cb741a788210c6f51",
+  "ownMetadataCounts": {
+    "md": 1416,
+    "mdUTF8Chars": 13334794,
+    "json": 2746,
+    "jsonObjects": 748751,
+    "jsonScalars": 2534677,
+    "jsonStrings": 1676345,
+    "jsonArrays": 75979
+  },
+  "authorCountComparison": {
+    "md": true,
+    "mdUTF8Chars": true,
+    "json": true,
+    "jsonObjects": true,
+    "jsonScalars": true,
+    "jsonStrings": true,
+    "jsonArrays": true
+  },
+  "memberByteDrift": [],
+  "limits": "All JSON values machine-counted including derived49 claims, never extracted from claims as semantic evidence. No new inventory universe/Git/current source certification."
+}

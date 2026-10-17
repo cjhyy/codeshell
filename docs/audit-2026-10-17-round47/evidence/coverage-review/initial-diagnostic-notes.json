@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "toolChunk": "08cece",
+      "exitCode": 0,
+      "kind": "metadata display truncation",
+      "note": "Wide baseline output was truncated; comparison lists and56 full tables not claimed fully read. Two56 copied derived claim objects displayed incidentally; excluded as semantic evidence.49 claims itself only hash/count."
+    }
+  ],
+  "files": []
+}

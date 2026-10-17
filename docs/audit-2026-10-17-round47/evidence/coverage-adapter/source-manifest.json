@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "productSemanticLines": 0,
+  "scope": "Hash-only metadata inventory adaptation, no product body decoded/displayed/parsed/executed",
+  "currentSourceCount": 4643,
+  "inventoryReconstruction": {
+    "frozen51": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "frozen51Sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+    "delta": "current-source-delta.json",
+    "ending": "checks.json"
+  },
+  "rootReportedContext": "ec1f6ae458d3646d07db20e876a2b9ce8c9939b9, no independent Git certification"
+}

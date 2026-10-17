@@ -1,0 +1,23 @@
+{
+  "capturedUTC": "2026-10-17T15:37:08.801459+00:00",
+  "startedUTC": "2026-10-17T15:37:07.281979+00:00",
+  "filter": [
+    "rg",
+    "--files",
+    "--hidden",
+    "-g",
+    "*.ts",
+    "-g",
+    "*.tsx",
+    "-g",
+    "!**/node_modules/**",
+    "-g",
+    "!**/.git/**"
+  ],
+  "sourceCount": 4643,
+  "input51": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "sourceBodyDecodedOrExecuted": false
+}

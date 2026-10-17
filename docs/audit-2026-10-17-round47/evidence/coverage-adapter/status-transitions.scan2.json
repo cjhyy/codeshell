@@ -1,0 +1,1446 @@
+{
+  "scope": "One current source path/SHA per row; attribution stages separated",
+  "rows": [
+    {
+      "path": "packages/core/src/context/compaction.ratios.test.ts",
+      "sha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.first.json",
+          "documentSha256": "b173f438e07f94429bdda37ce91601171b8e23f48c4b3651b37ea8c299275f14",
+          "jsonPointer": "/files/11",
+          "path": "packages/core/src/context/compaction.ratios.test.ts",
+          "sourceSha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "full"
+          },
+          "sourceHashFields": {
+            "sha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+            "finishFilesystemSha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                67
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "sha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+          "documentSha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179",
+          "jsonPointer": "/files/0",
+          "path": "packages/core/src/plugins/pluginCatalog.ts",
+          "sourceSha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Ordinary already-valid normal install key/layout classification and catalog DTO field. Does not certify path containment, symlink/realpath, manifest safety/identity or custody. Wrong navigation range88–98 displayed only, excluded."
+          },
+          "sourceHashFields": {
+            "sha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+            "initialSemanticReadSha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+            "endingSha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                26,
+                32
+              ],
+              [
+                118,
+                128
+              ],
+              [
+                135,
+                150
+              ],
+              [
+                171,
+                173
+              ],
+              [
+                180,
+                186
+              ],
+              [
+                190,
+                192
+              ],
+              [
+                195,
+                203
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+          "documentSha256": "54dcdc4529366c3eaa277604835046dd52ef79baf2601b5727613f071c4349fa",
+          "jsonPointer": "/files/7",
+          "path": "packages/core/src/settings/manager.ts",
+          "sourceSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Only existing merged-settings get/load data boundary. Migration/provenance/readUser scope comments displayed but excluded; no filesystem or authority audit."
+          },
+          "sourceHashFields": {
+            "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+            "initialSemanticReadSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+            "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                348,
+                348
+              ],
+              [
+                442,
+                445
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "sha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+          "documentSha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179",
+          "jsonPointer": "/files/1",
+          "path": "packages/desktop/src/main/plugins-service.ts",
+          "sourceSha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Ordinary catalog load and installationKind propagation to PluginSummary; filesystem skill count/manifest/media correctness excluded."
+          },
+          "sourceHashFields": {
+            "sha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+            "initialSemanticReadSha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+            "endingSha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                43,
+                53
+              ],
+              [
+                130,
+                143
+              ],
+              [
+                146,
+                148
+              ],
+              [
+                152,
+                154
+              ],
+              [
+                156,
+                162
+              ],
+              [
+                165,
+                167
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/market-review/ending-checks.first.json",
+          "documentSha256": "286fe16d6eda8f84249aadbab7027befddca4dd6ea040707af29990e18c798ca",
+          "jsonPointer": "/files/4",
+          "path": "packages/desktop/src/preload/types.d.ts",
+          "sourceSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+            "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                863,
+                883
+              ],
+              [
+                2068,
+                2081
+              ],
+              [
+                2083,
+                2085
+              ],
+              [
+                2087,
+                2094
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+      "sha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/11",
+          "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+          "sourceSha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; static only, no React/DOM test run"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+            "sha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+      "sha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/10",
+          "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+          "sourceSha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; static only, historical failed direction remains SKIP"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+            "sha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+      "sha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/market-aggregate/checks.json",
+          "documentSha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a",
+          "jsonPointer": "/inputPackages/0/rangeRows/6",
+          "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+          "sourceSha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sourceShaFromFrozenManifest": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                90,
+                110
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "sha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/market-aggregate/checks.json",
+          "documentSha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a",
+          "jsonPointer": "/inputPackages/0/rangeRows/4",
+          "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+          "sourceSha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sourceShaFromFrozenManifest": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                47,
+                69
+              ],
+              [
+                161,
+                177
+              ],
+              [
+                192,
+                249
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+      "sha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/market-aggregate/checks.json",
+          "documentSha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a",
+          "jsonPointer": "/inputPackages/1/rangeRows/2",
+          "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+          "sourceSha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sourceShaFromReadTimeManifest": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+            "initialSemanticReadSha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+            "endingSha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                10,
+                19
+              ],
+              [
+                24,
+                29
+              ],
+              [
+                36,
+                47
+              ],
+              [
+                62,
+                71
+              ],
+              [
+                131,
+                152
+              ],
+              [
+                159,
+                163
+              ],
+              [
+                169,
+                180
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "sha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round44/evidence/source-status-aggregate/checks.json",
+          "documentSha256": "eacce273b2452065b7529822708bb79c092831a005e81ef019783e7c6d21ca85",
+          "jsonPointer": "/rangeChecksFromFrozenManifestAndPinMetadata/2",
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+          "sourceSha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "full"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenMetadata": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+          "documentSha256": "54dcdc4529366c3eaa277604835046dd52ef79baf2601b5727613f071c4349fa",
+          "jsonPointer": "/files/11",
+          "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+          "sourceSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Only bilingual percentage/range/order/reset/success/error text."
+          },
+          "sourceHashFields": {
+            "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+            "initialSemanticReadSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+            "endingSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                441,
+                458
+              ],
+              [
+                1642,
+                1661
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "sha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/2",
+          "path": "packages/desktop/src/renderer/installedThemes.ts",
+          "sourceSha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Ordinary cached ThemePack id/name/source adapter and lookup/list. API refresh wrapper only displayed, Host/Ipc/installation implementation not followed."
+          },
+          "sourceHashFields": {
+            "sha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                4,
+                17
+              ],
+              [
+                31,
+                35
+              ],
+              [
+                42,
+                55
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.interaction.test.tsx",
+      "sha256": "e72e04301cb573bd8466d9ccfa109e787feca25f2d110bb5e1e66d277814615a",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+          "documentSha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+          "jsonPointer": "/inputSourceRangeMetadataChecks/4",
+          "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.interaction.test.tsx",
+          "sourceSha256": "e72e04301cb573bd8466d9ccfa109e787feca25f2d110bb5e1e66d277814615a",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenManifest": "e72e04301cb573bd8466d9ccfa109e787feca25f2d110bb5e1e66d277814615a"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                136,
+                258
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+          "documentSha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+          "jsonPointer": "/inputSourceRangeMetadataChecks/1",
+          "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+          "sourceSha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenManifest": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                24
+              ],
+              [
+                201,
+                279
+              ],
+              [
+                282,
+                351
+              ],
+              [
+                379,
+                423
+              ],
+              [
+                638,
+                672
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+          "documentSha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+          "jsonPointer": "/inputSourceRangeMetadataChecks/5",
+          "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+          "sourceSha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenManifest": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                10
+              ],
+              [
+                74,
+                84
+              ],
+              [
+                118,
+                128
+              ],
+              [
+                570,
+                594
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts",
+      "sha256": "e490a36c94d8824a8c48b7f715a53df5ab60d411c1140ed4ec7e2c252846f958",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+          "documentSha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+          "jsonPointer": "/inputSourceRangeMetadataChecks/2",
+          "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts",
+          "sourceSha256": "e490a36c94d8824a8c48b7f715a53df5ab60d411c1140ed4ec7e2c252846f958",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "full"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenManifest": "e490a36c94d8824a8c48b7f715a53df5ab60d411c1140ed4ec7e2c252846f958"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                160
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+      "sha256": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+          "documentSha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+          "jsonPointer": "/inputSourceRangeMetadataChecks/0",
+          "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+          "sourceSha256": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "full"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenManifest": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                251
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/5",
+          "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+          "sourceSha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Two existing test declarations as intent; only builtin persistence/card-list cases semantic. Generic DOM helpers, asset fixture and uninstall assertions display-only; nothing executed."
+          },
+          "sourceHashFields": {
+            "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                78,
+                115
+              ],
+              [
+                117,
+                123
+              ],
+              [
+                134,
+                159
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/0",
+          "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+          "sourceSha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Ordinary names, light/dark/system values, state/load/save and pressed display. Import/remove bodies, focus restoration, ThemeAudio/system implementation are outside semantic ranges."
+          },
+          "sourceHashFields": {
+            "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                24,
+                50
+              ],
+              [
+                53,
+                55
+              ],
+              [
+                64,
+                94
+              ],
+              [
+                112,
+                125
+              ],
+              [
+                211,
+                211
+              ],
+              [
+                214,
+                249
+              ],
+              [
+                281,
+                328
+              ],
+              [
+                356,
+                358
+              ],
+              [
+                360,
+                362
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.first.json",
+          "documentSha256": "b173f438e07f94429bdda37ce91601171b8e23f48c4b3651b37ea8c299275f14",
+          "jsonPointer": "/files/0",
+          "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+          "sourceSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "full"
+          },
+          "sourceHashFields": {
+            "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+            "finishFilesystemSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                341
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+          "documentSha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179",
+          "jsonPointer": "/files/5",
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "sourceSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Only original full stdio value-equal Args preservation and full editor rename carrying3supported non-editor fields; list raw-spread/actual editor callback. HTTP/auth/probe/trust/lifecycle and arbitrary grammar/edit intent excluded despite adjacent display."
+          },
+          "sourceHashFields": {
+            "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+            "initialSemanticReadSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+            "endingSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                45,
+                48
+              ],
+              [
+                433,
+                458
+              ],
+              [
+                717,
+                731
+              ],
+              [
+                1121,
+                1128
+              ],
+              [
+                1131,
+                1141
+              ],
+              [
+                1319,
+                1321
+              ],
+              [
+                1393,
+                1413
+              ],
+              [
+                1424,
+                1426
+              ],
+              [
+                1781,
+                1797
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+      "sha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.first.json",
+          "documentSha256": "b173f438e07f94429bdda37ce91601171b8e23f48c4b3651b37ea8c299275f14",
+          "jsonPointer": "/files/10",
+          "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+          "sourceSha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+            "finishFilesystemSha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                8,
+                17
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.first.json",
+          "documentSha256": "b173f438e07f94429bdda37ce91601171b8e23f48c4b3651b37ea8c299275f14",
+          "jsonPointer": "/files/4",
+          "path": "packages/desktop/src/renderer/settingsBus.ts",
+          "sourceSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "full"
+          },
+          "sourceHashFields": {
+            "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+            "finishFilesystemSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                29
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/7",
+          "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+          "sourceSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; focus wiring static only"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+            "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchDialog.tsx",
+      "sha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/6",
+          "path": "packages/desktop/src/renderer/shell/SearchDialog.tsx",
+          "sourceSha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; focus wiring static only"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+            "sha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/8",
+          "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+          "sourceSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; query producer/error consumer static only"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+            "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/searchFocus.ts",
+      "sha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/5",
+          "path": "packages/desktop/src/renderer/shell/searchFocus.ts",
+          "sourceSha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; static only, no DOM/runtime test"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+            "sha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+      "sha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/2",
+          "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+          "sourceSha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; 11 existing tests executed once"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+            "sha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+      "sha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/1",
+          "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+          "sourceSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; production pure functions executed"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+            "sha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/useSessionContentSearch.ts",
+      "sha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/9",
+          "path": "packages/desktop/src/renderer/shell/useSessionContentSearch.ts",
+          "sourceSha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; request producer and invalidation static only"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+            "sha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/3",
+          "path": "packages/desktop/src/renderer/theme-packs.ts",
+          "sourceSha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "Stable ID/plain-or-i18n name/source and builtin/default lookup. Audio/frame/surface definitions only display/navigation, not mechanism audit."
+          },
+          "sourceHashFields": {
+            "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                118,
+                128
+              ],
+              [
+                141,
+                142
+              ],
+              [
+                165,
+                180
+              ],
+              [
+                243,
+                245
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "unknown",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "round45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+          "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+          "jsonPointer": "/files/1",
+          "path": "packages/desktop/src/renderer/theme.ts",
+          "sourceSha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected",
+            "scope": "LocalStorage key/type/load/save only. applyTheme/applyThemePack/initTheme entry names are navigation, system/DOM/surface machinery not followed."
+          },
+          "sourceHashFields": {
+            "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                5,
+                20
+              ],
+              [
+                33,
+                49
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/shared/session-catalog.ts",
+      "sha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "full",
+        "plus-frozen43-44": "full",
+        "plus-frozen45": "full"
+      },
+      "provenance": [
+        {
+          "cohort": "old49-adapted",
+          "kind": "full",
+          "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+          "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+          "jsonPointer": "/files/13",
+          "path": "packages/desktop/src/shared/session-catalog.ts",
+          "sourceSha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "inspectionScope": "entire file; local/engine identity contract static only"
+          },
+          "sourceHashFields": {
+            "frozenSha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+            "sha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568"
+          },
+          "ranges": {}
+        }
+      ]
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "states": {
+        "old49-current": "unknown",
+        "plus-inspectionScope": "unknown",
+        "plus-frozen43-44": "selected",
+        "plus-frozen45": "selected"
+      },
+      "provenance": [
+        {
+          "cohort": "post49-pre45-adapted",
+          "kind": "selected",
+          "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+          "documentSha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+          "jsonPointer": "/inputSourceRangeMetadataChecks/3",
+          "path": "packages/optimization-lab/src/contracts/dataset.ts",
+          "sourceSha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+          "origin": "object-scalar-field",
+          "scopeFields": {
+            "coverage": "selected"
+          },
+          "sourceHashFields": {
+            "sha256FromFrozenManifest": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02"
+          },
+          "ranges": {
+            "selectedLineRanges": [
+              [
+                1,
+                181
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "counts": 35
+}

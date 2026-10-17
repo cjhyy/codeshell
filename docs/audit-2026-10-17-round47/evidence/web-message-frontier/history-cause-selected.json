@@ -1,0 +1,41 @@
+{
+  "scope": "Four retained historical windows actually selected for reading; no old runtime rerun or pass adoption.",
+  "contexts": [
+    {
+      "index": 20,
+      "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+      "jsonPointer": "/hits/exact-leaf/14/excerpt",
+      "line": 4,
+      "needle": "复制回复",
+      "context": "\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+      "sha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+    },
+    {
+      "index": 42,
+      "path": "docs/audit-2026-10-17/root.md",
+      "jsonPointer": null,
+      "line": 44,
+      "needle": "复制回复",
+      "context": "tory-corruption.log` 为 2 pass / 4 expect / 0 fail/skip / Completed。\n- 条件：这是本地损坏/不符合对象 schema 的记录隔离问题；没有证据证明正常 Claude writer 会生成 null，也未接触真实用户 transcript。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__main__\":`、`a*b*c`、`\"*literal*\"`。预期仅去围栏；实际分别成为 `if name == \"main\":`、`abc`、`\"literal\"`。\n- 影响：复制出的代码语义改变。原消息仍然保留；此项仅覆盖回复的“复制为纯文本”，不声称代码块独立复制按钮有问题。\n- 生产接线：`packages/desktop/src/renderer/messages/AssistantMessageView.tsx:53` 将此函数结果交给复制 hook。\n- 证据：`evidence/root-copy-code.test.ts` 调用真实转换函数，普通 prose 强调和简单代码块为正常对照。日志 `root-copy-code.log` 为 2 pass / 6 expect / 0 fail/ski",
+      "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+    },
+    {
+      "index": 43,
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "jsonPointer": "/observations/0/pairedWebMarkup",
+      "line": 1,
+      "needle": "复制回复",
+      "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+      "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+    },
+    {
+      "index": 46,
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "jsonPointer": "/observations/1/pairedWebMarkup",
+      "line": 1,
+      "needle": "复制回复",
+      "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+      "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "capturedUTC": "2026-10-17T15:32:14.441956+00:00",
+  "rootContext": "Root stated ec1f6ae458d3646d07db20e876a2b9ce8c9939b9; agent0Git",
+  "files": [
+    {
+      "path": "packages/web/app/MessageContent.tsx",
+      "bytes": 9846,
+      "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "lines": 295,
+      "capturedUTC": "2026-10-17T15:32:14.440368+00:00",
+      "timing": "before59 product body read"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "capturedUTC": "2026-10-17T15:32:14.441582+00:00",
+      "timing": "carried earlier instruction read hash; no new semantic read"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "capturedUTC": "2026-10-17T15:32:14.441950+00:00",
+      "timing": "carried earlier instruction read hash; no new semantic read"
+    }
+  ]
+}

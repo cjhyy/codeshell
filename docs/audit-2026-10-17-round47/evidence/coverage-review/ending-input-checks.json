@@ -1,0 +1,375 @@
+{
+  "createdUTC": "2026-10-17T15:46:36.205434+00:00",
+  "files": [],
+  "metadataDocuments": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "bytes": 8637,
+      "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round15/evidence/injection-source-manifest.json",
+      "bytes": 7522,
+      "sha256": "d8c1c6f145d16bf1c3a562acc1bec37b4eaf67980bf768656f10b9d52dc13ce0",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round18/evidence/unread-preflight.json",
+      "bytes": 658,
+      "sha256": "4665ad822414e7fa50f11054e83957d60842df2760ae2ffe314ea61b3d911a9f",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round26/evidence/root-source-manifest.json",
+      "bytes": 10316,
+      "sha256": "984deb2321f81e0a8ec05cc886aad02ce7f8e36c5ae054b2bd4bbd5ef2a8a0be",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "bytes": 15380,
+      "sha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "bytes": 1377,
+      "sha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/memoize-frontier/test-initial-pin.json",
+      "bytes": 348,
+      "sha256": "12974e2ff41e4ee92d1184e397cd1c02184bd0557f4ee1db6a490e77daf40b49",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round37/evidence/local-marker-review/prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+      "bytes": 59260,
+      "sha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "bytes": 20671,
+      "sha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/evidence/dataset-review/source-manifest.json",
+      "bytes": 7039,
+      "sha256": "89121f8407ec4f1dee0366ff798e39fb78c4fbdd5e8a8674fa31beabf57767d0",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/artifact-receipt.json",
+      "bytes": 3858,
+      "sha256": "7f341f4e0b15d8d56988042816d0d105f340e641ae6447cf929769704db225fe",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/build-index.py",
+      "bytes": 15317,
+      "sha256": "683e4f43235db76e2e0c0c179db654bf508456406f2c45045b8fb4f2c169ec5c",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "bytes": 17773,
+      "sha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/capture-inventories.py",
+      "bytes": 2343,
+      "sha256": "f1c976b5072818f34c886e954567816e53b34a72244198baab02e999ad36baca",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/checks.json",
+      "bytes": 953,
+      "sha256": "f967fdeb13d73a4a33fa876235e214b6356014534a69e658a58d8cec577ebc01",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/classification-examples.json",
+      "bytes": 7548,
+      "sha256": "90615a6de6e4cffd50815a2e95e48cbc8ca43b657aabbfa4eb3dba66f08bd1b8",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/classifier-first-script.py",
+      "bytes": 14124,
+      "sha256": "d0382315ce6776ef91408f205b9c2e53a653d1901dd1a53a972a045fa67a315e",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/classifier-first-summary.json",
+      "bytes": 1422,
+      "sha256": "65488930208f2747bab566c231259d5bd5479364f243015d71cd27b58ae5bb45",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/classifier-revision-notes.json",
+      "bytes": 1915,
+      "sha256": "008635d952e9edaf6a078403793d1f945c88f363d8bd6c44a0d6503550097348",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "bytes": 13255,
+      "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/history-ending-checks.json",
+      "bytes": 632,
+      "sha256": "c834bde4869a72aaf75d3371957ff6fd7f0be1c25dccaef69ce55bc564aabf2a",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/history-inventory.json",
+      "bytes": 851237,
+      "sha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/links-check.json",
+      "bytes": 2656,
+      "sha256": "5f786ea6d4de84255ce973e4564b5a74def21e7fdd4907bca505e54648135a31",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/method.md",
+      "bytes": 5264,
+      "sha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/pending-scopes.json",
+      "bytes": 3094,
+      "sha256": "1cb892ed3ee795b5ef6c0d544c666db3ada371e0c8e152ac417cc2cd0efa6941",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/report.md",
+      "bytes": 4436,
+      "sha256": "980123513213a2538d592475628fea9710dfe166c60bae0d0e83cc01dad23c3f",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/source-ending-checks.json",
+      "bytes": 3168,
+      "sha256": "e391b315a357d473fe7fdeda22a096797cc27fbae7c5453f74b78d95b504a2cb",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/source-manifest.json",
+      "bytes": 1049,
+      "sha256": "065c7b406ac41cdfcde467c26f2f6fe0a63e7214c255855d12f34254476e05cf",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/summary.json",
+      "bytes": 1812,
+      "sha256": "4a640a945674b2e325998bec462eab981d5ae3bbc0b1b478de8b0a5cb9cfafe7",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier/validation.json",
+      "bytes": 821,
+      "sha256": "b8cdaa40b98495cf3c30f05ed47d5ef8c2348d4d102e2197329db4f595400bd9",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/artifact-receipt.json",
+      "bytes": 1588,
+      "sha256": "8e6b791d8152583034078f269566202b362afea834d637f60964194200994bd9",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/checks.json",
+      "bytes": 299,
+      "sha256": "2406f35d9b0e83456f27d49f5e20a938a26102c27d5e544186ddbb433e650a10",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/input-pins.json",
+      "bytes": 953,
+      "sha256": "6640af77e2562b4fea8927169f79d007c8266215b15b9d373f0438a27eacfc31",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/links-check.json",
+      "bytes": 762,
+      "sha256": "df84a4b048fd0939b14716877f899467b521e29802f1f57cedc2de90f4f093c4",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/report.md",
+      "bytes": 2319,
+      "sha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/source-manifest.json",
+      "bytes": 589,
+      "sha256": "bf3de53a345ff66d39900cd1625947a20ec0cdf29aeff5bb40074425a757efc4",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status/summary.json",
+      "bytes": 1195,
+      "sha256": "4ff599f06db3c6889fe81987bddc03af1d5b2fe3e71474bdbdbb6c5453c17551",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/market-frontier/source-manifest.json",
+      "bytes": 18315,
+      "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/market-review/source-manifest.json",
+      "bytes": 10723,
+      "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "bytes": 11255,
+      "sha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.json",
+      "bytes": 25735,
+      "sha256": "69de34a23a8d07d2688e092688fef8d3cae6c762ac4d09dcda4ea5cfe7461fd5",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+      "bytes": 15265,
+      "sha256": "54dcdc4529366c3eaa277604835046dd52ef79baf2601b5727613f071c4349fa",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/classification.json",
+      "bytes": 467,
+      "sha256": "ce3ed870da9f366a53dfbfeecab138dcd8c86ce76a6811a2eef9f2c84db279f0",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/coverage-gate-detail.json",
+      "bytes": 5462,
+      "sha256": "07ac0020cdd4ff988dc25e8143750d8d68eee74a6e24f758b4658e69558dac68",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/coverage-gate-rows.json",
+      "bytes": 6602,
+      "sha256": "b67df1cec43ecdc2c94895cdd28188c9b254db74f06a16692c7d8daf6eb9bc13",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/ending-checks.json",
+      "bytes": 1172,
+      "sha256": "5a453d18122a93eb3ceece9950a47b1b11355ccba1e3b25c0a31596b8e93c8c0",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/history-contexts.json",
+      "bytes": 112824,
+      "sha256": "119725254ca84e13586185424fd7921d4a66b273a71608ff31212c36a6afeb4a",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/history-method.py",
+      "bytes": 3800,
+      "sha256": "fd7c8c6e87189ec70680aa4626ada28b3e5879c519bb48796be83f4fc5a16b95",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/history.json",
+      "bytes": 813960,
+      "sha256": "e4880c9c6c4e9d03be0310f33f082fb3b04252a2ade08d69161a58d20109806a",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/initial-pins.json",
+      "bytes": 489,
+      "sha256": "230ee0ceb0e7dfd02a841613dbbd5706d24affa7a781b4e733ca26b70ed3bfb8",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/metadata-notes.json",
+      "bytes": 658,
+      "sha256": "b9196334fd1864ce6c9a596507782318429b0fee8e1da00fbaf976bf5dc84a47",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/report.md",
+      "bytes": 2548,
+      "sha256": "ed36f7d2e0caadbcde4041232f89255774b4ee262d625c309505651f09029c7b",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/reviewer-receipt.json",
+      "bytes": 2741,
+      "sha256": "9a32f6d841f3ed1899eb095a04cefc1645269b8328308e0695c306b247f2524c",
+      "matchesOwnInitialMetadataPin": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round56-session-search/source-manifest.json",
+      "bytes": 4420,
+      "sha256": "2cd1a8e2e0cd46765588158ce9ecf267fbb0f052856fee74f6563fb49dbbff50",
+      "matchesOwnInitialMetadataPin": true
+    }
+  ],
+  "allMatch": true,
+  "productBytesOpened": 0,
+  "scope": "Own earlier metadata pin set only;57 final inputs separately checked; no current source or futureGit certification"
+}

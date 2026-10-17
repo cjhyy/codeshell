@@ -1,0 +1,511 @@
+{
+  "capturedUTC": "2026-10-17T15:39:27.497555+00:00",
+  "rootContext": "Root stated ec1f6ae458d3646d07db20e876a2b9ce8c9939b9; agent0Git",
+  "repositoryRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/web/app/MessageContent.tsx",
+      "bytes": 9846,
+      "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "lineCount": 295,
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "kind": "product",
+      "selectedLineRanges": [
+        [
+          65,
+          117
+        ],
+        [
+          177,
+          295
+        ]
+      ],
+      "selectedLineCount": 172,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          295
+        ]
+      ],
+      "bodyDisplayedLineCount": 295,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          295
+        ]
+      ],
+      "displayedLineCount": 295,
+      "initialSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "initialPinUTC": "2026-10-17T15:32:14.440368+00:00",
+      "initialPinTiming": "before first current source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Ordinary copy-label/code/text/reasoning/streaming/tool/status display. Lines7–64 and119–176 are HTML/link/filesystem/clipboard platform boundaries; displayed only, no safety or native correctness conclusion.",
+      "prepPinRow": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "lines": 295,
+        "capturedUTC": "2026-10-17T15:32:14.440368+00:00",
+        "timing": "before59 product body read"
+      }
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lineCount": 1404,
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "kind": "product",
+      "selectedLineRanges": [
+        [
+          61,
+          98
+        ],
+        [
+          783,
+          788
+        ],
+        [
+          806,
+          845
+        ]
+      ],
+      "selectedLineCount": 84,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          61,
+          100
+        ],
+        [
+          120,
+          172
+        ],
+        [
+          775,
+          846
+        ]
+      ],
+      "bodyDisplayedLineCount": 185,
+      "additionalNavigationSnippetLines": [
+        362,
+        366,
+        367,
+        369,
+        372,
+        622
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          61,
+          100
+        ],
+        [
+          120,
+          172
+        ],
+        [
+          362,
+          362
+        ],
+        [
+          366,
+          367
+        ],
+        [
+          369,
+          369
+        ],
+        [
+          372,
+          372
+        ],
+        [
+          622,
+          622
+        ],
+        [
+          775,
+          846
+        ]
+      ],
+      "displayedLineCount": 191,
+      "initialSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "initialPinUTC": "2026-10-17T15:35:41.780776+00:00",
+      "initialPinTiming": "before first current source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Controller DTO destructuring and actual message dispatch. Navigation to auth/approval/file callback names and viewport/history hooks does not review their mechanisms.",
+      "prepPinRow": {
+        "path": "packages/web/app/Workbench.tsx",
+        "bytes": 53688,
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+        "lineCount": 1404,
+        "pinUTC": "2026-10-17T15:35:41.780776+00:00",
+        "beforeSemanticOrNavigationRead": true
+      }
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "lineCount": 800,
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "kind": "product",
+      "selectedLineRanges": [
+        [
+          37,
+          67
+        ],
+        [
+          189,
+          241
+        ],
+        [
+          243,
+          271
+        ],
+        [
+          273,
+          294
+        ],
+        [
+          327,
+          361
+        ],
+        [
+          463,
+          476
+        ],
+        [
+          479,
+          492
+        ]
+      ],
+      "selectedLineCount": 198,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          17
+        ],
+        [
+          37,
+          68
+        ],
+        [
+          173,
+          303
+        ],
+        [
+          327,
+          361
+        ],
+        [
+          463,
+          507
+        ]
+      ],
+      "bodyDisplayedLineCount": 260,
+      "additionalNavigationSnippetLines": [
+        70,
+        85,
+        91,
+        133,
+        312,
+        363,
+        364,
+        365,
+        366,
+        367,
+        373,
+        381,
+        386,
+        392,
+        393,
+        406,
+        422,
+        426,
+        438,
+        570,
+        591,
+        751,
+        752,
+        760,
+        763
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          17
+        ],
+        [
+          37,
+          68
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          133,
+          133
+        ],
+        [
+          173,
+          303
+        ],
+        [
+          312,
+          312
+        ],
+        [
+          327,
+          361
+        ],
+        [
+          363,
+          367
+        ],
+        [
+          373,
+          373
+        ],
+        [
+          381,
+          381
+        ],
+        [
+          386,
+          386
+        ],
+        [
+          392,
+          393
+        ],
+        [
+          406,
+          406
+        ],
+        [
+          422,
+          422
+        ],
+        [
+          426,
+          426
+        ],
+        [
+          438,
+          438
+        ],
+        [
+          463,
+          507
+        ],
+        [
+          570,
+          570
+        ],
+        [
+          591,
+          591
+        ],
+        [
+          751,
+          752
+        ],
+        [
+          760,
+          760
+        ],
+        [
+          763,
+          763
+        ]
+      ],
+      "displayedLineCount": 285,
+      "initialSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialPinUTC": "2026-10-17T15:35:41.782672+00:00",
+      "initialPinTiming": "before first current source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Selected normal DTO/stream accumulation/tool result/sealing branches only. No replay/identity/transport/fallback authority conclusion; other rg lines are navigation.",
+      "prepPinRow": {
+        "path": "packages/web/src/lib/streamReducer.ts",
+        "bytes": 28526,
+        "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+        "lineCount": 800,
+        "pinUTC": "2026-10-17T15:35:41.782672+00:00",
+        "beforeSemanticOrNavigationRead": true
+      }
+    },
+    {
+      "path": "packages/web/app/MessageContent.test.tsx",
+      "bytes": 5526,
+      "sha256": "aa4590f3e190b592eb2afa1d806e338ce4f0d80b6960fc7fab9074682c943111",
+      "lineCount": 131,
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "kind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          10,
+          39
+        ],
+        [
+          60,
+          65
+        ],
+        [
+          83,
+          103
+        ]
+      ],
+      "selectedLineCount": 57,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          131
+        ]
+      ],
+      "bodyDisplayedLineCount": 131,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          131
+        ]
+      ],
+      "displayedLineCount": 131,
+      "initialSha256": "aa4590f3e190b592eb2afa1d806e338ce4f0d80b6960fc7fab9074682c943111",
+      "initialPinUTC": "2026-10-17T15:35:31.797416+00:00",
+      "initialPinTiming": "before first current source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Existing declarations only; renderer imports and all HTML/scheme/host-image/security assertions were displayed but not executed or adopted as evidence.",
+      "prepPinRow": {
+        "path": "packages/web/app/MessageContent.test.tsx",
+        "bytes": 5526,
+        "sha256": "aa4590f3e190b592eb2afa1d806e338ce4f0d80b6960fc7fab9074682c943111",
+        "lineCount": 131,
+        "pinUTC": "2026-10-17T15:35:31.797416+00:00",
+        "beforeSemanticRead": true
+      }
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "coverage": "hash-only; no new semantic source reading",
+      "kind": "unread-adjacent-hook",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "initialPinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "initialPinTiming": "before any navigation/body; no body subsequently read",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "bytes": 6078,
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173,
+        "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+        "beforeSemanticOrNavigationRead": true
+      }
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only; no new semantic source reading",
+      "kind": "instruction-carried-hash",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": null,
+      "initialPinUTC": "2026-10-17T15:32:14.441582+00:00",
+      "initialPinTiming": "carried previous instruction reading, exact original first-read timing unavailable",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "capturedUTC": "2026-10-17T15:32:14.441582+00:00",
+        "timing": "carried earlier instruction read hash; no new semantic read"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only; no new semantic source reading",
+      "kind": "instruction-carried-hash",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": null,
+      "initialPinUTC": "2026-10-17T15:32:14.441950+00:00",
+      "initialPinTiming": "carried previous instruction reading, exact original first-read timing unavailable",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "capturedUTC": "2026-10-17T15:32:14.441950+00:00",
+        "timing": "carried earlier instruction read hash; no new semantic read"
+      }
+    }
+  ],
+  "semanticScopeCounts": {
+    "productSelectedLines": 454,
+    "testDeclarationSelectedLines": 57,
+    "semanticSelectedLines": 511,
+    "displayedUniqueSourceLines": 902,
+    "selectedSourceRows": 4,
+    "hashOnlyRows": 3,
+    "explicitSemanticFullRows": 0
+  },
+  "rangeConvention": "One-based inclusive; canonical displayedLineRanges is union of body and additional rg navigation lines; selected subset checked. Repeat console displays do not add new semantic lines. Full-file text display is not upgraded to semantic full where boundary portions were excluded.",
+  "historicalReading": "All MD text/JSON scalar keyword traversal is navigation. Twelve same-path/SHA metadata rows and selected historical contexts were inspected; no entire-history semantic claim.",
+  "runs": {
+    "product": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "helpers": 0,
+    "react": 0,
+    "browser": 0,
+    "network": 0,
+    "native": 0,
+    "git": 0
+  }
+}

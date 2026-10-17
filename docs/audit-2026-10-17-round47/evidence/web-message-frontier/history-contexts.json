@@ -1,0 +1,2391 @@
+{
+  "createdUTC": "2026-10-17T15:32:21.054346+00:00",
+  "hits": {
+    "source_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2338",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3976/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+        "jsonPointer": "/currentByteOnlyChecks/11/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "byteOnlyNow": true
+        },
+        "sourceSha256": "639aab6d7bea71f41498920a285475b2b8557a59757e71dde23a69b0127238d4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/consumer-initial-pins.json",
+        "jsonPointer": "/files/2/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lineCount": 295,
+          "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+          "coverage": "hash-only before current consumer content read"
+        },
+        "sourceSha256": "f358fd7ff4127668d19bfd6d60909156b94265dea793d88a26281678a0129ded"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json"
+        },
+        "sourceSha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "jsonPointer": "/hashOnlyFiles/5/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json",
+          "coverage": "hash-only; no product body semantic reading",
+          "firstPinCapturedAtUTC": null
+        },
+        "sourceSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/files/45/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentBytes": 9846,
+          "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "mainBytes": 9846,
+          "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/hashOnlyChecks/5/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "manifest": "dataset-frontier/source-manifest.json",
+          "collection": "hashOnlyFiles",
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "coverage": "hash-only; no product body semantic reading",
+          "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+        "jsonPointer": "/files/10/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitSelectedClaimIds": [],
+          "historicalClaimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "whySuggested": "Ordinary message text/display metadata; old format/markdown/stream causes require exact gate.",
+          "notUnreadClaim": true,
+          "sourceBodyOpened": false,
+          "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+        },
+        "sourceSha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15906/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/web/app/MessageContent.tsx"
+          ],
+          "origin": "list-scalar",
+          "provenance": [
+            {
+              "historyRow": 198,
+              "jsonPointer": "/source_inventory/2338"
+            },
+            {
+              "historyRow": 3390,
+              "jsonPointer": "/module_inventory/84740d56/paths/137"
+            },
+            {
+              "historyRow": 3390,
+              "jsonPointer": "/module_inventory/a66f4ef2/paths/138"
+            }
+          ],
+          "claimId": "C015907"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15906/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "sourceHashFields": {
+            "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/web/app/MessageContent.tsx"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 1350,
+              "jsonPointer": "/files/3976"
+            }
+          ],
+          "claimId": "C015908"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 2
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+        "jsonPointer": "/rankChecks/10/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesDatedCandidate": true,
+          "inDrift": false
+        },
+        "sourceSha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/3889",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4300/path",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/84740d56/paths/137",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/a66f4ef2/paths/138",
+        "line": 1,
+        "needle": "packages/web/app/messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      }
+    ],
+    "source_filename": [
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "jsonPointer": null,
+        "line": 318,
+        "needle": "messagecontent.tsx",
+        "context": ":20` | agent 思考或工具运行时显示 |\n| **Banner / UpdateBanner / WelcomeTips** | 顶部启动信息、更新提示和欢迎提示 | `packages/tui/src/ui/components/Banner.tsx:42`，`packages/tui/src/ui/components/UpdateBanner.tsx:25`，`packages/tui/src/ui/components/WelcomeTips.tsx:36` | REPL 启动或更新可用时显示 |\n| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |\n| **工具调用视图** | 展示工具 start/running/result 和嵌套前缀 | `packages/tui/src/ui/components/ToolCall.tsx:42`，`packages/tui/src/ui/components/ToolCall.tsx:98`，`packages/tui/src/ui/components/AgentBlock.tsx:26` | 工具调用时自动折叠/展开 |\n| **Diff 视图** | 渲染 diff 行、结构化 diff 和普通 diff view | `packages/tui/src/ui/components/DiffView.tsx:18`，`packages/tui/src/ui/components/DiffLine.tsx:52`，`packages/tui/src/ui/components/StructuredDiff.tsx:17` | `/diff`、审批和文件编辑结果中使用 |\n| **输入历史** | 按 session/project 记录、搜索、导航、flush 历史 | `packages/tui/src/ui/input-history.ts:66`，`packages/tui/src/ui/input-history.ts:192`，`packages/tui/src/ui/input-history.ts:286` |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+      },
+      {
+        "path": "docs/archive/todo/fix-batch-8-2026-07-08.md",
+        "jsonPointer": null,
+        "line": 16,
+        "needle": "messagecontent.tsx",
+        "context": "ll an owned pty; existing resize/shell tests rerun | Failing regression observed, then `bun test packages/desktop/src/main/pty-ownership.test.ts packages/desktop/src/main/pty-resize-clamp.test.ts` passed twice before commit. |\n| Markdown render cache ignores width | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/MessageContent.tsx:23` | `1f59c49cd3d56f07813af6e7ca4d4c6fd31a6dff` | `packages/tui/src/ui/components/MessageContent.test.ts`: same markdown renders separately for different terminal widths | Failing regression observed, then `bun test packages/tui/src/ui/components/MessageContent.test.ts` passed before and after formatting, before commit. |\n\nFinal focused verification:\n\n`bun test tests/provider-model-flow-secret.test.tsx tests/text-input.test.ts packages/tui/src/ui/App.slash-command.test.ts packages/tui/src/ui/App.render-entry.test.tsx packages/desktop/src/main/pty-ownership.test.ts packages/desktop/src/main/pty-resize-clamp.test.ts packages/tui/src/ui/components/MessageContent.test.ts`\n\nResult: `19 pass`, `",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3ec27298fc5aa8b160a6955b49950b9fc751e816214b457126de6e071880cadb"
+      },
+      {
+        "path": "docs/archive/todo/review-master-2026-07-08.md",
+        "jsonPointer": null,
+        "line": 69,
+        "needle": "messagecontent.tsx",
+        "context": "lay time | `packages/desktop/src/renderer/types.ts:702` | `agent_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | Render cache keys only by markdown text, and `marked-terminal` width is captured once. | Include effective width in cache key and recreate/parameterize marked renderer on resize. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | New-message pill/divider has no scroll-away source | `packages/tui/src/ui/components/FullscreenLayout.tsx:170` | `useUnseenDivider().onScrollAway` exists but is not wired from `VirtualMessageList`/`ScrollBox`. | Expose sticky/scroll-away changes and call `onScrollAway`; keep jump-to-bottom clearing. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Compact tool-result flag is not rendered | `packages/tui/src/ui/App.tsx:2101` | Tool-result entries set `compact`, but `renderEntry",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61"
+      },
+      {
+        "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+        "jsonPointer": null,
+        "line": 111,
+        "needle": "messagecontent.tsx",
+        "context": "lers cannot distinguish a stale extract ref from a generic image-read failure, so they may not know to re-run extraction/snapshot before retrying.\n\nFix: include `staleRef: true` on missing-ref returns, and consider doing the same for ref lookup failures that indicate the tagged DOM node disappeared.\n\n## 🟡 Minor\n\n### `packages/tui/src/ui/components/MessageContent.tsx:23` - markdown render cache ignores terminal width\n\nProblem: the LRU cache is keyed only by markdown text, and `getMarkedInstance()` captures `process.stdout.columns` only when the singleton is first created at lines 82-86.\n\nImpact: after terminal resize, rows can re-render because `MessageRow` receives new `columns`, but cached ANSI and the singleton `marked-terminal` width can still reflect the old terminal width. This causes stale wrapping/reflow.\n\nFix: include effective width in the cache key and recreate or parameterize the `Marked` instance when width changes. Clear width-sensitive cache entries on resize.\n\n### `packages/tui/src/ui/components/FullscreenLayout.tsx:170` - new-message pi",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "dc0153bc7f0e9fed765900d98921fe5c59f0cf3b1fb29bce16a7674306f0859f"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2273",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2338",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "jsonPointer": "/hits/transcript_projection/19/context",
+        "line": 2,
+        "needle": "messagecontent.tsx",
+        "context": "t_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | Render cache keys only by markdown text, and `marked-terminal` width is captured once. | Include effective width in cache ",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "acb6dd8a20c8e4e5a2fc7130d49be5a72beeb07c61bc51cfa9671a8dfff8c68e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/105/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "jsonPointer": "/matches/format/33/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4fac52f58f4b0b7e0d2345b0c18f5715a4fe7b4d8a60eede695ed623dbe98ca8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-exports-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 22,
+        "needle": "messagecontent.tsx",
+        "context": "components/MessageContent.test.ts:3:  __renderMarkdownForTest,\npackages/tui/src/ui/components/MessageContent.test.ts:79:    const wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-exports-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 23,
+        "needle": "messagecontent.tsx",
+        "context": "79:    const wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;\npackages/desktop/src/renderer/Markdown.authority.test.tsx:47:async function renderMarkdown(element: React.ReactEleme",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-exports-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 24,
+        "needle": "messagecontent.tsx",
+        "context": " const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;\npackages/desktop/src/renderer/Markdown.authority.test.tsx:47:async function renderMarkdown(element: React.ReactElement): Promise<void> {\npackages/desktop/src/renderer/Markdown.authority.test.tsx:110:      await renderMarkdown(\npackages/desktop/src/r",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-exports-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 25,
+        "needle": "messagecontent.tsx",
+        "context": ".tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;\npackages/desktop/src/renderer/Markdown.authority.test.tsx:47:async function renderMarkdown(element: React.ReactElement): Promise<void> {\npackages/desktop/src/renderer/Markdown.authority.test.tsx:110:      await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:151:      await renderMarkdown(<Markdown text={`[report](/outside-project/${re",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-exports-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 26,
+        "needle": "messagecontent.tsx",
+        "context": "sx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;\npackages/desktop/src/renderer/Markdown.authority.test.tsx:47:async function renderMarkdown(element: React.ReactElement): Promise<void> {\npackages/desktop/src/renderer/Markdown.authority.test.tsx:110:      await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:151:      await renderMarkdown(<Markdown text={`[report](/outside-project/${result}.md)`} />);\npackages/desktop/src/renderer/Markdown.authority.test.tsx:168:    await renderMarkdown(\npackages/deskt",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-exports-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 27,
+        "needle": "messagecontent.tsx",
+        "context": "ent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;\npackages/desktop/src/renderer/Markdown.authority.test.tsx:47:async function renderMarkdown(element: React.ReactElement): Promise<void> {\npackages/desktop/src/renderer/Markdown.authority.test.tsx:110:      await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:151:      await renderMarkdown(<Markdown text={`[report](/outside-project/${result}.md)`} />);\npackages/desktop/src/renderer/Markdown.authority.test.tsx:168:    await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:184:    await renderMarkdown(<Markdown text=\"[unavailable](/outside-project/no-bridg",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/979/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3890/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3976/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+        "jsonPointer": "/hits/chat-view/16/context",
+        "line": 3,
+        "needle": "messagecontent.tsx",
+        "context": "lay time | `packages/desktop/src/renderer/types.ts:702` | `agent_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | Render ca",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+        "jsonPointer": "/hits/ordinary-contract/11/context",
+        "line": 4,
+        "needle": "messagecontent.tsx",
+        "context": "lay time | `packages/desktop/src/renderer/types.ts:702` | `agent_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | ",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/18/excerpt",
+        "line": 4,
+        "needle": "messagecontent.tsx",
+        "context": "components/MessageContent.test.ts:3:  __renderMarkdownForTest,\npackages/tui/src/ui/components/MessageContent.test.ts:79:    const wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tu",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/18/excerpt",
+        "line": 5,
+        "needle": "messagecontent.tsx",
+        "context": "79:    const wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tu",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/18/excerpt",
+        "line": 6,
+        "needle": "messagecontent.tsx",
+        "context": " const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tu",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/18/excerpt",
+        "line": 7,
+        "needle": "messagecontent.tsx",
+        "context": ".tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tu",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/19/excerpt",
+        "line": 3,
+        "needle": "messagecontent.tsx",
+        "context": "nst wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/19/excerpt",
+        "line": 4,
+        "needle": "messagecontent.tsx",
+        "context": "nst wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/19/excerpt",
+        "line": 5,
+        "needle": "messagecontent.tsx",
+        "context": " const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/19/excerpt",
+        "line": 6,
+        "needle": "messagecontent.tsx",
+        "context": ".tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/19/excerpt",
+        "line": 7,
+        "needle": "messagecontent.tsx",
+        "context": "sx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_path/2/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_path/29/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_path/59/context",
+        "line": 6,
+        "needle": "messagecontent.tsx",
+        "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_path/60/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_filename/2/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_filename/33/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_filename/63/context",
+        "line": 6,
+        "needle": "messagecontent.tsx",
+        "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/source_filename/64/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "ssages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/format_contract/56/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "jsonPointer": "/hits/format_contract/126/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+        "jsonPointer": "/rows/1/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+        "jsonPointer": "/rows/8/context",
+        "line": 6,
+        "needle": "messagecontent.tsx",
+        "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+        "jsonPointer": "/rows/9/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+        "jsonPointer": "/rows/16/context",
+        "line": 6,
+        "needle": "messagecontent.tsx",
+        "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+        "jsonPointer": "/rows/17/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "ssages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+        "jsonPointer": "/web-format/2/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b579cdb280d0ab316d85fce27b85e658bb6bd56cd84d26347afd869bdb7456f4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+        "jsonPointer": "/web-format/29/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b579cdb280d0ab316d85fce27b85e658bb6bd56cd84d26347afd869bdb7456f4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+        "jsonPointer": "/web-format/57/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b579cdb280d0ab316d85fce27b85e658bb6bd56cd84d26347afd869bdb7456f4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+        "jsonPointer": "/currentByteOnlyChecks/11/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "byteOnlyNow": true
+        },
+        "sourceSha256": "639aab6d7bea71f41498920a285475b2b8557a59757e71dde23a69b0127238d4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/consumer-initial-pins.json",
+        "jsonPointer": "/files/2/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lineCount": 295,
+          "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+          "coverage": "hash-only before current consumer content read"
+        },
+        "sourceSha256": "f358fd7ff4127668d19bfd6d60909156b94265dea793d88a26281678a0129ded"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+        "jsonPointer": "/hits/packages~1web~1src~1lib~1format.ts/13/excerpt",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7b87f0f00eebd364209af8f6ecbf9a28e653ea95ff6e52c256631c3955d34832"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+        "jsonPointer": "/hits/packages~1web~1src~1lib~1format.ts/37/excerpt",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7b87f0f00eebd364209af8f6ecbf9a28e653ea95ff6e52c256631c3955d34832"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json"
+        },
+        "sourceSha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "jsonPointer": "/hashOnlyFiles/5/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json",
+          "coverage": "hash-only; no product body semantic reading",
+          "firstPinCapturedAtUTC": null
+        },
+        "sourceSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+        "jsonPointer": "/hits/draft_switch/25/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4e25135927eddee1fb4b28674f1d434bda91adde1f6f5b9b270327e39b9bcc0b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+        "jsonPointer": "/hits/draft_switch/26/context",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4e25135927eddee1fb4b28674f1d434bda91adde1f6f5b9b270327e39b9bcc0b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/files/45/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentBytes": 9846,
+          "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "mainBytes": 9846,
+          "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/hashOnlyChecks/5/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "manifest": "dataset-frontier/source-manifest.json",
+          "collection": "hashOnlyFiles",
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "coverage": "hash-only; no product body semantic reading",
+          "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+        "jsonPointer": "/files/10/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitSelectedClaimIds": [],
+          "historicalClaimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "whySuggested": "Ordinary message text/display metadata; old format/markdown/stream causes require exact gate.",
+          "notUnreadClaim": true,
+          "sourceBodyOpened": false,
+          "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+        },
+        "sourceSha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15640/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15640/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15641/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15641/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15642/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15642/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15906/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/web/app/MessageContent.tsx"
+          ],
+          "origin": "list-scalar",
+          "provenance": [
+            {
+              "historyRow": 198,
+              "jsonPointer": "/source_inventory/2338"
+            },
+            {
+              "historyRow": 3390,
+              "jsonPointer": "/module_inventory/84740d56/paths/137"
+            },
+            {
+              "historyRow": 3390,
+              "jsonPointer": "/module_inventory/a66f4ef2/paths/138"
+            }
+          ],
+          "claimId": "C015907"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15906/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "sourceHashFields": {
+            "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/web/app/MessageContent.tsx"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 1350,
+              "jsonPointer": "/files/3976"
+            }
+          ],
+          "claimId": "C015908"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4213/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 2
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+        "jsonPointer": "/rankChecks/10/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesDatedCandidate": true,
+          "inDrift": false
+        },
+        "sourceSha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4213/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/3820",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/3889",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4214/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4300/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+        "jsonPointer": "/matches/111/excerpt",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "out/index.ts:1`、`enums.ts:1` 来自 Facebook Yoga）；CDP keymap（`cdp/src/keymap.ts:1` 翻译自 browser-use）；Claude Code restored-src 引用（`MessageContent.tsx:352`、`setup.ts:1`、`query.ts:1`）。均未见随包 license/notice。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "cb465195195433b72d3de735ea2a724470a22fd3bf6ad781f58f83fbe61dd7c2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-diff-semantic.json",
+        "jsonPointer": "/matches/21/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "| Markdown render cache ignores width | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/MessageContent.tsx:23` | `1f59c49cd3d56f07813af6e7ca4d4c6fd31a6dff` | `packages/tui/src/ui/components/MessageContent.test.ts`: same markdown renders separately for different terminal widths | Failing regression observed, then `bun test packages/tui/src/ui/components/MessageContent.test.ts` passed before and after formatting, before commit. |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "465c7fe536e06a0bd9f528ef437a2d9c9158bdebf5bb7839cf670e2fffbcfcc9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "jsonPointer": "/matches/2/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc0828bccb07f0f3110d59256d37c4735ebb5e7ca642ca555d69bb17a732ddbb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+        "jsonPointer": "/hits/121/excerpt",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "- Modify: `src/ui/components/TextInput.tsx`, `src/ui/components/MessageContent.tsx` — switch from `../../render/Ansi.js` to `../../render/index.js`.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b8bf7612968474cf492206e8479e0735e7f83836183a28ec0e9039a815d3f2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+        "jsonPointer": "/hits/125/excerpt",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "git add src/render/index.ts src/ui/components/TextInput.tsx src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b8bf7612968474cf492206e8479e0735e7f83836183a28ec0e9039a815d3f2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+        "jsonPointer": "/hits/147/excerpt",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "render/Ansi.js`. M1 adds an `Ansi` re-export from `index.ts` and migrates the two known consumers (`TextInput.tsx`, `MessageContent.tsx`) to import from `index.js`. The deep path stays working but README marks it `internal`.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b8bf7612968474cf492206e8479e0735e7f83836183a28ec0e9039a815d3f2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/124/matches/1/text",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "jsonPointer": null,
+        "line": 32,
+        "needle": "messagecontent.tsx",
+        "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "71e9ee030f1e0bb0945f67407051fff6238a58b8c054784dd81009af55988ce3"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "jsonPointer": null,
+        "line": 48,
+        "needle": "messagecontent.tsx",
+        "context": "未有正常Claude writer写null证据，影响限定该会话而非所有正常历史。和10-16 SWC-05导致整个磁盘会话目录查询失败的广泛影响不同。保留“本地损坏边界”条件，勿宣传正常writer可触发。2 pass /4 expect /Completed与报告一致。 |\n| R2-05 | 保留P3。`stripMarkdown.ts:6–8` 明确fenced code正文verbatim；`:14` 先移围栏，`:39–40` 后改暴露代码，Python正文实际变成name/main/abc。2 pass /6 expect /Completed、普通prose及简单代码对照充分；只影响回复整段“纯文本复制”，不是代码块独立复制、原消息丢失。 |\n| R2-06 | 建议P3。`MessageContent.tsx:158–175` 在原始文本扫描表格而不跟踪fence，`:316` hybrid先提取表格，故代码示例被拆成真正表格。真实TUI fixture输出保留尾部三反引号却丢失表格源码分隔符；简单含pipe代码与普通表格对照正常。不是支架自行渲染替代实现。 |\n| R2-07 | 建议P3。`MessageContent.tsx:177–181` 用split(\"\\u007c\")错误切escaped pipe，header两列使第三项expected-tail不被展示。真实TUI输出为left反斜杠/right，原last-column文本消失；属于内容误列/缺列，原消息仍在。规范明确escaped pipe属于cell内容，因此不是要求支持未承诺扩展。 |\n| R2-08 | 建议P3。`external-agent-changes.ts:121` 只识别Update/Add/Delete File，不含Move to；正常rename返回已移除旧路径却遗漏新路径，违背该模块`:16–20` “set of changed files / N files edited”归属目标。3 pass /6 expect /Completed，包括普通三种header对照。第三项JSON arguments异常确有观察，但是否实际Codex writer用JSON包装apply_patch尚待证明，应该继续标候选，不能扩为第二正式bug。未执行真实外部CLI、patch或UI review。 |\n\nR2-06与07共享 `root-tui-tables.log`，整组只有3 pass /",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "jsonPointer": null,
+        "line": 49,
+        "needle": "messagecontent.tsx",
+        "context": "kdown.ts:6–8` 明确fenced code正文verbatim；`:14` 先移围栏，`:39–40` 后改暴露代码，Python正文实际变成name/main/abc。2 pass /6 expect /Completed、普通prose及简单代码对照充分；只影响回复整段“纯文本复制”，不是代码块独立复制、原消息丢失。 |\n| R2-06 | 建议P3。`MessageContent.tsx:158–175` 在原始文本扫描表格而不跟踪fence，`:316` hybrid先提取表格，故代码示例被拆成真正表格。真实TUI fixture输出保留尾部三反引号却丢失表格源码分隔符；简单含pipe代码与普通表格对照正常。不是支架自行渲染替代实现。 |\n| R2-07 | 建议P3。`MessageContent.tsx:177–181` 用split(\"\\u007c\")错误切escaped pipe，header两列使第三项expected-tail不被展示。真实TUI输出为left反斜杠/right，原last-column文本消失；属于内容误列/缺列，原消息仍在。规范明确escaped pipe属于cell内容，因此不是要求支持未承诺扩展。 |\n| R2-08 | 建议P3。`external-agent-changes.ts:121` 只识别Update/Add/Delete File，不含Move to；正常rename返回已移除旧路径却遗漏新路径，违背该模块`:16–20` “set of changed files / N files edited”归属目标。3 pass /6 expect /Completed，包括普通三种header对照。第三项JSON arguments异常确有观察，但是否实际Codex writer用JSON包装apply_patch尚待证明，应该继续标候选，不能扩为第二正式bug。未执行真实外部CLI、patch或UI review。 |\n\nR2-06与07共享 `root-tui-tables.log`，整组只有3 pass /10 expect /Completed；不能把每项分别计3个测试。R2-08日志含2项rename/正常对照与1项JSON候选，总3个测试，只1个正式发现。\n\nGFM契约已核对官方[4.5 Fenced code blocks](https://github.github.com/gfm/#fenced-code-block",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c"
+      },
+      {
+        "path": "docs/audit-2026-10-17/findings.json",
+        "jsonPointer": "/findings/5/source",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7e197f4b8b12f058ceeefbb8c73e0fbb292da844823b9a33fd9e19bcafabdb0d"
+      },
+      {
+        "path": "docs/audit-2026-10-17/findings.json",
+        "jsonPointer": "/findings/6/source",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7e197f4b8b12f058ceeefbb8c73e0fbb292da844823b9a33fd9e19bcafabdb0d"
+      },
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "jsonPointer": null,
+        "line": 55,
+        "needle": "messagecontent.tsx",
+        "context": "top/src/renderer/messages/AssistantMessageView.tsx:53` 将此函数结果交给复制 hook。\n- 证据：`evidence/root-copy-code.test.ts` 调用真实转换函数，普通 prose 强调和简单代码块为正常对照。日志 `root-copy-code.log` 为 2 pass / 6 expect / 0 fail/skip / Completed；未操作实际剪贴板。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-06 [P3] TUI 把代码围栏内的表格源码提取成真实表格\n\n- 位置：`packages/tui/src/ui/components/MessageContent.tsx:164-175` 逐行检测表格，没有保留代码围栏状态；`:316` 在 Markdown parser 前运行该提取器。\n- 触发：回复用 md 代码围栏展示三行 Markdown 表格源码。预期管道符和分隔行作为代码保留；实际渲染为 flex table，原始管道符/分隔行消失，并把闭合围栏单独显示为三个反引号。\n- 影响：用户看到的示例结构与代码原文不符，难以照着抄写；原消息数据仍在，不属于持久数据丢失。\n- 证据：`evidence/root-tui-tables.test.ts` 第一项直接挂载真实 MessageContent 与本仓 renderer，用 PassThrough 捕获输出；普通 fenced code 中的管道符和真实表格为正常对照。原始 `root-tui-tables.log` 为 3 pass / 10 expect / 0 fail/skip / Completed（也包含 R2-07）。未启动真实终端或模型；logger 等包依赖读取安装的 dist，组件和 renderer 从源码导入。\n- 语义依据：代码围栏正文作为 literal text 保留，见 [CommonMark §4.5](https://spec.commonmark.org/0.31.2/#fenced-code-blocks)。\n- 查重：上一轮主 findings 和 root/TUI 报告未见同根因确认项。\n\n### R2-07 [P3] TUI 表格单元格含转义管道符时，后列正文从显示中消失\n\n- 位置：`packages/tui/src/ui/compon",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+      },
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "jsonPointer": null,
+        "line": 64,
+        "needle": "messagecontent.tsx",
+        "context": ".log` 为 3 pass / 10 expect / 0 fail/skip / Completed（也包含 R2-07）。未启动真实终端或模型；logger 等包依赖读取安装的 dist，组件和 renderer 从源码导入。\n- 语义依据：代码围栏正文作为 literal text 保留，见 [CommonMark §4.5](https://spec.commonmark.org/0.31.2/#fenced-code-blocks)。\n- 查重：上一轮主 findings 和 root/TUI 报告未见同根因确认项。\n\n### R2-07 [P3] TUI 表格单元格含转义管道符时，后列正文从显示中消失\n\n- 位置：`packages/tui/src/ui/components/MessageContent.tsx:177-181` 直接按每个 `|` split；表格 renderer `:297-303` 按 header 列数渲染 data cell。\n- 触发：两列表格第一格包含合法的 `left \\| right`，第二格是 `expected-tail`。预期两格分别显示 `left | right` 和 `expected-tail`；实际被切成三格，显示前两格 `left` 加一个反斜杠、`right`，最后一格完全不显示。原始日志的 JSON 表示会将这个反斜杠转义成两个。\n- 影响：普通表格回复在显示层静默丢失后列内容并错列，原始消息没有改变；未宣称导出/复制或其他 host renderer 同样受影响。\n- 证据：上述 `root-tui-tables.test.ts` 第三项挂载真实组件，原始日志保存输入与扁平显示文本；同组真实普通表格为正常对照。只执行 isolated renderer，没有外部会话/UI自动化。\n- 语义依据：[GFM §4.10 Example 200](https://github.github.com/gfm/#example-200) 明确单元格内的转义管道符是正文的一部分；本组件采用的 marked-terminal 支持 GFM，但该前置手工提取器绕过 parser。\n- 查重：上一轮主 findings 和 root/TUI 报告未见同根因确认项。与 R2-06 的围栏状态错误分别记录，修复边界不同。\n\n### R2-08 [P3] Codex apply_patch 重命名的变更文件列表遗漏新路径\n\n- 位置：`packag",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+      },
+      {
+        "path": "docs/audit-2026-10-17/source-manifest.json",
+        "jsonPointer": "/files/42/path",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/tui/src/ui/components/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27f492ee3e4314ea5b808155d5fab860882c4b717750e39ae60d1cfa3cd5aae1"
+      },
+      {
+        "path": "docs/review-2026-07-09/pre-beta-04-tui-cdp-config.md",
+        "jsonPointer": null,
+        "line": 31,
+        "needle": "messagecontent.tsx",
+        "context": "kages/cdp/README.md:7` 写 `npm install @cjhyy/code-shell-cdp`。\n- 建议：不发布就改 README 为 internal 说明；要公开则移除 private 并加入发布流程。\n- 阻塞 beta：是（公开文档误导安装不存在的包）。\n\n### M3 第三方来源归属缺随包 notice（法律，确证）\n- 证据：Yoga TS port（`tui/src/native-ts/yoga-layout/index.ts:1`、`enums.ts:1` 来自 Facebook Yoga）；CDP keymap（`cdp/src/keymap.ts:1` 翻译自 browser-use）；Claude Code restored-src 引用（`MessageContent.tsx:352`、`setup.ts:1`、`query.ts:1`）。均未见随包 license/notice。\n- 建议：逐项确认来源许可证，补 copyright/license/notice 并确保进发布包；来源不明的重写。\n- 阻塞 beta：建议阻塞到 provenance 明确。\n\n## Minor\n- m1 README（`:130` 中英）写 general preset 47 个 built-ins 且漏 `AddMarketplace`；实际 `preset/index.ts:34` GENERAL_BUILTINS 有 48 个，AddMarketplace 在 `:89`。\n- m2 `tui/README.md:34` 子命令表漏 `runs`（`main.ts:159` 已注册）。\n- m3 `CHANGELOG.md:34` 写 sample roles 在 `examples/agents/`（不存在，实际 `packages/desktop/resources/agents/`）；`:45` 写 `apiKeyRef`，实际 schema 用 `credentialId`（`schema.ts:170`）。\n- m4 clean checkout 未 build 时 source-dev 命令因找不到 `@cjhyy/code-shell-core` 失败（贡献者体验，npm 发布路径不受影响，workflow 会 build）。\n\n## Nit\n- `tui/README.md:15` 写 Node 17+、`cdp/README.md:15` ",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8102fe9a7a97ebc24023454ffa082ec4b3256ab61a0654026e16cbd2f53b9fea"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/84740d56/paths/137",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/a66f4ef2/paths/138",
+        "line": 1,
+        "needle": "messagecontent.tsx",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+        "jsonPointer": null,
+        "line": 26,
+        "needle": "messagecontent.tsx",
+        "context": "-design.md`](../specs/2026-05-16-tui-render-capability-design.md)\n\n---\n\n## File map\n\nPer milestone — files created or modified.\n\n**M1 — Contract & test floor**\n- Modify: `src/render/README.md` — rewrite to canonical API contract.\n- Modify: `src/render/index.ts` — add `Ansi` re-export.\n- Modify: `src/ui/components/TextInput.tsx`, `src/ui/components/MessageContent.tsx` — switch from `../../render/Ansi.js` to `../../render/index.js`.\n- Modify: `docs/architecture/11-render-tui-capability-plan.md` — drop the duplicate API table, point to the README.\n- Create: `tests/fixtures/render/keypress/plain.txt`, `ctrl-meta.txt`, `kitty.txt`, `modify-other-keys.txt`, `bracketed-paste.txt`, `mouse-wheel.txt` — captured byte fixtures for input parser tests.\n- Create: `tests/render-screen.test.ts` — layout / wide-char / ANSI / hyperlink / NoSelect / soft-wrap.\n- Create: `tests/render-diff.test.ts` — frame diff, blit, alt-screen clamp, resize.\n- Create: `tests/render-input.test.ts` — keypress parser against fixtures.\n\n**M2 — Scroll acceptance**\n- Commit (no edits): `src/u",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+        "jsonPointer": null,
+        "line": 82,
+        "needle": "messagecontent.tsx",
+        "context": " Milestone M1 — Contract & Test Floor\n\n### Task 1: Re-export `<Ansi>` from `src/render/index.ts`\n\n**Why:** Two UI files deep-import `../../render/Ansi.js`. Per spec §4.2, anything `supported` must be reachable through `index.ts`.\n\n**Files:**\n- Modify: `src/render/index.ts`\n- Modify: `src/ui/components/TextInput.tsx:12`\n- Modify: `src/ui/components/MessageContent.tsx:12`\n\n- [ ] **Step 1: Add the re-export**\n\nAppend to `src/render/index.ts` after the existing `AlternateScreen` line:\n\n```ts\n// Ansi — pre-rendered ANSI string into the React tree\nexport { default as Ansi } from \"./Ansi.js\";\n```\n\n- [ ] **Step 2: Update the two consumers**\n\nIn `src/ui/components/TextInput.tsx`, replace line 12:\n\n```ts\nimport { Ansi } from \"../../render/Ansi.js\";\n```\n\nwith:\n\n```ts\nimport { Ansi } from \"../../render/index.js\";\n```\n\n(Merge into the existing `from \"../../render/index.js\"` line at the top if the file already imports from it — check first; if so, just add `Ansi` to that import list and drop the deep-path line.)\n\nIn `src/ui/components/MessageContent.tsx`, do the sam",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+        "jsonPointer": null,
+        "line": 109,
+        "needle": "messagecontent.tsx",
+        "context": " line 12:\n\n```ts\nimport { Ansi } from \"../../render/Ansi.js\";\n```\n\nwith:\n\n```ts\nimport { Ansi } from \"../../render/index.js\";\n```\n\n(Merge into the existing `from \"../../render/index.js\"` line at the top if the file already imports from it — check first; if so, just add `Ansi` to that import list and drop the deep-path line.)\n\nIn `src/ui/components/MessageContent.tsx`, do the same on line 12.\n\n- [ ] **Step 3: Type-check**\n\nRun: `bun run typecheck`\nExpected: PASS, no `Ansi`-related errors.\n\n- [ ] **Step 4: Verify no other deep imports of Ansi remain**\n\nRun: `grep -rn \"render/Ansi\" src/ui src/cli 2>/dev/null`\nExpected: empty output.\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add src/render/index.ts src/ui/components/TextInput.tsx src/ui/components/MessageContent.tsx\ngit commit -m \"refactor(render): re-export <Ansi> from index; drop deep imports\"\n```\n\n---\n\n### Task 2: Rewrite `src/render/README.md` with API status table\n\n**Why:** Spec §4.1. The README is the single source of truth for the contract. The current README marks `ScrollBox` / `AlternateScreen` as \"c",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+        "jsonPointer": null,
+        "line": 124,
+        "needle": "messagecontent.tsx",
+        "context": " **Step 3: Type-check**\n\nRun: `bun run typecheck`\nExpected: PASS, no `Ansi`-related errors.\n\n- [ ] **Step 4: Verify no other deep imports of Ansi remain**\n\nRun: `grep -rn \"render/Ansi\" src/ui src/cli 2>/dev/null`\nExpected: empty output.\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add src/render/index.ts src/ui/components/TextInput.tsx src/ui/components/MessageContent.tsx\ngit commit -m \"refactor(render): re-export <Ansi> from index; drop deep imports\"\n```\n\n---\n\n### Task 2: Rewrite `src/render/README.md` with API status table\n\n**Why:** Spec §4.1. The README is the single source of truth for the contract. The current README marks `ScrollBox` / `AlternateScreen` as \"currently unused\" — false; UI uses both.\n\n**Files:**\n- Modify: `src/render/README.md` (full rewrite, ~150 lines)\n\n- [ ] **Step 1: Replace `src/render/README.md` with the contract README**\n\nReplace the entire file with:\n\n````markdown\n# `src/render/` — CodeShell Terminal Render Engine\n\nA React-based terminal UI runtime: Yoga flexbox layout, virtual DOM reconciler,\nANSI output diffing, alt-screen + mou",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+        "jsonPointer": null,
+        "line": 64,
+        "needle": "messagecontent.tsx",
+        "context": "ons`\n- `internal`: everything not exported from `src/render/index.ts`\n\n### 4.2 Export hygiene\n\n- Anything marked `supported` or `experimental` must be re-exported from `src/render/index.ts`.\n- `<Ansi>` is currently imported via `src/render/Ansi.js`. M1 adds an `Ansi` re-export from `index.ts` and migrates the two known consumers (`TextInput.tsx`, `MessageContent.tsx`) to import from `index.js`. The deep path stays working but README marks it `internal`.\n- `selection.ts` and other non-listed files stay un-exported. Adding a re-export is a contract change.\n\n### 4.3 Tests added in M1\n\nTest framework: `bun test`. All tests are pure unit tests against the in-process render engine. No real terminal, no Playwright, no docker. Terminal-specific behavior is verified via fixtures — captured escape-sequence byte strings stored under `tests/fixtures/render/`.\n\n| File | What it covers |\n|---|---|\n| `tests/render-screen.test.ts` | `<Box>` + `<Text>` layout (width / height / wrap), wide-char width, ANSI style application, hyperlink (OSC 8), `<NoSelect>` regions, soft",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "9554d03ac57dfadcdd6fff16aa454958758b819a02ccbb9e0a8ee4ef4796fe5d"
+      }
+    ],
+    "source_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3976/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+        "jsonPointer": "/currentByteOnlyChecks/11/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "byteOnlyNow": true
+        },
+        "sourceSha256": "639aab6d7bea71f41498920a285475b2b8557a59757e71dde23a69b0127238d4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/consumer-initial-pins.json",
+        "jsonPointer": "/files/2/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lineCount": 295,
+          "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+          "coverage": "hash-only before current consumer content read"
+        },
+        "sourceSha256": "f358fd7ff4127668d19bfd6d60909156b94265dea793d88a26281678a0129ded"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "jsonPointer": "/files/5/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json"
+        },
+        "sourceSha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "jsonPointer": "/files/5/firstSha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json"
+        },
+        "sourceSha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "jsonPointer": "/hashOnlyFiles/5/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json",
+          "coverage": "hash-only; no product body semantic reading",
+          "firstPinCapturedAtUTC": null
+        },
+        "sourceSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "jsonPointer": "/hashOnlyFiles/5/firstSha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json",
+          "coverage": "hash-only; no product body semantic reading",
+          "firstPinCapturedAtUTC": null
+        },
+        "sourceSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/files/45/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentBytes": 9846,
+          "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "mainBytes": 9846,
+          "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/files/45/currentSha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentBytes": 9846,
+          "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "mainBytes": 9846,
+          "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/files/45/mainSha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentBytes": 9846,
+          "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "mainBytes": 9846,
+          "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/hashOnlyChecks/5/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "manifest": "dataset-frontier/source-manifest.json",
+          "collection": "hashOnlyFiles",
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "coverage": "hash-only; no product body semantic reading",
+          "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+        "jsonPointer": "/files/10/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitSelectedClaimIds": [],
+          "historicalClaimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "whySuggested": "Ordinary message text/display metadata; old format/markdown/stream causes require exact gate.",
+          "notUnreadClaim": true,
+          "sourceBodyOpened": false,
+          "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+        },
+        "sourceSha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4299/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 2
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+        "jsonPointer": "/rankChecks/10/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesDatedCandidate": true,
+          "inDrift": false
+        },
+        "sourceSha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4299/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4300/sha256",
+        "line": 1,
+        "needle": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "context": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      }
+    ],
+    "display_contract": [
+      {
+        "path": "docs/archive/todo/arch-plans-and-verification-2026-07-08.md",
+        "jsonPointer": null,
+        "line": 278,
+        "needle": "message content",
+        "context": "teering-runtime PR.\n\n### 4. Compaction token-estimation 2.5x fix: persist actual prompt-token anchors\n\nStatus: PARTIAL. The original in-run 2.5x underestimate is fixed; resume/cold-start anchoring remains open.\n\nCurrent state:\n\n- The raw fallback estimator in `packages/core/src/context/compaction.ts:21` still uses message token estimation based on message content heuristics.\n- `ContextManager` now records provider usage through `packages/core/src/context/manager.ts:141-145`.\n- `ContextManager.estimateTokensHybrid()` at `packages/core/src/context/manager.ts:151-169` uses the last real `promptTokens` anchor plus estimates for newly appended messages, and rescales after message shrinkage.\n- `TurnLoop` records actual provider prompt tokens after model calls at `packages/core/src/engine/turn-loop.ts:732-745`.\n- Tests already cover the in-run anchor: `packages/core/src/context/manager-hybrid.test.ts`, `packages/core/src/context/manager-micro-escalation.test.ts`, and `packages/core/src/engine/turn-loop-usage-cache.test.ts`.\n- `Engine` still emits a rough s",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8f9d181fab07383f5dfdf7810cac93a2e9bce44a54ba4ffd35df649004ad2548"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2338",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "jsonPointer": "/scope",
+        "line": 1,
+        "needle": "inspectionscope",
+        "context": "Hashing complete files does not imply full-file behavioural coverage; inspectionScope distinguishes executed pure functions from static consumers and skipped grouping.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3975/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3976/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-excerpts.json",
+        "jsonPointer": "/snapshots/22/text",
+        "line": 21,
+        "needle": "message content",
+        "context": " <MessageContent text={entry.text} streaming={entry.streaming} nested />\n        </Box>\n      ) : (\n        <MessageContent key={key} text={entry.text} streaming={entry.streaming} />\n      );\n    case \"thinking\":\n      if (!nested) return null;\n      return (\n        <Box key={key} marginLeft={1}>\n          <Text dim>│ ⎿ </Text>\n          <ThinkingMessage content={entry.content} collapsed={!expanded} nested />\n        </Box>\n      );\n    case \"tool_start\":\n      return (\n        <ToolCallStart key={key} toolName={entry.toolName} args={entry.args} nested={nested} />\n      );\n    case \"tool_running\":\n      return <ToolCallRunning key={key} toolName={entry.toolName} nested={nested} />;\n    case \"tool_result\":\n      return (\n        <ToolCallResult\n          key={key}\n          toolName={entry.toolName}\n          result={entry.result}\n          error={entry.error}\n          nested={nested}\n          expanded={expanded}\n          compact={entry.compact}\n        />\n      );\n    case \"agent_start\":\n      return (\n        <AgentBlockStart\n",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "717b27c7b186997a6c38ff167e7cf5378e002888cfae5ec61c49b366bc62ceb4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+        "jsonPointer": "/currentByteOnlyChecks/11/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "byteOnlyNow": true
+        },
+        "sourceSha256": "639aab6d7bea71f41498920a285475b2b8557a59757e71dde23a69b0127238d4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/consumer-initial-pins.json",
+        "jsonPointer": "/files/2/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lineCount": 295,
+          "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+          "coverage": "hash-only before current consumer content read"
+        },
+        "sourceSha256": "f358fd7ff4127668d19bfd6d60909156b94265dea793d88a26281678a0129ded"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json"
+        },
+        "sourceSha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+        "jsonPointer": "/hashOnlyFiles/5/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesFirstPin": true,
+          "firstPinArtifact": "consumer-initial-pins.json",
+          "coverage": "hash-only; no product body semantic reading",
+          "firstPinCapturedAtUTC": null
+        },
+        "sourceSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/files/45/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentBytes": 9846,
+          "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "mainBytes": 9846,
+          "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+        "jsonPointer": "/hashOnlyChecks/5/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "manifest": "dataset-frontier/source-manifest.json",
+          "collection": "hashOnlyFiles",
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "coverage": "hash-only; no product body semantic reading",
+          "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+        },
+        "sourceSha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+        "jsonPointer": "/files/10/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "lines": 295,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitSelectedClaimIds": [],
+          "historicalClaimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "whySuggested": "Ordinary message text/display metadata; old format/markdown/stream causes require exact gate.",
+          "notUnreadClaim": true,
+          "sourceBodyOpened": false,
+          "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+        },
+        "sourceSha256": "672e61d0254044a19728e8d968db04fb0bbf4f32c588817d97f5f6b4855c1ce2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15902/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15902/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15903/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15903/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15904/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15904/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15905/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15905/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15906/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/web/app/MessageContent.tsx"
+          ],
+          "origin": "list-scalar",
+          "provenance": [
+            {
+              "historyRow": 198,
+              "jsonPointer": "/source_inventory/2338"
+            },
+            {
+              "historyRow": 3390,
+              "jsonPointer": "/module_inventory/84740d56/paths/137"
+            },
+            {
+              "historyRow": 3390,
+              "jsonPointer": "/module_inventory/a66f4ef2/paths/138"
+            }
+          ],
+          "claimId": "C015907"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15906/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "sourceHashFields": {
+            "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/web/app/MessageContent.tsx"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 1350,
+              "jsonPointer": "/files/3976"
+            }
+          ],
+          "claimId": "C015908"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15907/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4298/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C015907",
+            "C015908"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 2
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+        "jsonPointer": "/rankChecks/10/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "rank": 11,
+          "path": "packages/web/app/MessageContent.tsx",
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "matchesDatedCandidate": true,
+          "inDrift": false
+        },
+        "sourceSha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4298/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/3888",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/3889",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4299/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4300/path",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": {
+          "path": "packages/web/app/MessageContent.tsx",
+          "bytes": 9846,
+          "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+          "lines": 295,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "jsonPointer": "/groups/0/rawLogs/104/file",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "73ad4e09fdb09e15673e0c5e7a585f46d48e7756438c63635f853b7b289be9af"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "jsonPointer": "/logs/104/file",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/84740d56/paths/137",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/module_inventory/a66f4ef2/paths/138",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "jsonPointer": "/baseline_metadata_read_only/web_app_test_files/4",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/server-web-results.json",
+        "jsonPointer": "/104/file",
+        "line": 1,
+        "needle": "web/app/messagecontent",
+        "context": "packages/web/app/MessageContent.test.tsx",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e6c2ae23f2c342a0dee9ec9ad417f9c74a6a369920aa6719b136f564b8031209"
+      },
+      {
+        "path": "docs/todo/engine-split-plan.md",
+        "jsonPointer": null,
+        "line": 64,
+        "needle": "message content",
+        "context": "hild stream events, anchors\n  child sessions in the parent transcript, and runs/resumes child sessions.\n- `1249-1320`: Sandbox and base `ToolContext` setup. Reads project/global sandbox,\n  resolves/caches backend, builds `ToolContext`, overlays session cwd/sandbox/\n  sub-agent spawner, and wires stream callback.\n- `1321-1368`: Run logging and user message content. Logs task metadata, collects\n  attached image file paths, and builds either text or multimodal content blocks.\n- `1370-1522`: Session creation/resume and logging scope. Handles existing vs new\n  sessions, compacted message cache, orphaned tool-use patching, cost-store restore,\n  client-message idempotency, transcript persistence, turn sequence, `setCurrentSid`,\n  tool context session id, and `runWithSid`.\n- `1523-1617`: Session-start phase. Records session start, emits `on_session_start`\n  and `user_prompt_submit`, applies prompt rewrites, emits `session_started` with a\n  rough context seed, and replays last todo snapshot on resume.\n- `1619-1818`: Turn setup. Starts LLM client creation, bu",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4357041be053e4626de2cd0b3c6da419656fc37c0bfccf483ac67fa054b4b999"
+      },
+      {
+        "path": "docs/todo/engine-split-plan.md",
+        "jsonPointer": null,
+        "line": 505,
+        "needle": "message content",
+        "context": "rite race\n(`421-433`, `2799-2826`), and `forceCompact` shares state with automatic compaction.\n\n### `engine/run-preflight.ts`\n\nMoves from `run()`:\n\n- cwd/session-cwd resolution (`956-970`)\n- stream wrapper for todo/goal progress (`972-998`)\n- image parsing and policy (`999-1110`)\n- noise rejection (`1112-1126`)\n- attached image path hints and user message content construction (`1329-1368`)\n\nPublic surface:\n\n```ts\nexport async function prepareRunInput(args: PrepareRunInputArgs): Promise<\n  | { ok: true; cwd: string; taskText: string; parsedTask: ParsedTask; userMessageContent: string | ContentBlock[]; wrappedOnStream?: StreamCallback }\n  | { ok: false; result: EngineResult }\n>;\n```\n\nState needed:\n\n- `config.cwd`, `config.llm`, `config.clientDefaults` only by value\n- `sessionManager.readCwd`\n- `capabilitiesFor`, image policy/compression, and `existsSync`\n- stream callback and transcript append for `goal_progress`\n\nRisk: medium. The `wrappedOnStream` closure currently refers to `session` before it\nis initialized (`981-989` vs `1383`); extraction should",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4357041be053e4626de2cd0b3c6da419656fc37c0bfccf483ac67fa054b4b999"
+      }
+    ]
+  },
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3976",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "lines": 295,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+      "jsonPointer": "/currentByteOnlyChecks/11",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "matchesFirstPin": true,
+        "byteOnlyNow": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/consumer-initial-pins.json",
+      "jsonPointer": "/files/2",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "lineCount": 295,
+        "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+        "coverage": "hash-only before current consumer content read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+      "jsonPointer": "/files/5",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "matchesFirstPin": true,
+        "firstPinArtifact": "consumer-initial-pins.json"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/5",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "firstSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "matchesFirstPin": true,
+        "firstPinArtifact": "consumer-initial-pins.json",
+        "coverage": "hash-only; no product body semantic reading",
+        "firstPinCapturedAtUTC": null
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "jsonPointer": "/files/45",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "currentBytes": 9846,
+        "currentSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "mainBytes": 9846,
+        "mainSha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "jsonPointer": "/hashOnlyChecks/5",
+      "row": {
+        "manifest": "dataset-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/web/app/MessageContent.tsx",
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "coverage": "hash-only; no product body semantic reading",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "jsonPointer": "/files/10",
+      "row": {
+        "rank": 11,
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "lines": 295,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitSelectedClaimIds": [],
+        "historicalClaimIds": [
+          "C015907",
+          "C015908"
+        ],
+        "whySuggested": "Ordinary message text/display metadata; old format/markdown/stream causes require exact gate.",
+        "notUnreadClaim": true,
+        "sourceBodyOpened": false,
+        "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/4299",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "lines": 295,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C015907",
+          "C015908"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 2
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "jsonPointer": "/rankChecks/10",
+      "row": {
+        "rank": 11,
+        "path": "packages/web/app/MessageContent.tsx",
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "matchesDatedCandidate": true,
+        "inDrift": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/4299",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "lines": 295
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/4300",
+      "row": {
+        "path": "packages/web/app/MessageContent.tsx",
+        "bytes": 9846,
+        "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+        "lines": 295,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    }
+  ],
+  "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+}

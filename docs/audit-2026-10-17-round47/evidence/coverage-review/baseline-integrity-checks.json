@@ -1,0 +1,480 @@
+{
+  "createdUTC": "2026-10-17T15:39:59.664551+00:00",
+  "files": [],
+  "packages": [
+    {
+      "directory": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-frontier",
+      "receipt": "artifact-receipt.json",
+      "receiptRows": 22,
+      "allReceiptHashesMatch": true,
+      "checks": [
+        {
+          "path": "build-index.py",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "candidate-ranking.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "capture-inventories.py",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "checks.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "classification-examples.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "classifier-first-script.py",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "classifier-first-summary.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "classifier-revision-notes.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "coverage-claims.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "coverage-index.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "ending-coverage-overlay.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "history-ending-checks.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "history-inventory.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "links-check.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "method.md",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "package-inventory.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "pending-scopes.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "report.md",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "source-ending-checks.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "summary.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "validation.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        }
+      ],
+      "links": [
+        {
+          "document": "method.md",
+          "target": "capture-inventories.py",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "method.md",
+          "target": "classifier-first-script.py",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "method.md",
+          "target": "build-index.py",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "method.md",
+          "target": "classifier-revision-notes.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "method.md",
+          "target": "ending-coverage-overlay.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "package-inventory.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "history-inventory.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "coverage-index.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "coverage-claims.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "classification-examples.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "method.md",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "source-ending-checks.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "history-ending-checks.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "ending-coverage-overlay.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "candidate-ranking.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "pending-scopes.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "checks.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "source-manifest.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "validation.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "artifact-receipt.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        }
+      ],
+      "allLinksExist": true,
+      "actualFileCount": 23,
+      "metadataOnly": true
+    },
+    {
+      "directory": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/coverage-status",
+      "receipt": "artifact-receipt.json",
+      "receiptRows": 8,
+      "allReceiptHashesMatch": true,
+      "checks": [
+        {
+          "path": "checks.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "comparison.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "current-inventory.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "input-pins.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "links-check.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "report.md",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "summary.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        }
+      ],
+      "links": [
+        {
+          "document": "report.md",
+          "target": "current-inventory.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "summary.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "comparison.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "input-pins.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "checks.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "source-manifest.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "artifact-receipt.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        }
+      ],
+      "allLinksExist": true,
+      "actualFileCount": 9,
+      "metadataOnly": true
+    },
+    {
+      "directory": "/tmp/codeshell-audit-round56-session-search",
+      "receipt": "reviewer-receipt.json",
+      "receiptRows": 11,
+      "allReceiptHashesMatch": true,
+      "checks": [
+        {
+          "path": "classification.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "coverage-gate-detail.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "ending-checks.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "history-method.py",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "history.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "metadata-notes.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "report.md",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        }
+      ],
+      "links": [
+        {
+          "document": "report.md",
+          "target": "coverage-gate-detail.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "metadata-notes.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "history.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "history-method.py",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "history-contexts.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "coverage-gate-rows.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "source-manifest.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "initial-pins.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "ending-checks.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "classification.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        },
+        {
+          "document": "report.md",
+          "target": "reviewer-receipt.json",
+          "exists": true,
+          "canonicalWithinDirectory": true
+        }
+      ],
+      "allLinksExist": true,
+      "actualFileCount": 12,
+      "metadataOnly": true
+    }
+  ],
+  "authorMethodsExecuted": 0,
+  "productSourceBodiesRead": 0
+}

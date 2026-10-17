@@ -1,0 +1,585 @@
+{
+  "scope": "Only objects containing inspectionScope; minimal exact fields/provenance, not old claims copy",
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/1",
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+      "sourceSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/sessionContentSearch.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; production pure functions executed"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+        "sha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/2",
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+      "sourceSha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; 11 existing tests executed once"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+        "sha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/3",
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "sourceSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/modelSelection.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; production callback helper executed"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/4",
+      "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+      "sourceSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/modelSelection.test.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; 2 existing tests executed once"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+        "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/5",
+      "path": "packages/desktop/src/renderer/shell/searchFocus.ts",
+      "sourceSha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/searchFocus.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; static only, no DOM/runtime test"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+        "sha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/6",
+      "path": "packages/desktop/src/renderer/shell/SearchDialog.tsx",
+      "sourceSha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/SearchDialog.tsx"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; focus wiring static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+        "sha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/7",
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "sourceSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/SearchBar.tsx"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; focus wiring static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+        "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/8",
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "sourceSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/SessionSearchModal.tsx"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; query producer/error consumer static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+        "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/9",
+      "path": "packages/desktop/src/renderer/shell/useSessionContentSearch.ts",
+      "sourceSha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/shell/useSessionContentSearch.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; request producer and invalidation static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+        "sha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/10",
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+      "sourceSha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/chat/modelPickerPresentation.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; static only, historical failed direction remains SKIP"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+        "sha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/11",
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+      "sourceSha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; static only, no React/DOM test run"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+        "sha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/12",
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "sourceSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "limited-or-not-full-scope-unknown",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/transcripts.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "selected import/header, makeSessionId, archived/import/binding producer sections; content-search module dependency loaded without real storage"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+        "sha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "no-clear-leading-full-label",
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/13",
+      "path": "packages/desktop/src/shared/session-catalog.ts",
+      "sourceSha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/shared/session-catalog.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; local/engine identity contract static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+        "sha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/14",
+      "path": "packages/desktop/src/renderer/streamRouting.ts",
+      "sourceSha256": "2f3070e58bed90f35822ede8b28f3dea70c06be308d7bab9b2d9b628db6f588a",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "scope-unknown",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/streamRouting.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "lines 1-90; normal identity fallback contract static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "2f3070e58bed90f35822ede8b28f3dea70c06be308d7bab9b2d9b628db6f588a",
+        "sha256": "2f3070e58bed90f35822ede8b28f3dea70c06be308d7bab9b2d9b628db6f588a"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "no-clear-leading-full-label",
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/15",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sourceSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "scope-unknown",
+      "hashBinding": "different-sha-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/App.tsx"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "lines 1678-1706 and targeted call-site search; static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+        "sha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "no-clear-leading-full-label",
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/16",
+      "path": "packages/desktop/src/preload/index.ts",
+      "sourceSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "scope-unknown",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/preload/index.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "lines 1046-1047 and target search references; static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "no-clear-leading-full-label",
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/17",
+      "path": "packages/desktop/src/main/index.ts",
+      "sourceSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "scope-unknown",
+      "hashBinding": "different-sha-same-object",
+      "directPaths": [
+        "packages/desktop/src/main/index.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "lines 5017-5035 and target search references; static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+        "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "no-clear-leading-full-label",
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "documentSha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27",
+      "jsonPointer": "/1/rows/0",
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "sourceSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/modelSelection.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; production callback helper executed"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "documentSha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27",
+      "jsonPointer": "/1/rows/1",
+      "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+      "sourceSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "full-word-vetoed-or-conflicting-scope",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/renderer/modelSelection.test.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "entire file; 2 existing tests executed once"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+        "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "non-source-hash-field"
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round37/evidence/local-marker-review/prior-source-claims.json",
+      "documentSha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c",
+      "jsonPointer": "/currentDirectShaRowsFull/0/directRow",
+      "path": "packages/desktop/src/preload/index.ts",
+      "sourceSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "origin": "object-scalar-field",
+      "oldKind": "incidental-path-or-pin-object",
+      "adaptedKind": "scope-unknown",
+      "hashBinding": "current-same-object",
+      "directPaths": [
+        "packages/desktop/src/preload/index.ts"
+      ],
+      "located": false,
+      "scopeFields": {
+        "inspectionScope": "lines 1046-1047 and target search references; static only"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+      },
+      "rangeFields": {},
+      "vetoReasons": [
+        "no-clear-leading-full-label",
+        "non-source-hash-field"
+      ]
+    }
+  ],
+  "vetoWitnesses": {
+    "non-source-hash-field": {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/1",
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+      "sourceSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+      "origin": "object-scalar-field",
+      "scopeFields": {
+        "inspectionScope": "entire file; production pure functions executed"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+        "sha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76"
+      }
+    },
+    "no-clear-leading-full-label": {
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "documentSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "jsonPointer": "/files/12",
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "sourceSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "origin": "object-scalar-field",
+      "scopeFields": {
+        "inspectionScope": "selected import/header, makeSessionId, archived/import/binding producer sections; content-search module dependency loaded without real storage"
+      },
+      "roleFields": {},
+      "sourceHashFields": {
+        "frozenSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+        "sha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8"
+      }
+    }
+  }
+}

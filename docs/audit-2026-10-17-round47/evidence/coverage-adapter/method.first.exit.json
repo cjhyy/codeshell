@@ -1,0 +1,8 @@
+{
+  "tool": "0e0199",
+  "exitCode": 1,
+  "stage": "Python parse before any metadata scan/current source hashing in method.py",
+  "rawOutput": "  File \"/tmp/codeshell-audit-round57-coverage-adapter/method.py\", line 277\n    51full={x['path'] for x in map51.values() if x['coverageStatus']=='carryable-explicit-full'};sel51={x['path'] for x in map51.values() if x['coverageStatus']=='carryable-explicit-selected-no-full'}\n     ^\nSyntaxError: invalid decimal literal\n",
+  "kind": "own metadata script syntax error, not product/fixture/test execution",
+  "correction": "Rename illegal variable51full to full51; explicitly restore global current map after per-snapshot classification before next metadata object. No earlier counts existed."
+}
