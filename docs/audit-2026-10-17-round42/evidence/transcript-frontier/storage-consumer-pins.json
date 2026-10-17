@@ -1,0 +1,21 @@
+{
+  "scope": "before raw transcript storage and actual display consumer content read",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "lineCount": 445,
+      "pinUTC": "2026-10-17T14:16:17.367010+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/AgentDock.tsx",
+      "bytes": 7827,
+      "sha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "lineCount": 254,
+      "pinUTC": "2026-10-17T14:16:17.370038+00:00",
+      "semanticRead": false
+    }
+  ]
+}

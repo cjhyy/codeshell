@@ -1,0 +1,199 @@
+{
+  "classification": {
+    "proposalAlias": "TRANSCRIPT-R44-C1",
+    "severitySuggestion": "P3",
+    "authorClassification": {
+      "formal": 0,
+      "candidate": 1,
+      "newRelated": 0
+    },
+    "sourceFinding": "Background transcript translator seals tombstoned partial assistant text instead of revoking it, so active TUI child details can retain revoked text during fallback/replacement",
+    "ordinaryCondition": "Background subagent Engine streaming response emits at least one ordinary text delta, then a recoverable non-abort streaming failure takes the built-in non-streaming fallback; user views active agent detail",
+    "rootReportedFormalIntegrationIntent": {
+      "id": "TRANSCRIPT-R42-01",
+      "sameFindingAsAlias": true,
+      "countOnce": true,
+      "notAlreadyClaimedFormalByThisAuthor": true
+    },
+    "runtimeValidated": false,
+    "oldFamily": "July09 F-01 desktop fallback ID correlation+final upsert mismatch; current source uses stable IDs and replacement deltas. This leaf is a separate active TUI consumer that never uses messageId and treats tombstone as completion. Preserve relation, do not reissue old F01 desktop issue.",
+    "notClaimed": [
+      "Observed real provider failure or UI frames",
+      "Persistent/raw canonical session corruption",
+      "All TUI/display/model fallback behavior audited",
+      "Independent peer opinions counted as additional issues"
+    ]
+  },
+  "selection": {
+    "actualLeaf": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+    "actualLeafLines": 195,
+    "replacementsAfterBodyReading": 0,
+    "oldSameShaFullExcludedBeforeBody": [
+      {
+        "manifest": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+        "pointer": "/files/0",
+        "row": {
+          "path": "packages/server/src/mobile-remote/codex-parse.ts",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              137
+            ]
+          ],
+          "lineCount": 137,
+          "bytes": 5410,
+          "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+          "frozenSha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+          "matchesFrozen": true,
+          "note": "Static only; old format issues and baseline excluded; no current CLI producer contract established."
+        },
+        "matchesCurrentBeforeReadInventoryPin": true,
+        "productBodyOpenedByThisReview": false
+      },
+      {
+        "manifest": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/10",
+        "row": {
+          "path": "packages/web/src/lib/format.ts",
+          "bytes": 5447,
+          "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+          "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+          "frozenBlobVerified": true,
+          "currentMatchesFrozen": true,
+          "lineCount": 140
+        },
+        "matchesCurrentBeforeReadInventoryPin": true,
+        "productBodyOpenedByThisReview": false
+      }
+    ],
+    "selectedGateCurrentShaOnlyExplicitRow": "R28 package-inventory; no same-current-SHA full semantic receipt established, no historic-unread claim"
+  },
+  "ordinarySourceReasoning": "On normal recoverable streaming fallback producer revokes partial slot with tombstone and reopens same messageId for replacement delta. Child stream wrapper does not filter tombstone, normal child Engine passes callback to TurnLoop, background detailSink feeds translator. Leaf tombstone only seals its local assistant row and resets pointer; replacement delta appends a distinct bg-counter row. Registry stores both and selected actual TUI detail consumes raw rows; no runtime fixture used.",
+  "impactLimits": [
+    "Active background child detail can retain revoked partial text while fallback pending or work continues; not claimed as observed frames",
+    "No durable/raw session transcript corruption claim",
+    "Successful completion can hide Dock row; no always-visible-after-completion assertion",
+    "No new parallel-tool marker issue: normal producer drains full queue before results; earlier intuition withdrawn"
+  ],
+  "counterevidenceChecked": [
+    "Actual child spawner callback forwarding, not arbitrary event injection",
+    "Default CLI/bin→REPL→in-process transport→ui/App is active entry, not unused barrel/dead Dock",
+    "Final assistant_message falls through full translator switch default; inspected registry completion mutates status/control metadata without transcript replacement",
+    "Old F-01 remains explicitly related by family but original cause is desktop correlation/final compensation; current ordinary producer stable IDs and replacement deltas already differ",
+    "No assumptions from old loadedWorkspaceModules/native failure records beyond inventory metadata"
+  ],
+  "history": {
+    "fileCount": 3696,
+    "md": 1379,
+    "json": 2317,
+    "jsonStrings": 1130742,
+    "jsonScalars": 1704078,
+    "archives": 169,
+    "parseErrors": 0,
+    "initialQueries": {
+      "codex-parse": {
+        "hits": 83,
+        "cap": 80,
+        "retained": 80
+      },
+      "web-format": {
+        "hits": 490,
+        "cap": 80,
+        "retained": 80
+      },
+      "codex-parse-current-sha": {
+        "hits": 18,
+        "cap": 80,
+        "retained": 18
+      },
+      "web-format-current-sha": {
+        "hits": 121,
+        "cap": 80,
+        "retained": 80
+      }
+    },
+    "selectedQueries": {
+      "selected-path": {
+        "hits": 84,
+        "cap": 100,
+        "retained": 84
+      },
+      "selected-sha": {
+        "hits": 1,
+        "cap": 100,
+        "retained": 1
+      }
+    },
+    "selectedCoverageMeaningfulRowsRead": 1,
+    "selectedPath84ContextsNotAllClaimedRead": true,
+    "causeQueries": {
+      "translator-revoke": {
+        "hits": 16,
+        "cap": 80,
+        "retained": 16
+      },
+      "background-revoke": {
+        "hits": 3,
+        "cap": 80,
+        "retained": 3
+      },
+      "fallback-partial": {
+        "hits": 23,
+        "cap": 80,
+        "retained": 23
+      }
+    },
+    "causeBoundedWindowsActuallyRead": {
+      "translator-revoke": [
+        0,
+        1,
+        2,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "background-revoke": [
+        0,
+        2
+      ],
+      "fallback-partial": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    "causeBoundedWindowReadCount": 21,
+    "causeAll42RetainedNotSemanticExhaustion": true,
+    "oldF01SourceLinesActuallyRead": [
+      20,
+      27
+    ],
+    "rootAdditionalOldF01IntroAndR20ReportReadsAttributedToRootOnly": true,
+    "originalSnapshotNotRewritten": true
+  },
+  "validation": {
+    "productImports": 0,
+    "productFunctionCalls": 0,
+    "eventBufferOrLanguageFixtures": 0,
+    "testsRead": 0,
+    "testsRun": 0,
+    "BashCLISubprocessModelStreamReactBrowserDOMNetworkNativePermissionIdentityExperiments": 0,
+    "businessOrOutputFilesTouched": 0,
+    "gitCommands": 0,
+    "oldFailedDirectionsReopened": false,
+    "runtimePassesClaimed": 0,
+    "writesOnlyExactTmp": true
+  },
+  "metadataDiagnostic": "Wrong guessed packages/cli/src rg locator exit2 preserved in metadata-notes; actual rg inventory corrected path, no CLI/product retry"
+}

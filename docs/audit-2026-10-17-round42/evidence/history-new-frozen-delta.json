@@ -1,0 +1,501 @@
+{
+  "addedFiles": 77,
+  "patterns": {
+    "translator": "agent-transcript-translator|createTranscriptTranslator",
+    "tombstone-transcript": "(?:tombstone|撤销).{0,160}(?:transcript|转录|子代理|sub.?agent)|(?:transcript|转录|子代理|sub.?agent).{0,160}(?:tombstone|撤销)",
+    "fallback-placeholder": "(?:fallback|回退|降级).{0,180}(?:placeholder|占位|部分文本|partial text)|(?:placeholder|占位|部分文本|partial text).{0,180}(?:fallback|回退|降级)"
+  },
+  "counts": {
+    "translator": 90,
+    "tombstone-transcript": 5,
+    "fallback-placeholder": 0
+  },
+  "hits": {
+    "translator": [
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/aggregate-review/author-checks.initial.json",
+        "at": "$[\"finishChecksMetadata\"][\"currentSourceAndHashOnlyPaths\"][0][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/coverage-gate-rows.json",
+        "at": "$[\"rows\"][0][\"row\"][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/finish-checks.json",
+        "at": "$[\"currentSourceAndHashOnlyPaths\"][0][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][2][\"text\"]",
+        "context": "es/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][2][\"text\"]",
+        "context": "ant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][3][\"text\"]",
+        "context": "议，不含代码实现。\n\n---\n\n## 1. codeshell 现状速览\n\n源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。\n\n核心事实：\n\n- **派发**：`Agent(description, prompt, name?, maxTurns?, run_in_background?)` 工具。支持同步（阻塞父级）和后台（`run_in_background`）两种模式。同一条 LLM 消息里多个 `Agent` 调用会并行执行。\n- **定义方式**：**没有 agent 定义注册表**。每次调用都是临时（ephemeral）的——`name` / `description` / `prompt` 全部是调用时传入的字符串参数。`agent-registry.ts` 只存运行时元数据（id、status、时间戳、abort handle），不存\"agent 类型定义\"。\n- **上下文隔离**：每个子 agent 是一个全新的 `Engine` 实例（`engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][4][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][5][\"text\"]",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][6][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][7][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][8][\"text\"]",
+        "context": "es/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][8][\"text\"]",
+        "context": "ant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][9][\"text\"]",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][10][\"text\"]",
+        "context": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][11][\"text\"]",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][12][\"text\"]",
+        "context": "| `tool-system/builtin/agent-transcript-translator.ts` | `as any`×7 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][13][\"text\"]",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][13][\"text\"]",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][14][\"text\"]",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][15][\"text\"]",
+        "context": "4. **后台 agent 结果流式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][16][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][17][\"text\"]",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][18][\"text\"]",
+        "context": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][19][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][20][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][21][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][22][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][23][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][24][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][25][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][26][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][27][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][28][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][29][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][30][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][31][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][32][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][33][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][34][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][35][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][36][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][37][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][38][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][39][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][40][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][41][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][42][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][43][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][44][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][45][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][46][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][47][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][48][\"text\"]",
+        "context": "tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][49][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][50][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][51][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][52][\"text\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][53][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][54][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][55][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][56][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][57][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][58][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][59][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][60][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][61][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][62][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][63][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][64][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][65][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][66][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][67][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][68][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][69][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][70][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][71][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][72][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][73][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][74][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][75][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][76][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][77][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][78][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][79][\"text\"]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/initial-pins.json",
+        "at": "$[\"files\"][0][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/report.md",
+        "at": "$",
+        "context": "s、当前 SHA 1 hit 均已读：只见 source/module inventories，当前 SHA 来自 R28 package inventory；没有在该 bounded gate 建立旧 same-current-SHA full-semantic receipt。不能据此称历史从未读过。预选库存另有 agent-transcript-translator.ts（195 行），未打开其产品源码，不是替换过的审查方向；它的 84 hits cap80 多含旧 loaded-module/native-failed 路径值，不借为语义阅读或运行证据，旧失败方向不重开。[覆盖 gate rows](coverage-gate-rows.json) 的 36 行是显式元数据，不当全文阅读。\n\n实际数据链中，[process-service.ts:732](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/panels/process-service.ts:732) 初始化 sequence=0、空 events/eventBytes；emit 使用 appendProcessEvent 的返回 payload。leaf 111–127 每次统一递增 sequence，将同一序号放在事件 envelope 与 payload，按事件数与 JSON byte 上限淘汰最老记录。普通 stdout/stderr 路径以 MAX_EVENT_CHARS 切段再 emit；没有用任意巨 payload、无效 DTO、坏时钟或 NaN 构造问题。\n\n同 servic"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/source-manifest.json",
+        "at": "$[\"hashOnlyFiles\"][0][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-review/author-metadata-checks.json",
+        "at": "$[\"authorSourceByteOnlyChecks\"][5][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/source-manifest.json",
+        "at": "$[\"files\"][3][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/source-manifest.json",
+        "at": "$[\"hashOnlyChecks\"][0][\"path\"]",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+      }
+    ],
+    "tombstone-transcript": [
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][2][\"text\"]",
+        "context": "ktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][5][\"text\"]",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][8][\"text\"]",
+        "context": "ktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][11][\"text\"]",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round41/evidence/process-state-frontier/history-contexts.json",
+        "at": "$[\"translator\"][13][\"text\"]",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。"
+      }
+    ],
+    "fallback-placeholder": []
+  },
+  "contextCapEach": 120,
+  "productRuns": 0,
+  "limitations": [
+    "Only new77 frozen41 MD/JSON; original3696 prep inventories and read times unchanged.",
+    "All saved translator contexts are not necessarily read. Focused revocation contexts read separately."
+  ]
+}

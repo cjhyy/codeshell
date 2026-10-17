@@ -1,0 +1,87 @@
+{
+  "checkedUTC": "2026-10-17T14:34:35.100071+00:00",
+  "method": "Bothbase/targets canonicalized; all inline Markdown file links existence/membership only, no product/formal verifier run",
+  "linkCount": 11,
+  "allExist": true,
+  "allInsideOwnedDirectory": true,
+  "outsideRelativeAliasRequired": false,
+  "links": [
+    {
+      "source": "review.md",
+      "destination": "classification.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/classification.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "metadata-diagnostics.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/metadata-diagnostics.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "source-manifest.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/source-manifest.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/history.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-focused.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/history-focused.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-focused-selected.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/history-focused-selected.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/history-decisions.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-finish-check.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/history-finish-check.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "author-metadata-checks.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/author-metadata-checks.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "validation.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/validation.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    },
+    {
+      "source": "review.md",
+      "destination": "artifact-receipt.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round44-transcript-review/artifact-receipt.json",
+      "exists": true,
+      "insideOwnedDirectory": true
+    }
+  ]
+}

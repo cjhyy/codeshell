@@ -1,0 +1,29 @@
+{
+  "scope": "before actual consumer and StreamEvent producer navigation/content read",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lineCount": 1571,
+      "pinUTC": "2026-10-17T14:15:46.070643+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "lineCount": 1333,
+      "pinUTC": "2026-10-17T14:15:46.072430+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "pinUTC": "2026-10-17T14:15:46.073425+00:00",
+      "semanticRead": false
+    }
+  ]
+}

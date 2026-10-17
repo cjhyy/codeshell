@@ -1,0 +1,456 @@
+{
+  "finishedUTC": "2026-10-17T14:19:22.383399+00:00",
+  "method": "Same3696 inventory, every MD paragraph + every recursive JSON string value; all scalar counts preserved; literal/AND predicates, one hit per unit, cap80. No semantic exhaustion. Keys not searched.",
+  "fileCount": 3696,
+  "mdParagraphUnits": 57716,
+  "jsonStrings": 1130742,
+  "jsonScalars": 1704078,
+  "parseErrors": [],
+  "datedByteDrift": [],
+  "queries": {
+    "translator-revoke": {
+      "hits": 16,
+      "cap": 80,
+      "retained": 16
+    },
+    "background-revoke": {
+      "hits": 3,
+      "cap": 80,
+      "retained": 3
+    },
+    "fallback-partial": {
+      "hits": 23,
+      "cap": 80,
+      "retained": 23
+    }
+  },
+  "contexts": {
+    "translator-revoke": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "locator": "markdown-paragraph-start-line:2107",
+        "valueChars": 763,
+        "offset": 398,
+        "contextStart": 0,
+        "contextEnd": 763,
+        "text": "| 工具/文件 | 功能 | 使用方式 | 风险 |\n|---|---|---|---|\n| `agent.ts` / `Agent` | 启动子代理 | prompt + agent_type/name/max_turns/run_in_background | 子代理可并行或后台运行；后台状态进程内保存 |\n| `agent-registry.ts` | 后台 agent registry | agentId → status/result/cancel/transcript | process-local，进程崩溃丢状态；上限 `MAX_BACKGROUND_AGENTS = 6` |\n| `agent-notifications.ts` | 后台 agent 完成通知 | 与 Agent 工具配合 | 通知和 transcript routing 需避免串流到主会话 |\n| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |\n| `arena.ts` / `Arena` | 多模型协作分析工具 | topic + participants/config | 会调用多个 LLM，成本高；见第 27 节 |\n| `task.ts` / `TodoWrite` | 管理任务列表 | todos 全量快照 | UI pinned panel 依赖；TaskGuard 会提醒 stale in_progress |\n| `brief.ts` | 简报/摘要类工具 | 由定义决定 | 通常只读/文本生成 |",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+        "locator": "markdown-paragraph-start-line:20",
+        "valueChars": 1495,
+        "offset": 9,
+        "contextStart": 0,
+        "contextEnd": 1109,
+        "text": "### F-01 streaming fallback 的撤销/补偿契约在桌面链路不可用\n- 位置：`packages/core/src/engine/turn-loop.ts:1335`、`packages/desktop/src/renderer/types.ts:916`、`packages/desktop/src/renderer/types.ts:664`\n- 现状：streaming 模型调用失败时，core 发 `{ type:\"tombstone\", messageId: \"turn_${turnCount}\" }`，然后 retry non-streaming；无工具终态再发 `assistant_message`，其中 `message.content` 是最终文本。普通 desktop reducer 则在 `tombstone` 分支按本地 `Message.id` 精确删除，而 `stream_request_start` 创建的是 `freshId(\"assistant\")`；`assistant_message` 分支也只把当前 assistant 标成 `done`，不把 `message.content` 写回 UI 文本。\n- 为什么不合理：A2 的流式 fallback 设计意图是“撤销已经部分显示的 streaming 内容，再显示 non-streaming 的最终结果”。现在 producer 的撤销 id 与 consumer 的 message id 不在同一命名空间，补偿事件又被 consumer 当作纯封口事件，导致 fallback 路径无法可靠替换 UI 内容。这是 core StreamEvent 契约与 desktop reducer 语义不一致，影响正确性。\n- 影响面：普通 desktop `MessageStream` 的 streaming fallback；主要改动半径在 core `StreamEvent` 相关字段、`TurnLoop` fallback 发事件方式、desktop `applyStreamEvent` 消费语义。\n- 建议方向：给 `stream_request_start` 产生并下发稳定的 request/message correlation id，`tombstone` 使用同一 id；或者让 desktop `tombstone` 明确撤销当前 `streamingAssistantId`。同时让 `assistant_message` 在 fallback / 无 delta ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+        "locator": "markdown-paragraph-start-line:20",
+        "valueChars": 1243,
+        "offset": 252,
+        "contextStart": 0,
+        "contextEnd": 1243,
+        "text": "1. 用户发起一次普通 desktop 顶层对话，TurnLoop 先发 `stream_request_start`，desktop 创建一个本地 id 的 assistant slot，见 `packages/core/src/engine/turn-loop.ts:605`、`packages/desktop/src/renderer/types.ts:448`。\n2. provider streaming 已经发出至少一个 `text_delta`，desktop 将 token 追加到 `streamingAssistantId` 指向的 message，见 `packages/core/src/engine/model-facade.ts:81`、`packages/desktop/src/renderer/types.ts:486`、`packages/desktop/src/renderer/types.ts:500`、`packages/desktop/src/renderer/types.ts:505`。\n3. streaming call 抛出非 `ContextLimitError`、非 abort 错误；TurnLoop 发 `tombstone(turn_N)` 并调用 `callWithoutStreaming()`，见 `packages/core/src/engine/turn-loop.ts:1316`、`packages/core/src/engine/turn-loop.ts:1318`、`packages/core/src/engine/turn-loop.ts:1332`、`packages/core/src/engine/turn-loop.ts:1335`、`packages/core/src/engine/turn-loop.ts:1342`。\n4. desktop tombstone 找不到 `turn_N` 对应 message，partial text 继续留在 state，见 `packages/desktop/src/renderer/types.ts:918`、`packages/desktop/src/renderer/types.ts:919`。\n5. non-streaming 返回最终文本后，TurnLoop 发 `assistant_message(finalText)`，desktop 只封口不替换文本；用户可见结果是 partial text 或空 assistant bubble 被标记 done，见 `packages/core/src/engine/turn-loop.ts:879`、`packages/desktop/src/renderer/types.ts:664`、`packages/desktop/src/renderer/types.ts:672`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+        "locator": "markdown-paragraph-start-line:35",
+        "valueChars": 2202,
+        "offset": 158,
+        "contextStart": 0,
+        "contextEnd": 1258,
+        "text": "1. 在 `packages/core/src/types.ts` 扩展事件契约，保持向后兼容：\n   - `stream_request_start` 增加 `messageId?: string`。\n   - `assistant_message` 增加 `messageId?: string`。\n   - `tombstone` 保持 `messageId`，必要时增加 `agentId?: string` 以匹配子代理 wrapper 当前会在运行时 spread `agentId` 的事实，见 `packages/core/src/engine/engine.ts:1246`。\n2. 在 `packages/core/src/engine/turn-loop.ts` 的每个顶层 turn 开始处生成稳定 id，例如基于 `turnId` 而不是只基于 `turnCount`。`turnId` 已在 loop 内生成并用于日志，见 `packages/core/src/engine/turn-loop.ts:596`、`packages/core/src/engine/turn-loop.ts:597`。建议形如 `assistant_${turnId}`，避免同一 session resume 或子 Engine 的 `turn_1` 碰撞。\n3. `stream_request_start` emit 时带上 `messageId`，见当前 emit 点 `packages/core/src/engine/turn-loop.ts:605`。\n4. 将该 `messageId` 传入 `callModelWithFallback()`，fallback tombstone 使用同一 id，替换当前 `turn_${this.turnCount}`，见当前 tombstone 点 `packages/core/src/engine/turn-loop.ts:1335`。\n5. 所有本 turn 终态 `assistant_message` 尽量带同一 `messageId`，至少覆盖无工具正常结束和 fallback non-streaming 结束，见当前无工具终态 `packages/core/src/engine/turn-loop.ts:879`、`packages/core/src/engine/turn-loop.ts:881`。goal budget、max-turn summary 等特殊路径也可以带 id，但如果没有对应 `stream_request_start`，字段保持可选即可，见 `packages/core/src/engine/turn-loop.ts:866`、`packages/core/src/engine/turn-loop.ts:1262`。\n6. 在 `packages/desktop/src/renderer/type",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+        "locator": "markdown-paragraph-start-line:52",
+        "valueChars": 1413,
+        "offset": 274,
+        "contextStart": 0,
+        "contextEnd": 1374,
+        "text": "1. `packages/core/src/engine/turn-loop-streaming-fallback.test.ts` 新增 TurnLoop harness：\n   - 场景：fake model 的 `call()` 先通过 `onStream` 发 `text_delta(\"partial\")` 后抛错，`callWithoutStreaming()` 返回 `{ text:\"final\", toolCalls:[] }`。\n   - 断言：事件序列包含 `stream_request_start.messageId`；`tombstone.messageId` 等于该 id；`assistant_message.message.content === \"final\"` 且 `assistant_message.messageId` 等于该 id；最终 result text 是 `\"final\"`。\n   - 可复用现有 TurnLoop fake deps 模式，参考 `packages/core/src/engine/turn-loop-summary-safety.test.ts:11`、`packages/core/src/engine/turn-loop-summary-safety.test.ts:17`、`packages/core/src/engine/turn-loop-summary-safety.test.ts:30`。\n2. `packages/desktop/src/renderer/types.test.ts` 新增 reducer 测试：\n   - 场景：`stream_request_start({ messageId:\"m1\" })` → `text_delta(\"partial\")` → `tombstone({ messageId:\"m1\" })`。\n   - 断言：assistant message 被删除，`streamingAssistantId === null`，不会残留 partial。\n3. `packages/desktop/src/renderer/types.test.ts` 新增 fallback 补偿测试：\n   - 场景：上一条 tombstone 后再发 `assistant_message({ messageId:\"m1\", message:{ role:\"assistant\", content:\"final\" } })`。\n   - 断言：state 中有一条 assistant，`text === \"final\"`、`done === true`、`doneAt` 有值。\n4. `packages/desktop/src/renderer/types.test.ts` 新增 canonical final 覆盖测试：\n   - 场景：正常 streaming `text_delta(\"fin\")` 后 `assistant_message({ messageId:\"m1\", content:\"final\" })`。\n   - 断言：最终 assistant text 是 `\"final\"` 而不是 `\"fi",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "locator": "markdown-paragraph-start-line:195",
+        "valueChars": 1805,
+        "offset": 1609,
+        "contextStart": 1159,
+        "contextEnd": 1805,
+        "text": "-agent.ts:80`：进程退出兜底可合成 `turn_end`。\n- `packages/desktop/src/main/mobile-remote/room-manager.ts:438` 到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/25-small-features-impl-notes.md",
+        "locator": "markdown-paragraph-start-line:66",
+        "valueChars": 328,
+        "offset": 56,
+        "contextStart": 0,
+        "contextEnd": 328,
+        "text": "- Streaming assistant slots prefer `event.messageId`.\n- Tombstone removal clears `streamingAssistantId` when it deletes the active\n  streaming slot.\n- `assistant_message` with a matching id overwrites the partial streaming text with\n  final content.\n- `assistant_message` with `agentId` is ignored by the main assistant reducer.",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/26-small-features-review.md",
+        "locator": "markdown-paragraph-start-line:27",
+        "valueChars": 1241,
+        "offset": 453,
+        "contextStart": 3,
+        "contextEnd": 1241,
+        "text": "*F-03**：实现忠实。segment-aware key 覆盖 text/tool args，boundary 后不回合并；`streamCoalescer.test.ts` 的「burst of boundary events flushes as ONE batch」仍为 1 batch；segment 单调递增只进短生命周期 key，JS number 下无溢出风险。\n- **F-02**：实现忠实。`stream_request_start` 改看 `event.agentId`；顶层 dirty `activeAgents` 仍开主 slot；clean orphan 清非 backgrounded active；backgrounded agent 保留；`background_agent_completed` 清 active；子代理文本/工具仍只进 card。\n- **F-01**：实现忠实。core 用 `assistant_${turnId}` 贯穿 start/tombstone/终态；desktop tombstone 删 active slot 时清 `streamingAssistantId`；带 `agentId` 的子代理终态被主 reducer 忽略；turnId 带时间+随机片段避免 resume/子 Engine `turn_1` 碰撞。\n- **F-06**：实现忠实。`pre_tool_use: ask` 不再短路 classifier；合并顺序 deny > ask > allow；hook 只能收紧；merged ask 只走一次 `handleAsk()`；未见 deny 被 ask 批准绕过的路径。\n- **F-04**：基本忠实。main 新增 `agent:streamEvent` 带可选 seq，legacy `agent:msg` fallback 保留；renderer batch 用 maxSeq 推进并持久化 `snapshotSeq`；hydrate 对非空 projection 也按 cursor replay tail。见上方 Minor（cursor 合并边角）。\n- **N-07**：执行语义正确，`permissionDefault` 未接入 classifier；新增测试覆盖 allow 不自动放行、deny 不覆盖 explicit allow。仅一处 preset 注释残留（见 Nit）。\n- **N-02**：只改注释，现描述与实际「完整 LLMResponse 后 enqueue，队列负责 post-response batch 并发/顺序」一致。\n- **N-09**：`resultsToMessages()` 已删；`rg` 无 source caller；架构文档改指向 TurnLoop `toolResultToBlock(...)`。",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/4/context",
+        "valueChars": 128,
+        "offset": 3,
+        "contextStart": 0,
+        "contextEnd": 128,
+        "text": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/11/context",
+        "valueChars": 214,
+        "offset": 73,
+        "contextStart": 0,
+        "contextEnd": 214,
+        "text": "- 建议方向：给 `stream_request_start` 产生并下发稳定的 request/message correlation id，`tombstone` 使用同一 id；或者让 desktop `tombstone` 明确撤销当前 `streamingAssistantId`。同时让 `assistant_message` 在 fallback / 无 delta 场景能 upsert 最终文本，而不是只封口。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/18/context",
+        "valueChars": 239,
+        "offset": 6,
+        "contextStart": 0,
+        "contextEnd": 239,
+        "text": "   - `tombstone` 删除匹配 message 后，如果删除的是 `state.streamingAssistantId`，同步把 `streamingAssistantId` 清空；当前 tombstone 只改 `messages` 和 `agentMessageIndex`，见 `packages/desktop/src/renderer/types.ts:916`、`packages/desktop/src/renderer/types.ts:929`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/19/context",
+        "valueChars": 149,
+        "offset": 16,
+        "contextStart": 0,
+        "contextEnd": 149,
+        "text": "7. 不建议让 desktop tombstone 特判 `turn_N` 或“删除当前 streamingAssistantId”作为最终方案；这会继续依赖隐含状态，且无法把 fallback 的最终文本与正确 request 绑定。可以作为临时兼容分支，但主契约应是 core 下发稳定 id。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/history_projection/1/context",
+        "valueChars": 214,
+        "offset": 73,
+        "contextStart": 0,
+        "contextEnd": 214,
+        "text": "- 建议方向：给 `stream_request_start` 产生并下发稳定的 request/message correlation id，`tombstone` 使用同一 id；或者让 desktop `tombstone` 明确撤销当前 `streamingAssistantId`。同时让 `assistant_message` 在 fallback / 无 delta 场景能 upsert 最终文本，而不是只封口。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "locator": "/contexts/history-mapping/2/context",
+        "valueChars": 778,
+        "offset": 366,
+        "contextStart": 0,
+        "contextEnd": 778,
+        "text": "manager.ts:438` 到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "locator": "/hits/23/matches/26/text",
+        "valueChars": 128,
+        "offset": 3,
+        "contextStart": 0,
+        "contextEnd": 128,
+        "text": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "locator": "/hits/49/matches/4/text",
+        "valueChars": 237,
+        "offset": 41,
+        "contextStart": 0,
+        "contextEnd": 237,
+        "text": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "wholeValueIncluded": true
+      }
+    ],
+    "background-revoke": [
+      {
+        "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+        "locator": "markdown-paragraph-start-line:7",
+        "valueChars": 1117,
+        "offset": 51,
+        "contextStart": 0,
+        "contextEnd": 1117,
+        "text": "| 编号 | 标题 | 严重度 | 一句话 |\n|---|---|---|---|\n| F-01 | streaming fallback 的撤销/补偿契约在桌面链路不可用 | P1 | core 发 `tombstone(turn_N)` 并用 `assistant_message` 带最终文本，但 desktop 用本地 message id 删除且只把 `assistant_message` 当封口事件。 |\n| F-02 | `stream_request_start` 用 `activeAgents` 推断归属，运行态一脏就压掉主回复槽 | P1 | desktop 用“是否有 active agent”判断请求是否属于子代理，但部分收尾路径只改 message、不清 `activeAgents`。 |\n| F-03 | coalescer 按 agent 合并 delta，却没有在硬边界上切段 | P1 | 50ms 窗口内跨 `turn_complete` / `stream_request_start` / tool 边界的 delta 会被合并回第一次出现的位置。 |\n| F-04 | snapshot 的 seq 游标只存在于重放路径，live IPC 没有对齐游标 | P1 | main 给 snapshot 打 seq，但 live 事件仍只发原 JSON line，renderer 无法持续推进 `sinceSeq`。 |\n| F-05 | `requireExisting` 先创建 live session 再拒绝缺失磁盘会话 | P2 | protocol 能做到“不 run”，但仍可能把一个空 `ChatSession` 留在 manager 里。 |\n| F-06 | `pre_tool_use: ask` 用户同意后会跳过 classifier deny/rules | P1 | hook 的 ask 分支发生在 permission classify 前，批准后不再执行 classifier。 |\n| F-07 | builtin capability 的 `off` 可热生效，`on` 受构造期 frozen registry 限制 | P2 | 项目级动态能力开关语义不对称，启用被全局禁用的 builtin 需要重启 session。 |\n| F-08 | `tool_summary` 没有目标 id / agent 契约，desktop 只能挂到最近顶层工具 | P2 | 子代理 summary 可被误挂到主 feed 工具，或在无顶层工具时丢失。 |",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+        "locator": "markdown-paragraph-start-line:39",
+        "valueChars": 9163,
+        "offset": 5217,
+        "contextStart": 4767,
+        "contextEnd": 6317,
+        "text": "终态错误，用于清 busy 和显示错误 | TurnLoop model/context/unexpected error：`packages/core/src/engine/turn-loop.ts:710`、`717` 到 `720`、`736`、`1223`；protocol 后台唤醒失败兜底：`packages/core/src/protocol/server.ts:310` 到 `313` | coalescer 立即单独 flush，见 `packages/desktop/src/renderer/streamCoalescer.ts:138` 到 `143`；App 清 busy，见 `packages/desktop/src/renderer/App.tsx:1583`；reducer显示 system error 并清 streaming ids，见 `packages/desktop/src/renderer/types.ts:1036` 到 `1054` |\n| `tombstone` | streaming fallback 时撤销已部分输出的消息 | TurnLoop：`packages/core/src/engine/turn-loop.ts:1334` 到 `1335` | 主 reducer按 messageId 删除并修 agent index，见 `packages/desktop/src/renderer/types.ts:916` 到 `930` |\n| `task_update` | TodoWrite/任务列表 snapshot | TodoWrite：`packages/core/src/tool-system/builtin/task.ts:139` 到 `141`；Engine resume replay 最近 snapshot：`packages/core/src/engine/engine.ts:1632` 到 `1643`；Engine wrapper 记录 latestTodos：`packages/core/src/engine/engine.ts:1002` 到 `1005` | 主 reducer显示/更新 task_list，见 `packages/desktop/src/renderer/types.ts:678` 到 `699`；mobile 只展示 sub-agent task_update，见 `packages/desktop/src/renderer/lib/streamReducer.ts:405` 到 `435` |\n| `memory_recalled` | MemoryRead 命中记忆时的可见性信号 | Memory tool：`packages/core/src/tool-system/builtin/memory.ts:158` 到 `173` | 当前 desktop main reducer 未见专门 case，未知事件按 default ignore，见 `packages/desktop/src/renderer/types.ts:1091` 到 `1092`。这是“可被 host 消费”的协议事件 |\n| `thinking_delta` | thinking/reasoning live text | 当前 core 源码未见 live producer；类型在 `packages/core/src/types.ts:502`，consumer 已支持 | App 视作 noisy event，见 `packages/desktop/src/",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/26-small-features-review.md",
+        "locator": "markdown-paragraph-start-line:27",
+        "valueChars": 1241,
+        "offset": 453,
+        "contextStart": 3,
+        "contextEnd": 1241,
+        "text": "*F-03**：实现忠实。segment-aware key 覆盖 text/tool args，boundary 后不回合并；`streamCoalescer.test.ts` 的「burst of boundary events flushes as ONE batch」仍为 1 batch；segment 单调递增只进短生命周期 key，JS number 下无溢出风险。\n- **F-02**：实现忠实。`stream_request_start` 改看 `event.agentId`；顶层 dirty `activeAgents` 仍开主 slot；clean orphan 清非 backgrounded active；backgrounded agent 保留；`background_agent_completed` 清 active；子代理文本/工具仍只进 card。\n- **F-01**：实现忠实。core 用 `assistant_${turnId}` 贯穿 start/tombstone/终态；desktop tombstone 删 active slot 时清 `streamingAssistantId`；带 `agentId` 的子代理终态被主 reducer 忽略；turnId 带时间+随机片段避免 resume/子 Engine `turn_1` 碰撞。\n- **F-06**：实现忠实。`pre_tool_use: ask` 不再短路 classifier；合并顺序 deny > ask > allow；hook 只能收紧；merged ask 只走一次 `handleAsk()`；未见 deny 被 ask 批准绕过的路径。\n- **F-04**：基本忠实。main 新增 `agent:streamEvent` 带可选 seq，legacy `agent:msg` fallback 保留；renderer batch 用 maxSeq 推进并持久化 `snapshotSeq`；hydrate 对非空 projection 也按 cursor replay tail。见上方 Minor（cursor 合并边角）。\n- **N-07**：执行语义正确，`permissionDefault` 未接入 classifier；新增测试覆盖 allow 不自动放行、deny 不覆盖 explicit allow。仅一处 preset 注释残留（见 Nit）。\n- **N-02**：只改注释，现描述与实际「完整 LLMResponse 后 enqueue，队列负责 post-response batch 并发/顺序」一致。\n- **N-09**：`resultsToMessages()` 已删；`rg` 无 source caller；架构文档改指向 TurnLoop `toolResultToBlock(...)`。",
+        "wholeValueIncluded": false
+      }
+    ],
+    "fallback-partial": [
+      {
+        "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+        "locator": "markdown-paragraph-start-line:49",
+        "valueChars": 709,
+        "offset": 35,
+        "contextStart": 0,
+        "contextEnd": 709,
+        "text": "模型调用由 `callModelWithFallback()` 处理 streaming fallback、ContextLimit recovery、tombstone 等；主路径在 `packages/core/src/engine/turn-loop.ts:688`。如果无工具调用，TurnLoop 发 `assistant_message`，触发 `on_stop`，goal hook 可用 `continueSession` 阻止结束并追加提醒，见 `packages/core/src/engine/turn-loop.ts:876`、`packages/core/src/engine/turn-loop.ts:892`。如果有工具调用，TurnLoop 记录 assistant tool_use、发缺失的 `tool_use_start`、通过 `StreamingToolQueue` 执行工具、记录 transcript、发 `tool_result`，见 `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:1014`、`packages/core/src/engine/turn-loop.ts:1021`。Engine 在 TurnLoop 返回后持久化状态并最终发 `turn_complete`，见 `packages/core/src/engine/engine.ts:2340`、`packages/core/src/engine/engine.ts:2362`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+        "locator": "markdown-paragraph-start-line:7",
+        "valueChars": 1117,
+        "offset": 51,
+        "contextStart": 0,
+        "contextEnd": 1117,
+        "text": "| 编号 | 标题 | 严重度 | 一句话 |\n|---|---|---|---|\n| F-01 | streaming fallback 的撤销/补偿契约在桌面链路不可用 | P1 | core 发 `tombstone(turn_N)` 并用 `assistant_message` 带最终文本，但 desktop 用本地 message id 删除且只把 `assistant_message` 当封口事件。 |\n| F-02 | `stream_request_start` 用 `activeAgents` 推断归属，运行态一脏就压掉主回复槽 | P1 | desktop 用“是否有 active agent”判断请求是否属于子代理，但部分收尾路径只改 message、不清 `activeAgents`。 |\n| F-03 | coalescer 按 agent 合并 delta，却没有在硬边界上切段 | P1 | 50ms 窗口内跨 `turn_complete` / `stream_request_start` / tool 边界的 delta 会被合并回第一次出现的位置。 |\n| F-04 | snapshot 的 seq 游标只存在于重放路径，live IPC 没有对齐游标 | P1 | main 给 snapshot 打 seq，但 live 事件仍只发原 JSON line，renderer 无法持续推进 `sinceSeq`。 |\n| F-05 | `requireExisting` 先创建 live session 再拒绝缺失磁盘会话 | P2 | protocol 能做到“不 run”，但仍可能把一个空 `ChatSession` 留在 manager 里。 |\n| F-06 | `pre_tool_use: ask` 用户同意后会跳过 classifier deny/rules | P1 | hook 的 ask 分支发生在 permission classify 前，批准后不再执行 classifier。 |\n| F-07 | builtin capability 的 `off` 可热生效，`on` 受构造期 frozen registry 限制 | P2 | 项目级动态能力开关语义不对称，启用被全局禁用的 builtin 需要重启 session。 |\n| F-08 | `tool_summary` 没有目标 id / agent 契约，desktop 只能挂到最近顶层工具 | P2 | 子代理 summary 可被误挂到主 feed 工具，或在无顶层工具时丢失。 |",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+        "locator": "markdown-paragraph-start-line:20",
+        "valueChars": 1495,
+        "offset": 9,
+        "contextStart": 0,
+        "contextEnd": 1109,
+        "text": "### F-01 streaming fallback 的撤销/补偿契约在桌面链路不可用\n- 位置：`packages/core/src/engine/turn-loop.ts:1335`、`packages/desktop/src/renderer/types.ts:916`、`packages/desktop/src/renderer/types.ts:664`\n- 现状：streaming 模型调用失败时，core 发 `{ type:\"tombstone\", messageId: \"turn_${turnCount}\" }`，然后 retry non-streaming；无工具终态再发 `assistant_message`，其中 `message.content` 是最终文本。普通 desktop reducer 则在 `tombstone` 分支按本地 `Message.id` 精确删除，而 `stream_request_start` 创建的是 `freshId(\"assistant\")`；`assistant_message` 分支也只把当前 assistant 标成 `done`，不把 `message.content` 写回 UI 文本。\n- 为什么不合理：A2 的流式 fallback 设计意图是“撤销已经部分显示的 streaming 内容，再显示 non-streaming 的最终结果”。现在 producer 的撤销 id 与 consumer 的 message id 不在同一命名空间，补偿事件又被 consumer 当作纯封口事件，导致 fallback 路径无法可靠替换 UI 内容。这是 core StreamEvent 契约与 desktop reducer 语义不一致，影响正确性。\n- 影响面：普通 desktop `MessageStream` 的 streaming fallback；主要改动半径在 core `StreamEvent` 相关字段、`TurnLoop` fallback 发事件方式、desktop `applyStreamEvent` 消费语义。\n- 建议方向：给 `stream_request_start` 产生并下发稳定的 request/message correlation id，`tombstone` 使用同一 id；或者让 desktop `tombstone` 明确撤销当前 `streamingAssistantId`。同时让 `assistant_message` 在 fallback / 无 delta ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+        "locator": "markdown-paragraph-start-line:7",
+        "valueChars": 43,
+        "offset": 8,
+        "contextStart": 0,
+        "contextEnd": 43,
+        "text": "## F-01 streaming fallback 的撤销/补偿契约在桌面链路不可用",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "locator": "markdown-paragraph-start-line:225",
+        "valueChars": 3895,
+        "offset": 74,
+        "contextStart": 0,
+        "contextEnd": 1174,
+        "text": "| 编号 | 状态/边界 | 对应 finding | 源码锚点 | 说明 |\n|---|---|---|---|---|\n| V-01 | S4 streaming fallback / S8 assistant_message | F-01，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:20`、`docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:7` | `packages/core/src/engine/turn-loop.ts:605`、`packages/core/src/engine/turn-loop.ts:1335`、`packages/core/src/engine/turn-loop.ts:879` | tombstone 使用 `turn_${turnCount}`，而 request start 没有同一 message id，desktop fallback 补偿契约不闭合。 |\n| V-02 | S2 `stream_request_start` 事件归属 | F-02，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:29`、`docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:73` | `packages/core/src/types.ts:444`、`packages/core/src/engine/turn-loop.ts:605`、`packages/core/src/engine/engine.ts:1246` | core 顶层 request start 不带 agentId，子代理 wrapper 会 spread agentId；consumer 若不用事件字段而依赖 activeAgents，容易压掉主回复槽。 |\n| V-03 | S16 `turn_complete` 与下一 run 的紧邻边界 | F-03，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:38`、`docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:137` | `packages/core/src/engine/engine.ts:2363`、`packages/core/src/protocol/chat-session.t",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+        "locator": "markdown-paragraph-start-line:39",
+        "valueChars": 9163,
+        "offset": 5217,
+        "contextStart": 4767,
+        "contextEnd": 6317,
+        "text": "终态错误，用于清 busy 和显示错误 | TurnLoop model/context/unexpected error：`packages/core/src/engine/turn-loop.ts:710`、`717` 到 `720`、`736`、`1223`；protocol 后台唤醒失败兜底：`packages/core/src/protocol/server.ts:310` 到 `313` | coalescer 立即单独 flush，见 `packages/desktop/src/renderer/streamCoalescer.ts:138` 到 `143`；App 清 busy，见 `packages/desktop/src/renderer/App.tsx:1583`；reducer显示 system error 并清 streaming ids，见 `packages/desktop/src/renderer/types.ts:1036` 到 `1054` |\n| `tombstone` | streaming fallback 时撤销已部分输出的消息 | TurnLoop：`packages/core/src/engine/turn-loop.ts:1334` 到 `1335` | 主 reducer按 messageId 删除并修 agent index，见 `packages/desktop/src/renderer/types.ts:916` 到 `930` |\n| `task_update` | TodoWrite/任务列表 snapshot | TodoWrite：`packages/core/src/tool-system/builtin/task.ts:139` 到 `141`；Engine resume replay 最近 snapshot：`packages/core/src/engine/engine.ts:1632` 到 `1643`；Engine wrapper 记录 latestTodos：`packages/core/src/engine/engine.ts:1002` 到 `1005` | 主 reducer显示/更新 task_list，见 `packages/desktop/src/renderer/types.ts:678` 到 `699`；mobile 只展示 sub-agent task_update，见 `packages/desktop/src/renderer/lib/streamReducer.ts:405` 到 `435` |\n| `memory_recalled` | MemoryRead 命中记忆时的可见性信号 | Memory tool：`packages/core/src/tool-system/builtin/memory.ts:158` 到 `173` | 当前 desktop main reducer 未见专门 case，未知事件按 default ignore，见 `packages/desktop/src/renderer/types.ts:1091` 到 `1092`。这是“可被 host 消费”的协议事件 |\n| `thinking_delta` | thinking/reasoning live text | 当前 core 源码未见 live producer；类型在 `packages/core/src/types.ts:502`，consumer 已支持 | App 视作 noisy event，见 `packages/desktop/src/",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+        "locator": "markdown-paragraph-start-line:17",
+        "valueChars": 9315,
+        "offset": 3446,
+        "contextStart": 2996,
+        "contextEnd": 4546,
+        "text": "` 展示；未看到 core engine live-run 分支测试。 | 若回归，用户清掉 goal 后，正在跑的 loop 可能把旧 goal 复活；stop hook 也可能继续拦截最终答案。 | `engine clearGoal mutates live activeRunSession and unregisters hook`：构造有 `activeRunSession.state.activeGoal` 和 `activeGoalHook` 的 engine，调用 `clearGoal`，断言 live state 被清、`saveState` 收到清空后的状态、hook 被 unregister；另测 idle resume 路径。 | 高 |\n| `packages/core/src/engine/turn-loop.ts:1334`、`packages/desktop/src/renderer/types.ts:916` | streaming 模型调用失败后发 `tombstone` 并 `callWithoutStreaming` fallback；renderer tombstone 删除消息并重排 `agentMessageIndex`。 | 撤销已流出的半截 UI，再用非流式结果补齐；同时保持后续 subagent 事件索引正确。 | `rg \"streaming_fallback|tombstone\" packages/core/src/engine packages/desktop/src/renderer -g '*test.*'` 无命中。 | 若 core 回归，半截 assistant/tool 卡片会残留或 fallback 不发生；若 renderer 回归，删除 agent 后后续 agentId 可能错挂到旧 index，出现消息错挂/重复卡片。 | `turn-loop streaming failure emits tombstone and retries without streaming`：fake `model.call` 在发出部分流事件后抛错，`callWithoutStreaming` 成功，断言 tombstone 事件顺序和最终文本；`applyStreamEvent tombstone removes agent and reindexes later agents`：构造两个 agent，删除第一个，断言第二个 index 递减且后续 `tool_result` 挂对。 | 高 |\n| `packages/core/src/protocol/client.ts:357`、`packages/core/src/protocol/client.ts:375`、`packages/core/src/protocol/client.ts:405` | `AgentClient` 通用 response resolve/reject、stream/approval/status notification 分发、`close()` 拒绝 pending request。 | Core protocol client 的异步收包与关闭语义。 | `packages/core/src/protocol/client.steer.test.ts` 只覆盖 `steer()/unsteer()` 发 RPC；`rg \"handleResponse|handleNotification|approvalRequest|onStreamEvent|onStatus|Client closed",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+        "locator": "markdown-paragraph-start-line:44",
+        "valueChars": 718,
+        "offset": 196,
+        "contextStart": 0,
+        "contextEnd": 718,
+        "text": "1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/25-small-features-impl-notes.md",
+        "locator": "markdown-paragraph-start-line:58",
+        "valueChars": 285,
+        "offset": 103,
+        "contextStart": 0,
+        "contextEnd": 285,
+        "text": "- Each top-level turn now derives `assistant_${turnId}`.\n- `stream_request_start` emits `messageId`.\n- Streaming fallback tombstones use the same `messageId`.\n- Same-turn terminal `assistant_message` events include the same optional\n  `messageId` where the turn loop can identify them.",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup-decisions.json",
+        "locator": "/decisions/1/mechanism",
+        "valueChars": 84,
+        "offset": 13,
+        "contextStart": 0,
+        "contextEnd": 84,
+        "text": "F-01 Desktop streaming fallback tombstone correlation and final replacement mismatch",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/5/context",
+        "valueChars": 265,
+        "offset": 35,
+        "contextStart": 0,
+        "contextEnd": 265,
+        "text": "模型调用由 `callModelWithFallback()` 处理 streaming fallback、ContextLimit recovery、tombstone 等；主路径在 `packages/core/src/engine/turn-loop.ts:688`。如果无工具调用，TurnLoop 发 `assistant_message`，触发 `on_stop`，goal hook 可用 `continueSession` 阻止结束并追加提醒，见 `packages/core/src/engine/turn-lo",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/6/context",
+        "valueChars": 167,
+        "offset": 9,
+        "contextStart": 0,
+        "contextEnd": 167,
+        "text": "| F-01 | streaming fallback 的撤销/补偿契约在桌面链路不可用 | P1 | core 发 `tombstone(turn_N)` 并用 `assistant_message` 带最终文本，但 desktop 用本地 message id 删除且只把 `assistant_message` 当封口事件。 |",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/7/context",
+        "valueChars": 44,
+        "offset": 9,
+        "contextStart": 0,
+        "contextEnd": 44,
+        "text": "### F-01 streaming fallback 的撤销/补偿契约在桌面链路不可用",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/12/context",
+        "valueChars": 43,
+        "offset": 8,
+        "contextStart": 0,
+        "contextEnd": 43,
+        "text": "## F-01 streaming fallback 的撤销/补偿契约在桌面链路不可用",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "locator": "/contexts/stream_revoke/23/context",
+        "valueChars": 202,
+        "offset": 3,
+        "contextStart": 0,
+        "contextEnd": 202,
+        "text": "| `tombstone` | streaming fallback 时撤销已部分输出的消息 | TurnLoop：`packages/core/src/engine/turn-loop.ts:1334` 到 `1335` | 主 reducer按 messageId 删除并修 agent index，见 `packages/desktop/src/renderer/types.ts:916` 到 `",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "locator": "/matches/budgetMechanism/22/excerpt",
+        "valueChars": 145,
+        "offset": 85,
+        "contextStart": 0,
+        "contextEnd": 145,
+        "text": "2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+        "locator": "/selected/45/excerpt",
+        "valueChars": 145,
+        "offset": 85,
+        "contextStart": 0,
+        "contextEnd": 145,
+        "text": "2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "locator": "/hits/45/matches/2/text",
+        "valueChars": 709,
+        "offset": 35,
+        "contextStart": 0,
+        "contextEnd": 709,
+        "text": "模型调用由 `callModelWithFallback()` 处理 streaming fallback、ContextLimit recovery、tombstone 等；主路径在 `packages/core/src/engine/turn-loop.ts:688`。如果无工具调用，TurnLoop 发 `assistant_message`，触发 `on_stop`，goal hook 可用 `continueSession` 阻止结束并追加提醒，见 `packages/core/src/engine/turn-loop.ts:876`、`packages/core/src/engine/turn-loop.ts:892`。如果有工具调用，TurnLoop 记录 assistant tool_use、发缺失的 `tool_use_start`、通过 `StreamingToolQueue` 执行工具、记录 transcript、发 `tool_result`，见 `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:1014`、`packages/core/src/engine/turn-loop.ts:1021`。Engine 在 TurnLoop 返回后持久化状态并最终发 `turn_complete`，见 `packages/core/src/engine/engine.ts:2340`、`packages/core/src/engine/engine.ts:2362`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/plan-2026-07-09-security-M3-M2-IMPL-NOTES.md",
+        "locator": "markdown-paragraph-start-line:113",
+        "valueChars": 1733,
+        "offset": 995,
+        "contextStart": 545,
+        "contextEnd": 1733,
+        "text": "prompt-too-long, abort, and model-error returns are all covered by the unified exit even when a branch forgets an inline redaction.\n- Max-turns final-summary handling now mirrors the normal pre-model guard: if a sensitive tool result is pending, it skips synchronous `contextManager.manage()` before the no-tools summary call, preventing compaction-summary prompts from receiving plaintext.\n- To preserve the one-consumption contract on error paths, streaming fallback is disabled while a sensitive tool result is pending. A streaming failure emits a tombstone and returns `model_error` instead of re-sending the same plaintext via `callWithoutStreaming()`.\n- Added terminal coverage in `packages/core/src/engine/turn-loop-sensitive-result.test.ts` for loop-top abort, confirmed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowing the final no-tools model call to be the single plaintext consumer.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-07-09/13-findings-register.md",
+        "locator": "markdown-paragraph-start-line:7",
+        "valueChars": 4846,
+        "offset": 92,
+        "contextStart": 0,
+        "contextEnd": 1192,
+        "text": "| 编号 | 一句话标题 | 严重度 | 状态 | 归属模块 | 深挖在哪份文档 | 是否有修复设计 |\n|---|---|---|---|---|---|---|\n| F-01 | streaming fallback 的 tombstone / assistant_message 补偿契约在桌面链路不可用 | P1 | 已出修复设计 | 桌面流 | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md` | `04` |\n| F-02 | `stream_request_start` 用脏 `activeAgents` 推断归属，可能压掉主回复槽 | P1 | 已出修复设计 | 桌面流 | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md` | `04` |\n| F-03 | coalescer 合并 delta 时没有在 hard boundary 上切段 | P1 | 已出修复设计 | 桌面流 | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md` | `04` |\n| F-04 | snapshot 的 seq 游标只在 replay 内成立，live IPC 不带 seq | P1 | 已出修复设计 | 桌面流 | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md` | `04` |\n| F-05 | `requireExisting` 失败前先创建 live empty `ChatSession` | P2 | 已出修复设计；已在 `../codeshell-b3` TDD 落地，20号独立审查 APPROVE，merge 交接见 `../archive/review-2026-07-09/19-landing-status.md` | protocol | `../archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md` | `05` |\n| F-06 | `pre_tool_use: ask` 用户批准后跳过 classifier deny / rules | P1 | 已出修复设计 | tool-system | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md`、`../archive/review-2026-07-09/10-tool-system-execution-and-",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-07-09/README.md",
+        "locator": "markdown-paragraph-start-line:64",
+        "valueChars": 5294,
+        "offset": 576,
+        "contextStart": 126,
+        "contextEnd": 1676,
+        "text": "                                                                                                                                                      |\n| ---- | --------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| F-01 | streaming fallback 的撤销/补偿契约在桌面链路不可用                          | P1     | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md`                                                                                                                               |\n| F-02 | `stream_request_start` 用 `activeAgents` 推断归属，运行态一脏就压掉主回复槽 | P1     | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md`                                                                                                                               |\n| F-03 | coalescer 按 agent 合并 delta，却没有在硬边界上切段                         | P1     | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md`                                                                                                                               |\n| F-04 | snapshot 的 seq 游标只存在于重放路径，live IPC 没有对齐游标                 | P1     | `../archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md`                                                                                                                               |\n| F-05 | `requireE",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-07-09/pre-beta-08-security-refix2-review.md",
+        "locator": "markdown-paragraph-start-line:11",
+        "valueChars": 843,
+        "offset": 723,
+        "contextStart": 273,
+        "contextEnd": 843,
+        "text": "e：`engine.ts:2305-2309` 缓存的是 `run()` 返回后的 redacted history；resume 读该缓存（`:1449`）→ 拿到 redacted。\n- transcript/stream/summary：分别用 `transcriptResult`/`toolResultForDisplay`/`toolResultsForDisplay`，均不含明文。\n- context manager：pending sensitive 时跳过普通 manage（`:676-687`）+ max-turns summary 前跳过 sync manage（`:1299-1308`）。\n- 消费语义正确：明文只进它该进的那一次模型调用，之后 `:783` 立即 redaction；未消费明文不被提前抹（fast path `:417-424`）。abort 发生在消费前 → 兜底 redaction 抹掉（牺牲 resume 后再消费，符合 B1 目标）。\n- streaming fallback：pending sensitive 时禁 `callWithoutStreaming()`（`:1410-1417`），发 tombstone → model_error → 统一 redaction。",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-07-09/pre-beta-08-security-refix2-review.md",
+        "locator": "markdown-paragraph-start-line:25",
+        "valueChars": 251,
+        "offset": 103,
+        "contextStart": 0,
+        "contextEnd": 251,
+        "text": "### Nit×3（测试补强）\n1. 缺 Engine 级端到端断言：cached history / resume 输入不含明文（代码证据足够，测试可补）。\n2. 缺 pending-sensitive streaming fallback 禁用的专门测试（断言 callWithoutStreaming 未被调 + tombstone）。\n3. 敏感终态组合未覆盖 complete_goal / goal_budget_exhausted（统一出口已覆盖其 return，属覆盖缺口非代码缺陷）。",
+        "wholeValueIncluded": true
+      }
+    ]
+  },
+  "readContextsNotYetClaimed": true
+}

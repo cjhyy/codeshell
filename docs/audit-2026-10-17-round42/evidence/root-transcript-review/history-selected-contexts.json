@@ -1,0 +1,252 @@
+{
+  "contexts": [
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/core-complete-review.md",
+      "at": "$",
+      "context": " process-local，进程崩溃丢状态；上限 `MAX_BACKGROUND_AGENTS = 6` |\n| `agent-notifications.ts` | 后台 agent 完成通知 | 与 Agent 工具配合 | 通知和 transcript routing 需避免串流到主会话 |\n| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |\n| `arena.ts` / `Arena` | 多模型协作分析工具 | topic + participants/config | 会调用多个 LLM，成本高；见第 27 节 |\n| `task.ts` / `TodoWrite` | 管理任务列表 | todos 全量快照 | UI pinned panel 依赖；TaskGuard 会提醒 stale in_progress |\n| `brief.ts` | 简报/摘要类工具 | 由定义决定 | 通常只读/文本生成 |\n\nAgent 工具与 Engine 的 subAgentSpawner 连接：Engine 在 ToolContext 中注入 spawner，Agent 工具据此创建子 Engine 或后台 agent。后台 registry 是进程级内存，不是跨进程 durable run。\n\n### 24.5 MCP / LSP / Skill / Memory / Config / Cron 类\n\n| 工具/文件 | 功能 | 使用方式 | 风险 |\n|---|---|---|---|\n| `mcp-tools.ts` / `MCPTool`、`ListMcpResources`、`ReadMcpResource` "
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "at": "$",
+      "context": "\n\n1. 在 `packages/core/src/types.ts` 扩展事件契约，保持向后兼容：\n   - `stream_request_start` 增加 `messageId?: string`。\n   - `assistant_message` 增加 `messageId?: string`。\n   - `tombstone` 保持 `messageId`，必要时增加 `agentId?: string` 以匹配子代理 wrapper 当前会在运行时 spread `agentId` 的事实，见 `packages/core/src/engine/engine.ts:1246`。\n2. 在 `packages/core/src/engine/turn-loop.ts` 的每个顶层 turn 开始处生成稳定 id，例如基于 `turnId` 而不是只基于 `turnCount`。`turnId` 已在 loop 内生成并用于日志，见 `packages/core/src/engine/turn-loop.ts:596`、`packages/core/src/engine/turn-loop.ts:597`。建议形如 `assistant_${turnId}`，避免同一 session resume 或子 Engine 的 `turn_1` 碰撞。\n3. `stream_request_start` emit 时带上 `messageId`，见当前 emit 点 `packages/core/src/engine/turn-loop.ts:605`。\n4. 将该 `messageId` 传入 `callModelWithFallback()`，fallback tombstone 使用同一 id，替换当前 `turn_$"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "at": "$",
+      "context": "”可能改变正常 streaming 的显示结果；这是预期修复，但要重点跑 `packages/desktop/src/renderer/types.test.ts` 与 `packages/desktop/src/renderer/messages/AssistantMessageView.test.tsx`。\n3. tombstone 删除 message 后会调整 `agentMessageIndex`，当前逻辑已有索引重写，见 `packages/desktop/src/renderer/types.ts:921`、`packages/desktop/src/renderer/types.ts:927`；改动时不能破坏子代理 card index。\n4. 子代理事件会经 parent wrapper spread `agentId`，见 `packages/core/src/engine/engine.ts:1246`。如果给 tombstone/assistant_message 增加 `agentId` 类型，desktop 必须避免把子代理终态误写到主 assistant。\n\n## F-02 `stream_request_start` 用 `activeAgents` 推断归属，运行态一脏就压掉主回复槽\n\n### 1. 根因链\n\n1. `StreamEvent` 类型已经允许 `stream_request_start` 携带 `agentId?: string`，见 `packages/core/src/types.ts:444`。子 Engine 的事件会在 parent wrapper 中统一 spread `agentId: req.agentId`，见 `packages/core/src/engine/engine.ts:1226`、`packages/core/src/engine/engine.ts:1246`。\n2. desktop reducer 的 `stream_request_start`"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "at": "$",
+      "context": "ssage 后会调整 `agentMessageIndex`，当前逻辑已有索引重写，见 `packages/desktop/src/renderer/types.ts:921`、`packages/desktop/src/renderer/types.ts:927`；改动时不能破坏子代理 card index。\n4. 子代理事件会经 parent wrapper spread `agentId`，见 `packages/core/src/engine/engine.ts:1246`。如果给 tombstone/assistant_message 增加 `agentId` 类型，desktop 必须避免把子代理终态误写到主 assistant。\n\n## F-02 `stream_request_start` 用 `activeAgents` 推断归属，运行态一脏就压掉主回复槽\n\n### 1. 根因链\n\n1. `StreamEvent` 类型已经允许 `stream_request_start` 携带 `agentId?: string`，见 `packages/core/src/types.ts:444`。子 Engine 的事件会在 parent wrapper 中统一 spread `agentId: req.agentId`，见 `packages/core/src/engine/engine.ts:1226`、`packages/core/src/engine/engine.ts:1246`。\n2. desktop reducer 的 `stream_request_start` 分支没有看 `event.agentId`。它的注释说“event itself doesn't carry agentId”，并用 `Object.keys(state.activeAgents).length > 0` "
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+      "at": "$",
+      "context": "ktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendTurnEn"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "at": "$",
+      "context": "状态、hook 被 unregister；另测 idle resume 路径。 | 高 |\n| `packages/core/src/engine/turn-loop.ts:1334`、`packages/desktop/src/renderer/types.ts:916` | streaming 模型调用失败后发 `tombstone` 并 `callWithoutStreaming` fallback；renderer tombstone 删除消息并重排 `agentMessageIndex`。 | 撤销已流出的半截 UI，再用非流式结果补齐；同时保持后续 subagent 事件索引正确。 | `rg \"streaming_fallback|tombstone\" packages/core/src/engine packages/desktop/src/renderer -g '*test.*'` 无命中。 | 若 core 回归，半截 assistant/tool 卡片会残留或 fallback 不发生；若 renderer 回归，删除 agent 后后续 agentId 可能错挂到旧 index，出现消息错挂/重复卡片。 | `turn-loop streaming failure emits tombstone and retries without streaming`：fake `model.call` 在发出部分流事件后抛错，`callWithoutStreaming` 成功，断言 tombstone 事件顺序和最终文本；`applyStreamEvent tombstone removes agent and reindexes later agents`：构造两个 agent，删除第一个，断言第二个 index 递减且后续 `tool_result` 挂对。 | 高 |\n| `packages/core/src/protocol/client.ts:357"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "at": "$",
+      "context": "rc/renderer/types.ts:701` | `agent_start` 直接追加 AgentMessage 并覆盖 `agentMessageIndex`；没有像 `tool_use_start` 那样对重复事件做幂等保护。需人工确认上游是否保证 `agent_start` exactly-once。 | subagent 卡片创建和 agentId 到消息 index 的路由表。 | `rg \"duplicate.*agent_start|agent_start.*duplicate|agentMessageIndex|tombstone\" packages/desktop/src/renderer -g '*test.*'` 无命中；相反，移动端 `lib/streamReducer.test.ts:164` 明确覆盖了重复 `agent_start` 幂等。 | 若 live/replay overlap 或 provider 重放产生重复 `agent_start`，desktop 可能出现重复 subagent 卡、React key 冲突，后续 `text_delta/tool_result` 只挂到最后一张卡，前一张卡停留。 | `applyStreamEvent duplicate agent_start is idempotent`（若协议要求 exactly-once，则先补协议注释测试而不是改行为）：重复同一 `agentId` 后断言只有一张 agent 卡、index 稳定。 | 低（需人工确认） |\n\n## 已有良好覆盖的区域\n\n- `packages/desktop/src/main/parseStreamLine.ts:15` 覆盖充分：`parseStreamLine.test.ts` 覆盖有效 stream event、response/其它 method、缺失/空 `sessionId`、缺 even"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/archive/review-2026-07-09/26-small-features-review.md",
+      "at": "$",
+      "context": "phan 清非 backgrounded active；backgrounded agent 保留；`background_agent_completed` 清 active；子代理文本/工具仍只进 card。\n- **F-01**：实现忠实。core 用 `assistant_${turnId}` 贯穿 start/tombstone/终态；desktop tombstone 删 active slot 时清 `streamingAssistantId`；带 `agentId` 的子代理终态被主 reducer 忽略；turnId 带时间+随机片段避免 resume/子 Engine `turn_1` 碰撞。\n- **F-06**：实现忠实。`pre_tool_use: ask` 不再短路 classifier；合并顺序 deny > ask > allow；hook 只能收紧；merged ask 只走一次 `handleAsk()`；未见 deny 被 ask 批准绕过的路径。\n- **F-04**：基本忠实。main 新增 `agent:streamEvent` 带可选 seq，legacy `agent:msg` fallback 保留；renderer batch 用 maxSeq 推进并持久化 `snapshotSeq`；hydrate 对非空 projection 也按 cursor replay tail。见上方 Minor（cursor 合并边角）。\n- **N-07**：执行语义正确，`permissionDefault` 未接入 classifier；新增测试覆盖 allow 不自动放行、deny 不覆盖 explicit allow。仅一处 preset 注释残留（见 Nit）。\n- **N-02**：只改注释，现描述与实际「完整 LLMResponse 后 e"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+      "at": "$[\"hits\"][271][\"text\"]",
+      "context": "新增：dispose 幂等；replacement goal 不被旧 run 清除；mid-run clear 注销对应 handler；onMet 落盘；termination tombstone；subagent 不注册 Goal hook；attach/extend 只作用于本次 loop。"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+      "at": "$[\"contexts\"][\"stream_revoke\"][4][\"context\"]",
+      "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "at": "$[\"contexts\"][\"history-mapping\"][2][\"context\"]",
+      "context": "ktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][23][\"matches\"][26][\"text\"]",
+      "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][49][\"matches\"][4][\"text\"]",
+      "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][141][\"matches\"][1][\"text\"]",
+      "context": "  transcript/event log，而不是让 arm 正确性依赖无限 tombstone。"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][191][\"matches\"][0][\"text\"]",
+      "context": "| R60/P3 侧栏删除失败 | automation_flow_review 检查实际确认、持久diff、同键墓碑及SessionsView；见[独立复核](session-actions-quality-round13.md) | “永久”限定同project/local-row键的tombstone。实际 Core state/transcript保留；历史页修复权限后可重试完成删除。完整Main前置close/cleanup未动态运行 |"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][205][\"matches\"][0][\"text\"]",
+      "context": "on-catalog-store.ts:138](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-catalog-store.ts:138) 将 ID 加入 durable tombstone，并在后续 upsert 前过滤该 ID；不存在普通删除 patch 的撤销接口。cache [session-transcript-cache.ts:109](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-transcript-cache.ts:109) 同样写 deleted tombstone，[64](/"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][205][\"matches\"][0][\"text\"]",
+      "context": "ID；不存在普通删除 patch 的撤销接口。cache [session-transcript-cache.ts:109](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-transcript-cache.ts:109) 同样写 deleted tombstone，[64](/"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][206][\"matches\"][1][\"text\"]",
+      "context": "- `session-transcript-cache.ts:109–119`：renderer snapshot 删除也有 tombstone，阻止迟到保存恢复它。"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][206][\"matches\"][3][\"text\"]",
+      "context": "**影响与恢复：**用户确认的是删除；实际删除失败，界面却表现为已删除，并失去该侧栏行的可见重试入口。持久 tombstone 使同键的普通 disk 重建也不能稳定恢复它。Core 权威 state/transcript 在这个可复现故障里保留，**不是历史文件丢失**。实际 SessionsView 仍能从 Core 目录列出 A；修复目录权限后，到该历史管理页再次删除可完成原操作。本轮已实际验证该恢复。没有声称 SessionsView 提供打开原会话或撤销 catalog tombstone 的入口。"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+      "at": "$",
+      "context": "默清空后\n  继续。\n\n### 3.4 非目标\n\n- 不支持同一 sid 的新旧 binary rolling write、downgrade writer 或多个并发 CLI writer。\n- 不保留无限 goal terminal 审计历史。当前 goal 的 terminal 诊断信息足够；需要审计时应写\n  transcript/event log，而不是让 arm 正确性依赖无限 tombstone。\n- 不持久化 run-scoped `stopBlockCount`、本 run token/time baseline；新 run 对一个仍 armable 的 goal\n  重新计数是既有语义。\n- 不在本重构中把所有 session 数据迁到数据库，也不改 image/compaction/view-image 路径。\n\n## 4. 现状与债务地图\n\n下表中的“实验机制”指第三轮报告审查的未提交版本，不等同于当前可见源码。\n\n| 组件 | 想解决的问题 | 引入的新风险/成本 | 与四轮复核的对应关系 | 处理决定 |\n|---|---|---|---|---|\n| 不可变 `goalId` + 单调 `goalRevision` + CAS | 将 identity 与 `objective/setAtMs` 解耦；让 A terminal 不误清 same-objective B；给 stale generation 排序 | revision 分配绑到通用 `saveState`；revisionless 值被 blanket suppress；上溢/损坏处理；CAS 正确性又依赖锁 | 第一轮 blocker 2 要求真正 identity（`goal-fix-review-codex"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/review-2026-10-12/quality-round13.md",
+      "at": "$",
+      "context": "常对照，不是现有恢复按钮 |\n| R60/P3 侧栏删除失败 | automation_flow_review 检查实际确认、持久diff、同键墓碑及SessionsView；见[独立复核](session-actions-quality-round13.md) | “永久”限定同project/local-row键的tombstone。实际 Core state/transcript保留；历史页修复权限后可重试完成删除。完整Main前置close/cleanup未动态运行 |\n| R61/P3 同项目双窗口选择 | web_remote_review 独立查正式New Window、窗口独立activeProject与共享activeSession、字段更新及去重，支持保留 | 未找到要求镜像导航的产品契约，按确定的流程摩擦列P3。真实store/IPC/preload/双persistence + 精确AST选择链；未运行完整Electron双窗、真实发送或附件保护 |\n| R62/P3 离开CLI残留审批 | root 读取实际hook/controller/按钮回调fixture与生产leave/门禁，支持独立保留；见[生命周期附录](web-lifecycle-round13.md) | 离开前已有普通Read审批才触发，无卡leave及迟到旧卡均正常。卡仍指向A，不是错误发给B。重选native已验证；新建与正常resolved恢复仅静态 |\n\nR60 原候选 W23，R62 作者也临时使用 W23；正式将后者改称 W24，防止混同。R61/M1 与 R16 的 CC viewer 广播、归档 I11 的 worker 输出广播不同；它来自普通 project catal"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/review-2026-10-12/quality-round14.md",
+      "at": "$",
+      "context": "# 第十四轮整合文档最终只读语义核验\n\n结论：**保留 R63、R64、R65 的 P3 与 R58 的图片扩展；无需撤销或重新分级。最终五份文档没有未解决的实质语义矛盾。** 审计中通知主审修正的三处文案/路径均已只读确认完成。本次未运行任何测试、Electron、模型或原生实验，未改产品、主报告或目标，也未创建子代理；只写本 `/tmp` 审计文件。\n\n核验对象为 `/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/` 的 README、flow-coverage、notification-round14、terminal-lifecycle-round14、file-navigation-round14。辅助只读对照各附录所链的生产源码、fixture、既有成功日志、两份 reproduction-results JSON、notification-quality 与 Electron reload-identity 源码/JSON；没有将只读复核额外计入测试。\n\n## 统计与基线\n\n- 主报告正式表格实际为 **65 行：1 P1、44 P2、20 P3**。R63–R65 各一项 P3；R58 图片未另加编号。\n- 两基线 `validation/reproduction-results.json` 和 `validation/latest-a66f4ef2/reproduction-results.json` 各 **62 条、199 测试**。逐条只读核对所指向日志的 "
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/review-2026-10-12/session-actions-quality-round13.md",
+      "at": "$",
+      "context": "on-catalog-store.ts:138](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-catalog-store.ts:138) 将 ID 加入 durable tombstone，并在后续 upsert 前过滤该 ID；不存在普通删除 patch 的撤销接口。cache [session-transcript-cache.ts:109](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-transcript-cache.ts:109) 同样写 deleted tombstone，[64](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-transcript-cache.ts:64) 拦截迟到写入。这些反复活保护本身正确，侧栏提前发布它们是问题。\n\n原测试在真实权限拒绝之后 flush，读取实际 catalog 文件确认墓碑，调用实际 [upsertImportedSession:952](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/transcripts.ts:952)，再次 flush 后同键仍 0 行。这足以证明 **同 project key / local row id 的普"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/review-2026-10-12/session-actions-quality-round13.md",
+      "at": "$",
+      "context": "ID；不存在普通删除 patch 的撤销接口。cache [session-transcript-cache.ts:109](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-transcript-cache.ts:109) 同样写 deleted tombstone，[64](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-transcript-cache.ts:64) 拦截迟到写入。这些反复活保护本身正确，侧栏提前发布它们是问题。\n\n原测试在真实权限拒绝之后 flush，读取实际 catalog 文件确认墓碑，调用实际 [upsertImportedSession:952](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/transcripts.ts:952)，再次 flush 后同键仍 0 行。这足以证明 **同 project key / local row id 的普通导入不能持久恢复**；不要求记录“全局永远不可恢复”。生产正常 disk hydration [useAutomationSessionImport.ts:121](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/de"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/review-2026-10-12/session-actions-round13.md",
+      "at": "$",
+      "context": "。\n- `sessionPersistence.ts:270–275,334–347`：本地删除 diff 被作为持久 patch 自动提交。\n- `session-catalog-store.ts:138–153`：删除 ID 放入永久 tombstone，后续同 ID upsert 被忽略。\n- `session-transcript-cache.ts:109–119`：renderer snapshot 删除也有 tombstone，阻止迟到保存恢复它。\n- `preload/index.ts:971` → `main/index.ts:6787–6789` → `deleteDesktopSession:6748–6785`。Main 先等待 `bridge.closeSession:6759`，再 `await deleteSession:6767`；没有吞掉该服务异常。\n- `packages/server/src/sessions-service.ts:124–143` 的真实 `fs.rm` 可拒绝；如 owned 会话目录不可写，当前 fixture 得到实际 `EACCES`。\n\n**可复现操作时序：**\n\n1. 用实际 `SessionManager.create` / `appendMessage` / `updateSessionState` 创建已完成普通 Desktop 会话 A，完整 Core state 与两条消息可独立 resume；通过实际 `SessionCatalogStore` / `SessionTranscriptCache` / `SessionPersistence` 建立当前 active 的侧栏 A 和 renderer snapshot。\n2. 挂载实际 `Sidebar`、`D"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/review-2026-10-12/session-actions-round13.md",
+      "at": "$",
+      "context": "实际 `listDiskSessions` 仍列 A。但对同 project/key 的正常 `upsertImportedSession` 重建，实际 catalog 忽略它，flush 完成后仍 0 行。\n\n**影响与恢复：**用户确认的是删除；实际删除失败，界面却表现为已删除，并失去该侧栏行的可见重试入口。持久 tombstone 使同键的普通 disk 重建也不能稳定恢复它。Core 权威 state/transcript 在这个可复现故障里保留，**不是历史文件丢失**。实际 SessionsView 仍能从 Core 目录列出 A；修复目录权限后，到该历史管理页再次删除可完成原操作。本轮已实际验证该恢复。没有声称 SessionsView 提供打开原会话或撤销 catalog tombstone 的入口。\n\n**正常对照：**从实际 `SessionsView` 发起同一真实文件系统故障，`SessionsView.tsx:158–175,451–469` 保留行，展示真实 EACCES，并提供原 ID 重试按钮；在 success 之前不调用 `onSessionDeleted`，实际 catalog 行和 renderer snapshot 均保留。恢复 owned 权限后点击实际重试，删除完成、成功回调只报 A 一次。\n\n**修复建议：**侧栏可沿用 SessionsView 的顺序：先显示目标的 pending-delete 状态，Main 删除成功后才提交 catalog/snapshot tombstone 和清理 renderer 状态；失败保留行、展示错误并允许同 ID 重试。永久 tombstone 不能在后端接受删除前作为乐观 UI 标记使用。\n\n**信心与限制：**高。生产 UI、确认框、hoo"
+    },
+    {
+      "query": "tombstone-transcript",
+      "path": "docs/todo/small-features-2026-07-10/split-engine-ts.md",
+      "at": "$",
+      "context": ".cleargoal*.test.ts`、`protocol/server.goal*.test.ts`、`goal.test.ts`。\n\n新增：dispose 幂等；replacement goal 不被旧 run 清除；mid-run clear 注销对应 handler；onMet 落盘；termination tombstone；subagent 不注册 Goal hook；attach/extend 只作用于本次 loop。\n\n### 5.6 turn-loop-factory / run-loop-driver\n\n复用全部 `turn-loop-*.test.ts`，重点是 abort、context-limit、steer、sensitive result、usage/cache、max turns、goal lifecycle。\n\n新增：fake ports 逐一断言调用；heartbeat 的 usage fold 幂等；pending compaction 只消费一次；headless 只等待 subagent、不等待 shell/video；registry notify 与 queue enqueue race；abort 后仍 drain 已入队通知；所有 disposer 在抛错路径执行一次。\n\n### 5.7 run-finalizer / auxiliary-pipeline\n\n复用：`engine.prompt-cache.test.ts`、`session-usage.test.ts`、`engine.session-title.test.ts`、`engine.force-compact.test.ts`、memo"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/architecture/03-llm-and-model-layer.md",
+      "at": "$",
+      "context": "he app (`llm/providers/openai.ts:1`). It resolves headers and credentials lazily at client construction: explicit `apiKey` > `authCommand` stdout > environment fallback, with a header-only placeholder for custom providers that authenticate by `httpHeaders` (`llm/providers/openai.ts:212`, `llm/provider-auth.ts:81`). It memoizes one `Capability` per `(providerKind, model)` (`llm/providers/openai.ts:230`).\n\nThe important invariant is that request-shape divergence is centralized in `buildRequestBody()` (`llm/providers/openai.ts:306`):\n- token limit field and output cap: `max_tokens` vs `max_completion_tokens`, plus `clampMaxTokens` against capability `maxOutputTokens` (`llm/providers/openai.ts:318`, `llm/providers/openai.ts:329`);\n- sampling: `temperatur"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][0][\"text\"]",
+      "context": "he app (`llm/providers/openai.ts:1`). It resolves headers and credentials lazily at client construction: explicit `apiKey` > `authCommand` stdout > environment fallback, with a header-only placeholder for custom providers that authenticate by `httpHeaders` (`llm/providers/openai.ts:212`, `llm/provider-auth.ts:81`). It memoizes one `Capability` per `(providerKind, model)` (`llm/providers/openai.ts:230`)."
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round20/streamattempt.md",
+      "at": "$",
+      "context": "镜像或执行 App/React/Ink/ChatStore，没有真实 UI、timer、provider、网络或工具执行。\n\nCore 仅静态阅读普通 producer 选段：`turn-loop.ts:1119–1123` 提供 `assistantMessageId`，`:2109–2115` 先撤销主消息和工具 placeholders，`:2219–2223` 在 fallback 返回后重开相同 correlation ID。实际 TurnLoop、Engine、ModelFacade、真实/伪 provider、transport/replay/accounting 都未运行。源代码顺序不能证明异步端到端时序、异常传输或真实 TUI 的效果；没有把人为乱序、重复 ID、基线行原地修改的构造变成产品 bug。\n\n全历史去重扫描覆盖 docs/bugs 的 **2109 个 MD/JSON 文件**（1176 MD、933 JSON，含 archive）；递归 **267491 个字符串叶、373239 个全部 scalar 叶**，0 读/解析错。只搜索字符串，完整计数与最多 24 个上下文分开，见 [dedup](evidence/streamattempt-dedup.json)。关键词索引不代表语义穷尽。已核对 [round7 baseline](../audit-2026-10-17-round7/tui.md)、[旧 Desktop F-01](../archive/review-2026-07-09/03-optimization-findings.md)、round17 history mapper 和 round9 provider/history 配对范围，见"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "at": "$[\"matches\"][\"client-sync\"][160][\"excerpt\"]",
+      "context": "测试、`uiLanguage.ts`、`dict.ts` 的 namespace 组装入口，以及 Web 的 `i18n/translate.ts`、`lib/uiLanguage.ts` 和 mobile 的选定条目。插值使用 callback 返回字面字符串，普通 `$` 替换 token 不会在这一层被再次解释；fallback 顺序从源码可见。没有据此断言所有文案、placeholder、组件 caller 或语言切换行为正确。"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "at": "$[\"matches\"][\"client-sync\"][161][\"excerpt\"]",
+      "context": "测试、`uiLanguage.ts`、`dict.ts` 的 namespace 组装入口，以及 Web 的 `i18n/translate.ts`、`lib/uiLanguage.ts` 和 mobile 的选定条目。插值使用 callback 返回字面字符串，普通 `$` 替换 token 不会在这一层被再次解释；fallback 顺序从源码可见。没有据此断言所有文案、placeholder、组件 caller 或语言切换行为正确。"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-dedup.json",
+      "at": "$[\"contexts\"][\"memoize\"][0][\"context\"]",
+      "context": "tdout > environment fallback, with a header-only placeholder for custom providers that authenticate by `httpHeaders` (`llm/providers/openai.ts:212`, `llm/provider-auth.ts:81`). It memoizes one `Capability` per `(providerKind, model)` (`llm/providers/openai.ts:230`).\n\nThe important invariant is that request-shape divergence is centralized in `buildRequestBody()` (`llm/providers/openai.ts:306`):\n- token limit field and output cap: `max_tokens` vs `max_completion_tokens`, plus `clampMaxTokens` against capability `maxOutputTokens` (`llm/providers/openai.ts:318`, `llm/providers/openai.ts:329`);\n- sampling: `temperatur"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round34/evidence/root-history.json",
+      "at": "$[\"hits\"][\"helper-contract\"][0][\"context\"]",
+      "context": "fallback, with a header-only placeholder for custom providers that authenticate by `httpHeaders` (`llm/providers/openai.ts:212`, `llm/provider-auth.ts:81`). It memoizes one `Capability` per `(providerKind, model)` (`llm/providers/openai.ts:230`).\n\nThe important invariant is that request-shape divergence is centralized in `buildRequestBody()` (`llm/providers/openai.ts:306`):\n- token limit field and output cap: `max_tokens` vs `max_completion_tokens`, plus `clampMaxTokens` against capability `maxOutputTokens` (`llm/providers/openai.ts:318`, `llm/providers/openai.ts:329`);\n- sampling: `temperatur"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "at": "$[\"hits\"][\"rect_clip_terms\"][95][\"context\"]",
+      "context": ":false` 或 title/tool-summary 仍到 aux，后两点由调用链审查确认。\n\n### 3. Token/字符裁剪与脱敏\n\n- 正常文本路径的 12 条、单体 1600、总区 8000、gaps 1200 上限成立；内部 max 常量为正，\n  `Math.max(0, ...)` 避免负数，空输出回退为占位文本，head/tail 比例实现正确。\n- prompt 层的 `sensitive:true` 确实只呈现工具名、turn 和 success/error 状态，不包含\n  `result/error/contentBlocks`；现有测试也验证 secret 不在 prompt。\n- 但收集阶段仍保留敏感明文和不必要的原始块引用（Blocker 1），实际图片常不显示省略标记（Nit 2），\n  Unicode 边界也不安全（Nit 3）。所以该项不能判为完整通过。\n\n### 4. 缓存 key\n\n- key 包含 objective、finalText、渲染后的后台任务、工具证据、progress、上一轮 verdict/gaps\n  和分钟桶；所有新增 judge 可见证据都已覆盖。`setAtMs` 未直接进入 key，但同一 hook 中目标\n  实例固定，不会运行中变化；秒级当前时间继续按既有设计压成分钟桶。\n- 相反问题确实存在：实时 progress 和上一轮 verdict 让生产缓存几乎永不命中（Nit 1）。\n\n### 5. 绿线保留\n\n- judge throw 和不可解析输出仍返回 `continueSession:true`，fail-closed 未退化。\n- `wai"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round7/evidence/cross-review-providers.md",
+      "at": "$",
+      "context": "-skip.md` 的 `zsh: no matches found` 是导航命令的工具响应转录，不是 Bun log，也不是主题产品缺陷。报告没有把它混入测试统计。\n- 选择性复核 Desktop/Web `translate.ts`：callback 形式的 replace 保留普通 `$` 字符，unknown placeholder 和 fallback 的说明有源码支持；未执行的 fixture 不能外推字典一致性、全部调用方或语言切换正确。报告保持这条边界，没有宣称翻译测试通过。\n- 根报告的主题、source 文档解析观察均标明静态或未覆盖，不从导航失败/缺产物构造新 bug。复核不代表对这些整片目录再次做了全文审查。\n\n## TUI 方向\n\n- `tui-diff-display.first.log` 实际启动 Bun，但模块导入找不到 `../../../../packages/.../DiffLine.js`：**0 pass / 1 fail / 1 error，无 expectations/completion**。exit JSON 为 1。report 与 validation 逐项吻合，两个 Diff 候选没有动态证据。\n- 独立既有 baseline raw/exit 确认 **5 files / 27 pass / 264 expect / 0 fail / 0 skipped / Completed**。它检查 store、失败流撤销、slice anchor 和 memo，对 Diff 候选没有验证作用；报告没有将其当成 27 个新复现或全部终端覆盖。\n- 选择性复核 `DiffLine.tsx:45`–54、100–11"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "at": "$",
+      "context": "测试、`uiLanguage.ts`、`dict.ts` 的 namespace 组装入口，以及 Web 的 `i18n/translate.ts`、`lib/uiLanguage.ts` 和 mobile 的选定条目。插值使用 callback 返回字面字符串，普通 `$` 替换 token 不会在这一层被再次解释；fallback 顺序从源码可见。没有据此断言所有文案、placeholder、组件 caller 或语言切换行为正确。\n\n## 翻译 fixture 的首次准备失败，未启动测试\n\n保存 [root-i18n-contract.test.ts](evidence/root-i18n-contract.test.ts)，原计划扫描中英文 placeholder 并给出普通字面值/未知 placeholder 对照。Desktop dictionary 从 Web 包根导入 mobile；收据 collector 硬编码检查本 checkout 的 `packages/web/dist/index.js`，该文件不存在。在首次依赖字节收据准备阶段即抛 `FileNotFoundError`，guarded runner **没有被启动**，没有 Bun/JUnit/pass/fail/expect/completion 收据。实际 package resolver 可能使用共享依赖目标，本方向没有解析或验证；不能由这个路径假设失败推断运行时 import、共享依赖或发布产物有问题。完整工具响应转录及命令在 [root-i18n-preflight-failure.md](evidence/root-i18n-preflight-failure.md)；它不是原始 Bun log。\n\n"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "at": "$",
+      "context": "c/session/transcript.ts:89-102,149-212`。\n\n因此可出现：\n\n```text\n完整 transcript:  old image (#1) ... fresh image (#2)\ncompacted working: first text ... fresh image -> 被降级成占位符 #1\n模型调用 view_image({imageNumber: 1})\n实际从完整 transcript 返回 old image\n```\n\n这不是理论上的 placeholder 文案问题，而是 lookup 数据源不同造成的身份错配；相关代码锚点为\n`packages/core/src/context/compaction.ts:52-88`、\n`packages/core/src/context/compaction.ts:343-356` 和\n`packages/core/src/tool-system/builtin/view-image.ts:160-170`。\n\n### C.3 重取会产生新的出现序号\n\n历史图取回成功后，原 block 被作为新的 tool result 再写入 transcript；collector 按出现次数而不是\n内容 hash/identity 编号，所以同一像素会获得新的别名序号。旧号码仍然可用，但重复取回会持续增加\n图片出现数和 transcript base64 体积。\n`packages/core/src/tool-system/builtin/view-image.ts:173-185`、\n`packages/core/src/engine/tu"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "at": "$",
+      "context": ":false` 或 title/tool-summary 仍到 aux，后两点由调用链审查确认。\n\n### 3. Token/字符裁剪与脱敏\n\n- 正常文本路径的 12 条、单体 1600、总区 8000、gaps 1200 上限成立；内部 max 常量为正，\n  `Math.max(0, ...)` 避免负数，空输出回退为占位文本，head/tail 比例实现正确。\n- prompt 层的 `sensitive:true` 确实只呈现工具名、turn 和 success/error 状态，不包含\n  `result/error/contentBlocks`；现有测试也验证 secret 不在 prompt。\n- 但收集阶段仍保留敏感明文和不必要的原始块引用（Blocker 1），实际图片常不显示省略标记（Nit 2），\n  Unicode 边界也不安全（Nit 3）。所以该项不能判为完整通过。\n\n### 4. 缓存 key\n\n- key 包含 objective、finalText、渲染后的后台任务、工具证据、progress、上一轮 verdict/gaps\n  和分钟桶；所有新增 judge 可见证据都已覆盖。`setAtMs` 未直接进入 key，但同一 hook 中目标\n  实例固定，不会运行中变化；秒级当前时间继续按既有设计压成分钟桶。\n- 相反问题确实存在：实时 progress 和上一轮 verdict 让生产缓存几乎永不命中（Nit 1）。\n\n### 5. 绿线保留\n\n- judge throw 和不可解析输出仍返回 `continueSession:true`，fail-closed 未退化。\n- `wai"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/superpowers/plans/2026-06-03-session-origin.md",
+      "at": "$",
+      "context": "知用户备份路径。\n\n---\n\n## Self-Review 记录\n\n- **Spec 覆盖:** §4.A core origin→T1;§4.B 各宿主传 origin→T2;§4.C listDiskSessions 过滤→T3;\n  automation ⚙ 标志→T4;§4.D 删存量→T5。无遗漏。\n- **占位扫描:** 无 TODO/占位;每步给了完整代码。T2 \"tui 若有独立 tsc\" 给了 fallback(core build 兜底)。\n- **类型一致:** `SessionOrigin`(core)与 DiskSessionMeta.origin(desktop,窄化为 desktop/automation)\n  一致;create 第 6 参 origin、engine 传 config.origin/subagent 一致;rebuildFromDisk.origin 与 main 返回一致。\n- **TDD:** T1/T3/T4 先写失败测试;T2 纯接线 typecheck 兜底;T5 数据操作有备份+验证。\n- **存量删除:** T5 显式 tar 备份(sessions-origin-wipe-backup.tar.gz),可逆。\n"
+    },
+    {
+      "query": "fallback-placeholder",
+      "path": "docs/todo/core-universalize-plugin-panel-design.md",
+      "at": "$",
+      "context": "ifest 无 panels，panel loader 返回空，不影响安装。\n- **Codex 插件**：新版本会额外复制声明的 panel assets；这是新增兼容能力。未声明的任意网页目录不暴露。\n- **Desktop 持久化**：内置 kind/id 不变，无 migration；plugin 卸载、禁用或降级后保存的 tab 显示可关闭占位，\n  不再因 `getPanelEntry(...)!` 崩溃。\n- **多窗口/多 session**：PanelRegistry descriptor 可以 process-wide 同步，但 PanelContext 必须按\n  owner window + bucket 绑定，不能因为 main bridge 是 process-global 就共享 session 数据；当前 main bridge\n  的多窗口语义见 `packages/desktop/src/main/index.ts:311-318`。\n- **TUI/mobile/SDK**：只看到新增 manifest 数据类型，不加载 React/Electron host；不会显示 panels。\n- **变量重写**：继续保持安装期单向 `CLAUDE_PLUGIN_ROOT → CODESHELL_PLUGIN_ROOT`，没有 dual env 或 runtime\n  行为变化（`packages/core/src/plugins/varRewrite.ts:4-13`）。\n\n## 6. 完成定义\n\n功能可发布必须同时满足：\n\n1. `general`/`terminal-coding` 派生工具与权限逐项等价，现有 p"
+    }
+  ],
+  "selection": "All retained27+14 focused occurrences, exact path/location/context dedup only. Full units not thereby read.",
+  "productRuns": 0
+}

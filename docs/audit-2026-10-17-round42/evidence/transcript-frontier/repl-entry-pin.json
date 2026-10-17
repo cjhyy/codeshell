@@ -1,0 +1,9 @@
+{
+  "path": "packages/tui/src/cli/commands/repl.ts",
+  "bytes": 13991,
+  "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+  "lineCount": 349,
+  "pinUTC": "2026-10-17T14:22:04.850465+00:00",
+  "semanticRead": false,
+  "scope": "static default REPL→UI entry wiring only; no CLI/model/native invocation"
+}

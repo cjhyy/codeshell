@@ -1,0 +1,21 @@
+{
+  "scope": "before static exported TUI entry wiring, not rendering/native/CLI operation",
+  "files": [
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "lineCount": 9,
+      "pinUTC": "2026-10-17T14:21:14.761499+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "lineCount": 73,
+      "pinUTC": "2026-10-17T14:21:14.762512+00:00",
+      "semanticRead": false
+    }
+  ]
+}

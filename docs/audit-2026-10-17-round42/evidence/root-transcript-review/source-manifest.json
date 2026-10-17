@@ -1,0 +1,183 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "lineCount": 195,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "semanticLineCount": 195,
+      "displayedLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "displayedLineCount": 195,
+      "dedicatedPinBeforeRootBodySha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "finishSha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lineCount": 1571,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          507,
+          520
+        ]
+      ],
+      "semanticLineCount": 14,
+      "displayedLineRanges": [
+        [
+          500,
+          530
+        ]
+      ],
+      "displayedLineCount": 31,
+      "dedicatedPinBeforeRootBodySha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "finishSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2103,
+          2115
+        ],
+        [
+          2197,
+          2228
+        ]
+      ],
+      "semanticLineCount": 45,
+      "displayedLineRanges": [
+        [
+          2088,
+          2120
+        ],
+        [
+          2190,
+          2235
+        ]
+      ],
+      "displayedLineCount": 79,
+      "dedicatedPinBeforeRootBodySha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lineCount": 2318,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2145,
+          2149
+        ],
+        [
+          2166,
+          2169
+        ]
+      ],
+      "semanticLineCount": 9,
+      "displayedLineRanges": [
+        [
+          2120,
+          2175
+        ]
+      ],
+      "displayedLineCount": 56,
+      "dedicatedPinBeforeRootBodySha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "finishSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "unchanged": true
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "bytes": 19225,
+      "sha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "coverage": "selected historical report",
+      "selectedLineRanges": [
+        [
+          1,
+          3
+        ],
+        [
+          20,
+          27
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "lineCount": 97,
+      "pinOrigin": "Current3696 historical inventory before dedicated historical text read; Root product body read preceded this supplementary gate."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/streamattempt.md",
+      "bytes": 4141,
+      "sha256": "e6849d3df3a42dcd4aa4538a9148cecf7fc22465eb0403cbb3171cb759557126",
+      "coverage": "full historical report",
+      "selectedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "lineCount": 15,
+      "pinOrigin": "Current3696 historical inventory before dedicated historical text read; Root product body read preceded this supplementary gate."
+    }
+  ],
+  "counts": {
+    "productSemanticFiles": 4,
+    "full": 1,
+    "selected": 3,
+    "productSemanticLines": 263,
+    "productDisplayedLines": 361,
+    "testDeclarations": 0,
+    "historicalSelectedMetadataLines": 26
+  },
+  "scope": "Ordinary StreamEvent-to-background transcript representation, fallback revocation and actual TUI data consumer. No model/native/UI execution; no full Engine or lifecycle correctness claim.",
+  "sourceGateTiming": "Root reviews author44 proposal after author fresh3696 selection gate, own dedicated content pins precede Root body. Own focused3696 dedup scan is explicitly post-body, not backfilled as pre-body.",
+  "executions": {
+    "product": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "gitInThisExactPrep": 0
+  }
+}

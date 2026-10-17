@@ -1,0 +1,9 @@
+{
+  "path": "packages/core/src/engine/subagent-spawner.ts",
+  "bytes": 16481,
+  "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+  "lineCount": 441,
+  "pinUTC": "2026-10-17T14:19:31.212934+00:00",
+  "semanticRead": false,
+  "scope": "before ordinary streamOverride forwarding only; child authority/lifecycle mechanisms excluded"
+}

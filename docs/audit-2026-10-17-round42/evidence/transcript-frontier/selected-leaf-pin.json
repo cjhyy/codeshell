@@ -1,0 +1,10 @@
+{
+  "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+  "bytes": 6622,
+  "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+  "lines": 195,
+  "pinnedUTC": "2026-10-17T14:15:08.085729+00:00",
+  "coverage": "hash-only before selected current prep semantic read",
+  "semanticRead": false,
+  "selectionStatus": "actual intended leaf; previous two inventory candidates excluded before product body reading"
+}

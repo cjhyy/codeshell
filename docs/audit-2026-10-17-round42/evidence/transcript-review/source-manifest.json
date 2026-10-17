@@ -1,0 +1,1100 @@
+{
+  "prepOnly": true,
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "rootContextSupplied": "Frozen40 included in history; formal41 initially mutable and later integrated byRoot, excluded throughout dated prep.",
+  "finishedAtUTC": "2026-10-17T14:32:36.754474+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "lineCount": 195,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "coveredLineCount": 195,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "displayedLineCount": 195,
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:17:46.947610+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "prepRow": {
+        "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "bytes": 6622,
+        "lineCount": 195,
+        "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+        "pinBeforeBodyRead": true
+      },
+      "finishBytes": 6622,
+      "finishSha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "lineCount": 1333,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          751,
+          751
+        ],
+        [
+          765,
+          774
+        ],
+        [
+          832,
+          834
+        ]
+      ],
+      "coveredLineCount": 14,
+      "displayedBodyLineRanges": [
+        [
+          745,
+          777
+        ],
+        [
+          825,
+          836
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        481
+      ],
+      "displayedLineRanges": [
+        [
+          481,
+          481
+        ],
+        [
+          745,
+          777
+        ],
+        [
+          825,
+          836
+        ]
+      ],
+      "displayedLineCount": 46,
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:00.112897+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "prepRow": {
+        "path": "packages/core/src/types.ts",
+        "bytes": 51788,
+        "lineCount": 1333,
+        "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 51788,
+      "finishSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1119,
+          1123
+        ],
+        [
+          1140,
+          1142
+        ],
+        [
+          2103,
+          2116
+        ],
+        [
+          2197,
+          2228
+        ]
+      ],
+      "coveredLineCount": 54,
+      "displayedBodyLineRanges": [
+        [
+          1119,
+          1144
+        ],
+        [
+          2098,
+          2120
+        ],
+        [
+          2190,
+          2229
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1119,
+          1144
+        ],
+        [
+          2098,
+          2120
+        ],
+        [
+          2190,
+          2229
+        ]
+      ],
+      "displayedLineCount": 89,
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:00.112897+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "prepRow": {
+        "path": "packages/core/src/engine/turn-loop.ts",
+        "bytes": 108774,
+        "lineCount": 2412,
+        "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 108774,
+      "finishSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lineCount": 1571,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          507,
+          521
+        ],
+        [
+          575,
+          581
+        ]
+      ],
+      "coveredLineCount": 22,
+      "displayedBodyLineRanges": [
+        [
+          502,
+          526
+        ],
+        [
+          568,
+          584
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        4,
+        7,
+        19,
+        34,
+        323,
+        342,
+        348,
+        792,
+        855,
+        1113,
+        1372,
+        1461,
+        1474,
+        1521
+      ],
+      "displayedLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          7,
+          7
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          323,
+          323
+        ],
+        [
+          342,
+          342
+        ],
+        [
+          348,
+          348
+        ],
+        [
+          502,
+          526
+        ],
+        [
+          568,
+          584
+        ],
+        [
+          792,
+          792
+        ],
+        [
+          855,
+          855
+        ],
+        [
+          1113,
+          1113
+        ],
+        [
+          1372,
+          1372
+        ],
+        [
+          1461,
+          1461
+        ],
+        [
+          1474,
+          1474
+        ],
+        [
+          1521,
+          1521
+        ]
+      ],
+      "displayedLineCount": 56,
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:00.112897+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "prepRow": {
+        "path": "packages/core/src/tool-system/builtin/agent.ts",
+        "bytes": 62377,
+        "lineCount": 1571,
+        "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 62377,
+      "finishSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "lineCount": 445,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          64,
+          73
+        ],
+        [
+          306,
+          327
+        ],
+        [
+          360,
+          370
+        ],
+        [
+          380,
+          389
+        ]
+      ],
+      "coveredLineCount": 53,
+      "displayedBodyLineRanges": [
+        [
+          64,
+          76
+        ],
+        [
+          300,
+          329
+        ],
+        [
+          350,
+          390
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        92,
+        107
+      ],
+      "displayedLineRanges": [
+        [
+          64,
+          76
+        ],
+        [
+          92,
+          92
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          300,
+          329
+        ],
+        [
+          350,
+          390
+        ]
+      ],
+      "displayedLineCount": 86,
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:00.112897+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "prepRow": {
+        "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+        "bytes": 15679,
+        "lineCount": 445,
+        "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 15679,
+      "finishSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lineCount": 2318,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          94,
+          101
+        ],
+        [
+          754,
+          770
+        ],
+        [
+          2145,
+          2169
+        ]
+      ],
+      "coveredLineCount": 50,
+      "displayedBodyLineRanges": [
+        [
+          82,
+          112
+        ],
+        [
+          734,
+          776
+        ],
+        [
+          2140,
+          2172
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        617,
+        620,
+        626,
+        655,
+        840,
+        1503,
+        1925,
+        1926,
+        2110,
+        2121
+      ],
+      "displayedLineRanges": [
+        [
+          82,
+          112
+        ],
+        [
+          617,
+          617
+        ],
+        [
+          620,
+          620
+        ],
+        [
+          626,
+          626
+        ],
+        [
+          655,
+          655
+        ],
+        [
+          734,
+          776
+        ],
+        [
+          840,
+          840
+        ],
+        [
+          1503,
+          1503
+        ],
+        [
+          1925,
+          1926
+        ],
+        [
+          2110,
+          2110
+        ],
+        [
+          2121,
+          2121
+        ],
+        [
+          2140,
+          2172
+        ]
+      ],
+      "displayedLineCount": 117,
+      "initialPinArtifact": "ui-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:56.754110+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "prepRow": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "bytes": 90976,
+        "lineCount": 2318,
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 90976,
+      "finishSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "lineCount": 273,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          80,
+          82
+        ],
+        [
+          109,
+          109
+        ],
+        [
+          148,
+          150
+        ],
+        [
+          161,
+          168
+        ],
+        [
+          175,
+          178
+        ],
+        [
+          230,
+          237
+        ]
+      ],
+      "coveredLineCount": 27,
+      "displayedBodyLineRanges": [
+        [
+          78,
+          113
+        ],
+        [
+          148,
+          183
+        ],
+        [
+          220,
+          240
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        34
+      ],
+      "displayedLineRanges": [
+        [
+          34,
+          34
+        ],
+        [
+          78,
+          113
+        ],
+        [
+          148,
+          183
+        ],
+        [
+          220,
+          240
+        ]
+      ],
+      "displayedLineCount": 94,
+      "initialPinArtifact": "ui-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:56.754110+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "prepRow": {
+        "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+        "bytes": 11173,
+        "lineCount": 273,
+        "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 11173,
+      "finishSha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "lineCount": 441,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          85,
+          112
+        ],
+        [
+          376,
+          376
+        ],
+        [
+          414,
+          418
+        ],
+        [
+          424,
+          427
+        ]
+      ],
+      "coveredLineCount": 38,
+      "displayedBodyLineRanges": [
+        [
+          85,
+          112
+        ],
+        [
+          372,
+          378
+        ],
+        [
+          410,
+          428
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          85,
+          112
+        ],
+        [
+          372,
+          378
+        ],
+        [
+          410,
+          428
+        ]
+      ],
+      "displayedLineCount": 54,
+      "initialPinArtifact": "callback-render-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:25:26.596359+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "prepRow": {
+        "path": "packages/core/src/engine/subagent-spawner.ts",
+        "bytes": 16481,
+        "lineCount": 441,
+        "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 16481,
+      "finishSha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2637,
+          2645
+        ],
+        [
+          3546,
+          3547
+        ]
+      ],
+      "coveredLineCount": 11,
+      "displayedBodyLineRanges": [
+        [
+          2637,
+          2646
+        ],
+        [
+          3541,
+          3550
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          2637,
+          2646
+        ],
+        [
+          3541,
+          3550
+        ]
+      ],
+      "displayedLineCount": 20,
+      "initialPinArtifact": "callback-render-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:25:26.596359+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "prepRow": {
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210666,
+        "lineCount": 5082,
+        "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 210666,
+      "finishSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "lineCount": 344,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          232,
+          246
+        ]
+      ],
+      "coveredLineCount": 15,
+      "displayedBodyLineRanges": [
+        [
+          232,
+          252
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          232,
+          252
+        ]
+      ],
+      "displayedLineCount": 21,
+      "initialPinArtifact": "callback-render-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:25:26.596359+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "prepRow": {
+        "path": "packages/tui/src/ui/app-helpers.tsx",
+        "bytes": 11321,
+        "lineCount": 344,
+        "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 11321,
+      "finishSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:00.112897+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/App.tsx",
+        "bytes": 122863,
+        "lineCount": 2924,
+        "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 122863,
+      "finishSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "lineCount": 928,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinArtifact": "producer-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:00.112897+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/MessageStream.tsx",
+        "bytes": 37921,
+        "lineCount": 928,
+        "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 37921,
+      "finishSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/store.ts",
+      "bytes": 6412,
+      "sha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+      "lineCount": 195,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        16,
+        64,
+        70,
+        153
+      ],
+      "displayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          153,
+          153
+        ]
+      ],
+      "displayedLineCount": 4,
+      "initialPinArtifact": "ui-consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:20:56.754110+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/tui/src/ui/store.ts",
+        "bytes": 6412,
+        "lineCount": 195,
+        "sha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 6412,
+      "finishSha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "lineCount": 73,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        21,
+        22,
+        25,
+        26
+      ],
+      "displayedLineRanges": [
+        [
+          21,
+          22
+        ],
+        [
+          25,
+          26
+        ]
+      ],
+      "displayedLineCount": 4,
+      "initialPinArtifact": "entry-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:26:25.676812+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/tui/package.json",
+        "bytes": 2110,
+        "lineCount": 73,
+        "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 2110,
+      "finishSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lineCount": 265,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        10,
+        123,
+        186
+      ],
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          123,
+          123
+        ],
+        [
+          186,
+          186
+        ]
+      ],
+      "displayedLineCount": 3,
+      "initialPinArtifact": "entry-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:26:25.676812+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/tui/src/cli/main.ts",
+        "bytes": 11626,
+        "lineCount": 265,
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 11626,
+      "finishSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "lineCount": 349,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        26,
+        27,
+        69,
+        209,
+        323,
+        335
+      ],
+      "displayedLineRanges": [
+        [
+          26,
+          27
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          209,
+          209
+        ],
+        [
+          323,
+          323
+        ],
+        [
+          335,
+          335
+        ]
+      ],
+      "displayedLineCount": 6,
+      "initialPinArtifact": "entry-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:26:25.676812+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/tui/src/cli/commands/repl.ts",
+        "bytes": 13991,
+        "lineCount": 349,
+        "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 13991,
+      "finishSha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "lineCount": 122,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        10,
+        35,
+        42,
+        70
+      ],
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          35,
+          35
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          70,
+          70
+        ]
+      ],
+      "displayedLineCount": 4,
+      "initialPinArtifact": "entry-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:26:25.676812+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/tui/src/ui/index.tsx",
+        "bytes": 4514,
+        "lineCount": 122,
+        "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 4514,
+      "finishSha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "priorKnownSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesPriorKnownPin": true,
+      "coverage": "hash-only carried instructions, no new semantic instruction lines",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "priorKnownSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesPriorKnownPin": true,
+      "coverage": "hash-only carried instructions, no new semantic instruction lines",
+      "initialSemanticReadSha256": null
+    }
+  ],
+  "counts": {
+    "semanticProductFiles": 10,
+    "fullFiles": 1,
+    "selectedFiles": 9,
+    "productSemanticLines": 479,
+    "testSemanticLines": 0,
+    "historicalDocReadLinesSeparate": 66,
+    "hashOnlyNavigationProductFiles": 7,
+    "allProductBytePins": 17,
+    "instructionHashChecks": 2,
+    "displayedProductLinesIncludingNav": 799
+  },
+  "allProductInitialFinishStable": true,
+  "displayRangeMethod": "displayedLineRanges is canonical union of body ranges plus already-shown nav singleton lines; displayedLineCount counts that union once. Selected coverage is subset, not all displayed/native neighbors.",
+  "coverageLimits": "Only ordinary StreamEvent→transcript/display and callback routing. Ownership/lease/permissions, Engine/model execution, stream transport timing, UI/render/native/scroll behavior not validated. Desktop App/MessageStream wrong-name lookup and CLI/ui entry locators are hash-only. Dedicated helper tests not located by exact filename/function inventory; no global no-tests assertion."
+}

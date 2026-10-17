@@ -1,0 +1,8 @@
+{
+  "frozenReport": "/tmp/codeshell-audit-round45-root-frontier/report.md",
+  "reportSha256": "35cdd8659c275a9734fd8ead173d0495eb62fc87877d217fb48fc3e85f1c5b06",
+  "correction": "The phrase 原14/35文件等旧计数 includes an unsupported14 in Root prose. R8 report supports35 selected frozen source files, not full-file claims; no14 claim is adopted. All original frozen bytes remain unchanged.",
+  "sourceOfSupportedCount": "docs/audit-2026-10-17-round8/plugins.md final paragraph",
+  "productReruns": 0,
+  "metadataOnly": true
+}

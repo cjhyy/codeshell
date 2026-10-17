@@ -1,0 +1,21 @@
+{
+  "scope": "before actual child runner and TurnLoop onStream wiring search; ordinary event path only",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "pinUTC": "2026-10-17T14:20:50.166644+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/engine/query.ts",
+      "bytes": 4572,
+      "sha256": "074b342616085afc0fb527b916aeafe6af640298bbc5a5e9840735a3f7622953",
+      "lineCount": 171,
+      "pinUTC": "2026-10-17T14:20:50.168959+00:00",
+      "semanticRead": false
+    }
+  ]
+}
