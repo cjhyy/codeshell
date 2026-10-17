@@ -1,0 +1,36 @@
+{
+  "retrievedDate": "2026-10-17",
+  "sources": [
+    {
+      "url": "https://platform.claude.com/docs/en/build-with-claude/extended-thinking",
+      "title": "Extended thinking — Claude Platform Docs",
+      "method": "web open, first attempt successful",
+      "relevantLines": [
+        146,
+        150
+      ],
+      "paraphrase": "Manual thinking adds a requirement for the last assistant turn to start with a thinking block; tool-loop turn structure is described on the thinking workflow page.",
+      "usedFor": "Unconfirmed thinking round-trip candidate only; no executed vendor rejection claim."
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/build-with-claude/thinking-tool-workflows",
+      "title": "Thinking in tool and multi-turn workflows — Claude Platform Docs",
+      "method": "web click from official extended-thinking page, first attempt successful",
+      "relevantLines": [
+        79,
+        86,
+        122,
+        150
+      ],
+      "paraphrase": "Tool-result continuations must echo the complete assistant thinking content unchanged; filtering redacted thinking is described as a request error. The same round-trip rules apply to supported manual thinking.",
+      "usedFor": "Unconfirmed thinking round-trip candidate only; no real API request or opaque field validation."
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/function-calling#streaming",
+      "title": "Function calling — Streaming — official OpenAI documentation",
+      "method": "OpenAI Docs skill: official documentation connector search then fetch of matching page/anchor, both successful",
+      "result": "Search hit included Chat Completions wording; fetched default section showed Responses streaming. Search hit alone was not used as an established contract.",
+      "usedFor": "No affirmative normal Chat later-identity sequence established; candidate remains unconfirmed. No source failure fallback or live model request."
+    }
+  ]
+}

@@ -1,0 +1,405 @@
+{
+  "counts": {
+    "anthropic-progress": 65,
+    "fragmented-openai": 1
+  },
+  "parseErrors": [],
+  "rows": [
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "line": 14,
+      "match": "- 证据：`ContentBlock.is_error` 用于让 provider 设置 Anthropic `is_error:true`（`types.ts:17`）；live path 在 `toolResultToBlock()` 设置（`turn-loop.ts:177`）；但 transcript 落盘只存 `result/error/contentBlocks`，不存 `isError/is_error`（`transcript.ts:89`）；replay 时即使有 `error` 也只拼 `\"Error: ...\"`、未设 `is_error`（`transcript.ts:171`）；Anthropic provider 只在 block 有 `is_error` 时转发（`anthropic.ts:412"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-2026-07-09/pre-beta-final-02-contract-regression.md",
+      "line": 11,
+      "match": "op.ts:1071` 模型侧仍用原始 `toolResultToBlock(result)`；stream/transcript 走 redaction helper；普通工具保持原 result+contentBlocks。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/research-cc-vs-codex-image-handling.md",
+      "line": 46,
+      "match": "- **CC**:`truncateContentBlocks()` 主动重压缩,按 `IMAGE_TOKEN_ESTIMATE * 4 = 6400` 字符估算,超 `MAX_MCP_OUTPUT_TOKENS = 25000` 预算就压缩、压不动就丢。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/research-cc-vs-codex-image-handling.md",
+      "line": 89,
+      "match": "- MCP 图走 `truncateContentBlocks` 25k token 预算,超了主动压/丢"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/electron-image-input-design.md",
+      "line": 105,
+      "match": "- 把 `LLMMessage.content` 类型从 `string` 改成 `string | LLMMessageContentBlock[]`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/electron-image-input-design.md",
+      "line": 106,
+      "match": "- `LLMMessageContentBlock` 至少包含 `{type:\"text\", text}` 和 `{type:\"image\", mime, base64}` 两种。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 75,
+      "match": "- `view_image` 已存在，描述为把本地图片文件或历史图片作为 base64 image ContentBlock 回传给 vision 模型，见 `packages/core/src/tool-system/builtin/view-image.ts:1` 到 `packages/core/src/tool-system/builtin/view-image.ts:13`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 79,
+      "match": "- 成功时 `view_image` 返回 `{ contentBlocks: [{ type: \"image\", source: ... }], result }`，见 `packages/core/src/tool-system/builtin/view-image.ts:115` 到 `packages/core/src/tool-system/builtin/view-image.ts:127`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 80,
+      "match": "- builtin registry 支持工具返回 `contentBlocks`，见 `packages/core/src/tool-system/builtin/index.ts:136` 到 `packages/core/src/tool-system/builtin/index.ts:145`；ToolRegistry 会把它归一化进 `ToolResult.contentBlocks`，见 `packages/core/src/tool-system/registry.ts:148` 到 `packages/core/src/tool-system/registry.ts:165`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 81,
+      "match": "- TurnLoop 会把带 `contentBlocks` 的 tool result 原样放进 `tool_result.content`，见 `packages/core/src/engine/turn-loop.ts:172` 到 `packages/core/src/engine/turn-loop.ts:187`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 82,
+      "match": "- transcript 也会持久化 tool result 的 `contentBlocks` 并在 replay 时还原进 message，见 `packages/core/src/session/transcript.ts:89` 到 `packages/core/src/session/transcript.ts:102`、`packages/core/src/session/transcript.ts:171` 到 `packages/core/src/session/transcript.ts:188`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 459,
+      "match": "- `Engine.run` options 增加 attachments，并在 user message 装配前读取 image attachments 的 file bytes 生成 image ContentBlock。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "line": 476,
+      "match": "  - image attachment path 读取为 image ContentBlock。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/browser-tool-experience-improvements-2026-06-20.md",
+      "line": 33,
+      "match": "- **根因**：vision/image 截图作为 image ContentBlock 进了**模型上下文**（模型看得到），但 renderer 没把它画进工具卡片 → 用户看不到 AI 截了什么，无法判断\"截对没\"，调试盲区。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/browser-tool-experience-improvements-2026-06-20.md",
+      "line": 35,
+      "match": "- **前置依据（已查实）**：通道现成——`view_image` 工具早已用 tool_result 带 image ContentBlock 回传（`types.ts:57` 注释 + `ContentBlock.type` 含 `\"image\"`）。**待最后确认**：vision 的 image 块是否随 `tool_result` **流事件**（StreamEvent）送达 renderer，还是只在 transcript 持久化里。若流事件没带 → 需补 core 一处回传；若带了 → 纯 renderer 渲染。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "line": 237,
+      "match": "**4 个 test 文件 9 个 error 已全部收口:对 `BuiltinToolResult` 三臂联合做收窄(`\"contentBlocks\" in r`)、`asText` 改用 `BuiltinToolResult` 全臂、use-credential list cast 补 `label`、MaskedCredential 用 unknown cast 做运行时断言。`bun run typecheck` → 0 error。**"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "line": 242,
+      "match": "  `string | { contentBlocks } | { result; sandbox }`。下列测试仍假设 `.contentBlocks` 永远存在,tsc 无法收窄联合。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "line": 243,
+      "match": "- 受影响文件(各自需对返回值做联合收窄,如先断言 `typeof r === \"object\" && \"contentBlocks\" in r`):"
+    },
+    {
+      "category": "fragmented-openai",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "line": 490,
+      "match": "| 🔴 状态机 | `streamReducer.ts tool_result` | result 早于 tool_use_start 到达(WS 乱序)→map 无匹配静默丢→工具卡卡 done:false 无结果 | 加 `orphanResults` 缓冲,start 落地回填+乱序回归测 |"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 23,
+      "match": "- OpenAI and Anthropic pre-aborted createMessage calls both return AbortError without entering injected SDK fetch. This proves the pre-send cancellation control only. Active-stream cancellation, stalled transport timers, real sockets, process shutdown and SDK resource retention were not dynamically exercised here."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 53,
+      "match": "Trigger/control: real Anthropic SDK with in-memory SSE fetch gets first valid stream text `FAILED PREFIX`, then an overloaded_error SSE event; second stream succeeds with `SUCCESS`. Result text is SUCCESS, but ModelFacade emits `FAILED PREFIX` then `SUCCESS`, without tombstone, after two sends. Successful control emits just SUCCESS after one send."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 59,
+      "match": "ce, but the hard Goal cap and session foreground totals fail to include known failed-attempt usage: Anthropic streamEvent records snapshots into physical receipts at anthropic.ts:302–304; only finalMessage success calls recordUsage at :368–371. client-base.ts:99–117 adds successful foreground totals; :124–126 records attempt snapshots only into the receipt owner. TurnLoop:1201–1212 feeds response.usage into logical/session accumulation and Goal. GoalConfig descr"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 91,
+      "match": "uth/pool/fetch/cache/catalog/support code read; capability/spec/type/export files partly read. Real Anthropic SDK error/retry/success parsing, both SDK auth headers/cache rotation and pre-aborted control tested. Existing 32 test files not run here; OpenAI streamed failure/fallback, malformed/interleaved tool streams, active cancellation/stalls and real provider networking remain outside executed coverage. |"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 122,
+      "match": "- Ghost tool cards after a failed Anthropic attempt have only static UI reasoning and were not dynamically reproduced; no duplicate tool side effect is claimed."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 123,
+      "match": "- Budget accounting is demonstrated for the same Anthropic transparent retry as C4 and merged into C4. Independent OpenAI stream fallback, cancellation with partial usage, auxiliary requests and child aggregation were not reproduced; do not count these as separate findings."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/audit-2026-10-17-round4/context.md",
+      "line": 23,
+      "match": "ract: [turn-loop.ts:249](../../packages/core/src/engine/turn-loop.ts#L249)–255 forwards `ToolResult.contentBlocks` verbatim, [transcript.ts:265](../../packages/core/src/session/transcript.ts#L265)–279 replays it, and provider conversion retains nested text ([anthropic.ts:461](../../packages/core/src/llm/providers/anthropic.ts#L461)–465). A concrete producer is an opted-in vision-capable MCP server: [mcp-manager.ts:715](../../packages/core/src/tool-system/mcp"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "line": 29,
+      "match": "`goalToolResults` 浅拷贝并保留完整 `result`、`contentBlocks`、`displayResult`、"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "line": 44,
+      "match": "仍无字节边界，并且携带 prompt 根本不需要的 `contentBlocks`，应随上述 projection 一并收窄。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "line": 80,
+      "match": "`contentBlocks` 的结果通常也会填充 `result` 文本镜像（图片工具本身也提供“已加载图片”"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "line": 126,
+      "match": "  `result/error/contentBlocks`；现有测试也验证 secret 不在 prompt。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "line": 177,
+      "match": "1. TurnLoop 收集点改为有界、已脱敏、无 `contentBlocks` 的最小 projection，并为敏感值不在"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "line": 14,
+      "match": "非文本只保留布尔省略事实并在 prompt 中渲染占位，普通文本在进入 run 级窗口前已按 code point 截断。Engine 的 callback 快照不再携带 `ToolResult`、`contentBlocks`、`displayResult` 或 `transcriptResult`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "line": 42,
+      "match": "oolName`、`status`、可选的有界 `text` 和 `omittedNonText`（`goal-stop-hook.ts:88-112`）；类型不再含 `ToolResult` 或 `contentBlocks`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "line": 46,
+      "match": "- 没有发现把原始 `result`、`contentBlocks`、`displayResult`、`transcriptResult` 或未截断普通原文放进 judge snapshot 的旁路。原始 `ToolResult` 在当前模型 round 的既有消息/Transcript 路径中短暂存在，不是本新增快照持有。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "line": 47,
+      "match": "- 测试直接截获 `updateGoalJudgeContext` callback 的 snapshot，并把 secret 同时放入 result/display/transcript/contentBlocks；随后对 callback snapshot 本身做 `JSON.stringify(...).not.toContain(secret)` 和精确 shape 断言（`turn-loop-goal-lifecycle.test.ts:180-214`），不是只查最终 prompt。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "line": 70,
+      "match": "- projection 独立扫描 `contentBlocks`；只要任一块不是可保留的文本，就设置 `omittedNonText:true`，不再受 `result` 文本镜像的优先级影响（`goal-stop-hook.ts:216-250`）。渲染时该布尔值总追加 `[非文本/二进制内容已省略]`（`:254-261`）。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "line": 89,
+      "match": "a URL 和 detail。`codex-rs/core/src/tools/handlers/view_image.rs:207-235`。[源码][codex-output] | 返回内部 `{contentBlocks:[{type:\"image\",source:{base64,...}}]}`；TurnLoop 把它嵌入 `tool_result`。OpenAI Chat Completions 不接受 tool message 图片，因此 provider 再提升成单独 user `image_url` part。`packages/core/src/tool-system/builtin/view-image.ts:132-137`、`packages/core/src/engine/turn-loop.ts:183-193`、`packages/core/src/llm/providers/openai.ts:851-940` | 属于 provider 协议适配，不是功能错误；但链路更长，需保"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "line": 131,
+      "match": "5. Codex 输出保留 per-image detail，CodeShell `ContentBlock.source` 只有"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "line": 209,
+      "match": "   `Buffer` 与 base64 string，之后 contentBlocks 又被放进工作消息和 transcript。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "line": 255,
+      "match": "`packages/core/src/tool-system/builtin/view-image.ts:154-170`。图片 contentBlocks 会原样写入 transcript，"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "line": 442,
+      "match": "当内部 ContentBlock 返回成功；应返回明确错误或占位符。新增空 payload、非法 base64、带"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "line": 311,
+      "match": "tool/summary evidence 只消费 on_stop 时已治理的 typed `ContentBlock[]`。大结果已经落盘/截断并受 result budget 约束（`packages/core/src/context/manager.ts:364`—`packages/core/src/context/manager.ts:383`、`packages/core/src/context/manager.ts:489`—`packages/core/src/context/manager.ts:513`），旧结果已经 dedupe/microcompact（`packages/core/src/context/manager.ts:515`—`packages/core/src/context/manager.ts:550`），rolling summary 由 anchored mar"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+      "line": 22,
+      "match": " reader at `packages/desktop/src/main/transcript-reader.ts:255-262` chooses displayText or raw text ContentBlocks and carries no attachment summary. The shared browser projection does not repair this envelope: `projectOutputUserEvent` accepts only `session_user_message`/`steer_injected`, so this synthesized `user_message` enters the reducer unchanged. `Workbench.tsx:620-622` renders its text directly."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/PLAN.md",
+      "line": 13,
+      "match": "sageContent → openRunSession → Transcript.appendMessage. The last two calls persisted the same user ContentBlock array before journal introduction. The planned fixture runs those actual input preparation functions and the real Transcript.appendMessage writer without starting Engine/LLM, producing that exact persisted pre-journal format."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 23,
+      "match": "- OpenAI and Anthropic pre-aborted createMessage calls both return AbortError without entering injected SDK fetch. This proves the pre-send cancellation control only. Active-stream cancellation, stalled transport timers, real sockets, process shutdown and SDK resource retention were not dynamically exercised here."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 53,
+      "match": "Trigger/control: real Anthropic SDK with in-memory SSE fetch gets first valid stream text `FAILED PREFIX`, then an overloaded_error SSE event; second stream succeeds with `SUCCESS`. Result text is SUCCESS, but ModelFacade emits `FAILED PREFIX` then `SUCCESS`, without tombstone, after two sends. Successful control emits just SUCCESS after one send."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 59,
+      "match": "ce, but the hard Goal cap and session foreground totals fail to include known failed-attempt usage: Anthropic streamEvent records snapshots into physical receipts at anthropic.ts:302–304; only finalMessage success calls recordUsage at :368–371. client-base.ts:99–117 adds successful foreground totals; :124–126 records attempt snapshots only into the receipt owner. TurnLoop:1201–1212 feeds response.usage into logical/session accumulation and Goal. GoalConfig descr"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 91,
+      "match": "uth/pool/fetch/cache/catalog/support code read; capability/spec/type/export files partly read. Real Anthropic SDK error/retry/success parsing, both SDK auth headers/cache rotation and pre-aborted control tested. Existing 32 test files not run here; OpenAI streamed failure/fallback, malformed/interleaved tool streams, active cancellation/stalls and real provider networking remain outside executed coverage. |"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 122,
+      "match": "- Ghost tool cards after a failed Anthropic attempt have only static UI reasoning and were not dynamically reproduced; no duplicate tool side effect is claimed."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 123,
+      "match": "- Budget accounting is demonstrated for the same Anthropic transparent retry as C4 and merged into C4. Independent OpenAI stream fallback, cancellation with partial usage, auxiliary requests and child aggregation were not reproduced; do not count these as separate findings."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "line": 46,
+      "match": "   - `assistant_message` 增加 `assistantMessageToText(content)` helper：`string` 直接返回；`ContentBlock[]` 只拼接 text block；没有可展示文本时保留当前 message text。这个 helper 只在 renderer 本地处理 shape，不引入 runtime codeshell import。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "line": 52,
+      "match": "| 15 | 结果规整 / 有限包装 | string、`contentBlocks`、`sandbox` 统一成 `ToolResult`；timeout/abort/handler error 也规整为 error result。MCP 输出额外包 `<mcp-result trust=\"untrusted\">`，但 executor 没有通用 redact 阶段。 | 回到 Executor post hooks。 | 无 executor handler 时 registry 返回 error result。 | `packages/core/src/tool-system/registry.ts:151`、`packages/core/src/tool-system/registry.ts:156`、`packages/core/src/tool-system/"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "line": 54,
+      "match": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "line": 306,
+      "match": "- 现状：当前 TurnLoop 主链路用 `toolResultToBlock()`，会保留 `contentBlocks` 并给错误设置 `is_error`。`ToolExecutor.resultsToMessages()` 仍把 result/error 简化为纯文本，忽略 `contentBlocks` 和 `isError`。本轮 `rg \"resultsToMessages(\"` 未发现源码调用，但旧文档仍引用。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "line": 179,
+      "match": "`ToolExecutor.resultsToMessages()` 仍把 tool result 转成纯文本 `tool_result` blocks，不保留 `contentBlocks`，也不设置 `is_error`；当前 production 主链路不调用它，而是由 TurnLoop 使用 `toolResultToBlock()`，后者保留 `contentBlocks` 并设置 `is_error`。因此这是 P3 维护债，不是现行主链路 runtime bug。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "line": 185,
+      "match": "- 读 registry 对 `contentBlocks` / `sandbox` 的 `ToolResult` 归一化，确认当前 result 形状里确实有 helper 会丢的信息。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "line": 193,
+      "match": "- helper 对每个 result 只写 `content: result.error ? ... : result.result ?? \"(no output)\"`，没有使用 `result.contentBlocks` 或 `result.isError`：`packages/core/src/tool-system/executor.ts:641`、`packages/core/src/tool-system/executor.ts:642`、`packages/core/src/tool-system/executor.ts:645`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "line": 195,
+      "match": "- registry 当前会把 handler 的 `contentBlocks` 和 `sandbox` 带入 `ToolResult`：`packages/core/src/tool-system/registry.ts:148`、`packages/core/src/tool-system/registry.ts:156`、`packages/core/src/tool-system/registry.ts:158`、`packages/core/src/tool-system/registry.ts:162`、`packages/core/src/tool-system/registry.ts:163`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "line": 196,
+      "match": "- 当前主链路 `toolResultToBlock()` 明确保留 `result.contentBlocks`，并在 `result.isError || result.error` 时设置 `block.is_error = true`：`packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:181`、`packages/core/src/engine/turn-loop.ts:183`、`packages/core/src/engine/turn-loop.ts:185`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "line": 79,
+      "match": "- 问题：保留的 helper 把 tool result 简化为纯文本 block，丢 `contentBlocks` 和 `is_error`，而主链路已使用 `toolResultToBlock()`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "line": 81,
+      "match": "ecutor.resultsToMessages()` 并同步更新旧架构文档引用。若要保留 helper，则把转换逻辑委托给 `toolResultToBlock()` 或抽一个共享转换函数，确保 `contentBlocks`、`is_error` 和错误文本契约一致。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "line": 109,
+      "match": "ata.ts:1`。执行时先查 tool 和 executor，再应用 timeout、parent abort cascade、per-call child signal，最后把 string / contentBlocks / sandbox 统一归一成 `ToolResult`；普通执行错误转成 error ToolResult，不向 TurnLoop 抛，见 `packages/core/src/tool-system/registry.ts:85`。"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/core-modules/README.md",
+      "line": 19,
+      "match": "- **[llm](./llm.md)** — LLM provider adapters (anthropic/openai/...), capabilities, token counting, streaming watchdog"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/core-modules/llm.md",
+      "line": 15,
+      "match": "| `providers/anthropic.ts` | `AnthropicClient` — Anthropic Messages API adapter (thinking budget, required max_tokens). |"
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/core-modules/llm.md",
+      "line": 126,
+      "match": "ceiling is unknown, `maxTokens` stays `undefined` so each provider decides (OpenAI omits the field; Anthropic supplies its own constant). Forcing 8192 silently truncated streamed tool-arg JSON → \"Missing file_path\"."
+    },
+    {
+      "category": "anthropic-progress",
+      "path": "docs/archive/core-modules/session.md",
+      "line": 51,
+      "match": "  appendMessage(role: string, content: string | ContentBlock[]): TranscriptEvent;"
+    }
+  ]
+}

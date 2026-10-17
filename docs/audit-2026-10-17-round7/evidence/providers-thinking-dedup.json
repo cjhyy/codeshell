@@ -1,0 +1,27 @@
+{
+  "mdFiles": 539,
+  "jsonFiles": 360,
+  "parseErrors": [],
+  "matches": [
+    {
+      "path": "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      "line": 35,
+      "match": "onnections-pool.ts:26-36` 的 `reasoningFromParamValues`),其它 paramValues(temperature/top_p/max_tokens/thinking_type)**全丢**。"
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "line": 84,
+      "match": "> | #5 | HIGH | ✅修 `89557bb6` | 同处:extra 与 reasoningBody 共享嵌套 key(thinking/reasoning,catalog wire 到 .type/.effort)浅 spread 整体替换丢字段→深合并 |"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "line": 122,
+      "match": "- Ghost tool cards after a failed Anthropic attempt have only static UI reasoning and were not dynamically reproduced; no duplicate tool side effect is claimed."
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "line": 122,
+      "match": "- Ghost tool cards after a failed Anthropic attempt have only static UI reasoning and were not dynamically reproduced; no duplicate tool side effect is claimed."
+    }
+  ]
+}

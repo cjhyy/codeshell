@@ -1,0 +1,62 @@
+{
+  "baseline": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "count": 4,
+  "priorities": {
+    "P2": 1,
+    "P3": 3
+  },
+  "findings": [
+    {
+      "id": "FILES-R7-01",
+      "priority": "P2",
+      "title": "Edit单次替换解释字面replacement token并写入错误内容",
+      "report": "files.md",
+      "reportLine": 5,
+      "source": "packages/core/src/tool-system/builtin/edit.ts",
+      "line": 94,
+      "log": "evidence/files-edit-literal.first.log",
+      "evidenceLevel": "真实Edit/Read+自有tmp",
+      "limitations": "未运行executor/model/UI；EOL转换合同保留",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "FILES-R7-03",
+      "priority": "P3",
+      "title": "Grep Node fallback以basename匹配目录glob导致假阴性",
+      "report": "files.md",
+      "reportLine": 25,
+      "source": "packages/core/src/tool-system/builtin/grep.ts",
+      "line": 384,
+      "log": "evidence/files-grep-fallback.first.log",
+      "evidenceLevel": "真实Grep/fallback+自有tmp+注入ENOENT",
+      "limitations": "外部rg/grep未启动；无真实Windows或所有glob等价性结论",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "FILES-R7-04",
+      "priority": "P3",
+      "title": "Read超限错误建议无法穿过size gate的分页恢复",
+      "report": "files.md",
+      "reportLine": 35,
+      "source": "packages/core/src/tool-system/builtin/read.ts",
+      "line": 77,
+      "log": "evidence/files-read-large.first.log",
+      "evidenceLevel": "真实Read+6MiB自有text+小文件分页对照",
+      "limitations": "只确认恢复文案错误；不反对cap、不声称所有读取方式被堵",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "PROV-R7-01",
+      "priority": "P3",
+      "title": "Anthropic SDK参数事件路由落后一个工具并污染进度卡片",
+      "report": "providers.md",
+      "reportLine": 5,
+      "source": "packages/core/src/llm/providers/anthropic.ts",
+      "line": 347,
+      "log": "evidence/providers-stream-contract.first.log",
+      "evidenceLevel": "安装SDK内存parser→真实provider/Facade/Transcript/Web reducer",
+      "limitations": "最终response/transcript input正确；无真实Builtin执行/Engine/Host/UI/API；工具名与schema无关传播为源码推断",
+      "status": "confirmed-at-frozen-source-baseline"
+    }
+  ]
+}

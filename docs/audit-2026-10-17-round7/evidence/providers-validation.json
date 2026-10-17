@@ -1,0 +1,107 @@
+{
+  "frozenCommit": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "runs": [
+    {
+      "stem": "providers-stream-contract",
+      "attempt": 1,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round7/evidence/providers-stream-contract.test.ts"
+      ],
+      "exitCode": 0,
+      "rawCombinedStdoutStderr": "providers-stream-contract.first.log",
+      "exitReceipt": "providers-stream-contract.first.exit.txt",
+      "clean": true,
+      "observedBunCounts": {
+        "pass": 4,
+        "fail": 0,
+        "expectCalls": 19,
+        "reportedTests": 4,
+        "files": 1,
+        "completedGuardedShard": true
+      },
+      "result": "complete zero-failure guarded shard"
+    },
+    {
+      "stem": "providers-normalization-baseline",
+      "attempt": 1,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/llm/providers/anthropic-usage.test.ts",
+        "packages/core/src/llm/providers/anthropic-thinking.test.ts",
+        "packages/core/src/llm/providers/anthropic-tool-result-error.test.ts",
+        "packages/core/src/llm/providers/openai-tool-result-image.test.ts",
+        "packages/core/src/llm/providers/openai-tool-result-error.test.ts",
+        "packages/core/src/llm/providers/openai-max-tokens-clamp.test.ts"
+      ],
+      "exitCode": 0,
+      "rawCombinedStdoutStderr": "providers-normalization-baseline.first.log",
+      "exitReceipt": "providers-normalization-baseline.first.exit.txt",
+      "clean": true,
+      "observedBunCounts": {
+        "pass": 26,
+        "fail": 0,
+        "expectCalls": 46,
+        "reportedTests": 26,
+        "files": 6,
+        "completedGuardedShard": true
+      },
+      "result": "complete zero-failure guarded shard"
+    },
+    {
+      "stem": "providers-thinking-roundtrip",
+      "attempt": 1,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round7/evidence/providers-thinking-roundtrip.test.ts"
+      ],
+      "exitCode": 1,
+      "rawCombinedStdoutStderr": "providers-thinking-roundtrip.first.log",
+      "exitReceipt": "providers-thinking-roundtrip.first.exit.txt",
+      "clean": false,
+      "observedBunCounts": {
+        "pass": 1,
+        "fail": 1,
+        "expectCalls": 13,
+        "reportedTests": 2,
+        "files": 1,
+        "completedGuardedShard": false
+      },
+      "result": "SKIP after first fixture failure; no repair/retry/alternate execution"
+    }
+  ],
+  "cleanShardCount": 2,
+  "cleanTotals": {
+    "pass": 30,
+    "fail": 0,
+    "expectCalls": 65,
+    "skipped": 0,
+    "newFocusedTests": 4,
+    "existingBaselineTests": 26
+  },
+  "failedShardCount": 1,
+  "failedShardObservedTotals": {
+    "pass": 1,
+    "fail": 1,
+    "expectCalls": 13
+  },
+  "failedDirection": "thinking round-trip fixture line 71 expects exact tool_result content without automatic cache_control; whole direction skipped",
+  "confirmedFindings": 1,
+  "candidatesNotConfirmed": 2,
+  "limits": [
+    "No real SDK network client, provider endpoint, fetch/socket, actual model, paid API, real user data, native app, external message or auth/security/custody/watchdog experiment.",
+    "Core clients use in-memory _client adapters. Installed SDK MessageStream parses only an owned ReadableStream.",
+    "No product fix, dependency build/install, clean build, typecheck, lint, or full provider/Core suite claim.",
+    "Thinking failed fixture raw/exit preserved untouched. No repair/retry/alternate validation.",
+    "OpenAI later-identity behavior is dynamically observed only for synthetic chunks; supported normal producer reachability remains unproven."
+  ]
+}

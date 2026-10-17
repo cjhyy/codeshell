@@ -1,0 +1,35 @@
+# Read-only cross-review by Files auditor
+
+Reviewed the [Providers](../providers.md) and [TUI](../tui.md) final reports, complete new fixtures, first raw logs and exit receipts, selected production consumers, the installed Anthropic SDK emitter and the five existing TUI baseline test files. No new fixture, repair, rerun, alternate execution of failed directions, model, native program, network request or product edit was performed by this reviewer. Source inspection and byte/hash verification are review evidence, not replacement execution gates.
+
+## Providers: support one P3 confirmation and two candidates
+
+The installed `@anthropic-ai/sdk@0.39.0` runtime sends `inputJson` while processing `content_block_delta` (`lib/MessageStream.mjs:361–364`) and sends `contentBlock` on `content_block_stop` (`:389–390`). Both `_createMessage` and `_fromReadableStream` route decoded events through the same accumulator/emitter. The fixture's owned JSON-lines `ReadableStream` therefore exercises the actual installed SDK ordering rather than manually choosing an order for fake SDK callbacks. It does not exercise HTTP/SSE transport or a real provider.
+
+`AnthropicClient` sets the current tool id/name only in `contentBlock`, while `inputJson` uses that remembered identity. The complete first guarded stream shard demonstrates the first tool's missing argument updates and the next tool's arguments associated with the previous id. Actual `ModelFacade.call` forwards those events, and actual Web `reduceStream` associates the wrong argument object with the previous card. The SDK timing control and complete-identity OpenAI control are useful independent controls. This supports **PROV-R7-01 as one P3 progress/display finding**; delayed start and shifted arguments share one cause.
+
+Final SDK input, returned `response.toolCalls` and the actual in-memory Transcript retain correct arguments in the successful fixture. TurnLoop reads the final `response.toolCalls`, records those args and enqueues those tool calls (`turn-loop.ts:1634–1666`); that execution routing was inspected statically. No actual tool handler, complete Engine or UI was executed. In particular, the fixture's synthetic `path` fields are provider test data, not schema-valid current Read/Write builtin `file_path` arguments. The finding must not be described as actual tool execution using swapped args. The remembered streamed ids explain the skipped final start event, but replay/snapshots can restore correct durable args; no permanent data-loss claim is supported.
+
+**PROV-R7-C1 remains a candidate.** The OpenAI fixture proves what the parser does when an invented first delta lacks identity and a later delta supplies it, and proves the returned final args match the complete-identity control. It does not establish a supported normal producer for that delta order. Optional SDK fields and a source comment are insufficient to promote it; the author's read of official documentation did not establish that ordering. TurnLoop's final start fallback also limits the impact to the streaming interval.
+
+**PROV-R7-C2 remains skipped after a failed first fixture.** Raw output is **1 pass / 1 fail / 13 expect calls / exit 1**, with no guarded completion. The failure is the fixture's exact-object expectation omitting production `cache_control: {type: "ephemeral"}`. Earlier assertions in that failed test and the passing thinking-off test may be described honestly, but neither turns the whole failed shard into a clean confirmation. The SDK opaque values are invented, no provider rejection was observed, and this reviewer did not repair the expectation or execute an alternate probe.
+
+Provider clean totals are **4 new focused tests / 19 expect calls**, plus **26 existing baseline tests / 46 expect calls**: **30 clean tests / 65 expect calls** across two complete first shards. The failed thinking shard, including its one passed test, is separate and must not be added to those clean totals.
+
+## TUI: support zero confirmations, two source-only candidates
+
+The Diff fixture's relative imports over-traverse the repository root. The first raw log records module resolution failure before product code/assertions: **0 pass / 1 fail / 1 error / exit 1**, no guarded completion or expectation count. The unchanged failed fixture and receipt support the report's decision to skip this direction without a repair/rerun.
+
+Static source review supports retaining both questions, without promoting either. `classifyDiffLine` requires whitespace after the marker, while `ToolCall` comments name ordinary `git diff` output as an intended display source. The same classifier deliberately treats `+x` as plain output, so context-sensitive handling needs further design/evidence. `padToWidth` and gutter reserve use UTF-16 `.length`; the report explicitly labels its CJK example as a source-derived calculation, not measured renderer output. This reviewer did not run a width function or render the failed candidate through another route.
+
+The separate successful shard covers message-row memo comparison, slice anchor calculation, interrupted streaming state, listener isolation and failed-attempt revocation. I read all five existing test files and their first log: **27 pass / 264 expect calls / 0 fail / 0 skipped / exit 0**, guarded completion present. None asserts either Diff candidate. It is accurate to call these existing baseline tests and inaccurate to use them as validation of Diff classification, CJK padding, real PTY rendering or the whole virtual scroll system.
+
+TUI's **33 frozen source hashes and 10 artifact hashes** were independently checked against Git blob/current file bytes and the artifact receipt; all matched at review time. The source manifest's selected/truncated reads stay explicitly limited in the report. Source and artifact checks did not execute product code.
+
+## Final receipt check
+
+After the final Provider report/receipts were written, independently checked **18 frozen source files, 5 installed SDK dependency files and 21 artifact files**. All recorded hashes/byte counts matched; dependency logical import paths resolve to the recorded shared primary `node_modules` paths. Frozen Git blobs and current source files also matched. Installed dependencies are accurately separated from frozen Git source evidence.
+
+The final Provider report now explicitly labels the fixture's borrowed Read/Write names, synthetic `path/content` data, `tools=[]`, and the absence of builtin argument validation/execution. The structured finding preserves that limitation. The candidate and validation metadata match the one-confirmation/two-candidate classification and the raw clean/failed counts above.
+
+Read the separate Provider metadata-assembly note: it discloses two metadata path errors and corrected receipt generation, with tool-output transcriptions labeled as transcriptions. These were not Bun shards, do not change product test counts, and did not repair/retry the failed thinking fixture. No receipt mismatch remains at this review point. The aggregate batch evidence index remains authoritative for later report edits and final integration.

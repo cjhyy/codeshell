@@ -1,0 +1,47 @@
+{
+  "baseline": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "count": 5,
+  "candidates": [
+    {
+      "id": "FILES-R7-02",
+      "report": "files.md",
+      "source": "packages/core/src/tool-system/builtin/glob.ts",
+      "line": 90,
+      "status": "observed-behavior-contract-unproven",
+      "reason": "Returned subset is sorted; no explicit global-newest-200 contract found. Downgraded after review, not counted."
+    },
+    {
+      "id": "PROV-R7-C1",
+      "report": "providers.md",
+      "source": "packages/core/src/llm/providers/openai.ts",
+      "line": 831,
+      "status": "observed-fake-input-reachability-unproven",
+      "reason": "Late identity fake reproduces behavior, but no valid normal producer/protocol ordering proof; final TurnLoop also backfills start. Not counted."
+    },
+    {
+      "id": "PROV-R7-C2",
+      "report": "providers.md",
+      "source": "packages/core/src/llm/providers/anthropic.ts",
+      "line": 385,
+      "status": "SKIP-after-first-fixture-assertion-failure",
+      "reason": "Thinking roundtrip first shard fails due to unaccounted automatic cache_control. Partial observations are not confirmation; no repair/retry/alternate validation."
+    },
+    {
+      "id": "TUI-C1",
+      "report": "tui.md",
+      "source": "packages/tui/src/ui/components/DiffLine.tsx",
+      "line": 102,
+      "status": "source-only-SKIP",
+      "reason": "Diff classification fixture import over-traverses path. No product assertion executed; no repair/retry/alternate validation."
+    },
+    {
+      "id": "TUI-C2",
+      "report": "tui.md",
+      "source": "packages/tui/src/ui/components/DiffLine.tsx",
+      "line": 48,
+      "status": "source-only-SKIP",
+      "reason": "Same failed Diff fixture; terminal-column padding prediction has no successful renderer/width observation."
+    }
+  ],
+  "note": "Candidates are separate from confirmed severities. Original first fixtures/logs retained after downgrades."
+}

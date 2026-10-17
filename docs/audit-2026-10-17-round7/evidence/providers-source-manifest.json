@@ -1,0 +1,169 @@
+{
+  "frozenCommit": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "fileCount": 18,
+  "allMatchFrozen": true,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "reviewMode": "complete primary repository instructions"
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "bytes": 64200,
+      "lines": 1524,
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "frozenSha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "matchesFrozen": true,
+      "reviewMode": "ordinary request assembly, message normalization, stream and response conversion; auth/security/watchdog behavior excluded"
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "bytes": 22737,
+      "lines": 593,
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "frozenSha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "matchesFrozen": true,
+      "reviewMode": "ordinary request assembly, message normalization, stream and response conversion; auth/security/cancellation behavior excluded"
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "lines": 310,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "frozenSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "matchesFrozen": true,
+      "reviewMode": "stream forwarding, response extraction and in-memory Transcript recording"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "frozenSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozen": true,
+      "reviewMode": "selected tool event tracking, final tool materialization, execution/result consumer, continuation branches; not full file"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lines": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "frozenSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "matchesFrozen": true,
+      "reviewMode": "selected message/ToolResult conversion and in-memory API; not full file"
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "bytes": 18650,
+      "lines": 468,
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "frozenSha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "matchesFrozen": true,
+      "reviewMode": "constructor, usage wrapper and ordinary provider options; no auth/custody experiments"
+    },
+    {
+      "path": "packages/core/src/llm/types.ts",
+      "bytes": 2286,
+      "lines": 59,
+      "sha256": "0b87eea760e52b2a2dfb3ecabf9c6630f370e169c53dc2d11d6f732212805c2b",
+      "frozenSha256": "0b87eea760e52b2a2dfb3ecabf9c6630f370e169c53dc2d11d6f732212805c2b",
+      "matchesFrozen": true,
+      "reviewMode": "complete CreateMessageOptions and usage tracker contracts"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 50794,
+      "lines": 1306,
+      "sha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true,
+      "reviewMode": "selected Message, ContentBlock, LLMStreamChunk, StreamEvent, LLMResponse type contracts"
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 27797,
+      "lines": 779,
+      "sha256": "3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5",
+      "frozenSha256": "3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5",
+      "matchesFrozen": true,
+      "reviewMode": "selected initial state, tool start/args/result branches; actual pure reducer used by fixture"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86437,
+      "lines": 2284,
+      "sha256": "c578fb19975f8432a84679b4994ec9910fc0766ba5a45a22c16253cfab72aa9e",
+      "frozenSha256": "c578fb19975f8432a84679b4994ec9910fc0766ba5a45a22c16253cfab72aa9e",
+      "matchesFrozen": true,
+      "reviewMode": "selected tool start, live args and result branches; static only"
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "frozenSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "matchesFrozen": true,
+      "reviewMode": "installed SDK dependency declaration only"
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic-usage.test.ts",
+      "bytes": 1989,
+      "lines": 73,
+      "sha256": "8047033b84165eba5acf21ff117bbe2030e5c80bf1f15442496c041abc740ffe",
+      "frozenSha256": "8047033b84165eba5acf21ff117bbe2030e5c80bf1f15442496c041abc740ffe",
+      "matchesFrozen": true,
+      "reviewMode": "complete existing test source read before first guarded baseline run; in-memory SDK adapters"
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic-thinking.test.ts",
+      "bytes": 6787,
+      "lines": 187,
+      "sha256": "ef8dc82445282e48655e51c44595c6ddcb19aff8419e24bb77ff6f0587cbc9d5",
+      "frozenSha256": "ef8dc82445282e48655e51c44595c6ddcb19aff8419e24bb77ff6f0587cbc9d5",
+      "matchesFrozen": true,
+      "reviewMode": "complete existing test source read before first guarded baseline run; in-memory SDK adapters"
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic-tool-result-error.test.ts",
+      "bytes": 4825,
+      "lines": 144,
+      "sha256": "5f807226676ba6012abff5abc51c5761f752d7b730c1189978422b8c7be42ef6",
+      "frozenSha256": "5f807226676ba6012abff5abc51c5761f752d7b730c1189978422b8c7be42ef6",
+      "matchesFrozen": true,
+      "reviewMode": "complete existing test source read before first guarded baseline run; in-memory SDK adapters"
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai-tool-result-image.test.ts",
+      "bytes": 3407,
+      "lines": 105,
+      "sha256": "9195870ab5b0a278794ea8d72f3137a26333fa3f63cee224fa9b277f4a7f6992",
+      "frozenSha256": "9195870ab5b0a278794ea8d72f3137a26333fa3f63cee224fa9b277f4a7f6992",
+      "matchesFrozen": true,
+      "reviewMode": "complete existing test source read before first guarded baseline run; in-memory SDK adapters"
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai-tool-result-error.test.ts",
+      "bytes": 3812,
+      "lines": 134,
+      "sha256": "c6cd39c0a68bf411a1d1c21d35ae3bf432d2e080683ea6501d0b3fc0aef89461",
+      "frozenSha256": "c6cd39c0a68bf411a1d1c21d35ae3bf432d2e080683ea6501d0b3fc0aef89461",
+      "matchesFrozen": true,
+      "reviewMode": "complete existing test source read before first guarded baseline run; in-memory SDK adapters"
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai-max-tokens-clamp.test.ts",
+      "bytes": 2654,
+      "lines": 79,
+      "sha256": "464ab1694cb60deea4e13f3972c82cc0cc20bf60b4f99a08ec40d65a8bccd37d",
+      "frozenSha256": "464ab1694cb60deea4e13f3972c82cc0cc20bf60b4f99a08ec40d65a8bccd37d",
+      "matchesFrozen": true,
+      "reviewMode": "complete existing test source read before first guarded baseline run; in-memory SDK adapters"
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "sourceBase": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "confirmed": [
+    {
+      "sourceBase": "1b04838474bcd57212f80f791d0e268a00d347e3",
+      "status": "confirmed",
+      "evidenceLevel": "real production handler, owned temporary files, first guarded test with normal control; downstream integration static only",
+      "id": "FILES-R7-01",
+      "priority": "P2",
+      "title": "Default single Edit expands literal replacement tokens and reports intended rather than persisted replacement",
+      "sourceFile": "packages/core/src/tool-system/builtin/edit.ts",
+      "line": 94,
+      "relatedLines": [
+        98,
+        104,
+        105,
+        106,
+        108
+      ],
+      "fixture": "evidence/files-edit-literal.test.ts",
+      "log": "evidence/files-edit-literal.first.log",
+      "trigger": "Unique exact match; new_string contains $&, $$, $` or $' with default replace_all=false.",
+      "observed": "Success diff echoes literal replacement while JavaScript replacement processing changes persisted bytes; subsequent real Read exposes the changed bytes.",
+      "control": "Ordinary and unmatched $1 replacements remain literal; explicit replace_all=true preserves $&.",
+      "limits": "No executor/Engine/model/UI or code execution. All four token manifestations count as one root cause."
+    },
+    {
+      "sourceBase": "1b04838474bcd57212f80f791d0e268a00d347e3",
+      "status": "confirmed",
+      "evidenceLevel": "real production handler, owned temporary files, first guarded test with normal control; downstream integration static only",
+      "id": "FILES-R7-03",
+      "priority": "P3",
+      "title": "Node Grep fallback returns no matches for a directory-qualified glob with matching content",
+      "sourceFile": "packages/core/src/tool-system/builtin/grep.ts",
+      "line": 384,
+      "relatedLines": [
+        105,
+        220,
+        268,
+        269,
+        371,
+        389,
+        394
+      ],
+      "fixture": "evidence/files-grep-fallback.test.ts",
+      "log": "evidence/files-grep-fallback.first.log",
+      "trigger": "Both external search commands unavailable, injected ENOENT; glob src/**/*.ts over src/deep/answer.ts.",
+      "observed": "Unfiltered and *.ts controls find the file; directory-qualified filter returns No matches found.",
+      "contract": "Generic unrestricted public glob schema, unchanged rg --glob routing, fallback comment intending equivalent filtering. Directory-specific support is inferred; no public directory example located.",
+      "limits": "No native process was launched; actual rg/grep/platform behavior not run. P3 ordinary false negative only.",
+      "primaryContract": {
+        "readBy": "root, read-only web opens, no product process",
+        "sources": [
+          "https://raw.githubusercontent.com/BurntSushi/ripgrep/master/GUIDE.md",
+          "https://git-scm.com/docs/gitignore"
+        ],
+        "paraphrase": "Ripgrep manual glob filtering uses .gitignore syntax; Git describes directory-qualified matching and /**/ spanning directories. This supports the advertised rg route pattern meaning; no actual rg execution is claimed."
+      }
+    },
+    {
+      "sourceBase": "1b04838474bcd57212f80f791d0e268a00d347e3",
+      "status": "confirmed",
+      "evidenceLevel": "real production handler, owned temporary files, first guarded test with normal control; downstream integration static only",
+      "id": "FILES-R7-04",
+      "priority": "P3",
+      "title": "Oversized Read recommends paging which cannot pass the unconditional size gate",
+      "sourceFile": "packages/core/src/tool-system/builtin/read.ts",
+      "line": 78,
+      "relatedLines": [
+        77,
+        91,
+        97,
+        99
+      ],
+      "fixture": "evidence/files-read-large.test.ts",
+      "log": "evidence/files-read-large.first.log",
+      "trigger": "6 MiB normal text, then follow error guidance with offset=1 limit=2.",
+      "observed": "Same size rejection repeats; small-file paging control works.",
+      "limits": "Only inaccurate recovery guidance is a defect. Fixed size cap is not called a defect; Grep alternative still exists. No cap bypass, content corruption, native/security/model claim."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "FILES-R7-02",
+      "status": "unconfirmed-behavior-candidate",
+      "priority": null,
+      "sourceBase": "1b04838474bcd57212f80f791d0e268a00d347e3",
+      "title": "Glob caps before sorting, so the omitted matching file remains absent after becoming newest",
+      "sourceFile": "packages/core/src/tool-system/builtin/glob.ts",
+      "line": 90,
+      "relatedLines": [
+        16,
+        101
+      ],
+      "fixture": "evidence/files-glob-order.test.ts",
+      "log": "evidence/files-glob-order.first.log",
+      "reasonNotConfirmed": "Returned subset is sorted as generic description promises. No explicit contract or consumer requiring globally newest 200 was located. Observed truncation before sorting alone is insufficient to prove defect.",
+      "rootReview": "Downgraded after root read-only contract review; original first fixture/log unchanged, no rerun."
+    }
+  ],
+  "totals": {
+    "confirmed": 3,
+    "P2": 1,
+    "P3": 2,
+    "unconfirmedCandidates": 1
+  },
+  "historicalDuplicates": [
+    "Notebook N23/C9 string source",
+    "Notebook N08/C10 metadata/id loss",
+    "Patch A01 move executable mode",
+    "Patch A02 rollback snapshot bytes/mode",
+    "Core C04 relative Write/Edit history cwd",
+    "TUI A08/A09 undo behavior"
+  ],
+  "dedupReceipt": "evidence/files-dedup.json"
+}

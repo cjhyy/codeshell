@@ -1,0 +1,130 @@
+{
+  "terms": "(diff.{0,100}(width|padding|wrap|CJK|unicode|marker|classif|color|colour|空白|换行|中文|彩色|颜色|加号|减号))|((padding|wrap|CJK|unicode|marker|classif|color|colour).{0,100}diff)",
+  "matches": [
+    {
+      "path": "docs/core-deep-dive/v2-03-tool-system-security-deep-dive.md",
+      "line": 107,
+      "text": "**③ plan 模式门（`executor.ts:220`）。** plan 模式下只放只读工具（`PLAN_MODE_ALLOWED_TOOLS`，与 engine 的可见性过滤共享同一个集合，防止「模型看见的集合」与「executor 跑的集合」漂移）。这里有个微妙处理：`Bash` 在允许列表里——好让模型能用它做只读探查——但「在列表里」不等于「可以写」。一条会改文件的 Bash 命令（`echo >`、`sed -i`、`mv` …）必须在这里被 `classifyBashCommand` 判为非 `safe-read` 后拦下（`executor.ts:228`），否则它会绕过 plan 模式溜进正常权限流（那里用户可能批准它），而且**完全不留 diff**（因为它没碰 Write/Edit）。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/quality-root.md",
+      "line": 15,
+      "text": "材料验证包括唯一编号、报告/源码行号、所有本地 Markdown 链接、冻结 source blob SHA、最终 evidence-index SHA、收据计数与 staged 路径只在本任务目录。八份被 ignore 的 raw `.log` 仅在本任务 evidence 下显式 force-add。完整 staged `diff --check` 只有一条例外：`root-cli-data.first.log:7` 原 Bun 代码框空行包含一个字面尾空格。原始日志原样保留，排除日志后的材料空白检查通过。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/quality-root.md",
+      "line": 26,
+      "text": "完整staged diff空白检查仅有一条原始日志例外：`lab-offline-round2.raw.log:11` 的provider错误诊断以字面空格结束。按首跑原始字节保留；排除raw日志后的材料检查通过。16个原始log已在本任务目录显式force-add，未带入其他ignored文件。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/README.md",
+      "line": 28,
+      "text": "材料检查包含源码/证据SHA、编号/行号、收据计数与本地链接。16份被ignore的原始日志显式纳入本审查目录；Lab失败诊断第11行自带一个尾空格，完整diff空白检查因此有一条原始收据例外并原样保留，排除日志后的材料空白检查通过。"
+    },
+    {
+      "path": "docs/todo/gpt-cache-optimization-2026-09-06.md",
+      "line": 76,
+      "text": "- 8份修改／新增源码和测试文件的ESLint、Prettier，以及diff空白检查通过。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "line": 82,
+      "text": "- 位置：`packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:62-72` 在已进入 hunk 后仍优先处理文件头；`:105-112` 又排除所有以三个加/减号开头的正文行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/README.md",
+      "line": 44,
+      "text": "材料检查：源码/证据 SHA、问题行号、唯一编号与本地 Markdown 链接核对通过。原始 Bun 失败日志中一行诊断自带尾空格，完整 diff --check 因此有一条例外，保留原始字节；排除原始日志后的材料空白检查通过。被 .gitignore 忽略的42份日志已在本审查目录显式纳入版本控制。"
+    },
+    {
+      "path": "docs/architecture/09-tui.md",
+      "line": 16,
+      "text": "| Terminal renderer | `render/`, `native-ts/yoga-layout/` | `src/render` is first-party CodeShell code, not an npm `ink` dependency (`packages/tui/src/render/README.md:7`); it wraps React reconciler commits, a TS Yoga port, cell buffers, overlays, ANSI diffs, and terminal mode cleanup (`packages/tui/src/render/ink.tsx:122`, `packages/tui/src/render/renderer.ts:32`, `packages/tui/src/native-ts/yoga-layout/index.ts:1`). |"
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-recents-round23.md",
+      "line": 104,
+      "text": "归档diff的三处纯空白context行已在可读副本规范化以通过staged whitespace检查；[gzip原件](validation/original-menu-recents-round23/portability-correction/portability-correction.diff.gz)保留完整原字节，[规范化收据](validation/original-menu-recents-round23/portability-correction/diff-normalization.json)记录两个SHA。fixture/guard字节及两次通过收据未变。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "line": 114,
+      "text": "05:51 staged diff检查发现6份本任务归档harness log共8行行尾空白；只去除归档副本行尾空格以通过git检查，/tmp原始文件、错误内容及最终断言不动。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "line": 158,
+      "text": "08:14第二十三轮最终独立整合审计通过（执行0），唯一当前摘要旧81/243已改latest表与说明83/247，R82中间阶段明确标历史。当前83=1P1/52P2/30P3，两个冻结common83/247，新增menu2files4tests82expects；scope、原失败、source与cleanup分账无未解决实质矛盾。可读diff三空白context行规范化，gzip保留原字节及SHA，fixture/guard不变、未重跑。第24轮legacy图片历史fallback仅/tmp准备与独立静态审，尚未运行或正式收录。08:01origin仍a66f，下次08:50–09:00，11:00前继续。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "jsonPath": "/searchTerms",
+      "text": "DiffLine|classifyDiffLine|padToWidth|truncateToWidth|truncateStartToWidth|slice-anchor|computeSliceStart|VirtualMessageList|wrapText|wrap-text|measure-text|CodeBlock|ToolCallResult|StructuredDiff"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/logs/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/settings-navigation/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/sidebar-projection/11/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "line": 1058,
+      "text": "  color: var(--diff-added, #16a34a);"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "line": 1062,
+      "text": "  color: var(--diff-removed, #dc2626);"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 602,
+      "text": "The test asserts the **visible** properties (text content + ANSI bold + OSC 8). If the renderer wraps lines with `\\r` or `\\n` differently than expected, update `.toContain` calls to match what the renderer actually emits — but keep the **intent** of each test:"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-file-root-round27/static-preflight.md",
+      "line": 57,
+      "text": "- `getProjectStore()` is a lazy default singleton (`main/project-store.ts:1226–1235`) with **reset only**, not an injectable store setter. The workspace service does have `__setSessionWorkspaceServiceSessionManagerForTests` and `__setSessionWorkspaceServiceProjectStoreForTests` (`session-workspace-service.ts:102–127`). A coherent later validation must make renderer-root authorization and workspace authority consume the same actual temporary registry, rather than silently setting only the workspace service's instance while Main reads a different singleton. Options are an owned isolated HOME/default singleton, or a labeled validator DI wrapper around the real `requireRendererProjectRoot` with the actual store's `list()` snapshot (its existing `options.projects` seam). Neither may synthesize B's path from a hand-maintained test map."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/static-preflight.md",
+      "line": 57,
+      "text": "- `getProjectStore()` is a lazy default singleton (`main/project-store.ts:1226–1235`) with **reset only**, not an injectable store setter. The workspace service does have `__setSessionWorkspaceServiceSessionManagerForTests` and `__setSessionWorkspaceServiceProjectStoreForTests` (`session-workspace-service.ts:102–127`). A coherent later validation must make renderer-root authorization and workspace authority consume the same actual temporary registry, rather than silently setting only the workspace service's instance while Main reads a different singleton. Options are an owned isolated HOME/default singleton, or a labeled validator DI wrapper around the real `requireRendererProjectRoot` with the actual store's `list()` snapshot (its existing `options.projects` seam). Neither may synthesize B's path from a hand-maintained test map."
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "line": 64,
+      "text": "- **R2-11不存在生产统一禁用quotePath的反证。** `ReviewService:72–75`分派到getGitDiffForReview/getGitRangeDiff/getGitCommitDiff；`desktop-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-8-2026-07-08.md",
+      "line": 16,
+      "text": "| Markdown render cache ignores width | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/MessageContent.tsx:23` | `1f59c49cd3d56f07813af6e7ca4d4c6fd31a6dff` | `packages/tui/src/ui/components/MessageContent.test.ts`: same markdown renders separately for different terminal widths | Failing regression observed, then `bun test packages/tui/src/ui/components/MessageContent.test.ts` passed before and after formatting, before commit. |"
+    },
+    {
+      "path": "docs/archive/core-modules/git.md",
+      "line": 3,
+      "text": "**One-line role.** Thin, injection-safe wrappers around the `git`/`gh` CLIs — porcelain helpers (status/diff/log/commit) for the `/git` slash commands, plus full worktree lifecycle (create/setup/remove) for the EnterWorktree/ExitWorktree tools."
+    },
+    {
+      "path": "docs/archive/core-modules/review.md",
+      "line": 81,
+      "text": "- **Content is truncated to `maxChars` (default 12000)** with a `…(truncated)…` marker appended — large diffs are silently clipped, so the model may not see the whole change."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "/189/detail",
+      "text": "In applyStylesToWrappedText, when trimEnabled is true, the function skips whitespace in originalPlain (lines 236-243) to account for trimmed output. However, this whitespace skipping advances charIndex through originalPlain while the wrapped line has already consumed (or not consumed) those characters differently. Subsequently, charToSegment[charIndex] lookups (lines 248, 251) may index into the wrong segment because the character index no longer corresponds to the original text position that charToSegment was built from. The fallback ?? 0 masks the mismatch, causing styled segments to apply to wrong character ranges."
+    }
+  ]
+}

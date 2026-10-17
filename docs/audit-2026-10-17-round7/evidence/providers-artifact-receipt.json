@@ -1,0 +1,114 @@
+{
+  "frozenCommit": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "artifactCount": 21,
+  "confirmedFindings": 1,
+  "candidateCount": 2,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-assemble.py",
+      "bytes": 15744,
+      "sha256": "51c6ad23764b4598caebcb4b257c3b3875b5ed623ee134e94ab5008759095fc4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-candidates.json",
+      "bytes": 1147,
+      "sha256": "87cdd907eb8f3e08053f28901e47c66c68db174cb2471c2611dec7b8becc0925"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup-corpus.json",
+      "bytes": 210747,
+      "sha256": "b49844271608585f346ef3d1664835740842d88a1571fb900b9ef565fa3b0a11"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "bytes": 27653,
+      "sha256": "5e1dc769dc618c7f1aa211ade0e552efb41747b47bf976bd1dc356610e42fac7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dependency-receipt.json",
+      "bytes": 2851,
+      "sha256": "c553fb02c6f7d241a72a7d12af7ec25cf3fadd3c61285be3cf782af0ea039235"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-findings.json",
+      "bytes": 1422,
+      "sha256": "671f0868c6d9a8e0c98d343916dbf1a092c56f84df0ebe9078cb84fa1f32ef27"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-metadata-assembly-note.md",
+      "bytes": 2231,
+      "sha256": "0e7d08f7edcbf4c9574c32b8086d318f549d963d9c8668f7e3200d9e9d74519b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-normalization-baseline.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-normalization-baseline.first.log",
+      "bytes": 3676,
+      "sha256": "b25f99b58636d2473539459109138d7851e0f1ca0d1d7772bcadedd855e5d360"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-primary-sources.json",
+      "bytes": 1989,
+      "sha256": "4ac9249d9059a75c85cb605ec860c8dcdd7d567efddca563323b1e8675eaea05"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-source-manifest.json",
+      "bytes": 7811,
+      "sha256": "72420600137d33595b73ab93eadc29841b606139f372ca10d10f70028c8a2b76"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-stream-contract.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-stream-contract.first.log",
+      "bytes": 822,
+      "sha256": "85b3642b84ae002c1749c2c8a4c6ab2a113fc6f2482460665805112337fa27f9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-stream-contract.test.ts",
+      "bytes": 9264,
+      "sha256": "f9839718c97580d9c6a1cd3a7e6ebdade08925f823444546749d5207128cfd26"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-targeted-dedup.json",
+      "bytes": 12293,
+      "sha256": "622b6ee0e142b03df076c8f9204e17c1b826a4e6697d6523eed7b9db729ce9e9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-thinking-dedup.json",
+      "bytes": 1222,
+      "sha256": "19c424514964e92d5f1a03d1c09ddeca40206e46e78475ca2a283e02678c8736"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-thinking-roundtrip.first.exit.txt",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-thinking-roundtrip.first.log",
+      "bytes": 1488,
+      "sha256": "41b72b0c2bcee7b27ec56765f8aa85cda7256d8a0054cd3f11b293485d2f9d8e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-thinking-roundtrip.test.ts",
+      "bytes": 4279,
+      "sha256": "77a24b08b154ac3767d39ee476aa715f233135be91d8c14aa24f557b7d388e56"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-validation.json",
+      "bytes": 3802,
+      "sha256": "e86181e91fb12346c0eff9ec02e477066d51bf0a4cab62428614a44dcae4f41d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/providers.md",
+      "bytes": 9194,
+      "sha256": "2c3752573b3bbefff7de9d04092de86cc38cc90232f2d282e4e5f070e4de5dc5"
+    }
+  ],
+  "note": "Receipt excludes itself. Final root evidence-index is authoritative if reports are later amended. This assembler never runs tests."
+}
