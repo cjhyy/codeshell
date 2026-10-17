@@ -1,6 +1,6 @@
 name: release UI acceptance
 
-# Local native directory packages without a release identity. No publishing.
+# Native package and browser validation without a release identity. No publishing.
 on:
   workflow_dispatch:
     inputs:

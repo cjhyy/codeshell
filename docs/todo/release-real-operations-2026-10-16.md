@@ -249,8 +249,8 @@ incompatibility: its Electron launcher uses a shell command and returns the shel
 PID, whereas early fixture capture expected a direct executable/Main PID. This is
 source evidence, not a new Windows runtime result or an explanation of run 5's
 shutdown-query failure. A narrow exact-vector direct-spawn transport and actual
-Main identity checks are being prepared before the next Windows job; no package
-patch, arbitrary shell parser or shell fallback is planned.
+Main identity checks are now wired before the next Windows job; no package patch,
+arbitrary shell parser or shell fallback is used.
 
 The Windows exact-vector helper `807992bea` is independently reviewed and passes
 seven pure Node policy tests. A separate manually transcribed command test plus
@@ -258,8 +258,20 @@ unproven/rejected/thrown cleanup tests pass four cases, avoiding a circular
 expected-vector assertion. The permanent literal library-taskkill guard records
 any forced fallback as failure and redirects only through the same captured
 birth-custody monitor; suppression never returns native success or authorizes a
-replacement PID. Source/common and packaged wiring still await final checks and
-actual Windows CI. These local fake-policy tests are not Windows execution.
+replacement PID. Source/common and packaged wiring pass final checks and still
+require actual Windows CI. These local fake-policy tests are not Windows execution.
+
+Final Windows transport chain is `807992bea` → `dad996f6c` plus source integration
+`5b1f56ce8`. Common/source and packaged fixtures retain their exact installed
+loader/guard ordering, capture the direct Main before handshake, verify actual
+PID/parent/executable/HOME and read live transport failures after shutdown.
+Forced library cleanup always fails acceptance even if its bounded cleanup
+eventually succeeds. Combined Root verification passes 33 guarded Node tests,
+33 packaged barrier/exit/launcher Bun tests (102 assertions), syntax and lint.
+Independent source review is recorded at
+`/private/tmp/codeshell-windows-source-transport-verified-summary-20261017.json`.
+No local Windows or additional macOS native launch was used for this transport
+change. The full three-platform job must establish its real runtime behavior.
 
 Local integration to `34553b747` preserves all five pre-existing primary checkout
 changes with exact content hashes, modes and sizes. Receipt:
