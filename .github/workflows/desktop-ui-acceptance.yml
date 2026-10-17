@@ -748,3 +748,196 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-reload-390-dark.png
           if-no-files-found: error
           retention-days: 7
+
+  # Independent disposable VM: source-UI failures never bypass or block this
+  # installer scope. The original matrix remains required and unchanged.
+  windows-nsis-ui:
+    if: github.event_name != 'workflow_dispatch' || inputs.suite != 'web'
+    name: independent Windows NSIS installation UI
+    runs-on: windows-2022
+    timeout-minutes: 65
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.16.0"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: ensure setuptools for native node-gyp
+        run: python -m pip install --upgrade setuptools
+
+      - name: prepare new evidence root
+        run: |
+          node <<'NODE'
+          const { mkdirSync, appendFileSync } = require("node:fs");
+          const { join } = require("node:path");
+          const root = join(process.env.RUNNER_TEMP, "codeshell-windows-nsis-acceptance");
+          mkdirSync(root, { mode: 0o700 });
+          appendFileSync(process.env.GITHUB_ENV, `ACCEPTANCE_ROOT=${root}\n`);
+          NODE
+
+      - name: install locked native dependencies
+        timeout-minutes: 15
+        run: bun install --frozen-lockfile
+
+      - name: Windows installer ownership and failure contracts
+        if: runner.os == 'Windows'
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+
+      # Integrated by Root only after this exact pending test source is reviewed.
+      - name: passive startup and Goal fixture contracts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/passive-startup-goal-contracts.log"
+
+      - name: verify local package authority and output ownership
+        run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
+
+      - name: build Desktop workspace dependencies
+        timeout-minutes: 15
+        run: bun run packages/desktop/scripts/build-workspace-dependencies.ts
+
+      - name: build Desktop
+        timeout-minutes: 10
+        run: bun run --cwd packages/desktop build
+
+      - name: inspect tracked source after build
+        run: |
+          git status --porcelain=v1 --untracked-files=no
+          git diff --stat
+
+      - name: materialize production workspace packages
+        timeout-minutes: 5
+        run: bun run --cwd packages/desktop predist
+
+      - name: inspect tracked source after materialization
+        run: |
+          git status --porcelain=v1 --untracked-files=no
+          git diff --stat
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { readFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          for (const path of ["packages/desktop/resources/chrome-extension/service-worker.js", "packages/desktop/resources/chrome-extension/service-worker.js.LEGAL.txt"]) {
+            const git = (args) => execFileSync("git", args, { encoding: "utf8", timeout: 5000 }).trim();
+            const bytes = readFileSync(path);
+            console.log(JSON.stringify({ path, normalizedBlobMatchesHead: git(["hash-object", `--path=${path}`, path]) === git(["rev-parse", `HEAD:${path}`]), rawSHA256: createHash("sha256").update(bytes).digest("hex"), crlfLines: bytes.toString("utf8").split("\r\n").length - 1 }));
+          }
+          NODE
+
+      - name: diagnose Windows fixed process-query transport
+        if: runner.os == 'Windows'
+        timeout-minutes: 3
+        run: node packages/desktop/scripts/diagnose-windows-process-metadata.mjs "$ACCEPTANCE_ROOT/process-metadata"
+
+      - name: verify native process metadata before spawning a package builder
+        timeout-minutes: 2
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { snapshotElectronTestProcesses } from "./packages/desktop/scripts/electron-test-process-snapshot.mjs";
+          const cold = Date.now();
+          const rows = snapshotElectronTestProcesses({
+            execFile: (file, args, options) => execFileSync(file, args, { ...options, timeout: 30_000 }),
+          });
+          console.log(JSON.stringify({ phase: "cold-metadata-query", elapsedMs: Date.now() - cold, rows: rows.length }));
+          const warm = Date.now();
+          const verified = snapshotElectronTestProcesses();
+          console.log(JSON.stringify({ phase: "normal-custody-query", elapsedMs: Date.now() - warm, rows: verified.length }));
+          NODE
+
+      - name: package native directory without publishing
+        timeout-minutes: 12
+        run: node packages/desktop/scripts/smoke-local-package.mjs --output "$ACCEPTANCE_ROOT/package"
+
+      - name: production Windows NSIS installation, replacement and uninstall
+        if: runner.os == 'Windows'
+        timeout-minutes: 40
+        run: |
+          set -euo pipefail
+          node packages/desktop/scripts/smoke-windows-nsis-install.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/windows-nsis" 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis.log"
+
+      # Public metadata only; never transfer an App, ASAR, Setup, HOME or cache.
+      - name: retain independent Windows installer evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-ui-independent-windows-nsis
+          path: |
+            ${{ env.ACCEPTANCE_ROOT }}/package/build-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/package/electron-builder.local.json
+            ${{ env.ACCEPTANCE_ROOT }}/package/build.log
+            ${{ env.ACCEPTANCE_ROOT }}/process-metadata/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/passive-startup-goal-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/journal.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install-crash-evidence.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/baseline-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/payload-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/first-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/preflight.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/first-registration.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/marker-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replace-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-registration.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstall-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstalled.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/cache-before-cleanup.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/final-os-state.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/nsis-build.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/nsis-build.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replace.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replace.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstall.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstall.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/first-error.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/failure.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/failure-body.txt
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-1280-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-1280-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-768-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-768-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-390-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-390-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-reload-390-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/first-error.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/failure.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/failure-body.txt
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-1280-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-1280-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-768-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-768-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-390-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-390-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-reload-390-dark.png
+          if-no-files-found: error
+          retention-days: 7
