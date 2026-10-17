@@ -1,0 +1,24 @@
+{
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesWritten": 0,
+  "productFunctionsInvoked": 0,
+  "vmAstEvaluations": 0,
+  "nativeExperiments": 0,
+  "gitCommands": 0,
+  "networkRequests": 0,
+  "realTaskOrModelRuns": 0,
+  "authPermissionCustodyIdentityExperiments": 0,
+  "runs": [],
+  "testDeclarationsRead": {
+    "coreQueue": 4,
+    "webReplay": 9,
+    "total": 13,
+    "executed": 0,
+    "passingEvidence": false
+  },
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0
+}

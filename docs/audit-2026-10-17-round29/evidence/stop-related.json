@@ -1,0 +1,11 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "count": 0,
+  "observations": [],
+  "excludedOldFamilies": [
+    "R81/B22-1 native parent Browser pending action cancellation propagation",
+    "R08 Web/Mobile external CLI room Stop missing target",
+    "Historical Stop priority regression already expressed in current helper/tests"
+  ],
+  "note": "Old exclusions are not new related counts; no failed direction reopened."
+}

@@ -1,0 +1,41 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "branchProvidedByRoot": "codex/audit/runtime-frontier-round29-20261017",
+  "initialUtc": "2026-10-17T11:36:46.774709+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "captureTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "firstFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "captureTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "bytes": 2742,
+      "lineCount": 76,
+      "firstFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "captureTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "bytes": 1511,
+      "lineCount": 42,
+      "firstFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "captureTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

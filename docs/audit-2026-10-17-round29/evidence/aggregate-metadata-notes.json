@@ -1,0 +1,16 @@
+{
+  "productExecution": false,
+  "productReruns": 0,
+  "events": [
+    {
+      "operation": "First Root metadata assembly",
+      "exitCode": 0,
+      "error": "Initial stop pins semanticRead:false described the pin-capture time, not final semantic coverage. Root overclassified all8 as final hash-only; only the explicitly unread approvals test belongs there.",
+      "firstHashOnlyCount": 12,
+      "correctedHashOnlyCount": 5,
+      "correction": "Use stop final inventoryOnlyNotSemanticallyRead exact path list; preserve original generated source manifest and coverage as .first diagnostics, never active contributors.",
+      "sourceBytesChanged": false,
+      "sourceSemanticReadsAdded": 0
+    }
+  ]
+}

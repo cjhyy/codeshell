@@ -1,0 +1,67 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "corpus": {
+    "files": 2765,
+    "markdown": 1275,
+    "json": 1490,
+    "stringLeaves": 562917,
+    "scalarLeaves": 833428,
+    "exactArchiveDirectories": 169,
+    "parseErrors": 0
+  },
+  "matchCounts": {
+    "stop-priority": 64,
+    "runtime-cancel": 20
+  },
+  "retainedContexts": {
+    "stop-priority": 64,
+    "runtime-cancel": 20
+  },
+  "decisions": [
+    {
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "ranges": [
+        [
+          18,
+          27
+        ]
+      ],
+      "meaning": "Old R81 explicitly distinguishes correct viewed-bucket selection and immediate renderer stopped state from downstream native Browser action cancellation. Not a current leaf-priority defect and no native direction reopened."
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "ranges": [
+        [
+          29,
+          38
+        ]
+      ],
+      "meaning": "Old R08 is Web/Mobile CLI room stop frame without room identity and actual native rejection, a different producer. Do not call it wrong native cancellation or present it as this Desktop helper."
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "ranges": [
+        [
+          202,
+          231
+        ]
+      ],
+      "meaning": "Stop helper and useRunController extraction already documented; inventory hits do not prove full historical review or a new defect."
+    }
+  ],
+  "notPromoted": [
+    {
+      "subject": "Empty string override",
+      "reason": "No ordinary caller producing an empty override established. Main composer passes no override, relay/QuickChat use actual bucket strings; malformed artificial values are outside finding scope."
+    },
+    {
+      "subject": "Different legacy provider id in summary",
+      "reason": "Ordinary send at controller258–303 resolves and persists the intended engineSessionId before launching. Duplicated stop resolver code alone does not establish a normal wrong-target execution; no identity or native experiment attempted."
+    },
+    {
+      "subject": "Immediate stopped status before cancel ACK",
+      "reason": "Explicit existing UI contract and older report distinction; not newly equated with actual engine cancellation or propagated native rollback."
+    }
+  ],
+  "limit": "Regex and selected prior inspection do not establish exhaustive history semantics; negative only for declared read scope."
+}

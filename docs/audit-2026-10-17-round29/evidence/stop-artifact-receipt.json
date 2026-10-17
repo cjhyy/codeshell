@@ -1,0 +1,74 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-author-checks.json",
+      "bytes": 2537,
+      "sha256": "b9a2554adb6ad7d523f03645c946bd19d95f61fae6faee3303962b6a024e083f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-dedup.json",
+      "bytes": 579694,
+      "sha256": "5328ab2cc0be8b2058c986587d82b01b8b70c151aaa2375e64a274fe5e76a356"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-history-decisions.json",
+      "bytes": 2468,
+      "sha256": "06ea123c3ff4388345e1793c0aaf34c9fcbc0ff3714cb5c923549b54aa6b3c69"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-initial-source-pins.json",
+      "bytes": 3445,
+      "sha256": "50cecc6f63d92f0ea0b0b7bafb712659bc53bfb6913390b41ab7d26be783db08"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-inventory.json",
+      "bytes": 568,
+      "sha256": "2df8e48bf6cb285e28186f24f471b4e99e63e882e09b1e9a8704d55aff72b9a5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-metadata-notes.json",
+      "bytes": 1013,
+      "sha256": "a0512a91f35967b7375f22b18c67ba7848f88e708431feac5cf163e5bab22d78"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-related.json",
+      "bytes": 438,
+      "sha256": "4165baaceb81c82df416bb1fcb412c1c1e02815da7a45e872f659144326fc29a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-source-manifest.json",
+      "bytes": 10682,
+      "sha256": "c59340ca1281ff79acc3aa580f8bc36d5091e06ce23a37e2ee80af9594a79603"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-validation.json",
+      "bytes": 1157,
+      "sha256": "f996b29d038d3c84b580e5abede2a368d6a79b134ae4d834a3a887212a9980f5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/stop-report.md",
+      "bytes": 4880,
+      "sha256": "318b1c58cb88e277e9c23c84fd1a29c19412b62384e06f0d1378c5f1631fb227"
+    }
+  ],
+  "artifactCount": 12,
+  "sourcePinCount": 13,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "selfExcluded": true
+}

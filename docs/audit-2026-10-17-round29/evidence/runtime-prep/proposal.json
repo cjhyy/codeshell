@@ -1,0 +1,55 @@
+{
+  "parentReportedBaseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "status": "negative-static-prep",
+  "mainSources": [
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          101
+        ]
+      ]
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          207
+        ]
+      ]
+    }
+  ],
+  "nextRootRead": [
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "ranges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "reason": "Bounded ordinary FIFO/cancel/finish helper, current callback failure release is source counterevidence; no new candidate proposed."
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "ranges": [
+        [
+          1,
+          207
+        ]
+      ],
+      "reason": "Browser durable event→stream projection. Review snapshot/live split with streamReducer327–366/463–500/588–613 and app/chat44–67; do not import its dependencies or revive old userMessageDisplay."
+    }
+  ],
+  "noNewReadsOnLaterFormalization": true,
+  "limits": "Negative prep is actual selected reading, not proof entire Core/Web lifecycle is correct. Metadata source coverage counts are not independent audit or execution counts."
+}

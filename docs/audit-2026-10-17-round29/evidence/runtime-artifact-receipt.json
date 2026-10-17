@@ -1,0 +1,76 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "report": "docs/audit-2026-10-17-round29/runtime-report.md",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-author-checks.json",
+      "bytes": 5394,
+      "sha256": "469c477e0c5658c291d5c6caceb51bc7b84009fd0657667e3b7559c68cda4a9f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+      "bytes": 668269,
+      "sha256": "e1503f9210a7bbe21a077e1c1c5355e83323bae3e3b20a7204044b1f0df7f5e2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.py",
+      "bytes": 3473,
+      "sha256": "7021c145e0d6bf494589b782faac4ddd97ac93063d4fd5880aa6c1d65b1cbb5f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-history-decisions.json",
+      "bytes": 5261,
+      "sha256": "502453893c914afdabdf16af09d91c99678965809f3b71c91e7802dc8d1afd57"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-metadata-notes.json",
+      "bytes": 1218,
+      "sha256": "c1cc87b641ea0c24930c83cc8ab59c40d66bc6332fe2165f618af7d6767bd913"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep-copy-receipt.json",
+      "bytes": 4609,
+      "sha256": "e7dbfb496c15367450f48f3c770917073179740159321b92fb034811eff3b1cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-source-manifest.json",
+      "bytes": 8223,
+      "sha256": "0cab58340ffc4b0fcba458cdddad4f92fc6aa3ef55d782bd2ccbff15edd3d78f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-validation.json",
+      "bytes": 929,
+      "sha256": "2fcd04541c2b52dc634902da46341a3310740097c1ea7394c5df689220fd1935"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/runtime-report.md",
+      "bytes": 5787,
+      "sha256": "ad25349e08624c89ecfa42d4b08702c60aad511e56270afdfa11bdd1e8f515a7"
+    }
+  ],
+  "artifactCount": 12,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "receiptSelfExcluded": true,
+  "prepCopiesSeparateCount": 13,
+  "newSemanticReadsDuringFormalization": 0
+}

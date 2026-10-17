@@ -1,0 +1,1521 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "initialUTC": "2026-10-17T11:41:01.500874+00:00",
+  "gitCommandsByReviewer": 0,
+  "productRunsByReviewer": 0,
+  "pending": false,
+  "initialPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "initialFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "initialFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "bytes": 2742,
+      "lineCount": 76,
+      "initialFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "bytes": 1511,
+      "lineCount": 42,
+      "initialFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "bytes": 7039,
+      "lineCount": 144,
+      "initialFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "bytes": 13196,
+      "lineCount": 267,
+      "initialFilesystemSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "initialFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "bytes": 35323,
+      "lineCount": 966,
+      "initialFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "lineCount": 2982,
+      "initialFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "lineCount": 36,
+      "initialFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "bytes": 7050,
+      "lineCount": 43,
+      "initialFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lineCount": 800,
+      "initialFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "bytes": 1083,
+      "lineCount": 24,
+      "initialFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "bytes": 1757,
+      "lineCount": 42,
+      "initialFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "bytes": 6072,
+      "lineCount": 177,
+      "initialFilesystemSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lineCount": 1247,
+      "initialFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "initialFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "bytes": 2184,
+      "lineCount": 59,
+      "initialFilesystemSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "bytes": 3816,
+      "lineCount": 115,
+      "initialFilesystemSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "lineCount": 242,
+      "initialFilesystemSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "bytes": 14636,
+      "lineCount": 91,
+      "initialFilesystemSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "bytes": 13182,
+      "lineCount": 78,
+      "initialFilesystemSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "bytes": 37767,
+      "lineCount": 470,
+      "initialFilesystemSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "coverage": "initial byte pin; semantic coverage only when listed in files",
+      "finishFilesystemSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "initialEqualsFinish": true
+    }
+  ],
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCount": 5,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "bytes": 2742,
+      "lineCount": 76,
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "initialFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "finishFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "coveredLineCount": 76,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "bytes": 1511,
+      "lineCount": 42,
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "initialFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "finishFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "coveredLineCount": 42,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "bytes": 7039,
+      "lineCount": 144,
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "initialFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "finishFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          144
+        ]
+      ],
+      "coveredLineCount": 144,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "initialFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "finishFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          470,
+          525
+        ],
+        [
+          900,
+          1045
+        ]
+      ],
+      "coveredLineCount": 202,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "bytes": 35323,
+      "lineCount": 966,
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "initialFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "finishFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          180,
+          245
+        ],
+        [
+          276,
+          338
+        ]
+      ],
+      "coveredLineCount": 129,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "lineCount": 2982,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "initialFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2442,
+          2463
+        ]
+      ],
+      "coveredLineCount": 22,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "lineCount": 36,
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "initialFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "finishFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "coveredLineCount": 36,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "bytes": 7050,
+      "lineCount": 43,
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "initialFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "finishFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "coveredLineCount": 43,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lineCount": 800,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "finishFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          268,
+          366
+        ],
+        [
+          735,
+          770
+        ]
+      ],
+      "coveredLineCount": 135,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false,
+      "navigationOnlyRangesExcludedFromSemanticCount": [
+        [
+          222,
+          246
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "bytes": 1083,
+      "lineCount": 24,
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "initialFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "finishFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "coveredLineCount": 24,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "bytes": 1757,
+      "lineCount": 42,
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "initialFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "finishFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "coveredLineCount": 42,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lineCount": 1247,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "initialFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "finishFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          258,
+          305
+        ],
+        [
+          438,
+          475
+        ],
+        [
+          866,
+          900
+        ],
+        [
+          950,
+          1022
+        ]
+      ],
+      "coveredLineCount": 194,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          382,
+          408
+        ],
+        [
+          2610,
+          2640
+        ]
+      ],
+      "coveredLineCount": 58,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "bytes": 2184,
+      "lineCount": 59,
+      "sha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "initialFilesystemSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "finishFilesystemSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          59
+        ]
+      ],
+      "coveredLineCount": 59,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "bytes": 3816,
+      "lineCount": 115,
+      "sha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "initialFilesystemSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "finishFilesystemSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          29,
+          39
+        ],
+        [
+          96,
+          111
+        ]
+      ],
+      "coveredLineCount": 27,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "lineCount": 242,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "initialFilesystemSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "finishFilesystemSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          138,
+          147
+        ]
+      ],
+      "coveredLineCount": 10,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "bytes": 14636,
+      "lineCount": 91,
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "initialFilesystemSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "finishFilesystemSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          27
+        ]
+      ],
+      "coveredLineCount": 10,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "bytes": 13182,
+      "lineCount": 78,
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "initialFilesystemSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "finishFilesystemSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          29,
+          38
+        ]
+      ],
+      "coveredLineCount": 10,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "bytes": 37767,
+      "lineCount": 470,
+      "sha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "initialFilesystemSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "finishFilesystemSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          202,
+          231
+        ]
+      ],
+      "coveredLineCount": 30,
+      "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+      "runtimeExecuted": false,
+      "gitBlobComparedByReviewer": false
+    }
+  ],
+  "stopPinnedBeforeReviewerSourceReadUTC": "2026-10-17T11:41:23.650754+00:00",
+  "finishedUTC": "2026-10-17T11:44:46.243268+00:00",
+  "hashOnlyFiles": [
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "bytes": 13196,
+      "lineCount": 267,
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "coverage": "hash-only; not semantically read by this independent reviewer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "bytes": 6072,
+      "lineCount": 177,
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "coverage": "hash-only; not semantically read by this independent reviewer"
+    }
+  ],
+  "reviewerSemanticSourceCount": 21,
+  "reviewerProductTestLines": 1164,
+  "reviewerInstructionLines": 222,
+  "reviewerPriorHistoryLines": 129,
+  "authorSourceManifestChecks": [
+    {
+      "author": "room",
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 217,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 5,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "bytes": 2742,
+      "lineCount": 76,
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          76
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 76,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "bytes": 1511,
+      "lineCount": 42,
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          42
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 42,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "bytes": 7039,
+      "lineCount": 144,
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          144
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 144,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "bytes": 13196,
+      "lineCount": 267,
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          215
+        ],
+        [
+          245,
+          267
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 238,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          470,
+          525
+        ],
+        [
+          900,
+          1045
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 202,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "bytes": 35323,
+      "lineCount": 966,
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          112
+        ],
+        [
+          180,
+          338
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 271,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "lineCount": 2982,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          2442,
+          2463
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 22,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "lineCount": 36,
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          36
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 36,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "bytes": 7050,
+      "lineCount": 43,
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          43
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 43,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "room",
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lineCount": 800,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          268,
+          392
+        ],
+        [
+          479,
+          503
+        ],
+        [
+          665,
+          770
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 256,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 217,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 5,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "bytes": 1083,
+      "lineCount": 24,
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          24
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 24,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "bytes": 1757,
+      "lineCount": 42,
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          42
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 42,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "bytes": 6072,
+      "lineCount": 177,
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          177
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 177,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lineCount": 1247,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          90
+        ],
+        [
+          180,
+          327
+        ],
+        [
+          438,
+          542
+        ],
+        [
+          820,
+          1085
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 609,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          382,
+          408
+        ],
+        [
+          2589,
+          2640
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 79,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "bytes": 2184,
+      "lineCount": 59,
+      "sha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "coverageDeclaredByAuthor": "full",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          1,
+          59
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 59,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "bytes": 3816,
+      "lineCount": 115,
+      "sha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          29,
+          39
+        ],
+        [
+          96,
+          111
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 27,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "lineCount": 242,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          138,
+          147
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 10,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "bytes": 14636,
+      "lineCount": 91,
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          18,
+          27
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 10,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "bytes": 13182,
+      "lineCount": 78,
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          29,
+          38
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 10,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    },
+    {
+      "author": "stop",
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "bytes": 37767,
+      "lineCount": 470,
+      "sha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "coverageDeclaredByAuthor": "selected",
+      "selectedLineRangesDeclaredByAuthor": [
+        [
+          202,
+          231
+        ]
+      ],
+      "coveredLineCountDeclaredByAuthor": 30,
+      "matchesAuthorManifest": true,
+      "reviewerSemanticCoverageInSeparateFilesField": true
+    }
+  ],
+  "currentRound29ArtifactChecks": [
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-candidates.json",
+      "bytes": 109,
+      "lineCount": 5,
+      "sha256": "9736d2cf89af319669c6d06992e25585e4ca1179aed7a7a8af6e68643d35e8f1",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-consumer-initial-pins.json",
+      "bytes": 1978,
+      "lineCount": 48,
+      "sha256": "e5ffed89b96f63d3bddd2aa7f55d210d76c7cb6188deb9c9c7f894373ac1e19d",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "bytes": 708175,
+      "lineCount": 15378,
+      "sha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.py",
+      "bytes": 3324,
+      "lineCount": 38,
+      "sha256": "dafb4e595bd36b0c6a457adebae1a7b1e6c4658ed8eb452be97aecdee5bc46a1",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-findings.json",
+      "bytes": 107,
+      "lineCount": 5,
+      "sha256": "2ec6c33a53831f116330d53b0b0f3a346d59491abcee487ca31bf8748fb7f4ba",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-history-decisions.json",
+      "bytes": 2220,
+      "lineCount": 37,
+      "sha256": "985f6fc2d9c8fc30ab4eb1694c663063a1ea280d884bd06f7666984fad2f6abf",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-initial-source-pins.json",
+      "bytes": 1551,
+      "lineCount": 41,
+      "sha256": "5e26bb395f2f5909950892e6f871e24b76eff3579ca7b2a5c50136e2c2a0694c",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-metadata-notes.json",
+      "bytes": 796,
+      "lineCount": 17,
+      "sha256": "785cd514c7c804242d291da87ec5c5f2c61af90f218eb55266b85b52e467c898",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-related.json",
+      "bytes": 111,
+      "lineCount": 5,
+      "sha256": "2d0732f1f982e7e91116eccb04d076f61aeae78970427e0eda767cc59b16a624",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-source-manifest.json",
+      "bytes": 10900,
+      "lineCount": 279,
+      "sha256": "b9ecbee4420b9ff840ad725ed6c3b49eba4f1137073882e7b88eab183885a287",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-supplemental-pins.json",
+      "bytes": 1538,
+      "lineCount": 35,
+      "sha256": "700e0174578f5bebb13e9bc879c976436ea494072b87b0a69833c079eb88faea",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-validation.json",
+      "bytes": 840,
+      "lineCount": 24,
+      "sha256": "b5c60d129fab1f30607a7193e0f6ce5a424a3fb24bd40ea83494b3ba4b2b1906",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/room-report.md",
+      "bytes": 4060,
+      "lineCount": 18,
+      "sha256": "272901153859e10fb97f3f7cec7b93464250fb8077ca2bb5ac67db2665f1f547",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-author-checks.json",
+      "bytes": 2537,
+      "lineCount": 74,
+      "sha256": "b9a2554adb6ad7d523f03645c946bd19d95f61fae6faee3303962b6a024e083f",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-candidates.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-dedup.json",
+      "bytes": 579694,
+      "lineCount": 14283,
+      "sha256": "5328ab2cc0be8b2058c986587d82b01b8b70c151aaa2375e64a274fe5e76a356",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-findings.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-history-decisions.json",
+      "bytes": 2468,
+      "lineCount": 67,
+      "sha256": "06ea123c3ff4388345e1793c0aaf34c9fcbc0ff3714cb5c923549b54aa6b3c69",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-initial-source-pins.json",
+      "bytes": 3445,
+      "lineCount": 71,
+      "sha256": "50cecc6f63d92f0ea0b0b7bafb712659bc53bfb6913390b41ab7d26be783db08",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-inventory.json",
+      "bytes": 568,
+      "lineCount": 19,
+      "sha256": "2df8e48bf6cb285e28186f24f471b4e99e63e882e09b1e9a8704d55aff72b9a5",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-metadata-notes.json",
+      "bytes": 1013,
+      "lineCount": 19,
+      "sha256": "a0512a91f35967b7375f22b18c67ba7848f88e708431feac5cf163e5bab22d78",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-related.json",
+      "bytes": 438,
+      "lineCount": 11,
+      "sha256": "4165baaceb81c82df416bb1fcb412c1c1e02815da7a45e872f659144326fc29a",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-source-manifest.json",
+      "bytes": 10682,
+      "lineCount": 284,
+      "sha256": "c59340ca1281ff79acc3aa580f8bc36d5091e06ce23a37e2ee80af9594a79603",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-validation.json",
+      "bytes": 1157,
+      "lineCount": 41,
+      "sha256": "f996b29d038d3c84b580e5abede2a368d6a79b134ae4d834a3a887212a9980f5",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/stop-report.md",
+      "bytes": 4880,
+      "lineCount": 25,
+      "sha256": "318b1c58cb88e277e9c23c84fd1a29c19412b62384e06f0d1378c5f1631fb227",
+      "matchesFrozenAuthorReceipt": true,
+      "coverage": "current Round29 artifact byte/metadata check, not baseline source or full semantic reading"
+    }
+  ],
+  "currentRound29ReceiptChecks": [
+    {
+      "author": "room",
+      "path": "docs/audit-2026-10-17-round29/evidence/room-author-receipt.json",
+      "bytes": 2386,
+      "lineCount": 76,
+      "sha256": "23d8ff39cff03f47b3a6c42ddef4ebf6ed2694f3cc2252f7a04654c41f2aed2c",
+      "coverage": "parsed receipt metadata; not frozen baseline source"
+    },
+    {
+      "author": "stop",
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-artifact-receipt.json",
+      "bytes": 2600,
+      "lineCount": 74,
+      "sha256": "7b5054daefc44344e4489618ec9c51939693fe15203fc4de3630fc603a93e2df",
+      "coverage": "parsed receipt metadata; not frozen baseline source"
+    }
+  ],
+  "authorReportedFreezeChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round29/room-report.md",
+      "bytes": 4060,
+      "lineCount": 18,
+      "sha256": "272901153859e10fb97f3f7cec7b93464250fb8077ca2bb5ac67db2665f1f547",
+      "authorReportedFrozenSha256": "272901153859e10fb97f3f7cec7b93464250fb8077ca2bb5ac67db2665f1f547",
+      "matchesReportedFreeze": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/room-source-manifest.json",
+      "bytes": 10900,
+      "lineCount": 279,
+      "sha256": "b9ecbee4420b9ff840ad725ed6c3b49eba4f1137073882e7b88eab183885a287",
+      "authorReportedFrozenSha256": "b9ecbee4420b9ff840ad725ed6c3b49eba4f1137073882e7b88eab183885a287",
+      "matchesReportedFreeze": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/room-author-receipt.json",
+      "bytes": 2386,
+      "lineCount": 76,
+      "sha256": "23d8ff39cff03f47b3a6c42ddef4ebf6ed2694f3cc2252f7a04654c41f2aed2c",
+      "authorReportedFrozenSha256": "23d8ff39cff03f47b3a6c42ddef4ebf6ed2694f3cc2252f7a04654c41f2aed2c",
+      "matchesReportedFreeze": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/stop-report.md",
+      "bytes": 4880,
+      "lineCount": 25,
+      "sha256": "318b1c58cb88e277e9c23c84fd1a29c19412b62384e06f0d1378c5f1631fb227",
+      "authorReportedFrozenSha256": "318b1c58cb88e277e9c23c84fd1a29c19412b62384e06f0d1378c5f1631fb227",
+      "matchesReportedFreeze": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/stop-artifact-receipt.json",
+      "bytes": 2600,
+      "lineCount": 74,
+      "sha256": "7b5054daefc44344e4489618ec9c51939693fe15203fc4de3630fc603a93e2df",
+      "authorReportedFrozenSha256": "7b5054daefc44344e4489618ec9c51939693fe15203fc4de3630fc603a93e2df",
+      "matchesReportedFreeze": true
+    }
+  ],
+  "reportLinkChecks": [
+    {
+      "report": "docs/audit-2026-10-17-round29/room-report.md",
+      "localLinks": 10,
+      "missing": []
+    },
+    {
+      "report": "docs/audit-2026-10-17-round29/stop-report.md",
+      "localLinks": 17,
+      "missing": []
+    }
+  ],
+  "historyInventoryChecks": [
+    {
+      "author": "room",
+      "inventoryFiles": 2765,
+      "currentByteMatches": 2765,
+      "mismatches": [],
+      "parseErrorsDeclared": [],
+      "archivesIncluded": true,
+      "coverage": "inventory byte verification only; selected old reports read separately"
+    },
+    {
+      "author": "stop",
+      "inventoryFiles": 2765,
+      "currentByteMatches": 2765,
+      "mismatches": [],
+      "parseErrorsDeclared": [],
+      "archivesIncluded": true,
+      "coverage": "inventory byte verification only; selected old reports read separately"
+    }
+  ],
+  "bothHistoryInventoriesExactlyEqual": true,
+  "metadataFailures": [],
+  "classification": {
+    "room": {
+      "formal": 0,
+      "candidate": 0,
+      "newRelated": 0
+    },
+    "stop": {
+      "formal": 0,
+      "candidate": 0,
+      "newRelated": 0
+    }
+  },
+  "validation": {
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "imports": 0,
+    "fixturesWritten": 0,
+    "productFunctionEvaluations": 0,
+    "reactBrowserRuns": 0,
+    "nativeRuns": 0,
+    "vmAstRuns": 0,
+    "networkRequests": 0,
+    "modelCalls": 0,
+    "gitCommands": 0,
+    "passedTests": 0,
+    "expectations": 0
+  },
+  "limitations": [
+    "Author source rows are metadata-checked and are not automatically reviewer full/selected semantic coverage.",
+    "Current29 artifact and receipt checks are separate from source pins. These uncommitted audit artifacts are not claimed to exist in b348 baseline. Root independently binds source bytes to frozen Git.",
+    "Author-reported frozen artifact hashes precede this review; no reviewer durable artifact hash was captured before artifact semantic reads. Current bytes match the reported freeze and receipts.",
+    "Room author streamReducer has null initialSemanticReadSha256; stop author QuickChat helper/Host/Dock missing before-read hashes remain limitations; current matching bytes cannot reconstruct those capture times.",
+    "Whole historical inventory byte checks and keyword occurrence counts do not mean semantic reading of all historical files. Old failed directions remain skipped.",
+    "Large combined old-report output was truncated; R17 report was reread separately in full before counting full. No product execution occurred."
+  ]
+}

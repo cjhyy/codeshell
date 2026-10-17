@@ -1,0 +1,24 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "mainHead": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "sourcePins": 39,
+  "activeSourceChecks": 81,
+  "hashOnlyChecks": 5,
+  "authorArtifactChecks": 49,
+  "verbatimPrepCopies": 13,
+  "history": {
+    "files": 2765,
+    "markdown": 1275,
+    "json": 1490,
+    "stringLeaves": 562917,
+    "scalarLeaves": 833428,
+    "archivePaths": 169,
+    "parseErrors": 0
+  },
+  "productRuns": 0,
+  "oldFailedDirectionsRemainSkipped": true,
+  "goalStillActive": true
+}

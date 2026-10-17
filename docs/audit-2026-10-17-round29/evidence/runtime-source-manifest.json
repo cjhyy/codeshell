@@ -1,0 +1,244 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "parentReportedFormalFreeze": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "readingPerformedDuringPrepParentBaseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "sourceReadingReceipt": "evidence/runtime-prep/source-manifest.json",
+  "sameSemanticReadingAsCopiedPrep": true,
+  "newSemanticSourceReadsDuringFormalization": 0,
+  "gitCommandsByAuthor": 0,
+  "rootFrozenBlobBindingRequired": true,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFirstPin": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "firstPinBeforeThisTaskSemanticRead": false,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "instruction"
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "lineCount": 101,
+      "firstFilesystemSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "finishFilesystemSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "matchesFirstPin": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "coveredLineCount": 101,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "bytes": 7513,
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "lineCount": 207,
+      "firstFilesystemSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "finishFilesystemSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "matchesFirstPin": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          207
+        ]
+      ],
+      "coveredLineCount": 207,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "lineCount": 79,
+      "firstFilesystemSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "finishFilesystemSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "matchesFirstPin": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          79
+        ]
+      ],
+      "coveredLineCount": 79,
+      "firstPinBeforeThisTaskSemanticRead": false,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "lineCount": 999,
+      "firstFilesystemSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "finishFilesystemSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "matchesFirstPin": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          115,
+          153
+        ],
+        [
+          315,
+          366
+        ],
+        [
+          527,
+          600
+        ],
+        [
+          610,
+          790
+        ]
+      ],
+      "coveredLineCount": 346,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "bytes": 9383,
+      "sha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "lineCount": 229,
+      "firstFilesystemSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "finishFilesystemSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "matchesFirstPin": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          229
+        ]
+      ],
+      "coveredLineCount": 229,
+      "firstPinBeforeThisTaskSemanticRead": false,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "lineCount": 800,
+      "firstFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "finishFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "matchesFirstPin": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          320,
+          367
+        ],
+        [
+          455,
+          516
+        ],
+        [
+          578,
+          632
+        ]
+      ],
+      "coveredLineCount": 165,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "lineCount": 1377,
+      "firstFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "finishFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "matchesFirstPin": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          530,
+          635
+        ]
+      ],
+      "coveredLineCount": 106,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "lineCount": 396,
+      "firstFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "finishFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "matchesFirstPin": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          165
+        ]
+      ],
+      "coveredLineCount": 165,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "navigation-boundary-only"
+    },
+    {
+      "path": "packages/web/app/chat.ts",
+      "bytes": 8615,
+      "sha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "lineCount": 208,
+      "firstFilesystemSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "finishFilesystemSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "matchesFirstPin": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          36,
+          74
+        ],
+        [
+          96,
+          126
+        ]
+      ],
+      "coveredLineCount": 70,
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "gitBlobVerifiedByAuthor": false,
+      "role": "product-or-contract"
+    }
+  ],
+  "sourcePinCount": 10,
+  "mainSourceCount": 2,
+  "mainFullReadLines": 308,
+  "totalDeclaredReadLines": 1685,
+  "instructionReadLines": 217,
+  "navigationOnlyReadLines": 165,
+  "ordinaryProductContractReadLines": 1303,
+  "scopeNote": "Formal fields bind the same read-time filesystem hashes to a parent-reported docs-only later baseline; no new semantic reading or author Git command. Root independently verifies b348 frozen blobs. Formal hash recheck is not a second full read."
+}

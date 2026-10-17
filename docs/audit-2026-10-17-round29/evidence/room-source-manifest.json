@@ -1,0 +1,279 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "branchProvidedByRoot": "codex/audit/runtime-frontier-round29-20261017",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSemanticReadSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "firstPinTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "firstFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSemanticReadSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCount": 5,
+      "firstPinTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "bytes": 2742,
+      "lineCount": 76,
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "firstFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "initialSemanticReadSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "finishFilesystemSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "coveredLineCount": 76,
+      "firstPinTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "bytes": 1511,
+      "lineCount": 42,
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "firstFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "initialSemanticReadSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "finishFilesystemSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "coveredLineCount": 42,
+      "firstPinTiming": "After rg inventory, before semantic reading for this Round29 scope",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "bytes": 7039,
+      "lineCount": 144,
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "firstFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "initialSemanticReadSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "finishFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          144
+        ]
+      ],
+      "coveredLineCount": 144,
+      "firstPinTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "bytes": 13196,
+      "lineCount": 267,
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "firstFilesystemSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "initialSemanticReadSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "finishFilesystemSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          215
+        ],
+        [
+          245,
+          267
+        ]
+      ],
+      "coveredLineCount": 238,
+      "firstPinTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "firstFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "initialSemanticReadSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "finishFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          470,
+          525
+        ],
+        [
+          900,
+          1045
+        ]
+      ],
+      "coveredLineCount": 202,
+      "firstPinTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "bytes": 35323,
+      "lineCount": 966,
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "firstFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "initialSemanticReadSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "finishFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          112
+        ],
+        [
+          180,
+          338
+        ]
+      ],
+      "coveredLineCount": 271,
+      "firstPinTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "lineCount": 2982,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "firstFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2442,
+          2463
+        ]
+      ],
+      "coveredLineCount": 22,
+      "firstPinTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "lineCount": 36,
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "firstFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "initialSemanticReadSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "finishFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "coveredLineCount": 36,
+      "firstPinTiming": "Before full prior report semantic read; prior dedup excerpts were navigation only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "bytes": 7050,
+      "lineCount": 43,
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "firstFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "initialSemanticReadSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "finishFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "coveredLineCount": 43,
+      "firstPinTiming": "Before full prior report semantic read; prior dedup excerpts were navigation only",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lineCount": 800,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "firstFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialSemanticReadSha256": null,
+      "finishFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          268,
+          392
+        ],
+        [
+          479,
+          503
+        ],
+        [
+          665,
+          770
+        ]
+      ],
+      "coveredLineCount": 256,
+      "firstPinTiming": "First durable filesystem hash captured AFTER selected reducer read; initial SHA is deliberately null, not retroactively inferred.",
+      "gitBlobCompared": false,
+      "runtimeExecuted": false
+    }
+  ],
+  "sourcePinCount": 12,
+  "productContractReadLines": 1251,
+  "instructionLines": 222,
+  "priorReportLines": 79,
+  "finishedUtc": "2026-10-17T11:40:33.840132+00:00",
+  "gitCommands": 0,
+  "productAttempts": 0,
+  "limitations": [
+    "Full byte SHA does not imply semantic review outside declared selected ranges.",
+    "11 pins captured before this scope source read; reducer first durable hash captured after selected read, initialSemanticReadSha256=null retained. Root frozen Git binding cannot retroactively prove earlier SHA.",
+    "Only ordinary browser DTO/catchup/display contract. Server journal/authentication/permission/identity mechanics and actual transcript data were not validated or executed.",
+    "No product/test/helper/React/parser/VM/native/network/model invocation."
+  ]
+}

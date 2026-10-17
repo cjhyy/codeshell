@@ -1,0 +1,38 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "files": [
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "bytes": 5644,
+      "lineCount": 168,
+      "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+    },
+    {
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "bytes": 6817,
+      "lineCount": 161,
+      "initialFilesystemSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "firstDurableSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.ts",
+      "bytes": 936,
+      "lineCount": 22,
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "pinTiming": "First durable hash after full22-line source read; initial stays null."
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+      "bytes": 1602,
+      "lineCount": 49,
+      "initialFilesystemSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "firstDurableSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+    }
+  ],
+  "productExecution": false
+}
