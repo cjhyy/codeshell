@@ -92,6 +92,11 @@ const files = {
   "中文.txt": "new-Chinese-owned\n",
   "new.txt": "owned rename body\n",
 };
+const modeFile = "mode file.txt";
+const modeContents = "owned mode-only preview\nunchanged bytes\n";
+const binaryFile = "二进制.bin";
+const binaryBefore = Buffer.from([0, 1, 2, 3]);
+const binaryAfter = Buffer.from([0, 1, 2, 4]);
 async function dismissTrust() {
   const view = win.getByRole("button", { name: /^(仅查看|View only)/ });
   if (
@@ -142,15 +147,33 @@ try {
     "old.txt": "owned rename body\n",
   }))
     await put(join(projectPath, name), content);
+  await put(join(projectPath, modeFile), modeContents);
+  await writeFile(join(projectPath, binaryFile), binaryBefore, { mode: 0o600 });
   git("add", ".");
   git("commit", "--quiet", "-m", "Owned Review baseline");
   await rename(join(projectPath, "old.txt"), join(projectPath, "new.txt"));
   for (const [name, content] of Object.entries(files)) await put(join(projectPath, name), content);
+  await writeFile(join(projectPath, binaryFile), binaryAfter);
   git("add", "--all");
+  // Index mode works on Windows too; the working-tree file bytes remain unchanged.
+  git("update-index", "--chmod=+x", "--", modeFile);
   await put(
     join(evidence, "owned-git.diff"),
     git("diff", "--cached", "--no-ext-diff", "--find-renames"),
   );
+  const modePatch = git("diff", "--cached", "--no-ext-diff", "--", modeFile);
+  const binaryPatch = git("diff", "--cached", "--no-ext-diff", "--", binaryFile);
+  assert.equal(
+    modePatch,
+    `diff --git a/${modeFile} b/${modeFile}\nold mode 100644\nnew mode 100755\n`,
+  );
+  assert.ok(binaryPatch.startsWith("diff --git "));
+  assert.match(binaryPatch, /\nBinary files .* differ\n$/);
+  for (const patch of [modePatch, binaryPatch]) assert.doesNotMatch(patch, /^(?:--- |\+\+\+ |@@)/m);
+  report.headerOnlyGit = {
+    mode: { path: modeFile, patch: modePatch },
+    binary: { path: binaryFile, patch: binaryPatch },
+  };
   await put(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
   await put(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: projectPath, name: "Owned Review repository", lastOpenedAt: Date.now() },
@@ -385,6 +408,42 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
       actualBytesSHA256: hash(await readFile(join(projectPath, name))),
     });
   }
+  for (const name of [modeFile, binaryFile]) {
+    const card = report.cards.find((card) => card.title === name);
+    const correct =
+      !!card && card.header.includes(name) && card.header.includes("+0 -0") && !card.rows.length;
+    operations.push({
+      action: `Review staged header-only ${name} preserves complete title and path`,
+      correct,
+      card: card ?? null,
+    });
+    if (!correct) failures.push({ message: `Header-only Review did not preserve ${name}` });
+  }
+  review = await openPanel("review");
+  const modeHeader = review
+    .locator('span.truncate[title="mode file.txt"]')
+    .locator("..")
+    .locator("..");
+  await modeHeader.getByRole("button", { name: /^(打开文件|Open file)$/ }).click();
+  const modePanel = win.locator('[data-panel-id="files"][data-panel-active="true"]');
+  await modePanel.waitFor();
+  const modePreviewLines = [];
+  for (const line of modeContents.trimEnd().split("\n")) {
+    const renderedLine = modePanel.getByText(line, { exact: true });
+    await renderedLine.waitFor();
+    modePreviewLines.push(await renderedLine.textContent());
+  }
+  assert.deepEqual(modePreviewLines, modeContents.trimEnd().split("\n"));
+  const modeOpened = await win.evaluate(() => window.__ownedReviewOpen.at(-1));
+  assert.equal(modeOpened.path, join(projectPath, modeFile));
+  const modeBytes = await readFile(join(projectPath, modeFile));
+  assert.deepEqual(modeBytes, Buffer.from(modeContents));
+  operations.push({
+    action: `Review open header-only ${modeFile} reaches actual unchanged file preview`,
+    opened: modeOpened,
+    previewLines: modePreviewLines,
+    actualBytesSHA256: hash(modeBytes),
+  });
   report.reviewCalls = await app.evaluate(() => globalThis.__ownedReviewCalls);
   assert.ok(
     report.reviewCalls.some(
@@ -399,6 +458,23 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
         ),
     ),
   );
+  assert.ok(
+    report.reviewCalls.some(
+      (call) =>
+        call.sessionId === sessionId &&
+        call.request.kind === "working" &&
+        call.request.mode === "staged" &&
+        call.result.errors.length === 0 &&
+        call.result.repositories.some(
+          (repository) =>
+            repository.repoRoot === projectPath &&
+            repository.diff.includes(modePatch) &&
+            repository.diff.includes(binaryPatch),
+        ),
+    ),
+    "Actual Main Review diff must retain both owned header-only Git patches",
+  );
+  assert.equal(operations.length, 11);
 } catch (error) {
   failures.push({ message: error.message, stack: error.stack });
   await win?.screenshot({ path: join(evidence, "failure.png"), timeout: 2000 }).catch(() => {});
