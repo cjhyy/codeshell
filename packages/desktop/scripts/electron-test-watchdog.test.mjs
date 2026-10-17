@@ -4,8 +4,10 @@ import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 
-const root = { pid: 10, ppid: 99, birth: "root" };
-const descendant = { pid: 11, ppid: 10, birth: "descendant" };
+const birth = (second) => `Sat Oct 17 13:40:${String(second).padStart(2, "0")} 2026`;
+
+const root = { pid: 10, ppid: 99, birth: birth(0) };
+const descendant = { pid: 11, ppid: 10, birth: birth(1) };
 
 function fixture(initial = [root]) {
   const child = Object.assign(new EventEmitter(), { pid: 10, exitCode: null, signalCode: null });
@@ -62,14 +64,14 @@ function fixture(initial = [root]) {
 test("paused descendant binding freshly adopts only the pinned live root's actual descendants", () => {
   const f = fixture();
   const stop = watchElectronTestProcess(f.child, f.options);
-  f.setProcesses([root, descendant, { pid: 20, ppid: 1, birth: "foreign" }]);
+  f.setProcesses([root, descendant, { pid: 20, ppid: 1, birth: birth(2) }]);
   deepStrictEqual(stop.bindObservedDescendant(11), descendant);
   equal(stop.bindObservedDescendant(10), undefined);
   equal(stop.bindObservedDescendant(20), undefined);
   equal(stop.bindObservedDescendant(30), undefined);
   f.setProcesses([
-    { ...root, birth: "reused" },
-    { ...descendant, birth: "replacement" },
+    { ...root, birth: birth(10) },
+    { ...descendant, birth: birth(10) },
   ]);
   equal(stop.bindObservedDescendant(11), undefined);
   stop();
@@ -78,7 +80,7 @@ test("paused descendant binding freshly adopts only the pinned live root's actua
 test("binding never reacquires a reused descendant or a cleaning/disarmed watcher", () => {
   const f = fixture([root, descendant]);
   const stop = watchElectronTestProcess(f.child, f.options);
-  f.setProcesses([root, { ...descendant, birth: "reused" }]);
+  f.setProcesses([root, { ...descendant, birth: birth(10) }]);
   equal(stop.bindObservedDescendant(11), undefined);
   stop();
   equal(stop.bindObservedDescendant(11), undefined);
@@ -128,8 +130,8 @@ test("timeout signals owned descendants before root and escalates after one seco
   f.setProcesses([
     root,
     descendant,
-    { pid: 12, ppid: 11, birth: "grandchild" },
-    { pid: 20, ppid: 1, birth: "unrelated" },
+    { pid: 12, ppid: 11, birth: birth(2) },
+    { pid: 20, ppid: 1, birth: birth(3) },
   ]);
   f.tick();
   f.fireTimeout(5_000);
@@ -156,8 +158,8 @@ test("reused root PID never authorizes a replacement or its descendants", () => 
   const f = fixture();
   watchElectronTestProcess(f.child, f.options);
   f.setProcesses([
-    { ...root, birth: "replacement" },
-    { pid: 11, ppid: 10, birth: "unrelated child" },
+    { ...root, birth: birth(10) },
+    { pid: 11, ppid: 10, birth: birth(11) },
   ]);
   f.tick();
   f.fireTimeout(5_000);
@@ -171,8 +173,8 @@ test("escalation skips reused descendant PID and cannot discover through it", ()
   f.fireTimeout(5_000);
   f.setProcesses([
     root,
-    { ...descendant, birth: "replacement" },
-    { pid: 12, ppid: 11, birth: "unrelated grandchild" },
+    { ...descendant, birth: birth(10) },
+    { pid: 12, ppid: 11, birth: birth(12) },
   ]);
   f.fireTimeout(1_000);
   deepStrictEqual(f.signals, [
@@ -202,7 +204,7 @@ test("a departed process tree does not require one native query per stale incarn
     ...Array.from({ length: 200 }, (_, index) => ({
       pid: index + 100,
       ppid: root.pid,
-      birth: `departed-${index}`,
+      birth: birth(1),
     })),
   ]);
   let reads = 0;
@@ -229,10 +231,10 @@ test("normal completion cleans only observed leftovers and their live descendant
   const f = fixture([root, descendant]);
   watchElectronTestProcess(f.child, f.options);
   f.setProcesses([
-    { ...root, birth: "replacement" },
+    { ...root, birth: birth(10) },
     { ...descendant, ppid: 1 },
-    { pid: 12, ppid: 11, birth: "leftover grandchild" },
-    { pid: 20, ppid: 10, birth: "unrelated child" },
+    { pid: 12, ppid: 11, birth: birth(2) },
+    { pid: 20, ppid: 10, birth: birth(11) },
   ]);
   f.child.exitCode = 0;
   f.child.emit("exit", 0, null);
@@ -300,9 +302,9 @@ test("terminate rechecks identity before each signal and skips PID replacements"
       return reads < 3
         ? [root, descendant]
         : [
-            { ...root, birth: "replacement root" },
-            { ...descendant, birth: "replacement descendant" },
-            { pid: 12, ppid: 11, birth: "unrelated grandchild" },
+            { ...root, birth: birth(10) },
+            { ...descendant, birth: birth(11) },
+            { pid: 12, ppid: 11, birth: birth(12) },
           ];
     },
   });
@@ -437,7 +439,7 @@ test("receipt evidence is bounded without truncating the tracked cleanup proof",
   const children = Array.from({ length: 600 }, (_, index) => ({
     pid: 1_000 + index,
     ppid: root.pid,
-    birth: `child-${index}`,
+    birth: birth(1),
   }));
   const f = fixture([root, ...children]);
   const stop = watchElectronTestProcess(f.child, f.options);
@@ -523,8 +525,8 @@ for (const platform of ["linux", "win32"])
       [10, "SIGTERM"],
     ]);
     f.setProcesses([
-      { ...root, birth: "replacement" },
-      { ...descendant, birth: "replacement" },
+      { ...root, birth: birth(10) },
+      { ...descendant, birth: birth(10) },
     ]);
     f.fireTimeout(1_000);
     equal(f.signals.length, 2);
@@ -536,7 +538,7 @@ test("each signal rechecks identity after the preceding signal can race PID reus
     ...f.options,
     signalProcess: (pid, signal) => {
       f.signals.push([pid, signal]);
-      f.setProcesses([{ ...root, birth: "replacement" }, descendant]);
+      f.setProcesses([{ ...root, birth: birth(10) }, descendant]);
     },
   });
   f.fireTimeout(5_000);
