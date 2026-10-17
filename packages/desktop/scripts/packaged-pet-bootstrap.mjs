@@ -116,10 +116,10 @@ if (role === "Main") {
   }
   const spawn = children.spawn;
   let workerSpawnCount = 0;
-  process.once("exit", () => {
+  process.once("exit", (code) => {
     appendFileSync(
       join(home, "main-exits.jsonl"),
-      JSON.stringify({ pid: process.pid, workerSpawnCount }) + "\n",
+      JSON.stringify({ pid: process.pid, code, workerSpawnCount }) + "\n",
       { mode: 0o600 },
     );
   });

@@ -108,3 +108,24 @@ test("a syntactically valid but incomplete worker exit record cannot permit clea
       false,
     );
   }));
+
+test("AppImage launcher and guarded Main need separate normal exit receipts", () =>
+  fixture(async (state, put) => {
+    const child = state.children[0];
+    state.verifiedMains = new Set([102]);
+    const ui = { ...state, requireWorkerEvidence: false, mainPidByChild: new Map([[child, 102]]) };
+    await put("main-exits.jsonl", [{ pid: child.pid, code: 0, workerSpawnCount: 0 }]);
+    expect(await canCleanupPackagedProcesses(ui)).toBe(false);
+    await put("main-exits.jsonl", [{ pid: 102, code: 0, workerSpawnCount: 0 }]);
+    expect(await canCleanupPackagedProcesses(ui)).toBe(true);
+    for (const code of [undefined, 1]) {
+      await put("main-exits.jsonl", [{ pid: 102, code, workerSpawnCount: 0 }]);
+      expect(await canCleanupPackagedProcesses(ui)).toBe(false);
+    }
+    await put("main-exits.jsonl", [{ pid: 102, code: 0, workerSpawnCount: 0 }]);
+    child.exitCode = 1;
+    expect(await canCleanupPackagedProcesses(ui)).toBe(false);
+    child.exitCode = null;
+    child.signalCode = "SIGTERM";
+    expect(await canCleanupPackagedProcesses(ui)).toBe(false);
+  }));

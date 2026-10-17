@@ -10,6 +10,7 @@ import { build } from "esbuild";
 import { _electron } from "playwright";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.mjs";
 import { preloadPausedPackagedMain } from "./packaged-main-preload.mjs";
 import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
 import { canCleanupPackagedProcesses } from "./packaged-process-exits.mjs";
@@ -25,12 +26,19 @@ export async function preparePackagedPetFixture({
   fixtureRoot,
   keychainReferenceFile,
   requireWorkerEvidence = true,
+  appImageRuntime,
 }) {
   assert.equal(typeof requireWorkerEvidence, "boolean");
+  if (appImageRuntime) {
+    assert.equal(process.platform, "linux");
+    assert.equal(requireWorkerEvidence, false, "AppImage fixture covers manifest UI only");
+    assert.equal(officialApp, appImageRuntime.appRoot);
+  }
   officialApp = await realpath(resolve(officialApp));
   keychainReferenceFile = keychainReferenceFile && (await realpath(keychainReferenceFile));
   const layout = describePackagedAppLayout(officialApp);
   const executable = await realpath(layout.executable);
+  const launcherExecutable = appImageRuntime?.launcherExecutable ?? executable;
   const { resources } = layout;
   const resourcesURLPrefix = pathToFileURL(resources + sep).href;
   const managedNode = await realpath(layout.managedNode);
@@ -104,12 +112,16 @@ export async function preparePackagedPetFixture({
     CODESHELL_OFFICIAL_BOOTSTRAP: bootstrap,
     CODESHELL_OFFICIAL_USER_DATA: isolated.userDataDir,
   });
+  // Never inherit APPIMAGE/APPDIR. Only the actual ELF runtime may supply them.
+  if (appImageRuntime) Object.assign(environment, appImageRuntime.environment);
   const children = [];
   const processMonitors = [];
   const monitorsByChild = new Map();
   const workers = new Set();
   const verifiedMains = new Set();
   const verifiedWorkerMains = new Set();
+  const mainPidByChild = new Map();
+  const mainBirthByChild = new Map();
   let launchFailed = false;
   const terminateChild = async (child) => {
     const monitor = monitorsByChild.get(child);
@@ -139,14 +151,29 @@ export async function preparePackagedPetFixture({
       let preloadFailure;
       childrenModule.spawn = function (command, args, options) {
         const owned =
-          command === executable &&
+          command === launcherExecutable &&
           args?.includes("--inspect-brk=0") &&
           options?.env?.HOME === isolated.home;
         const child = spawn.call(this, command, args, options);
         if (owned) {
+          assert.equal(captured, undefined, "Packaged launcher captured more than once");
           captured = child;
           children.push(child);
-          const monitor = watchElectronTestProcess(child, { timeoutMs: 120_000 });
+          let rootIdentity;
+          const monitor = watchElectronTestProcess(child, {
+            timeoutMs: 120_000,
+            ...(appImageRuntime
+              ? {
+                  snapshotProcesses: () => {
+                    const rows = snapshotElectronTestProcesses();
+                    rootIdentity ??= rows.find(
+                      (row) => row.pid === child.pid && row.ppid === process.pid,
+                    );
+                    return rows;
+                  },
+                }
+              : {}),
+          });
           processMonitors.push(monitor);
           monitorsByChild.set(child, monitor);
           for (const stream of ["stdout", "stderr"])
@@ -162,6 +189,31 @@ export async function preparePackagedPetFixture({
             isHostScript: (url) => url.startsWith(resourcesURLPrefix),
             allowParsedHostOnStart: true,
             terminateChild: () => terminateChild(child),
+            launcherOwnsInspector: !appImageRuntime,
+            verifyPausedIdentity: async (evaluate) => {
+              const main = await evaluate(
+                `({pid:process.pid,ppid:process.ppid,executable:process.execPath,appImage:process.env.APPIMAGE,appDir:process.env.APPDIR,home:process.env.HOME,argv:process.argv,noSandboxSwitch:require("electron").app.commandLine.hasSwitch("no-sandbox")})`,
+              );
+              assert.equal(
+                main.noSandboxSwitch,
+                false,
+                "Actual packaged Main disabled the sandbox",
+              );
+              assert.ok(!main.argv.some((arg) => /^--no-sandbox(?:=|$)/.test(arg)));
+              const identity = appImageRuntime
+                ? appImageRuntime.verifyPaused(rootIdentity, main)
+                : main;
+              if (appImageRuntime) {
+                const pinned = monitor.bindObservedDescendant(identity.pid);
+                assert.deepEqual(
+                  pinned,
+                  { pid: identity.pid, ppid: identity.ppid, birth: identity.birth },
+                  "Paused Main was not bound to active runtime birth custody",
+                );
+              }
+              assert.equal(identity.pid, appImageRuntime ? main.pid : child.pid);
+              return { ...identity, chromiumSandboxRequested: true };
+            },
           }).then(async (receipt) => {
             await writeFile(
               join(isolated.home, `startup-pause-${child.pid}.json`),
@@ -180,7 +232,8 @@ export async function preparePackagedPetFixture({
       let app;
       try {
         app = await _electron.launch({
-          executablePath: executable,
+          executablePath: launcherExecutable,
+          chromiumSandbox: true,
           args: ["--inspect-brk=0", `--user-data-dir=${isolated.userDataDir}`],
           cwd: isolated.home,
           env: environment,
@@ -198,6 +251,11 @@ export async function preparePackagedPetFixture({
           platform: process.platform,
           arch: process.arch,
           userData: app.getPath("userData"),
+          pid: process.pid,
+          ppid: process.ppid,
+          appImage: process.env.APPIMAGE ?? null,
+          appDir: process.env.APPDIR ?? null,
+          noSandboxSwitch: app.commandLine.hasSwitch("no-sandbox"),
         }));
         assert.equal(identity.packaged, true);
         assert.equal(identity.appPath, join(resources, "app.asar"));
@@ -206,6 +264,17 @@ export async function preparePackagedPetFixture({
         assert.equal(identity.userData, isolated.userDataDir);
         assert.equal(identity.platform, process.platform);
         assert.equal(identity.arch, process.arch);
+        assert.equal(identity.noSandboxSwitch, false);
+        identity.chromiumSandboxRequested = true;
+        const mainPid = startupPause.pid;
+        assert.equal(identity.pid, mainPid, "Main identity changed after startup guard");
+        if (appImageRuntime) {
+          assert.equal(identity.appImage, launcherExecutable);
+          assert.equal(identity.appDir, officialApp);
+          assert.equal(identity.ppid, captured.pid);
+          mainPidByChild.set(captured, mainPid);
+          mainBirthByChild.set(captured, startupPause.mainIdentity.birth);
+        } else assert.equal(mainPid, captured.pid);
         await writeFile(
           join(isolated.home, `packaged-identity-${captured.pid}.json`),
           JSON.stringify(identity),
@@ -219,7 +288,7 @@ export async function preparePackagedPetFixture({
         assert.ok(
           receipts.some(
             (receipt) =>
-              receipt.pid === captured.pid &&
+              receipt.pid === mainPid &&
               receipt.role === "Main" &&
               receipt.negativeProbes === 7 &&
               receipt.homeId === hash(isolated.home) &&
@@ -227,7 +296,7 @@ export async function preparePackagedPetFixture({
           ),
           "packaged Main synchronous preimport guard receipt is missing",
         );
-        verifiedMains.add(captured.pid);
+        verifiedMains.add(mainPid);
         app.__packagedIdentity = identity;
         app.__startupPause = startupPause;
       } catch (error) {
@@ -260,6 +329,7 @@ export async function preparePackagedPetFixture({
     },
     terminateChild,
     async assertWorker(app) {
+      assert.ok(!appImageRuntime, "AppImage acceptance never starts an Engine/Worker");
       const pid = app.process().pid;
       const deadline = Date.now() + 15_000;
       while (Date.now() < deadline) {
@@ -327,6 +397,19 @@ export async function preparePackagedPetFixture({
         settlements.some((result) => result?.status !== "cleaned")
       )
         return false;
+      if (
+        appImageRuntime &&
+        children.some(
+          (child, index) =>
+            !settlements[index].owned.some(
+              (row) =>
+                row.pid === mainPidByChild.get(child) &&
+                row.birth === mainBirthByChild.get(child) &&
+                row.ppid === child.pid,
+            ),
+        )
+      )
+        return false;
       return canCleanupPackagedProcesses({
         home: isolated.home,
         requireWorkerEvidence,
@@ -335,6 +418,7 @@ export async function preparePackagedPetFixture({
         verifiedMains,
         verifiedWorkerMains,
         workers,
+        mainPidByChild,
       });
     },
     async verifyUnchanged() {
@@ -343,14 +427,17 @@ export async function preparePackagedPetFixture({
       );
       const after = await capturePackagedAppIntegrity(officialApp);
       assert.equal(after.appTreeSHA256, before.appTreeSHA256, "official signed app changed");
+      const runtime = appImageRuntime && (await appImageRuntime.verifyUnchanged());
       return {
         ...after,
         beforeAppTreeSHA256: before.appTreeSHA256,
         unchangedAfterRuntime: true,
+        ...(runtime ? { appImageRuntime: runtime } : {}),
         observedProcessSettlements,
         bootstrapSHA256: hash(await readFile(bootstrap)),
         mainExits: children.map((child) => ({
           pid: child.pid,
+          mainPid: mainPidByChild.get(child) ?? child.pid,
           code: child.exitCode,
           signal: child.signalCode,
         })),

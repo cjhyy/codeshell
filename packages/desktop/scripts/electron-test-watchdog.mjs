@@ -32,6 +32,8 @@ function completionEvidence(status, owned, remaining, queryFailed) {
  * and failed queries/residual processes resolve "disarmed" and "unproven".
  * terminate() requests the same identity-checked cleanup immediately and returns
  * completed. A disarmed or settled watcher never regains signaling authority.
+ * bindObservedDescendant(pid) freshly registers a real descendant while the
+ * pinned root is still alive; it returns only its matched PID/parent/full birth.
  */
 export function watchElectronTestProcess(child, options = {}) {
   const {
@@ -54,6 +56,7 @@ export function watchElectronTestProcess(child, options = {}) {
     return Object.assign(() => {}, {
       completed,
       terminate: () => completed,
+      bindObservedDescendant: () => undefined,
     });
   }
   if (!["darwin", "linux", "win32"].includes(platform))
@@ -180,5 +183,28 @@ export function watchElectronTestProcess(child, options = {}) {
     if (state === "watching") cleanup(true);
     return completed;
   };
-  return Object.assign(stop, { completed, terminate });
+  const bindObservedDescendant = (pid) => {
+    if (
+      state !== "watching" ||
+      snapshotFailureReported ||
+      !Number.isSafeInteger(pid) ||
+      pid <= 0 ||
+      pid === root.pid
+    )
+      return undefined;
+    const current = observe();
+    if (
+      !current ||
+      snapshotFailureReported ||
+      current.get(root.pid)?.birth !== root.birth ||
+      current.get(root.pid)?.ppid !== root.ppid
+    )
+      return undefined;
+    const fresh = current.get(pid);
+    const pinned = owned.get(pid);
+    if (!fresh || !pinned || fresh.birth !== pinned.birth || fresh.ppid !== pinned.ppid)
+      return undefined;
+    return { pid: fresh.pid, ppid: fresh.ppid, birth: fresh.birth };
+  };
+  return Object.assign(stop, { completed, terminate, bindObservedDescendant });
 }

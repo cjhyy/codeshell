@@ -61,8 +61,11 @@ export async function hashAppImage(file) {
     await handle.read(header, 0, header.length, 0);
     assertType2AppImageHeader(header);
     const digest = createHash("sha256");
-    for await (const bytes of handle.createReadStream({ start: 0, autoClose: false }))
+    const runtimeCacheDigest = createHash("md5");
+    for await (const bytes of handle.createReadStream({ start: 0, autoClose: false })) {
       digest.update(bytes);
+      runtimeCacheDigest.update(bytes);
+    }
     const after = await lstat(file);
     const final = await handle.stat();
     assert.ok(
@@ -73,7 +76,12 @@ export async function hashAppImage(file) {
         final.mtimeMs === info.mtimeMs,
       "AppImage changed while hashing",
     );
-    return { sha256: digest.digest("hex"), size: info.size };
+    return {
+      sha256: digest.digest("hex"),
+      size: info.size,
+      // Runtime cache naming only. SHA256 remains the artifact identity.
+      runtimeCacheMD5: runtimeCacheDigest.digest("hex"),
+    };
   } finally {
     await handle.close();
   }
@@ -114,10 +122,17 @@ async function main() {
   assert.ok(
     output !== source.appRoot &&
       !inside(source.appRoot, output) &&
-      output !== desktop &&
-      !inside(desktop, output),
-    "AppImage output must be outside source package/Desktop",
+      output !== repository &&
+      !inside(repository, output),
+    "AppImage output must be outside source package/checkout",
   );
+  if (process.env.CODE_SHELL_TEST_HOME) {
+    const outerHome = await realpath(process.env.HOME);
+    assert.ok(
+      output !== outerHome && !inside(outerHome, output),
+      "AppImage output must survive outer isolated-HOME cleanup",
+    );
+  }
   await mkdir(output, { mode: 0o700 });
   const receipt = {
     status: "failed",
@@ -139,7 +154,7 @@ async function main() {
     started: new Date().toISOString(),
   };
   const privateRoot = join(output, "private-build");
-  let child, stop, log;
+  let child, stop, log, closeTimer;
   try {
     await writeFile(
       join(output, "source-inventory-before.json"),
@@ -190,7 +205,19 @@ async function main() {
         timeoutMs: 600_000,
         reportFailure: (message) => receipt.failures.push(message),
       });
-    receipt.result = await completed;
+    const custody =
+      stop &&
+      stop.completed.then((settlement) => {
+        receipt.processSettlement = settlement;
+        assert.equal(settlement.status, "cleaned", "Builder process settlement is unproven");
+        return new Promise((_, reject) => {
+          closeTimer = setTimeout(
+            () => reject(Error("Builder close event did not settle after proven exit")),
+            5_000,
+          );
+        });
+      });
+    receipt.result = await (custody ? Promise.race([completed, custody]) : completed);
     receipt.processSettlement = stop && (await stop.completed);
     assert.equal(receipt.processSettlement?.status, "cleaned");
     assert.equal(receipt.result.error, undefined);
@@ -211,6 +238,7 @@ async function main() {
     if (stop && child?.exitCode === null && child?.signalCode === null)
       receipt.processSettlement = await stop.terminate();
   } finally {
+    clearTimeout(closeTimer);
     for (const close of [() => stop?.(), () => log?.close()]) {
       try {
         await close();

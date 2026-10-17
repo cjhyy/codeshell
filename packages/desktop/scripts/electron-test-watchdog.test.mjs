@@ -59,6 +59,69 @@ function fixture(initial = [root]) {
   };
 }
 
+test("paused descendant binding freshly adopts only the pinned live root's actual descendants", () => {
+  const f = fixture();
+  const stop = watchElectronTestProcess(f.child, f.options);
+  f.setProcesses([root, descendant, { pid: 20, ppid: 1, birth: "foreign" }]);
+  deepStrictEqual(stop.bindObservedDescendant(11), descendant);
+  equal(stop.bindObservedDescendant(10), undefined);
+  equal(stop.bindObservedDescendant(20), undefined);
+  equal(stop.bindObservedDescendant(30), undefined);
+  f.setProcesses([
+    { ...root, birth: "reused" },
+    { ...descendant, birth: "replacement" },
+  ]);
+  equal(stop.bindObservedDescendant(11), undefined);
+  stop();
+});
+
+test("binding never reacquires a reused descendant or a cleaning/disarmed watcher", () => {
+  const f = fixture([root, descendant]);
+  const stop = watchElectronTestProcess(f.child, f.options);
+  f.setProcesses([root, { ...descendant, birth: "reused" }]);
+  equal(stop.bindObservedDescendant(11), undefined);
+  stop();
+  equal(stop.bindObservedDescendant(11), undefined);
+  const g = fixture([root, descendant]);
+  const cleaning = watchElectronTestProcess(g.child, g.options);
+  cleaning.terminate();
+  equal(cleaning.bindObservedDescendant(11), undefined);
+  g.fireTimeout(1000);
+});
+
+test("binding latches query failure and cannot return stale cached authority", () => {
+  const f = fixture([root, descendant]);
+  let fail = false;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses: () => {
+      if (fail) throw Error("metadata unavailable");
+      return [root, descendant];
+    },
+  });
+  fail = true;
+  equal(stop.bindObservedDescendant(11), undefined);
+  fail = false;
+  equal(stop.bindObservedDescendant(11), undefined);
+  equal(f.failures.length, 1);
+  stop();
+});
+
+test("immediately bound Main remains owned when runtime exits before the first interval", async () => {
+  const f = fixture();
+  const stop = watchElectronTestProcess(f.child, f.options);
+  f.setProcesses([root, descendant]);
+  deepStrictEqual(stop.bindObservedDescendant(descendant.pid), descendant);
+  f.setProcesses([{ ...descendant, ppid: 1 }]);
+  f.child.exitCode = 0;
+  f.child.emit("exit", 0, null);
+  deepStrictEqual(f.signals, [[descendant.pid, "SIGTERM"]]);
+  f.fireTimeout(1000);
+  const settled = await stop.completed;
+  equal(settled.status, "cleaned");
+  deepStrictEqual(settled.owned, [root, descendant]);
+});
+
 test("timeout signals owned descendants before root and escalates after one second", () => {
   const f = fixture();
   const stop = watchElectronTestProcess(f.child, f.options);

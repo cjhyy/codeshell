@@ -14,6 +14,8 @@ export async function preloadPausedPackagedMain(
     timeoutMs = 15_000,
     allowParsedHostOnStart = false,
     terminateChild,
+    verifyPausedIdentity,
+    launcherOwnsInspector = true,
   } = {},
 ) {
   let socket;
@@ -21,6 +23,8 @@ export async function preloadPausedPackagedMain(
   let stderr = "";
   let sequence = 0;
   let resumed = false;
+  let mainIdentity;
+  let pausedMainGone = false;
   const pending = new Map();
   const scripts = new Map();
   let onData;
@@ -106,6 +110,19 @@ export async function preloadPausedPackagedMain(
     const { scriptSource } = await send("Debugger.getScriptSource", {
       scriptId: top.location.scriptId,
     });
+    mainIdentity = verifyPausedIdentity
+      ? await bounded(
+          verifyPausedIdentity(async (expression) => {
+            const evaluated = await send("Runtime.evaluate", {
+              expression,
+              includeCommandLineAPI: true,
+              returnByValue: true,
+            });
+            assert.ok(!evaluated.exceptionDetails, JSON.stringify(evaluated.exceptionDetails));
+            return evaluated.result.value;
+          }),
+        )
+      : undefined;
     const result = await send("Runtime.evaluate", {
       expression: `require(${JSON.stringify(bootstrap)}); "guard-installed"`,
       includeCommandLineAPI: true,
@@ -114,7 +131,9 @@ export async function preloadPausedPackagedMain(
     assert.ok(!result.exceptionDetails, JSON.stringify(result.exceptionDetails));
     assert.equal(result.result.value, "guard-installed");
     const receipt = {
-      pid: child.pid,
+      pid: mainIdentity?.pid ?? child.pid,
+      launcherPid: child.pid,
+      ...(mainIdentity ? { mainIdentity } : {}),
       method: "inspect-brk first-JavaScript pause, synchronous CJS require, then resume",
       pauseURL: url,
       reason: paused.reason,
@@ -131,18 +150,29 @@ export async function preloadPausedPackagedMain(
     // this captured child before disconnecting on any failed startup barrier.
     const errors = [error];
     try {
-      if (child.exitCode === null && child.signalCode === null) {
-        assert.equal(
-          typeof terminateChild,
-          "function",
-          "Owned birth identity is required to terminate startup",
-        );
-        await terminateChild();
-        if (child.exitCode === null && child.signalCode === null)
-          throw Error("captured startup child still alive; inspector and HOME retained", {
-            cause: error,
-          });
-      }
+      assert.equal(
+        typeof terminateChild,
+        "function",
+        "Owned birth identity is required to terminate startup",
+      );
+      const settlement = await terminateChild();
+      pausedMainGone = launcherOwnsInspector
+        ? child.exitCode !== null || child.signalCode !== null
+        : Boolean(
+            mainIdentity?.birth &&
+            settlement?.status === "cleaned" &&
+            settlement.remainingCount === 0 &&
+            settlement.owned.some(
+              (row) =>
+                row.pid === mainIdentity.pid &&
+                row.ppid === mainIdentity.ppid &&
+                row.birth === mainIdentity.birth,
+            ),
+          );
+      if (!pausedMainGone)
+        throw Error("actual paused Main exit unproven; inspector and HOME retained", {
+          cause: error,
+        });
     } catch (closeError) {
       errors.push(closeError);
     }
@@ -151,7 +181,12 @@ export async function preloadPausedPackagedMain(
     clearTimeout(timer);
     if (onData) child.stderr.removeListener("data", onData);
     if (onExit) child.removeListener("exit", onExit);
-    if (resumed || child.exitCode !== null || child.signalCode !== null) socket?.close();
+    if (
+      resumed ||
+      pausedMainGone ||
+      (launcherOwnsInspector && (child.exitCode !== null || child.signalCode !== null))
+    )
+      socket?.close();
     for (const waiting of pending.values()) waiting.reject(Error("startup inspector disposed"));
   }
 }

@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { preparePackagedPetFixture } from "./packaged-pet-fixture.mjs";
+import { preparePackagedAppImageRuntime } from "./packaged-appimage-runtime.mjs";
 import { inventoryAppTree } from "./packaged-app-integrity.mjs";
 import { settlePackagedPet } from "./packaged-pet-shutdown.mjs";
 import {
@@ -26,7 +27,12 @@ for (let index = 2; index < process.argv.length; index += 2) {
   const flag = process.argv[index],
     value = process.argv[index + 1];
   assert.ok(
-    ["--packaged-app", "--evidence-dir", "--default-keychain-reference"].includes(flag) &&
+    [
+      "--packaged-app",
+      "--evidence-dir",
+      "--default-keychain-reference",
+      "--appimage-build-receipt",
+    ].includes(flag) &&
       value &&
       !options.has(flag),
     "Expected packaged app, fresh evidence directory and macOS metadata reference",
@@ -56,6 +62,7 @@ const operations = [],
   errors = [],
   pending = [];
 let fixture,
+  appImageRuntime,
   app,
   win,
   keychainReference,
@@ -271,13 +278,21 @@ try {
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const origin = `http://127.0.0.1:${server.address().port}`;
   await put("inventory-before.json", await inventoryAppTree(packagedApp));
+  if (options.has("--appimage-build-receipt"))
+    appImageRuntime = await preparePackagedAppImageRuntime({
+      receiptFile: options.get("--appimage-build-receipt"),
+      sourceApp: packagedApp,
+      fixtureRoot,
+      evidence,
+    });
   fixture = await preparePackagedPetFixture({
-    officialApp: packagedApp,
+    officialApp: appImageRuntime?.appRoot ?? packagedApp,
     isolated,
     origin,
     fixtureRoot,
     keychainReferenceFile: options.get("--default-keychain-reference"),
     requireWorkerEvidence: false,
+    appImageRuntime,
   });
   fixture.env.CODESHELL_UPDATE_FEED = origin;
   // Keep the production 30s timer unchanged. All ten actual UI checks share
@@ -337,6 +352,7 @@ const settled = await settlePackagedPet({
       "Worker creation requires retaining private HOME",
     );
     assert.deepEqual(errors, [], "Renderer/feed failure requires retaining private HOME");
+    assert.deepEqual(failures, [], "Failed updater expectations require retaining private HOME");
     if (keychainReference) {
       const after = readDefaultKeychain(keychainReference.home);
       for (const key of ["path", "dev", "ino", "uid"])
@@ -365,7 +381,11 @@ const receipt = {
     cause: error.cause?.message,
   })),
   boundary:
-    "Actual supplied packaged Main/preload/Settings/electron-updater; only owned generic HTTP feed response. No updater/IPC/isPackaged substitution, no download/install/external open, no Worker/model/nativeStorage. Guard scope is preimport fetch/http/https, Chromium origin allowlist and private HOME; no raw socket or OS sandbox claim.",
+    "Actual supplied packaged Main/preload/Settings/electron-updater; only owned generic HTTP feed response. " +
+    (appImageRuntime
+      ? "Actual type-2 AppImage extract-and-run runtime supplies APPIMAGE/APPDIR; runtime launcher and Main are distinct, guarded owned births. "
+      : "") +
+    "No updater/IPC/isPackaged substitution, no download/install/external open, no Worker/model/nativeStorage. Guard scope is preimport fetch/http/https, Chromium origin allowlist and private HOME; no raw socket or OS sandbox claim.",
 };
 await put("receipt.json", receipt);
 console.log(

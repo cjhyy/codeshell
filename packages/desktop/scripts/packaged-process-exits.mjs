@@ -19,13 +19,15 @@ export async function canCleanupPackagedProcesses({
   verifiedMains,
   verifiedWorkerMains,
   workers,
+  mainPidByChild = new Map(),
 }) {
+  const mainPid = (child) => mainPidByChild.get(child) ?? child.pid;
   if (
     launchFailed ||
     !children.length ||
     !children.every(
       (child) =>
-        verifiedMains.has(child.pid) && (child.exitCode !== null || child.signalCode !== null),
+        verifiedMains.has(mainPid(child)) && (child.exitCode !== null || child.signalCode !== null),
     )
   )
     return false;
@@ -42,23 +44,31 @@ export async function canCleanupPackagedProcesses({
   )
     return false;
   if (requireWorkerEvidence) {
-    if (!workers.size || !children.every((child) => verifiedWorkerMains.has(child.pid)))
+    if (!workers.size || !children.every((child) => verifiedWorkerMains.has(mainPid(child))))
       return false;
   } else {
     const mainExits = await rows(home, "main-exits.jsonl", false);
     if (
       !children.every((child) => {
-        const proofs = mainExits.filter((row) => row.pid === child.pid);
+        const pid = mainPid(child);
+        const proofs = mainExits.filter((row) => row.pid === pid);
         if (proofs.length !== 1) return false;
+        // A real AppImage runtime has a separate launcher PID and propagates
+        // its child's exit. Require both independently observed normal exits.
+        if (
+          mainPidByChild.has(child) &&
+          (child.exitCode !== 0 || child.signalCode !== null || proofs[0].code !== 0)
+        )
+          return false;
         const count = proofs[0].workerSpawnCount;
         return (
           Number.isSafeInteger(count) &&
           count >= 0 &&
-          count === spawned.filter((worker) => worker.mainPid === child.pid).length &&
-          (count === 0 || verifiedWorkerMains.has(child.pid))
+          count === spawned.filter((worker) => worker.mainPid === pid).length &&
+          (count === 0 || verifiedWorkerMains.has(pid))
         );
       }) ||
-      spawned.some((worker) => !children.some((child) => child.pid === worker.mainPid))
+      spawned.some((worker) => !children.some((child) => mainPid(child) === worker.mainPid))
     )
       return false;
   }

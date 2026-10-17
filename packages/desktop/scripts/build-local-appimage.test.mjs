@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
 import { join } from "node:path";
@@ -55,6 +56,7 @@ test("image checksum binds actual owned bytes and rejects links or unrelated bin
     const before = await hashAppImage(file);
     assert.equal(before.size, 32);
     assert.match(before.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(before.runtimeCacheMD5, createHash("md5").update(header()).digest("hex"));
     const changed = header();
     changed[31] = 1;
     await writeFile(file, changed);
