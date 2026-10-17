@@ -8,13 +8,13 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI16, is failed overall: Web, Linux and macOS pass
-their independently audited scopes, while Windows stops in a newly added test's
-CRLF source extraction before any native application launch. That fixture defect
-has a reviewed test-only correction; its native acceptance still awaits the next
-full run. CI14 remains the latest fully passing matrix. The
-[CI16 record](#ci16--windows-fixture-portability-failure) and earlier CI15 failures
-remain separate source-bound evidence.
+The latest completed run, CI17, is failed overall. Web, Linux and macOS pass
+their independently audited scopes. Windows passes the corrected test gate and
+its eight native steps according to API/stdout, then fails the actual NSIS step;
+artifact upload also fails, leaving the installer phase/cause and complete
+Windows receipts unverified. CI14 remains the latest fully passing matrix. The
+[CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
+and earlier CI15 native failures remain separate source-bound evidence.
 
 ## Reproduced and repaired
 
@@ -106,6 +106,7 @@ main, tags and publication remain outside that authorization. The branch is
 | [39016494715](https://github.com/cjhyy/codeshell/actions/runs/39016494715), source `67e09d1f6`                     | All four jobs and independent artifact audits pass again. Each native platform verifies 83 real UI operations/12 Main launches and separately 11 Write-card React tests/38 assertions with no failures or skips. Current package integrity, Panel diagnostics, AppImage sandbox/update checks and both DMG UI copies pass. Web verifies nine image regressions, 31 browser behaviors and 88 recorded source hashes. No new blocker is found in this acceptance; earlier unknown failures remain separately preserved.                                                                                                                                                                                                                                                                                               |
 | [39020679310](https://github.com/cjhyy/codeshell/actions/runs/39020679310), source `7e5570210`                     | Overall failed. Web passes 31 actual behaviors, nine image/45 assertions, 64 pure Node contracts and a separate expected-negative retention run. Linux passes 83 operations/12 Main and actual AppImage ten GETs. macOS first-cycle Pet IPCs return successfully, then its post-close Keychain identity check refuses; later native suites/DMG are skipped. Windows startup seven/three Main pass, then Review identity RPC rejects with PromiseGC before any Review operation; six later suites/NSIS are skipped. Both native causes remain unknown.                                                                                                                                                                                                                                                               |
 | [39022606881](https://github.com/cjhyy/codeshell/actions/runs/39022606881), source `e7543a568`                     | Overall failed in Windows' new Review pure Node fixture (8 pass/four CRLF extraction failures), before native launch; 22 NSIS contracts pass but all Windows runtime/install stages are skipped. Web passes 31 browser behaviors, nine image/45 assertions and 64 lifecycle contracts. Linux and macOS each independently pass 83 native operations/12 Main, separate Write 11/38 and Review 12 pure contracts; AppImage ten GETs and both DMG 13-operation UI rounds pass. The fixture-only CRLF correction is reviewed with 13 passing contracts and awaits a new full run. Earlier native unknowns remain preserved.                                                                                                                                                                                             |
+| [39023748382](https://github.com/cjhyy/codeshell/actions/runs/39023748382), source `70d2e3846`                     | Overall failed in actual Windows NSIS, then artifact upload/checkout cleanup fail without detailed errors. Corrected Review13/NSIS22 contracts and Write11/38 pass in retained logs; original eight native steps have API/stdout success but no Windows artifact for complete independent receipt/PNG acceptance. NSIS phase/cause/installed UI count and OS restoration remain unknown. Web31+9/45+64, Linux83/12+AppImage10GET, macOS83/12+DMG two13 UI all pass independent artifact audits. Earlier native causes remain unknown.                                                                                                                                                                                                                                                                               |
 
 The CI12 Windows failure is frozen at
 `ci-39013381607-windows-20261017/verified-summary.json` (SHA256
@@ -1149,6 +1150,83 @@ Frozen summaries under `/private/tmp/codeshell-real-operation-cycles-20261016`:
   `3ff48639340ba08f8ff6acf613360647385daf99023c07f5a519da6cf87464e3`.
 - macOS `ci-39022606881-mac-independent-20261017/verified-summary.json`, SHA256
   `e52604cb16eb921cb17cd8565c042bfb67410cf8f8ddd7afe58d839aa3bd2c71`.
+
+## CI17 — Windows NSIS failure without an artifact
+
+[Run 39023748382](https://github.com/cjhyy/codeshell/actions/runs/39023748382)
+executes source `70d2e3846ea48d0d797e51dbeac7026f563c76bb`, containing the reviewed
+CRLF test-only correction and CI16 evidence. Web, Linux and macOS each have new,
+independent artifact audits; their prior results are not substituted for this run.
+Windows fails in the actual NSIS step, followed by failed artifact upload and
+checkout cleanup. Only the other three platforms have complete artifact audits.
+
+Web passes **31 browser behaviors**, nine image tests/45 assertions and 64 pure
+Node lifecycle contracts. All 106 recorded source hashes and 33 PNG structures/
+CRCs verify. The separate expected-negative reducer run passes two controls and
+fails six known UI assertions while preserving its runner-verified owned browser
+HOME/profile after normal close and observed custody settlement. Root again
+views the actual fresh-login/draft and 390px multiline annotation samples.
+
+Linux passes **83 native operations/12 Main**, separate Write React 11/38 and
+all **13 Review pure Node contracts**, including the added LF/CRLF final-tail
+regression. Actual Review's 11 cases agree with its report and durable evidence:
+Main PID 5160 exits 0/no signal, controller exits 0, 55 journal events, stdout
+212 bytes/four chunks and stderr 818 bytes/eight chunks have contiguous complete
+ranges, with no first error, signal request or recording/truncation failure.
+AppImage verifies ten actual GETs, first-JavaScript seven negative probes,
+sandbox and full source/cache bytes/07777 inventory, including only 75 exact mode
+normalizations. Inner fixture HOMEs are removed; outer launcher scratch remains
+retained. Six agent-viewed and two Root-viewed actual PNG samples show readable
+Chinese, complete generated-image paths and contained narrow Settings controls.
+
+macOS passes **83 native operations/12 Main**, plus both DMG UI rounds of
+**13 operations/one Main each**. Write React 11/38 and Review's 13 pure contracts
+are separate. Three startup post-exit phases restore the final gates; Review's
+11 cases, journal/stdout/stderr bounds, normal Main/controller exits and original
+report agree. Four packaged watchdog request ledgers are empty/nontruncated.
+The source-bound directory, mounted/copied payload and managed Node inventories,
+production hooks and local ad-hoc signing checks pass. Both readonly attachments
+are detached, and same-build owned replacement preserves its synthetic marker.
+Fresh private HOMEs are removed while launcher scratch/DMG evidence roots remain
+retained. Six agent-viewed and two Root-viewed samples include both actual DMG
+390px dark Settings copies. This remains owned-copy acceptance; earlier inode/
+PromiseGC causes remain unknown.
+
+Windows passes 13 Review contracts (including LF/CRLF), 22 NSIS contracts and
+Write React 11/38 in the retained job log. API and driver stdout show all eight
+native steps succeeded, including Review past the earlier GC point. The actual
+NSIS step then fails; its only final console error is the generic assertion
+`Windows NSIS acceptance failed; owned state retained`. Neither the job log nor
+the check-run annotation contains the internal phase or original NSIS error.
+
+The upload and checkout-post steps also report failure without a detailed error.
+The frozen artifact API contains only Web/Linux/macOS artifacts. Thus no Windows
+ZIP/PNG, complete 83-operation/12-Main receipts, installed-copy UI reports,
+registry/cache snapshots or six-root installer custody can be independently
+verified. NSIS may have completed some operations; missing evidence does not
+mean zero execution. The generic retention message is source intent, rather than
+independent proof of retained state. Do not infer an internal timeout, process
+termination, runner/OS cause or installer side effect from step timing.
+
+Independent source review identifies a concrete evidence gap: process and outer
+first errors are synchronously written to local receipt/journal, but the final
+assertion replaces the console error with the generic message. Existing child
+stdio tails are also only local files. Bounded console checkpoint/first-error
+mirroring and a Windows public-evidence upload before NSIS are being prepared;
+no diagnostic change is claimed to repair the still-unknown NSIS cause.
+
+Frozen summaries under `/private/tmp/codeshell-real-operation-cycles-20261016`:
+
+- Web `ci-39023748382-web-independent-audit.json`, SHA256
+  `1260a00237d74f16bf3f6b579c3058ffd2f7a288fb87eca14a67be1b68d31751`.
+- Linux `ci-39023748382-linux-independent-audit.json`, SHA256
+  `a984ed2753d847cd2f635b17dd6d2ff4ac2c9da19cdf877814c628df8d95e3a3`.
+- macOS `ci-39023748382-mac-independent-20261017/verified-summary.json`, SHA256
+  `051f3a3bf58f0b278a63edd2f95bf9ca3d309d92ec3b9ffcc28acf2e2abbe65f`.
+- Windows `ci-39023748382-windows-independent-20261017/verified-failed-summary.json`, SHA256
+  `93fd90f152be6f19185c8d04b9a8d2a2b353a1b70c5985635e4aae0210aab0b3`.
+- Windows second NSIS peer `ci-39023748382-windows-nsis-peer-20261017/verified-failed-peer-summary.json`, SHA256
+  `969a8b93c8fda5dd945894ef1aaa149401b32517fd25c3b5a6892d179e5940ae`.
 
 ## Remaining acceptance work
 
