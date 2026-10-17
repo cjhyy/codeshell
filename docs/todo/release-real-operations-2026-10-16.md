@@ -2799,7 +2799,7 @@ replacement and uninstall are not reached. This is not CI24's uninstall absence
 failure; the new uninstaller macro is not thereby shown to have executed or fixed
 that prior failure. Bounded crash-event metadata records `queried: true`, status
 `unknown`, reason `no-exact-application-event`, with a 30,000ms query timeout and
-maximum eight records. It does not identify the installation failure's cause.
+maximum eight records per provider. It does not identify the installation failure's cause.
 Windows artifact 12107843915 has 139 public files/CRC and ZIP SHA-256
 `142611c1beb00ea69a19294fd8106756550cb96a4e125f5ee8691de3451e4784`.
 The owned NSIS root is retained; partial installation effects and OS restoration
@@ -2836,6 +2836,11 @@ exact run/source and all four jobs, with two successes and two failures:
   `a2cf80b2d76e63f5c6e338028d8252690ba3fb0534fd49eb283c7bc4c53ee9d8`.
 - `ci-39052422751-final-artifacts-api.json`, SHA-256
   `db79cf3c45c61dc1c9b125af9b4a17bbe3eb8d5fd3f7e0261cf47c3d82035c70`.
+
+Root's final `ci25-final-matrix-binding-20261018.json` has SHA-256
+`ee950a41fef853d6b475b00463a578379ff27ac889990ab7a4eff00ae5a3289a`.
+It cross-binds seventeen source-bound proofs; this is not an added test or native
+operation count and does not turn the failed matrix into a pass.
 
 ## CI26 — goal-extension callback local preparation
 
