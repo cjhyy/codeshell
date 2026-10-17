@@ -1,0 +1,51 @@
+{
+  "frozenSource": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "formalFindings": 0,
+  "newCandidates": 0,
+  "shards": [
+    {
+      "id": "host-lifecycle-controls",
+      "firstExecution": true,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.test.ts"
+      ],
+      "exitCode": 0,
+      "completed": true,
+      "pass": 6,
+      "fail": 0,
+      "expect": 22,
+      "skip": 0,
+      "rawLog": "evidence/host-lifecycle-controls.first.log",
+      "receipt": "evidence/host-lifecycle-controls.first.receipt.json",
+      "scope": "6 newly authored pure memory synchronous lifecycle controls, no request dispatch"
+    }
+  ],
+  "totals": {
+    "cleanShards": 1,
+    "pass": 6,
+    "fail": 0,
+    "expect": 22,
+    "skip": 0,
+    "failedShards": 0
+  },
+  "staticToolFailure": {
+    "exitCode": 2,
+    "direction": "guessed top-level archive/_archive inventory",
+    "note": "evidence/host-static-inventory-skip.md",
+    "productFailure": false
+  },
+  "excludedKnownCandidate": {
+    "id": "HL-C1",
+    "previousReport": "docs/audit-2026-10-17-round3/host-link.md",
+    "reason": "caller-owned service references; still no normal producer mutation or declared immutable registration snapshot contract; no mutation experiment"
+  },
+  "limits": [
+    "No worker/Engine/provider/plugin/native/authority/approval/credential/security/custody process or network execution.",
+    "Current production HostRuntime callers pass no start/stop callbacks; callback tests validate public synchronous lifecycle only.",
+    "No full existing Host suite, build, typecheck, lint, or distribution validation."
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.33458709716796875,
+  "firstExecution": true,
+  "rawCombinedLog": "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.first.log",
+  "bytes": 1073,
+  "sha256": "c5e5c0f5467870f9c1faab9772af94a33a44857326ffc3d69fd7a4a2ab613129",
+  "scope": "HostRuntime direct source import; synchronous in-memory callbacks; no request/approval/worker/provider/native/network operations"
+}

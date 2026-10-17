@@ -1,0 +1,24 @@
+bun test v1.3.11 (af24e281)
+
+tests/hooks-inject.test.ts:
+(pass) wrapHookMessages > returns null for empty / undefined / whitespace-only inputs [0.44ms]
+(pass) wrapHookMessages > wraps a single message into a user-role <system-reminder> [0.09ms]
+(pass) wrapHookMessages > joins multiple messages with a blank line inside a single reminder
+(pass) wrapHookMessages > trims each message and drops empties before joining
+(pass) HookRegistry + wrapHookMessages integration > aggregates messages from multiple handlers in priority order [0.12ms]
+(pass) HookRegistry + wrapHookMessages integration > handler receives data merged via emit (smoke test for ctx envelope)
+(pass) HookRegistry + wrapHookMessages integration > handler can skip via isSubAgent and return no messages [0.53ms]
+(pass) HookRegistry + wrapHookMessages integration > returning {stop: true} short-circuits the chain but keeps prior messages
+
+packages/core/src/hooks/registry.unregister.test.ts:
+(pass) HookRegistry unregister-by-identity (file_history_backup leak) > a named handler re-registered per run does not accumulate when each run unregisters its own [0.20ms]
+(pass) HookRegistry unregister-by-identity (file_history_backup leak) > WITHOUT unregistering, identical-name handlers DO stack (this is the bug being prevented)
+(pass) HookRegistry unregister-by-identity (file_history_backup leak) > unregister matches by identity, so a different closure with the same name is NOT removed
+(pass) HookRegistry removeByNamePrefix (mid-session plugin hook drop) > removes every hook whose name starts with the prefix, across all events; leaves others
+(pass) HookRegistry removeByNamePrefix (mid-session plugin hook drop) > no plugin hooks → no-op, returns 0
+
+ 13 pass
+ 0 fail
+ 32 expect() calls
+Ran 13 tests across 2 files. [54.00ms]
+Completed Bun shard: 13 tests, 0 skipped; 0 failures.

@@ -1,0 +1,87 @@
+{
+  "frozenSource": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "currentEqualsFrozen": true,
+      "readScope": "full repository instructions"
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "frozenSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "bytes": 4014,
+      "currentEqualsFrozen": true,
+      "readScope": "full; ordinary capability declarations and synchronous lifecycle; no request dispatch experiments"
+    },
+    {
+      "path": "packages/host/src/host-requests.ts",
+      "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "bytes": 4880,
+      "currentEqualsFrozen": true,
+      "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "frozenSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "bytes": 388,
+      "currentEqualsFrozen": true,
+      "readScope": "full public export inventory"
+    },
+    {
+      "path": "packages/host/src/runtime.test.ts",
+      "frozenSha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+      "bytes": 10519,
+      "currentEqualsFrozen": true,
+      "readScope": "full static test inventory; not executed because request/approval tests are outside scope"
+    },
+    {
+      "path": "packages/host/README.md",
+      "frozenSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "bytes": 1609,
+      "currentEqualsFrozen": true,
+      "readScope": "full; synchronous lifecycle declared contract only; credential paragraphs excluded from audit"
+    },
+    {
+      "path": "packages/host/package.json",
+      "frozenSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "bytes": 923,
+      "currentEqualsFrozen": true,
+      "readScope": "full package metadata"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "frozenSha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "bytes": 66162,
+      "currentEqualsFrozen": true,
+      "readScope": "lines 339-343 HostRuntime producer only; broader auth/worker routing excluded"
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-host.ts",
+      "frozenSha256": "b21b444ea6ea0cdbcdf45aa4f00f769beefdb565a2780d351b4b2cc42308ee08",
+      "bytes": 21797,
+      "currentEqualsFrozen": true,
+      "readScope": "lines 130-134 HostRuntime producer only; no task workers or authority execution"
+    },
+    {
+      "path": "packages/desktop/src/main/worker-host-runtime.ts",
+      "frozenSha256": "b43e6ababb56769c3186475c709bbd0f156529adb2abd0652dc9155d6a8c9cc0",
+      "bytes": 2766,
+      "currentEqualsFrozen": true,
+      "readScope": "full static service construction only; no native/authority/credential execution"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "currentEqualsFrozen": true,
+      "readScope": "full maintained guarded runner entry"
+    }
+  ],
+  "distRead": false,
+  "productImports": [
+    "packages/host/src/runtime.ts"
+  ],
+  "dependencyRuntimeImports": []
+}

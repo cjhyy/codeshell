@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round11/evidence/hooks-pure-contracts.test.ts"
+  ],
+  "exitCode": 0,
+  "startedAt": "2026-10-17T06:30:19.372769+00:00",
+  "rawCombinedLogSha256": "d95f7fdeaa19c129d265e8930622644d10fdc8cd0ffcd5a77c1e2f409464778e"
+}

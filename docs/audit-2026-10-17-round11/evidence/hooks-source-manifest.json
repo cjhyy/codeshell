@@ -1,0 +1,137 @@
+{
+  "frozenCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesCurrent": true,
+      "coverage": "full; instructions"
+    },
+    {
+      "path": "packages/core/src/hooks/registry.ts",
+      "frozenSha256": "e32b89a6923b71547db9fa689acaa7a525e44d96362b12c7e3dbe142b50c8ae6",
+      "matchesCurrent": true,
+      "coverage": "full; executed directly in fixtures"
+    },
+    {
+      "path": "packages/core/src/hooks/events.ts",
+      "frozenSha256": "eeeb9e47449f13d18e9a2c42b5c3f3f497a646c50a6e357b4e7277c9ae33cc91",
+      "matchesCurrent": true,
+      "coverage": "full; type/docs source only"
+    },
+    {
+      "path": "packages/core/src/hooks/hook-output.ts",
+      "frozenSha256": "ce41c645d88773c430f05ec823b130c99828e10c6e8899180773c0d8ff646361",
+      "matchesCurrent": true,
+      "coverage": "full; executed directly in focused fixture"
+    },
+    {
+      "path": "packages/core/src/hooks/inject.ts",
+      "frozenSha256": "55b7d22c9e1a478d896d211b8500d08139f8be4d26073f9cb3d8eb283178b9d4",
+      "matchesCurrent": true,
+      "coverage": "full; executed through unchanged baseline"
+    },
+    {
+      "path": "packages/core/src/hooks/configured-tool-hooks.ts",
+      "frozenSha256": "6ce05b375c7afefc51383308eeeb81522d16e3650fb3a228a3c2ed506e7aafac",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; no descriptor/identity/approval/custody runtime"
+    },
+    {
+      "path": "packages/core/src/hooks/shell-runner.ts",
+      "frozenSha256": "14389133a7a10104567ef79e569d07d216d8187f4da169a550f3942b9221bb2a",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; no shell helper or runner runtime"
+    },
+    {
+      "path": "packages/core/src/plugins/loadPluginHooks.ts",
+      "frozenSha256": "9ae073a5decb8d5a3d6899ceb2742f3ba4356a53cbb042f05c06d9448cd98cc1",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; no plugin registry or command runtime"
+    },
+    {
+      "path": "packages/core/src/plugins/loadPluginHooks.matcher.test.ts",
+      "frozenSha256": "f725a8c08b191dac8bcc04faf362a8bc157730fbdc73423f564178d73da71320",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; not executed"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertHooks.ts",
+      "frozenSha256": "c6ce4988d1429a0e950a94d8f03ee8c4211ea588d24bca63a574be50d4c66eb2",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; no installer, path-policy or filesystem experiment"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertHooks.test.ts",
+      "frozenSha256": "c85790fbdc3fff4a340fcea9cbf854eef8c676b6ac788781ae710963b8221893",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; not executed"
+    },
+    {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "frozenSha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "matchesCurrent": true,
+      "coverage": "full; onceDispose imported by actual HookRegistry"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "frozenSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "matchesCurrent": true,
+      "coverage": "lines 250-269; SDK hook export only"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesCurrent": true,
+      "coverage": "lines 1168-1212; settings matcher contract only"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "frozenSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "matchesCurrent": true,
+      "coverage": "lines 650-690; hooks schema only"
+    },
+    {
+      "path": "tests/hooks-handler-mutations.test.ts",
+      "frozenSha256": "4520a7efdada013d6e255d792414b517bd1f55da39c5ce2d5583a5b586eedcf2",
+      "matchesCurrent": true,
+      "coverage": "source-only; not executed (executor/permission imports excluded)"
+    },
+    {
+      "path": "tests/hook-result-schema.test.ts",
+      "frozenSha256": "3ce1bff281270c5a718aaf68a76487e1ff8a981738f541e59a01e673ae75fb2d",
+      "matchesCurrent": true,
+      "coverage": "source-only; not executed (mixed install/SHA surface excluded)"
+    },
+    {
+      "path": "tests/hooks-inject.test.ts",
+      "frozenSha256": "b7d6356d1244d4be63c1aaa6cac5e39171a165cff4a7ec27749014d4b12a764e",
+      "matchesCurrent": true,
+      "coverage": "full; unchanged baseline executed"
+    },
+    {
+      "path": "packages/core/src/hooks/registry.unregister.test.ts",
+      "frozenSha256": "c84feefef0ebfc788a53ea0310059ca3092740c0d462952fe5f26be9903cdd36",
+      "matchesCurrent": true,
+      "coverage": "full; unchanged baseline executed"
+    },
+    {
+      "path": "tests/settings-hooks-schema.test.ts",
+      "frozenSha256": "47244279254f20e5afd4672be72205ce7ef310ba9e74a9de151377631bf9b190",
+      "matchesCurrent": true,
+      "coverage": "full; source-only; not executed"
+    },
+    {
+      "path": "tests/hooks-shell-runner.test.ts",
+      "frozenSha256": "800b52bb73a7863bfe3ffe6effc52ed39694689369f21f41590c4319676e8f5c",
+      "matchesCurrent": true,
+      "coverage": "matcher line search only; not executed"
+    },
+    {
+      "path": "tests/hooks-engine-settings.test.ts",
+      "frozenSha256": "245d47b0b8ac69058fa05b01de8332a35f9ab80750268c0140d28331e0a59975",
+      "matchesCurrent": true,
+      "coverage": "matcher/event line search only; not executed"
+    }
+  ]
+}

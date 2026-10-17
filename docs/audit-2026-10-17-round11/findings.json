@@ -1,0 +1,30 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "count": 1,
+  "priorities": {
+    "P3": 1
+  },
+  "findings": [
+    {
+      "id": "CHAT-R11-01",
+      "priority": "P3",
+      "title": "通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store",
+      "source": "packages/chat/src/notification-progress.ts",
+      "line": 187,
+      "report": "chat.md",
+      "reportLine": 5,
+      "log": "evidence/chat-progress-load.first.log",
+      "evidenceLevel": "真实 NotificationDeliveryProgress、createDesktopNotificationHandler、DesktopControlClient.prototype.watchEvents 方法；内存 store、fake adapter、page/sleep 回调替身。watcher 不构造 client，不走 request/descriptor/spawn/checkpoint。",
+      "staticScope": "CLI 和 Desktop host 生产构造接线、FileNotificationDeliveryProgressStore 的非 ENOENT 传播。",
+      "limitations": [
+        "未诱发真实磁盘/OS 读取故障，不验证具体 EIO/EMFILE 概率或平台恢复。",
+        "未运行 Desktop/CLI host、实际账号/平台/模型、网络/SDK连接、权限或 custody 行为。",
+        "未证明通知永久丢失；当前不推进 cursor，新 handler/process 重建可恢复。",
+        "结论限定初次 load 失败；已加载后的 save/flush 恢复控制通过。"
+      ],
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": "direct-source-unchanged-at-reviewed-main",
+      "runtimeRetested": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round11/evidence/root-composition-controls.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true,
+  "elapsedSeconds": 0.3527867794036865,
+  "scope": "Actual compiler/freeze/runtime preset/snapshot with in-memory ordinary declarations, dummy tools/queries never invoked. No Engine/Host/provider/network/native/security or authority experiment."
+}

@@ -1,0 +1,69 @@
+{
+  "frozenCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "metadataOnly": true,
+  "productReruns": 0,
+  "files": [
+    {
+      "path": "hooks.md",
+      "bytes": 5507,
+      "sha256": "a8ba3185913df81abf1423d786838df563a0fc814bdc6ea0f482a19fb3558192"
+    },
+    {
+      "path": "evidence/hooks-candidates.json",
+      "bytes": 1548,
+      "sha256": "9a612795cd895f8ec23d8aadc278d668cb0277ebec4daaa44d1024bc39be0c50"
+    },
+    {
+      "path": "evidence/hooks-dedup.json",
+      "bytes": 392914,
+      "sha256": "e3e1d42f7cf201fe0affbed4e7c0bdc9844d5639e639ae07d9f8254df1c2d8e6"
+    },
+    {
+      "path": "evidence/hooks-existing-pure.first.exit.json",
+      "bytes": 357,
+      "sha256": "3a0c8e2d80289ddca445c76d336a638b4bdeefcff16dba937aefcfb9ce8f0c3e"
+    },
+    {
+      "path": "evidence/hooks-existing-pure.first.log",
+      "bytes": 1851,
+      "sha256": "11a5a786d84d2a570e2ad263635242896659d0f9e7e455e426c53a97cc22c6ad"
+    },
+    {
+      "path": "evidence/hooks-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/hooks-navigation-skip.md",
+      "bytes": 2000,
+      "sha256": "3620de7bb0a7b725d308ec82a250f8a413fdb06ee593954f19d99605e03fdf2b"
+    },
+    {
+      "path": "evidence/hooks-pure-contracts.first.exit.json",
+      "bytes": 339,
+      "sha256": "f1042ede39a709f1bddb5c44a5c1974accac470b5662613c03d3b482b1c04e9e"
+    },
+    {
+      "path": "evidence/hooks-pure-contracts.first.log",
+      "bytes": 1359,
+      "sha256": "d95f7fdeaa19c129d265e8930622644d10fdc8cd0ffcd5a77c1e2f409464778e"
+    },
+    {
+      "path": "evidence/hooks-pure-contracts.test.ts",
+      "bytes": 6117,
+      "sha256": "58089d0267204b584f6c53a0480fd3aba7e7574e193aff8a6b963d6ef2b0688c"
+    },
+    {
+      "path": "evidence/hooks-source-manifest.json",
+      "bytes": 5637,
+      "sha256": "ed1601cf0ddf7256f5f677ae5a09d46b2ce5110e35ea26c9c929789646c09005"
+    },
+    {
+      "path": "evidence/hooks-validation.json",
+      "bytes": 2055,
+      "sha256": "6fc9fae031ef73a19ff8dc52ec1e7974d3ef15b2670857d89975f808d81d89db"
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogWhitespacePreserved": true
+}

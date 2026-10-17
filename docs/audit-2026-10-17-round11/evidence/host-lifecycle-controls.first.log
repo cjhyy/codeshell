@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.test.ts:
+(pass) round11 HostRuntime synchronous in-memory lifecycle controls > an empty runtime starts and stops its adapter once [1.42ms]
+(pass) round11 HostRuntime synchronous in-memory lifecycle controls > returned capability arrays do not mutate the registered catalog [0.27ms]
+(pass) round11 HostRuntime synchronous in-memory lifecycle controls > stop during adapter start is terminal and never starts services [0.92ms]
+(pass) round11 HostRuntime synchronous in-memory lifecycle controls > stop during service start reverses only reached services once [0.07ms]
+(pass) round11 HostRuntime synchronous in-memory lifecycle controls > reentrant stop callbacks do not double-stop the catalog or adapter
+(pass) round11 HostRuntime synchronous in-memory lifecycle controls > all synchronous shutdown failures are retained in reverse service order [0.36ms]
+
+ 6 pass
+ 0 fail
+ 22 expect() calls
+Ran 6 tests across 1 file. [225.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

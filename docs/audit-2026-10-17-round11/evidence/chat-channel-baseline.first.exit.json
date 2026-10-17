@@ -1,0 +1,10 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/chat/src/channel.test.ts"
+  ],
+  "exitCode": 0
+}

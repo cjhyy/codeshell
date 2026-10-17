@@ -1,0 +1,23 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "reviewedMain": "9cbd3a34c8c3249d87a2a31b2edf538e0448c365",
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/e2e-startup-operation-cycles.mjs",
+    "packages/desktop/scripts/e2e-startup-operation-cycles.test.mjs",
+    "packages/desktop/scripts/electron-harness.mjs",
+    "packages/desktop/scripts/packaged-appimage-runtime.mjs",
+    "packages/desktop/scripts/packaged-appimage-runtime.test.mjs",
+    "packages/desktop/scripts/windows-source-harness.test.mjs"
+  ],
+  "directFindingAndCandidateSourceMatchesFrozen": {
+    "packages/chat/src/notification-progress.ts": true,
+    "packages/chat/src/notification-relay.ts": true,
+    "packages/chat/src/desktop-control-client.ts": true,
+    "packages/core/src/hooks/registry.ts": true,
+    "packages/core/src/composition/compiler.ts": true
+  },
+  "runtimeRetested": false,
+  "notes": "Eight concurrent main paths are Desktop acceptance harness/AppImage/startup scripts, CI and docs. Direct finding/candidate implementations unchanged; no native execution or product retest. Initial/current dirty state and four untracked byte hashes preserved."
+}

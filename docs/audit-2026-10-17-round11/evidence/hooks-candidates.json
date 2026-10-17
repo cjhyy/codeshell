@@ -1,0 +1,30 @@
+[
+  {
+    "id": "HOOK-R11-C1",
+    "status": "observed-candidate",
+    "priority": null,
+    "title": "Registering a higher-priority hook during emit duplicates an existing handler",
+    "source": {
+      "path": "packages/core/src/hooks/registry.ts",
+      "line": 43,
+      "relatedLines": [
+        45,
+        86,
+        92,
+        94
+      ]
+    },
+    "normalInput": "A real HookRegistry with two async-capable handlers; while emit waits on the first, register a third handler at higher priority. All data is in memory and handler results are ordinary messages.",
+    "observed": "Existing-high runs twice, existing-low once, new-high zero times in the same emit. Final registration count is 3 and aggregated messages contain the existing-high message twice.",
+    "controls": [
+      "All handlers registered before emit run once each in descending priority",
+      "The suspended handler with no mid-emit register runs once"
+    ],
+    "evidenceLevel": "actual HookRegistry source + bounded in-memory fake handlers; no Engine or shell runner",
+    "missingContract": "The public SDK exports HookRegistry, but a supported normal Engine/SDK producer timing and an explicit mid-emit registration visibility/once-per-chain contract were not established. Therefore no product bug severity or Engine duplicate-injection claim.",
+    "test": "evidence/hooks-pure-contracts.test.ts",
+    "log": "evidence/hooks-pure-contracts.first.log",
+    "exit": "evidence/hooks-pure-contracts.first.exit.json",
+    "dedup": "evidence/hooks-dedup.json"
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "purpose": "Read-only external documentation for static formatting candidates; no platform request, account or rendering fixture.",
+  "reads": [
+    {
+      "url": "https://docs.mattermost.com/messaging/formatting-text",
+      "tool": "web open",
+      "result": "200-wordlim page returned Total lines: 0; no readable contract body obtained."
+    },
+    {
+      "url": "https://github.com/mattermost/mattermost/tree/master/webapp/channels/src/utils",
+      "tool": "web open",
+      "result": "Internal Error. Failed to fetch restricted URL.",
+      "disposition": "SKIP formatting direction; no retry, alternate retrieval, parser fixture or source download."
+    },
+    {
+      "url": "https://github.com/WecomTeam/aibot-node-sdk",
+      "tool": "web open",
+      "result": "Official SDK README readable. Describes sendMessage as AI Bot push markdown and replyStream limit 20480 bytes.",
+      "assessment": "replyStream bound is not an exact sendMessage contract; does not confirm the older WeCom character/byte candidate. No product fixture executed."
+    }
+  ],
+  "failedOpenTranscription": {
+    "result": "Internal Error ()",
+    "content": "Failed to fetch https://github.com/mattermost/mattermost/tree/master/webapp/channels/src/utils: Failed to fetch restricted URL"
+  },
+  "limitations": "Search results and readable official SDK README do not establish Mattermost renderer semantics, WeCom sendMessage limits or actual service behavior."
+}
