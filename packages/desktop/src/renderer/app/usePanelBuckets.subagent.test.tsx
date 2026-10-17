@@ -137,6 +137,16 @@ describe("subagent conversation dock requests", () => {
     expect(hook.result.current.reviewDrafts).toEqual({});
   });
 
+  test("preserves an explicitly empty review snapshot while opening its turn", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("codeshell:review-files", { detail: { files: ["a.ts"], diff: "" } }),
+      );
+    });
+    expect(hook.result.current.activePanelState.reviewDiff).toBe("");
+  });
+
   test("keeps an accepted review bound to its bucket when a chat switch is batched", async () => {
     hook = await renderHook(useHarness);
     await act(async () => {

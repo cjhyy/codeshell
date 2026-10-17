@@ -292,7 +292,7 @@ export interface SessionFileDiff {
   path: string;
   /** Tool call that produced this diff; used only as stable provenance. */
   toolCallId: string;
-  /** Synthetic unified diff generated from the tool's own edit payload. */
+  /** Cumulative per-file preview composed from the successful edit payloads. */
   diff: string;
 }
 
@@ -309,8 +309,8 @@ export interface FilesChangedSummaryMessage {
   totalAdded: number;
   totalRemoved: number;
   /**
-   * Session/turn-scoped diff snippets derived from the tool calls that
-   * produced this card. This deliberately avoids asking Git for the
+   * Session/turn-scoped previews, grouped by file and composed where the
+   * successful tool payloads establish a continuous edit. Avoids asking Git for the
    * whole working tree, which can include changes from other sessions.
    */
   sessionDiffs?: SessionFileDiff[];

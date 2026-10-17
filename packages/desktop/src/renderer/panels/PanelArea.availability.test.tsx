@@ -151,4 +151,11 @@ describe("PanelArea launcher availability", () => {
     expect(text(container)).toContain("after-note");
     expect(diffCalls).toBe(0);
   });
+
+  test("keeps an authoritative empty snapshot without opening a live repository diff", async () => {
+    await render({ reviewDiff: "", requestKind: "review" });
+    await settle(emptyStatus);
+    expect(reviewTabs()).toHaveLength(1);
+    expect(diffCalls).toBe(0);
+  });
 });

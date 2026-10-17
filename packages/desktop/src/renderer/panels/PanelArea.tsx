@@ -210,7 +210,7 @@ function ResolvedPanelArea({
   );
   // A saved turn diff remains useful after a repository is removed. It may
   // open from its chat card, without exposing Git actions in the panel launcher.
-  const hasReviewSnapshot = Boolean(reviewDiff?.trim());
+  const hasReviewSnapshot = reviewDiff !== undefined;
   const enabledPanels = useMemo(
     () =>
       getEnabledPanelEntries({

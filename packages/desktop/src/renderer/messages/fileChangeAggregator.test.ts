@@ -46,14 +46,12 @@ describe("aggregateFileChanges", () => {
     expect(aggregateFileChanges([tool("Read", { file_path: "a.ts" })])).toBeNull();
   });
 
-  test("counts Edit by line diff of old_string vs new_string", () => {
+  test("counts only changed lines rather than unchanged replacement context", () => {
     const msgs: Message[] = [
       user(),
       tool("Edit", { file_path: "a.ts", old_string: "one\ntwo", new_string: "one\ntwo\nthree" }),
     ];
-    expect(aggregateFileChanges(msgs)).toEqual([
-      { path: "a.ts", added: 3, removed: 2, count: 1 },
-    ]);
+    expect(aggregateFileChanges(msgs)).toEqual([{ path: "a.ts", added: 1, removed: 0, count: 1 }]);
   });
 
   test("injected user turns (steer/wakeup) do NOT reset the aggregation boundary (#9)", () => {
@@ -100,7 +98,7 @@ describe("aggregateFileChanges", () => {
       tool("NotebookEdit", { file_path: "nb.ipynb", old_source: "x", new_source: "x\ny" }),
     ];
     expect(aggregateFileChanges(msgs)).toEqual([
-      { path: "nb.ipynb", added: 2, removed: 1, count: 1 },
+      { path: "nb.ipynb", added: 1, removed: 0, count: 1 },
     ]);
   });
 
@@ -110,9 +108,7 @@ describe("aggregateFileChanges", () => {
       tool("Edit", { file_path: "a.ts", old_string: "a", new_string: "a\nb" }),
       tool("Edit", { file_path: "a.ts", old_string: "c", new_string: "c\nd\ne" }),
     ];
-    expect(aggregateFileChanges(msgs)).toEqual([
-      { path: "a.ts", added: 5, removed: 2, count: 2 },
-    ]);
+    expect(aggregateFileChanges(msgs)).toEqual([{ path: "a.ts", added: 3, removed: 0, count: 2 }]);
   });
 
   test("includes subagent toolCalls", () => {
@@ -122,9 +118,7 @@ describe("aggregateFileChanges", () => {
       description: "do stuff",
       done: true,
       startedAt: 0,
-      toolCalls: [
-        tool("Write", { file_path: "from-agent.ts", content: "hello" }),
-      ],
+      toolCalls: [tool("Write", { file_path: "from-agent.ts", content: "hello" })],
       textBuffer: "",
       toolCount: 1,
     };
@@ -171,9 +165,7 @@ describe("aggregateFileChanges", () => {
       malformed,
       tool("Write", { file_path: "ok.ts", content: "x" }),
     ];
-    expect(aggregateFileChanges(msgs)).toEqual([
-      { path: "ok.ts", added: 1, removed: 0, count: 1 },
-    ]);
+    expect(aggregateFileChanges(msgs)).toEqual([{ path: "ok.ts", added: 1, removed: 0, count: 1 }]);
   });
 
   test("ignores tools missing file_path", () => {
@@ -182,16 +174,11 @@ describe("aggregateFileChanges", () => {
       tool("Edit", { old_string: "a", new_string: "b" }),
       tool("Write", { file_path: "ok.ts", content: "x" }),
     ];
-    expect(aggregateFileChanges(msgs)).toEqual([
-      { path: "ok.ts", added: 1, removed: 0, count: 1 },
-    ]);
+    expect(aggregateFileChanges(msgs)).toEqual([{ path: "ok.ts", added: 1, removed: 0, count: 1 }]);
   });
 
   test("supports `path` as alias for file_path", () => {
-    const msgs: Message[] = [
-      user(),
-      tool("Write", { path: "alias.ts", content: "x\ny" }),
-    ];
+    const msgs: Message[] = [user(), tool("Write", { path: "alias.ts", content: "x\ny" })];
     expect(aggregateFileChanges(msgs)).toEqual([
       { path: "alias.ts", added: 2, removed: 0, count: 1 },
     ]);
@@ -254,7 +241,7 @@ describe("aggregateFileChanges", () => {
 
     const summary = aggregateFileChangeSummary(msgs);
 
-    expect(summary?.files).toEqual([{ path: "multi.ts", added: 3, removed: 2, count: 1 }]);
+    expect(summary?.files).toEqual([{ path: "multi.ts", added: 2, removed: 1, count: 1 }]);
     // edit 1: "one" → "one\ntwo" — the common "one" line is trimmed to context,
     // so only "+two" is added (interleaved diff, not all-remove-then-all-add).
     expect(summary?.sessionDiffs[0]?.diff).toContain(" one");
@@ -294,5 +281,97 @@ describe("aggregateFileChanges", () => {
     const parsed = parseUnifiedDiff(summary?.sessionDiffs.map((d) => d.diff).join("\n") ?? "");
     expect(parsed.map((f) => f.newPath ?? f.oldPath)).toEqual(["docs/plan.md", "docs/new.md"]);
     expect(parsed[1]?.status).toBe("added");
+  });
+
+  test("two edits to the same text produce one net diff without the intermediate value", () => {
+    const summary = aggregateFileChangeSummary([
+      user(),
+      tool("Edit", { file_path: "a.ts", old_string: "original", new_string: "intermediate" }),
+      tool("Edit", { file_path: "./a.ts", old_string: "intermediate", new_string: "final" }),
+    ]);
+    expect(summary?.files).toEqual([{ path: "a.ts", added: 1, removed: 1, count: 2 }]);
+    expect(summary?.sessionDiffs).toHaveLength(1);
+    const diff = summary!.sessionDiffs[0]!.diff;
+    expect(parseUnifiedDiff(diff)).toHaveLength(1);
+    expect(diff).toContain("-original");
+    expect(diff).toContain("+final");
+    expect(diff).not.toContain("intermediate");
+  });
+
+  test("an exact reversal has no net files-changed card", () => {
+    expect(
+      aggregateFileChangeSummary([
+        user(),
+        tool("Edit", { file_path: "a.ts", old_string: "a", new_string: "b" }),
+        tool("Edit", { file_path: "a.ts", old_string: "b", new_string: "a" }),
+      ]),
+    ).toBeNull();
+  });
+
+  test("external attribution can preserve a touched file with an authoritative empty preview", () => {
+    const summary = aggregateFileChangeSummary([
+      user(),
+      tool("Edit", { file_path: "a.ts", old_string: "a", new_string: "b" }),
+      tool("Edit", { file_path: "a.ts", old_string: "b", new_string: "a" }),
+      {
+        kind: "system",
+        id: "external-a",
+        text: "done",
+        externalFileChanges: {
+          sourceId: "external-source",
+          cwd: "/repo",
+          files: ["a.ts"],
+        },
+      },
+    ]);
+    expect(summary?.files).toEqual([{ path: "a.ts", added: 0, removed: 0, count: 3 }]);
+    expect(summary?.sessionDiffs).toEqual([]);
+  });
+
+  test("different edit locations remain visible in one file's diff", () => {
+    const summary = aggregateFileChangeSummary([
+      user(),
+      tool("Edit", { file_path: "a.ts", old_string: "first-old", new_string: "first-new" }),
+      tool("Edit", { file_path: "a.ts", old_string: "second-old", new_string: "second-new" }),
+    ]);
+    const diff = summary!.sessionDiffs[0]!.diff;
+    const files = parseUnifiedDiff(diff);
+    expect(summary?.sessionDiffs).toHaveLength(1);
+    expect(files).toHaveLength(1);
+    expect(files[0]?.hunks).toHaveLength(2);
+    for (const line of ["-first-old", "+first-new", "-second-old", "+second-new"])
+      expect(diff).toContain(line);
+  });
+
+  test("a newly written file followed by an edit only shows its final added content", () => {
+    const summary = aggregateFileChangeSummary([
+      user(),
+      tool("Write", { file_path: "a.ts", content: "start\nintermediate\nend\n" }),
+      injectedUser(),
+      tool("Edit", { file_path: "a.ts", old_string: "intermediate", new_string: "final" }),
+    ]);
+    expect(summary?.files).toEqual([{ path: "a.ts", added: 3, removed: 0, count: 2 }]);
+    expect(summary?.sessionDiffs).toHaveLength(1);
+    expect(summary?.sessionDiffs[0]?.diff).toContain("--- /dev/null");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+final");
+    expect(summary?.sessionDiffs[0]?.diff).not.toContain("intermediate");
+  });
+
+  test("MultiEdit composes sequential replacements in a single call", () => {
+    const summary = aggregateFileChangeSummary([
+      user(),
+      tool("MultiEdit", {
+        file_path: "a.ts",
+        edits: [
+          { old_string: "a", new_string: "b" },
+          { old_string: "b", new_string: "c" },
+        ],
+      }),
+    ]);
+    expect(summary?.files).toEqual([{ path: "a.ts", added: 1, removed: 1, count: 1 }]);
+    expect(summary?.sessionDiffs[0]?.diff).toContain("-a");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+c");
+    expect(summary?.sessionDiffs[0]?.diff).not.toContain("+b");
+    expect(parseUnifiedDiff(summary!.sessionDiffs[0]!.diff)).toHaveLength(1);
   });
 });

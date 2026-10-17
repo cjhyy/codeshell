@@ -830,12 +830,12 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     const onReview = (e: Event): void => {
       const detail = (e as CustomEvent<{ files?: string[]; diff?: string }>).detail;
       const files = detail?.files;
-      if (!gitReviewAvailableRef.current && !detail?.diff?.trim()) return;
+      if (!gitReviewAvailableRef.current && typeof detail?.diff !== "string") return;
       updatePanelBucket(activeBucketRef.current, (state) => ({
         ...state,
         open: true,
         reviewFiles: Array.isArray(files) && files.length > 0 ? files : undefined,
-        reviewDiff: detail?.diff || undefined,
+        reviewDiff: typeof detail?.diff === "string" ? detail.diff : undefined,
         requestNonce: state.requestNonce + 1,
         requestKind: "review",
       }));
