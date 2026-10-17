@@ -1,0 +1,248 @@
+{
+  "base": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "headAtAuthorSourceCheck": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "lineCount": 45,
+      "coveredLineCount": 45,
+      "bytes": 1722,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "currentSha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "frozenSha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "frozenGitBlob": "db661f02eb2de72466806a00eaca8879a6d6cdfb",
+      "matchesFrozen": true,
+      "role": "product-or-contract",
+      "note": "Actual zero-runtime-import production string leaf; read full and exercised once by authorized shard."
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "lineCount": 34,
+      "coveredLineCount": 34,
+      "bytes": 1257,
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "currentSha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "frozenSha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "frozenGitBlob": "e2d96758906504be497e28e87f6459f4f70cc43a",
+      "matchesFrozen": true,
+      "role": "product-or-contract",
+      "note": "Read full, existing seven pure-leaf tests executed once by authorized shard; bounded existing ANSI controls are not a new ANSI investigation."
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          280,
+          345
+        ],
+        [
+          410,
+          515
+        ]
+      ],
+      "lineCount": 702,
+      "coveredLineCount": 172,
+      "bytes": 25112,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "currentSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "frozenSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "frozenGitBlob": "dcf3f1db0cb52ac62ae9afd714ce3ae0cdf41d75",
+      "matchesFrozen": true,
+      "role": "product-or-contract",
+      "note": "Raw onData to ring, raw helper and both readOutput branches/header entry read only; never imported or instantiated."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          79
+        ]
+      ],
+      "lineCount": 130,
+      "coveredLineCount": 79,
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "currentSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "frozenSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "frozenGitBlob": "df9050f5c27206ff810ca33028ab2c2d430833d3",
+      "matchesFrozen": true,
+      "role": "product-or-contract",
+      "note": "Actual inventory-resolved BashOutput contract and body; manager/tool remain static only."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          104,
+          135
+        ]
+      ],
+      "lineCount": 396,
+      "coveredLineCount": 32,
+      "bytes": 23642,
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "currentSha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "frozenSha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "frozenGitBlob": "e2cfdea739d943ef70a9e60a0ba5fe67cd5c092d",
+      "matchesFrozen": true,
+      "role": "product-or-contract",
+      "note": "Prior raw mirror/cleaned output contract only; surrounding process semantics are not validated."
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          188
+        ]
+      ],
+      "lineCount": 188,
+      "coveredLineCount": 188,
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "currentSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "frozenSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "frozenGitBlob": "33d65a1e472ed6d1160a267680cf58b3ebe946fc",
+      "matchesFrozen": true,
+      "role": "product-or-contract",
+      "note": "Additional full static source read: raw Buffer retention, UTF-8 decoding and best-effort raw disk mirror; no import/constructor/FS experiment."
+    },
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "lineCount": 217,
+      "coveredLineCount": 217,
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenGitBlob": "50671f6297598a14ad4710b61ab103747fa7676a",
+      "matchesFrozen": true,
+      "role": "instruction",
+      "note": "Assistant workflow instructions, re-read in full; not a product source target."
+    }
+  ],
+  "sourcePinCount": 7,
+  "activeProductContractPinCount": 6,
+  "instructionPinCount": 1,
+  "productContractReadLines": 550,
+  "coverageRule": "Full hashes pin bytes; only declared full/selected ranges were semantically read. The copied prep11 hash rechecks below do not add11 new full source reads.",
+  "prepHashRechecks": [
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "bytes": 1722,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "bytes": 1257,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "bytes": 25112,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "bytes": 5335,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "bytes": 23642,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "bytes": 523,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "bytes": 1229,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/protocol/session-message-result.ts",
+      "sha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "bytes": 2130,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "bytes": 9304,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "sha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "bytes": 13007,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "bytes": 6276,
+      "matchesFrozen": true,
+      "matchesCopiedPrep": true,
+      "coverage": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest"
+    }
+  ],
+  "prepHashRecheckCount": 11,
+  "productChanges": false,
+  "gitWrites": false
+}

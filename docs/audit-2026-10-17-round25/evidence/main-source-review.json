@@ -1,0 +1,63 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "refreshedMain": "d9d2c33ddd1b2edea28a719e4cd0a505a96c0b08",
+  "externalCommits": [
+    "d9d2c33dd feat(review): add scoped AI drafts and complete Git review targets"
+  ],
+  "externalPaths": [
+    "TODO.md",
+    "packages/coding/src/index.git.ts",
+    "packages/coding/src/review/review-prompt.test.ts",
+    "packages/coding/src/review/review-prompt.ts",
+    "packages/coding/src/review/review-target.test.ts",
+    "packages/coding/src/review/review-target.ts",
+    "packages/desktop/src/main/desktop-services.review-diff.test.ts",
+    "packages/desktop/src/main/desktop-services.ts",
+    "packages/desktop/src/main/index.ts",
+    "packages/desktop/src/main/review-service.test.ts",
+    "packages/desktop/src/main/review-service.ts",
+    "packages/desktop/src/preload/project-authority-api.ts",
+    "packages/desktop/src/preload/project-authority-types.ts",
+    "packages/desktop/src/renderer/App.tsx",
+    "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+    "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+    "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+    "packages/desktop/src/renderer/chat/composerSeed.ts",
+    "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+    "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+    "packages/desktop/src/renderer/i18n/ns/panels.ts",
+    "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+    "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+    "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+    "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+    "packages/desktop/src/shared/review.ts",
+    "packages/tui/src/cli/commands/builtin/git-commands.ts",
+    "packages/tui/src/cli/commands/builtin/review-command.test.ts"
+  ],
+  "changedSelectedSources": [
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "frozenBytes": 299077,
+      "mainBytes": 299337,
+      "authorReadRanges": [
+        [
+          4206,
+          4213
+        ]
+      ],
+      "selectedAuthorLinesUnchanged": true
+    }
+  ],
+  "readScope": "Metadata-only source delta;complete +8line index.ts patch read,addition afterold6447 atnew6448-6455 forreview preparePrompt. SelectedLinkcatalog ranges unchangedbyteforbyte;other27changedpaths not comprehensivelyread orruntimevalidated. Actualoutput-clean producer untouched. Frozen/current/main separated; no newfeature/fix verification orproductrerun.",
+  "productAttempts": 0,
+  "productTestsRerun": false,
+  "patchArtifact": {
+    "path": "evidence/main-index.patch",
+    "bytes": 572,
+    "sha256": "330e03e433c51035baa79b46e5b858c4c86e92a5a0693d61a2701020b7700ddc",
+    "scope": "Exact git diff --unified=0 metadata capture;8insertions,not an applied patch or product run.",
+    "hunk": "@@ -6447,0 +6448,8 @@"
+  }
+}

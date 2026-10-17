@@ -1,0 +1,126 @@
+{
+  "status": "One independent pure-text frontier recommended for Root review; source lead only, not a formal bug or runtime reproduction",
+  "initialReadHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "currentHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "outputDirectory": "/tmp/codeshell-audit-round25-pure-data-frontier",
+  "proposedLane": {
+    "source": "packages/core/src/runtime/output-clean.ts",
+    "actualExports": [
+      "stripAnsi",
+      "foldProgressLines",
+      "cleanOutput"
+    ],
+    "preferredNarrowFunction": "foldProgressLines (ordinary CRLF text only; no ANSI/OSC/bidi/grapheme experiment)",
+    "runtimeImports": 0,
+    "sourceLead": {
+      "classification": "unexecuted source inference; severity not assigned",
+      "cause": "The leaf splits on LF and replaces every segment containing CR with only text after its final CR. An ordinary CR immediately before LF therefore has no following segment text, discarding the visible completed line.",
+      "sampleInputEscaped": "ready\\r\\nnext\\r\\n",
+      "sourcePredictedResultEscaped": "\\n\\n",
+      "executionPerformed": false,
+      "expectedVisibleContract": "BashOutput promises reading background output after removing ANSI/progress redraw noise; visible ordinary line text should remain. The helper explicitly says newlines are preserved as line separators. ExactCRLF→LF normalization is not asserted as a general byte-preservation contract.",
+      "notOSDependent": "CRLF is a finite ordinary string boundary; no Windows/PTY/shell/process assumption or native validation is needed to evaluate this leaf."
+    },
+    "ordinaryStaticProducerChain": [
+      {
+        "source": "packages/core/src/runtime/background-shell.ts:328-342",
+        "evidence": "Actual child stdout/stderr onData writes raw Buffer to ring without newline rewriting. Sourceonly; no child or manager created."
+      },
+      {
+        "source": "packages/core/src/runtime/background-shell.ts:444-502",
+        "evidence": "modeall reads rawretained text then cleanOutput; incrementalmode reads rawbuffer, advances rawoffset, then cleanOutput. Both have same short-text transformation; no cap orcursor-fault experiment needed."
+      },
+      {
+        "source": "packages/core/src/tool-system/builtin/background-shell-tools.ts:25-61",
+        "evidence": "Actual inventory located BashOutput tool definition and body; body calls readOutput then returns header/text. No tool/ctx/session/authority execution."
+      }
+    ],
+    "counterevidenceAndLimits": [
+      "Raw retained output remains available to test/UI helper or external tail; proposed effect is cleaned agent-facing text, not disk corruption.",
+      "Existing leaf tests cover ordinaryLF, bareCRprogress and ANSI only; no CRLF case present. Existing tests are static read, not current passed evidence.",
+      "A deliberate bareCRredraw is intended to drop earlierframes; the proposal targets completedCRLF lines and preserves bareCRcontrol semantics.",
+      "Do not extrapolate to allbackgroundshell behavior, NativeWindows, resourcecleanup, commands, security/permissions or completeLLMinteraction.",
+      "No ordinary actualprocess log or SDK/model/client was invoked; sourceflow is the only producer evidence in this prep."
+    ]
+  },
+  "history": {
+    "roots": [
+      "docs",
+      "bugs"
+    ],
+    "allRecursiveMarkdownAndJSONScalars": true,
+    "archivesIncluded": true,
+    "excluded": "future currentround25 (none authored here); round24 nowincluded ashistory",
+    "totals": {
+      "files": 2451,
+      "markdown": 1233,
+      "json": 1218,
+      "stringLeaves": 405154,
+      "scalarLeaves": 575335,
+      "parseErrors": 0
+    },
+    "matchCounts": {
+      "exact": 177,
+      "newlineMechanism": 16
+    },
+    "retainedContexts": {
+      "exact": 177,
+      "newlineMechanism": 16
+    },
+    "limits": [
+      "All scalar values searched through string/JSON spelling; keys notvalues.",
+      "All177exact/16newlinecontexts saved, but keywords/boundedparent inspection are notsemanticexhaustion.",
+      "Exact output-clean mentions were inventory/contracts; selectedread didnot identify prior same CRLFvisibletextloss. Novelty is conditional on Root finaldedup."
+    ]
+  },
+  "distinctFromOld": [
+    {
+      "prior": "May30 and OM3 session-memory-sort (secondbatch operations-memory.md)",
+      "decision": "Excluded entirely asnewlane; OM3 timezone/string-sort is alreadyformal and itsoriginalgroup failed. No summary/memory retry."
+    },
+    {
+      "prior": "round14 formatResetTime(showTime=false) and relative-time concerns",
+      "decision": "Oldstaticobservation with noordinaryconsumer andruntimeIntl dependency; no formatter/i18n recovery or newtest."
+    },
+    {
+      "prior": "round6 skills CRLF frontmatter / failed import direction",
+      "decision": "Different parser/delimiter cause, remains skipped; no Skill parser import or repetition."
+    },
+    {
+      "prior": "round19 simplediff CRLF normalization",
+      "decision": "Humanpreview explicitly normalizes newline style; different contract, not output-cleanvisibletextloss."
+    },
+    {
+      "prior": "round21 NDJSON CRLF controls",
+      "decision": "readline parser ordinary JSON streams; different leaf andcause, no NDJSONorCLI rerun."
+    },
+    {
+      "prior": "BackgroundShell old largeburst pagination#5; oldANSI/OSC/sliceAnsi/TUI failures",
+      "decision": "Proposed cue occursin tinyASCII completedlines beforeanycap. Only CRLF text folding considered; no oldcap/native/ANSI/grapheme fixture recovery."
+    },
+    {
+      "prior": "session-message-result.ts considered",
+      "decision": "No independent new causalissue selected; notificationauthority/Date.now dependencies not a recommendedruntime lane."
+    }
+  ],
+  "suggestedNextStepAfterRootCreatesNewBranch": {
+    "authorizedNow": false,
+    "fixtureWritten": false,
+    "testExecuted": false,
+    "proposalOnly": [
+      "Revalidate frozen/source path and exact zero runtime imports against nextfrozenbranch.",
+      "If Rootassigns lane, useguarded first-run only of actual leaf focusedfixture and optionallyexisting7pureleaf declarations.",
+      "Keep anycharacterization explicitlycurrentbadbehavior+normalLF/bareCRcontrols; passing doesnotmeanfix.",
+      "Save mergedfirststdout/stderr plus exit beforeinspection; anyfailure ends direction, preserve andskipwithoutrepair/retry/alternatevalidation.",
+      "Never importorconstruct BackgroundShellManager/BashOutput/toolbarrel/Engine/process; no realtimer/native/VM/AST/network/HOME/security/custody/identity experiment."
+    ]
+  },
+  "metadataFailures": "metadata-notes.json and metadata-first-responses.txt (manualvisibletranscription, notproductraw; no reconstructed exitcodes)",
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesWritten": 0,
+  "vmAstEvaluations": 0,
+  "gitWrites": 0,
+  "round24Writes": 0
+}

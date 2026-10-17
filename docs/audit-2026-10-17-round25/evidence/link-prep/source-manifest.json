@@ -1,0 +1,348 @@
+{
+  "readHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "frozenReference": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "frozenReferenceMeaning": "Existing round24 frozen source reference, not a claimed round25 branch or runtime freeze.",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "lines": 217,
+      "bytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenReferenceSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "readHeadSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Repository instructions; parent owns branch/worktree integration; no Git writes."
+    },
+    {
+      "path": "packages/link/README.md",
+      "lines": 42,
+      "bytes": 2941,
+      "currentSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "frozenReferenceSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "readHeadSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Portable manifest/public package contract; upstream statements are not revalidated."
+    },
+    {
+      "path": "packages/link/package.json",
+      "lines": 37,
+      "bytes": 951,
+      "currentSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "frozenReferenceSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "readHeadSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Actual public entry metadata only; no dist/build/package runtime validation."
+    },
+    {
+      "path": "packages/host/README.md",
+      "lines": 26,
+      "bytes": 1609,
+      "currentSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "frozenReferenceSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "readHeadSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Public synchronous lifecycle contract; credential paragraphs read as context, not validated."
+    },
+    {
+      "path": "packages/host/package.json",
+      "lines": 38,
+      "bytes": 923,
+      "currentSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "frozenReferenceSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "readHeadSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Actual public entry/dependency metadata only."
+    },
+    {
+      "path": "packages/link/src/catalog.ts",
+      "lines": 705,
+      "bytes": 30277,
+      "currentSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "frozenReferenceSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "readHeadSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "705 lines read in bounded contiguous segments; pure metadata, lookup and typed localization. No auth/permission/provider URL validation."
+    },
+    {
+      "path": "packages/link/src/types.ts",
+      "lines": 107,
+      "bytes": 3278,
+      "currentSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "frozenReferenceSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "readHeadSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Portable presentation data shapes; no runtime imports."
+    },
+    {
+      "path": "packages/link/src/recipes.ts",
+      "lines": 122,
+      "bytes": 4162,
+      "currentSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "frozenReferenceSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "readHeadSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Read-only metadata compatibility projection; no record/store/access execution."
+    },
+    {
+      "path": "packages/link/src/figma.ts",
+      "lines": 29,
+      "bytes": 1031,
+      "currentSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "frozenReferenceSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "readHeadSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Local string constants, reviewed action-id membership; no upstream API or OAuth claims verified."
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "lines": 71,
+      "bytes": 1878,
+      "currentSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "frozenReferenceSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "readHeadSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Public exports/import-edge inventory only; never imported."
+    },
+    {
+      "path": "packages/link/src/catalog.test.ts",
+      "lines": 102,
+      "bytes": 4144,
+      "currentSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "frozenReferenceSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "readHeadSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Existing source test declarations/contract counterevidence only; not executed."
+    },
+    {
+      "path": "packages/link/src/recipes.test.ts",
+      "lines": 68,
+      "bytes": 2561,
+      "currentSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "frozenReferenceSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "readHeadSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Existing ordinary schema/projection declarations/contract counterevidence only; not executed."
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "lines": 118,
+      "bytes": 4215,
+      "currentSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "frozenReferenceSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "readHeadSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "selected",
+      "selectedLineRanges": [
+        [
+          69,
+          118
+        ]
+      ],
+      "note": "Recipe union/data shape plus adjacent request/error declarations; no authorization validation."
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "lines": 117,
+      "bytes": 4014,
+      "currentSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "frozenReferenceSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "readHeadSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "117-line ordinary synchronous registry/lifecycle; no construction, callbacks or dispatch."
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "lines": 13,
+      "bytes": 388,
+      "currentSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "frozenReferenceSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "readHeadSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "13-line public export inventory; host-request authority implementation not re-read."
+    },
+    {
+      "path": "packages/server/src/links/catalog.ts",
+      "lines": 57,
+      "bytes": 2243,
+      "currentSha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "frozenReferenceSha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "readHeadSha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "57-line actual pure compose function and impure default-registration entry boundary, static only."
+    },
+    {
+      "path": "packages/desktop/src/main/link-provider-catalog.ts",
+      "lines": 6,
+      "bytes": 259,
+      "currentSha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "frozenReferenceSha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "readHeadSha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "6-line compatibility re-export; no server barrel imported."
+    },
+    {
+      "path": "packages/desktop/src/main/link-provider-catalog.test.ts",
+      "lines": 25,
+      "bytes": 1129,
+      "currentSha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "frozenReferenceSha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "readHeadSha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "25-line existing two-test declaration; trusted executor fixture not executed."
+    },
+    {
+      "path": "packages/server/src/links/service.ts",
+      "lines": 2232,
+      "bytes": 84284,
+      "currentSha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "frozenReferenceSha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "readHeadSha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "selected",
+      "selectedLineRanges": [
+        [
+          235,
+          265
+        ]
+      ],
+      "note": "Ordinary createLinkService takes catalog at line243; nearby constructor/state context only; not a full service/auth audit."
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "lines": 7322,
+      "bytes": 299077,
+      "currentSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "frozenReferenceSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "readHeadSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "selected",
+      "selectedLineRanges": [
+        [
+          4206,
+          4213
+        ]
+      ],
+      "note": "Ordinary links:listLocalProviders IPC registration at4210; neighboring lines incidental; no Electron import/execution."
+    },
+    {
+      "path": "docs/todo/link-catalog-compatibility-delivery.md",
+      "lines": 31,
+      "bytes": 2501,
+      "currentSha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "frozenReferenceSha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "readHeadSha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Existing cross-version discovery contract and previously reported validations; no historical raw receipt retrieval or rerun."
+    },
+    {
+      "path": "docs/todo/link-connector-refactor-delivery-2026-10-16.md",
+      "lines": 28,
+      "bytes": 4467,
+      "currentSha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "frozenReferenceSha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "readHeadSha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "full",
+      "selectedLineRanges": null,
+      "note": "Five-recipe/schema2 compatibility contract and previously reported verification, not current execution."
+    },
+    {
+      "path": "docs/todo/link-connector-refactor-plan-2026-10-16.md",
+      "lines": 393,
+      "bytes": 54388,
+      "currentSha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "frozenReferenceSha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "readHeadSha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "selected",
+      "selectedLineRanges": [
+        [
+          87,
+          125
+        ]
+      ],
+      "note": "Explicit current-host versus device recipe mapping and model boundary; larger initial read was output-truncated and is not claimed full."
+    },
+    {
+      "path": "docs/architecture/local-link-mvp.md",
+      "lines": 175,
+      "bytes": 14632,
+      "currentSha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "frozenReferenceSha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "readHeadSha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "matchesFrozenReference": true,
+      "matchesReadHead": true,
+      "readScope": "selected",
+      "selectedLineRanges": [
+        [
+          39,
+          72
+        ]
+      ],
+      "note": "Actual catalog/display/IPC design context; not current upstream-provider fact verification."
+    }
+  ],
+  "sourcePinCount": 24,
+  "full": 19,
+  "selected": 5,
+  "notSemanticCoverage": "Full-file byte pins prove byte identity only; inventory-only and navigation-only files have not become full source coverage."
+}

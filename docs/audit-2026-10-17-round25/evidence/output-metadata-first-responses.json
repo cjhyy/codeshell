@@ -1,0 +1,10 @@
+{
+  "recordType": "manual transcription of first metadata tool response; not original process raw",
+  "id": "OUTPUT-META-01",
+  "exitCode": 2,
+  "argvText": "rg -n 'write\\(|readAll\\(|sliceFromAbsolute|toString|writeSync|readSync|normalize|replace|\\r|\\n' packages/core/src/runtime/ring-file.ts",
+  "transportNote": "JavaScript string interpretation inserted literal CR/LF in regex argument; displayed command spelling is preserved as explanatory escaped text, not a claim of exact shell byte capture.",
+  "firstOutput": "rg: the literal \"\\n\" is not allowed in a regex\n\nConsider enabling multiline mode with the --multiline flag (or -U for short).\nWhen multiline mode is enabled, new line characters can be matched.\n",
+  "productExecution": false,
+  "productReruns": 0
+}

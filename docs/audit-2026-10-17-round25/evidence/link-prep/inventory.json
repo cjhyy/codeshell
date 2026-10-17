@@ -1,0 +1,259 @@
+{
+  "readHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "frozen": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "paths": [
+    {
+      "path": "CODESHELL.md",
+      "lines": 217,
+      "bytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/README.md",
+      "lines": 26,
+      "bytes": 1609,
+      "currentSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "frozenSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/package.json",
+      "lines": 38,
+      "bytes": 923,
+      "currentSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "frozenSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/src/ask-user-unavailable.test.ts",
+      "lines": 165,
+      "bytes": 5811,
+      "currentSha256": "48bae42cd5be14b68fb40263b1e406ed1e954233b3d52910c2959c1abe605000",
+      "frozenSha256": "48bae42cd5be14b68fb40263b1e406ed1e954233b3d52910c2959c1abe605000",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/src/host-requests.ts",
+      "lines": 151,
+      "bytes": 4880,
+      "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "lines": 13,
+      "bytes": 388,
+      "currentSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "frozenSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/src/runtime.test.ts",
+      "lines": 300,
+      "bytes": 10519,
+      "currentSha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+      "frozenSha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "lines": 117,
+      "bytes": 4014,
+      "currentSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "frozenSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/host/tsconfig.json",
+      "lines": 16,
+      "bytes": 367,
+      "currentSha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "frozenSha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/README.md",
+      "lines": 42,
+      "bytes": 2941,
+      "currentSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "frozenSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/bunfig.toml",
+      "lines": 8,
+      "bytes": 389,
+      "currentSha256": "3ca9de8b7a4887aef172606f8ebd7134b173a765e6cdad93fcc6a4d0d28306d8",
+      "frozenSha256": "3ca9de8b7a4887aef172606f8ebd7134b173a765e6cdad93fcc6a4d0d28306d8",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/contracts/operations.v1.json",
+      "lines": 4525,
+      "bytes": 98172,
+      "currentSha256": "9a52bbb7a93d02c80ccad46b861d5423c23444367f9d172d720718d9614ac353",
+      "frozenSha256": "9a52bbb7a93d02c80ccad46b861d5423c23444367f9d172d720718d9614ac353",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/package.json",
+      "lines": 37,
+      "bytes": 951,
+      "currentSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "frozenSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/catalog.test.ts",
+      "lines": 102,
+      "bytes": 4144,
+      "currentSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "frozenSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/catalog.ts",
+      "lines": 705,
+      "bytes": 30277,
+      "currentSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "frozenSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/figma.ts",
+      "lines": 29,
+      "bytes": 1031,
+      "currentSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "frozenSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/file-selection.test.ts",
+      "lines": 106,
+      "bytes": 3564,
+      "currentSha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+      "frozenSha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/file-selection.ts",
+      "lines": 92,
+      "bytes": 3645,
+      "currentSha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+      "frozenSha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "lines": 71,
+      "bytes": 1878,
+      "currentSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "frozenSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/management-types.ts",
+      "lines": 258,
+      "bytes": 7193,
+      "currentSha256": "290214fc9c1f191c0dae2943eea79f32a54291e0fbe76134b880c7de0cb477ed",
+      "frozenSha256": "290214fc9c1f191c0dae2943eea79f32a54291e0fbe76134b880c7de0cb477ed",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "lines": 118,
+      "bytes": 4215,
+      "currentSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "frozenSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/operation-validation.ts",
+      "lines": 278,
+      "bytes": 10999,
+      "currentSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "frozenSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "lines": 212,
+      "bytes": 8281,
+      "currentSha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "frozenSha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "lines": 584,
+      "bytes": 17020,
+      "currentSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "frozenSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/recipes.test.ts",
+      "lines": 68,
+      "bytes": 2561,
+      "currentSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "frozenSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/recipes.ts",
+      "lines": 122,
+      "bytes": 4162,
+      "currentSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "frozenSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/src/types.ts",
+      "lines": 107,
+      "bytes": 3278,
+      "currentSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "frozenSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    },
+    {
+      "path": "packages/link/tsconfig.json",
+      "lines": 17,
+      "bytes": 404,
+      "currentSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "frozenSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    }
+  ],
+  "note": "Actual rg --files inventory. Byte pins are not full source review or runtime validation."
+}

@@ -1,0 +1,51 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/dedup.py",
+      "bytes": 3012,
+      "sha256": "74edc8d440268ea5f3b520b24db615477199533dec5b440e6bd6caeda41341e3"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/history.json",
+      "bytes": 551527,
+      "sha256": "ecf1e8e1b037f7a34cd69607489ab5c3c32405dd7f1434e81df4e05f2c0755ea"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/inventory.json",
+      "bytes": 94123,
+      "sha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/metadata-first-responses.txt",
+      "bytes": 763,
+      "sha256": "68f543aef5b92e601a4a0b8ef8f7fcfea87021ef32aa02285542c748edd6ef4b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/metadata-notes.json",
+      "bytes": 1292,
+      "sha256": "5d44ccb9ae51551db0ca1f6debedcf8de97036fa0e0a77a70a7884c842b94741"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/proposal.json",
+      "bytes": 6902,
+      "sha256": "06bd96fb199dbf0ba3d0104e32ededd504b4d74ba41d6d42696d42ac8804e8fc"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/selected-history.json",
+      "bytes": 11503,
+      "sha256": "992c03f920760ecf7ce5b9121f46fd9aae416954867b9826a69563a2155a2635"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round25-pure-data-frontier/source-manifest.json",
+      "bytes": 6557,
+      "sha256": "46a7aa416f01b28139c328319497dc3157a6bd2daba4434601a67604ed5f3206"
+    }
+  ],
+  "receiptExcludesItself": true,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "fixturesWritten": 0,
+  "gitWrites": 0,
+  "round24Writes": 0,
+  "note": "Ownedmetadata proposalonly; fullhashes areprovenance,notadditional productexecution or semanticcoverage."
+}

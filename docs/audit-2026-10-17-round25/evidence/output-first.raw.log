@@ -1,0 +1,28 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round25/evidence/output-crlf.test.ts:
+{"characterization":"one CRLF line","input":"ready\r\n","literalExpectedCleanText":"ready\n","observed":"\n","boundary":"Owned short ASCII strings; actual leaf only. Passing asserts current wrong behavior, not a fix."}
+(pass) round25 actual output-clean CRLF characterization and ordinary controls > a completed CRLF line loses its visible text [3.41ms]
+{"characterization":"two CRLF lines","input":"ready\r\nnext\r\n","literalExpectedCleanText":"ready\nnext\n","observed":"\n\n","boundary":"Owned short ASCII strings; actual leaf only. Passing asserts current wrong behavior, not a fix."}
+(pass) round25 actual output-clean CRLF characterization and ordinary controls > two completed CRLF lines retain separators while losing both bodies
+{"characterization":"mixed LF and CRLF","input":"first\nsecond\r\nlast","literalExpectedCleanText":"first\nsecond\nlast","observed":"first\n\nlast","boundary":"Owned short ASCII strings; actual leaf only. Passing asserts current wrong behavior, not a fix."}
+(pass) round25 actual output-clean CRLF characterization and ordinary controls > mixed LF and CRLF loses only the CRLF line body [0.03ms]
+{"characterization":"progress ending in CRLF","input":"10%\r100%\r\nready\r\n","literalExpectedCleanText":"100%\nready\n","observed":"\n\n","boundary":"Owned short ASCII strings; actual leaf only. Passing asserts current wrong behavior, not a fix."}
+(pass) round25 actual output-clean CRLF characterization and ordinary controls > a progress redraw completed by CRLF also loses its final visible frame
+(pass) round25 actual output-clean CRLF characterization and ordinary controls > ordinary LF lines keep their visible text [0.02ms]
+(pass) round25 actual output-clean CRLF characterization and ordinary controls > bare CR progress still keeps the final frame
+
+packages/core/src/runtime/output-clean.test.ts:
+(pass) stripAnsi > removes color escapes [0.04ms]
+(pass) stripAnsi > removes cursor/erase escapes
+(pass) stripAnsi > leaves plain text untouched
+(pass) foldProgressLines > collapses \r progress frames to the last frame [0.04ms]
+(pass) foldProgressLines > keeps normal newlines
+(pass) foldProgressLines > handles trailing \r without newline
+(pass) cleanOutput > strips ANSI and folds progress in one pass [0.29ms]
+
+ 13 pass
+ 0 fail
+ 23 expect() calls
+Ran 13 tests across 2 files. [175.00ms]
+Completed Bun shard: 13 tests, 0 skipped; 0 failures.

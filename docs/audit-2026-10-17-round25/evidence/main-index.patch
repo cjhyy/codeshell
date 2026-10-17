@@ -1,0 +1,13 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index 31a936879..8631bb31a 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -6447,0 +6448,8 @@ ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: num
++ipcMain.handle("review:preparePrompt", async (_e, sessionId: string, request: unknown) => {
++  assertDesktopSessionId(sessionId);
++  return reviewService.preparePrompt(
++    sessionId,
++    request as import("../shared/review.js").ReviewAiPromptRequest,
++  );
++});
++

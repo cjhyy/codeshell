@@ -1,0 +1,23 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "count": 0,
+  "sourceChanges": [],
+  "sourceMetadataChanges": [
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "frozenBytes": 299077,
+      "mainBytes": 299337,
+      "authorReadRanges": [
+        [
+          4206,
+          4213
+        ]
+      ],
+      "selectedAuthorLinesUnchanged": true
+    }
+  ],
+  "runtimeRetested": false,
+  "note": "New observed bug recorded,not fixed;index concurrentfeaturechange notfixverification."
+}
