@@ -1,0 +1,54 @@
+{
+  "frozenCommit": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "hashOrigin": "captured frozen worktree source bytes; root must verify against frozen Git blobs before integration",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesCurrent": true,
+      "coverage": "full; instructions"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/parser.ts",
+      "frozenSha256": "2572d1d2204c222d62bd37e609ed5d68a253b64a8637a5e7334800bb497b3611",
+      "matchesCurrent": true,
+      "coverage": "full; actual parsePatch execution"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/types.ts",
+      "frozenSha256": "cc2e53039c195b6d4150ef357dbe634c43c4181a7a60559fbea068e4dbe6ad7a",
+      "matchesCurrent": true,
+      "coverage": "full; AST contract and PatchParseError transitively executed"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/seek-sequence.ts",
+      "frozenSha256": "c7d9155f6b62bcdc3a6fb901b0265ac3f926e732fbe1456a7a6ef82fc0adeb66",
+      "matchesCurrent": true,
+      "coverage": "full; actual seekSequence execution"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/eol.ts",
+      "frozenSha256": "2d54066dacad5e32c76b3752d755a6266a7fa02c99d90e6f00c0fdebf68cf040",
+      "matchesCurrent": true,
+      "coverage": "full; source only, not executed"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/applier.ts",
+      "frozenSha256": "8f4bfde4d496e3eae137525fc4a5af0a1c2db79f6b1d8c3cf0e8ca4989a4b4bb",
+      "matchesCurrent": true,
+      "coverage": "lines 1-260; static ordinary content planner/matcher consumer only, not executed"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/index.ts",
+      "frozenSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "matchesCurrent": true,
+      "coverage": "full; static tool description/parser/AST handoff only, not imported or executed"
+    },
+    {
+      "path": "tests/apply-patch.test.ts",
+      "frozenSha256": "fe0cb513a3a5dd729f0ff00f96500d616b6c350ff9f8fa8c6162f7299970dd5b",
+      "matchesCurrent": true,
+      "coverage": "full; source only, existing mixed tests not executed"
+    }
+  ]
+}

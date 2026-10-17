@@ -1,0 +1,81 @@
+{
+  "frozenSource": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-candidates.json",
+      "bytes": 943,
+      "sha256": "54ffbe10b5154bbd3a2ec41b71420e6e29a878b98125812d9cdf85b3a69d2ce2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+      "bytes": 272892,
+      "sha256": "7dfc81ebfefff583c8654306ddb1577426dad62fcc1b702fc6a5007e8ea8a3d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+      "bytes": 368522,
+      "sha256": "db434249ea6d2e98097b40fda17000bde582168d1e86623dfb9bb0d2d181b4e8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-findings.json",
+      "bytes": 3150,
+      "sha256": "9f2ace7fa0d58f66499725b295346807e4b0141b4c0803f9af0d718ece3ec28f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-key-events.first-exit.json",
+      "bytes": 281,
+      "sha256": "a42bc8cbee915acc707e46c49b2138725aa8bcac6ac3657e26e034e51e09167c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-key-events.first.log",
+      "bytes": 1346,
+      "sha256": "267089e86d88b08d4ce85f426cf1a6185484ff9f5fd895fede9862ed306d92c1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-key-events.test.ts",
+      "bytes": 3717,
+      "sha256": "9222c2f41ffe17dd439b170fa06a7f286a12e6b87d86f5e2aff7b057248206fd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-metadata-read-diagnostic.json",
+      "bytes": 502,
+      "sha256": "32b492f2f4128d7616a8b926dc141ab1b013c8b78805e3f7e9aca8d3b666130e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-official-sources.json",
+      "bytes": 959,
+      "sha256": "c3123e6158ae33af366b359170d538ff356bdbaac22d0623ca7fef01f65f22c1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-source-manifest.json",
+      "bytes": 9109,
+      "sha256": "e572e09e1ae3b3da06b3e3ea1eb3c0ef2579563e7d8b7938ce733d5c3a4b39fd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-text-data.first-exit.json",
+      "bytes": 279,
+      "sha256": "e5883013d5d3a78de9302c2209ab2acd3203cc339d8deebf895a674d6199bf4f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-text-data.first.log",
+      "bytes": 778,
+      "sha256": "5769d685e360e7b434d684b268c8ec24d337b183f360606750faf644a066ab95"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-text-data.test.ts",
+      "bytes": 4153,
+      "sha256": "b9b217c23c3609c5f9d8f2eaea82d878006f4dd5f98fb7e0fbedefdf49dd1f60"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-validation.json",
+      "bytes": 1287,
+      "sha256": "a8d2514fc9f7e28e4ed24e5f7e5f570aea64896fd3f26676dcd54aff6d75a8a1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/tui-input.md",
+      "bytes": 6865,
+      "sha256": "9ed0975714f9b05cb5691efb8dc85c4b4a89a831b70a272f3a0293dbc299f344"
+    }
+  ],
+  "selfExcluded": true
+}

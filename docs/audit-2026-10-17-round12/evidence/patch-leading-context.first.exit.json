@@ -1,0 +1,18 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round12/evidence/patch-leading-context.test.ts"
+  ],
+  "exitCode": 0,
+  "durationSeconds": 0.2994070053100586,
+  "log": "docs/audit-2026-10-17-round12/evidence/patch-leading-context.first.log",
+  "logSha256": "e51f796029f7dd89337c9760090139d2538fd0e8f6eb640f56b153250a6450c9",
+  "logBytes": 1240,
+  "fixtureSha256": "323e995d9030a57ebb2dddff175a48de4db627cca5d12d311166873a4c69bdc7",
+  "firstRun": true,
+  "productCalls": "parsePatch and seekSequence only",
+  "noApplierToolOrFilesystemExecution": true
+}

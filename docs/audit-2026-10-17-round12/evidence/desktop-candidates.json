@@ -1,0 +1,15 @@
+{
+  "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "candidates": [
+    {
+      "id": "DESKTOP-R12-C1",
+      "title": "Write 工具卡把字符串长度标为字节",
+      "file": "packages/desktop/src/renderer/tool-cards/FileToolCard.tsx",
+      "line": 56,
+      "evidenceLevel": "Source-only candidate",
+      "reason": "content.length is UTF-16 code units while B denotes bytes; ordinary Unicode differs from UTF-8 byte count",
+      "limits": "No actual component mount or production Write execution; not counted confirmed",
+      "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "baseline": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "totals": {
+    "firstBunShards": 6,
+    "completedCleanShards": 6,
+    "passedTests": 66,
+    "expectations": 413,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 0,
+    "existingBaselineTests": 35,
+    "newFocusedObservationsAndControls": 31
+  },
+  "runs": [
+    {
+      "log": "evidence/root-time-display-existing.first.log",
+      "exitFile": "evidence/root-time-display-existing.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 12,
+      "failed": 0,
+      "expectations": 16,
+      "skipped": 0,
+      "sha256": "be23f4bf860b51a8daf67ea5d94a932b52a1d1a4d7b66ce79a8b867d8cf24db3"
+    },
+    {
+      "log": "evidence/tui-key-events.first.log",
+      "exitFile": "evidence/tui-key-events.first-exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 7,
+      "failed": 0,
+      "expectations": 121,
+      "skipped": 0,
+      "sha256": "267089e86d88b08d4ce85f426cf1a6185484ff9f5fd895fede9862ed306d92c1"
+    },
+    {
+      "log": "evidence/tui-text-data.first.log",
+      "exitFile": "evidence/tui-text-data.first-exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 7,
+      "failed": 0,
+      "expectations": 165,
+      "skipped": 0,
+      "sha256": "5769d685e360e7b434d684b268c8ec24d337b183f360606750faf644a066ab95"
+    },
+    {
+      "log": "evidence/desktop-display-contracts.first.log",
+      "exitFile": "evidence/desktop-display-contracts.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 9,
+      "failed": 0,
+      "expectations": 41,
+      "skipped": 0,
+      "sha256": "d77108a3dd1a57611c4729ee552aa8e141ea6f6d040442f9f403b2c4e1c0f611"
+    },
+    {
+      "log": "evidence/desktop-existing-metadata.first.log",
+      "exitFile": "evidence/desktop-existing-metadata.first.exit.txt",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 23,
+      "failed": 0,
+      "expectations": 39,
+      "skipped": 0,
+      "sha256": "35338aa219a51a1b42bdfea45878b472515510b888bc2a1c8eb4e8333b8782d8"
+    },
+    {
+      "log": "evidence/patch-leading-context.first.log",
+      "exitFile": "evidence/patch-leading-context.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 8,
+      "failed": 0,
+      "expectations": 31,
+      "skipped": 0,
+      "sha256": "e51f796029f7dd89337c9760090139d2538fd0e8f6eb640f56b153250a6450c9"
+    }
+  ],
+  "notes": [
+    "Six first raw combined logs and exit artifacts saved before inspection; no failed Bun shard or product rerun.",
+    "66 tests = 35 existing + 31 focused; one log shared by two TUI findings and another by Desktop finding/related boundary, counted once each.",
+    "TUI key parser/event constructors execute without terminal/App/dispatcher/Button/TextInput. Text shard redirects Core utility barrel before first run to real frozen intl.ts; OSC native helper is a throwing zero-call stub, not whole Core validation.",
+    "Desktop actual helper/parser only. Synthetic standard Git-format strings are not installed Git captures. UI consumer effects are static; raw tool arguments are unchanged.",
+    "Patch parser/matcher only; applier/tool/filesystem mutation source-only and not executed.",
+    "Root actual existing relativeTime/timezones tests only; scheduleModel/localization/backend scheduler not executed. Old skipped directions remain skipped.",
+    "Static navigation and metadata-reference/regex/document-edit diagnostics are labeled tool-response transcriptions, not Bun failures; metadata corrections did not rerun product fixtures.",
+    "No models/paid APIs/accounts/user data/external messages/native apps/PTY/auth/permission/security/custody/watchdog experiments, shared deps/dist rebuild or full build/typecheck/lint/test."
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "frozenSource": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "confirmed": 2,
+  "candidates": 1,
+  "cleanCompletedShards": 2,
+  "cleanTestsPassed": 14,
+  "cleanExpectCalls": 286,
+  "failedShards": 0,
+  "skippedTests": 0,
+  "shards": [
+    {
+      "fixture": "tui-key-events.test.ts",
+      "firstRawLog": "tui-key-events.first.log",
+      "firstExit": "tui-key-events.first-exit.json",
+      "exitCode": 0,
+      "passes": 7,
+      "expectCalls": 121,
+      "kind": "focused characterizations and controls"
+    },
+    {
+      "fixture": "tui-text-data.test.ts",
+      "firstRawLog": "tui-text-data.first.log",
+      "firstExit": "tui-text-data.first-exit.json",
+      "exitCode": 0,
+      "passes": 7,
+      "expectCalls": 165,
+      "kind": "candidate characterization and pure data controls",
+      "coreBarrelRedirectBeforeFirstRun": true,
+      "coreWholePackageTested": false,
+      "OSCExecCalls": 0
+    }
+  ],
+  "existingTestsExecuted": 0,
+  "reruns": 0,
+  "productChanged": false,
+  "notRun": [
+    "Ink/React render",
+    "TTY/PTY/native input",
+    "actual terminal",
+    "App/dispatcher/Button/TextInput",
+    "Core whole barrel",
+    "clipboard/native OSC helpers",
+    "build/typecheck/lint/full suite"
+  ],
+  "metadataDiagnostic": "tui-metadata-read-diagnostic.json"
+}

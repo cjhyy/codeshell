@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/automation/relativeTime.test.ts",
+    "packages/desktop/src/renderer/automation/timezones.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "elapsedSeconds": 0.284
+}

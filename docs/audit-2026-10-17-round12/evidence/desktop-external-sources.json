@@ -1,0 +1,21 @@
+{
+  "retrievedDate": "2026-10-17",
+  "method": "web open/find, official primary sources only; not a product network call",
+  "sources": [
+    {
+      "title": "Git diff-format — Generating patch text with -p",
+      "url": "https://git-scm.com/docs/diff-format",
+      "reviewedLines": "328–369",
+      "facts": "Patch headers identify a/ and b/ paths, even on additions/deletions; extended headers include old/new mode and new/deleted file mode. Header paths therefore provide identity independently of textual hunks.",
+      "verbatimQuoteWords": 0
+    },
+    {
+      "title": "Git official diff.c source",
+      "url": "https://raw.githubusercontent.com/git/git/master/diff.c",
+      "reviewedLines": "3655–3692, 3718–3764, 3774–3781",
+      "facts": "The upstream producer builds a path header before mode metadata. must_show_header emits metadata for additions, deletions, and mode changes even if text has no changes. Binary branches emit the path header and a binary notice without textual hunks.",
+      "limitations": "Read-only upstream master snapshot; no installed Git version was executed or claimed. Synthetic patch strings were passed to the actual CodeShell parser.",
+      "verbatimQuoteWords": 0
+    }
+  ]
+}

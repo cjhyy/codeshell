@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log",
+  "rawLogSha256": "d77108a3dd1a57611c4729ee552aa8e141ea6f6d040442f9f403b2c4e1c0f611",
+  "policy": "Combined stdout/stderr and exit saved before log inspection; no retry permitted on failure."
+}

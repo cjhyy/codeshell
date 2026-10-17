@@ -1,0 +1,7 @@
+{
+  "kind": "labeled transcription of a metadata-reference read tool response, not a product test",
+  "commandTail": "cat docs/audit-2026-10-17-round11/evidence/notification-findings.json",
+  "firstVisibleOutput": "cat: docs/audit-2026-10-17-round11/evidence/notification-findings.json: No such file or directory",
+  "exitCode": "not retained by the text-only tool wrapper",
+  "action": "guessed metadata-reference path skipped; no retry or alternate reference was needed; product shards unaffected"
+}

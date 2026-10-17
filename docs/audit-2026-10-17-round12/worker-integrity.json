@@ -1,0 +1,232 @@
+{
+  "baseline": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "artifactChecks": [
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "sha256": "ec3a14e8bf7f899e3377d352d26aca0d11647cae28f96bfd64a2953870318a64"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-note.md",
+      "sha256": "5084e49a937a6c9ffbf1aa54b7dfaa84fea490d35f757238f054329dfe747573"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "sha256": "d834db5819494b3b73facc06df297a8a04a7f1e2ac07e84c5e373287c301dfff"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.py",
+      "sha256": "17e9c8c92a4297ad8240203e3b386aa6bfa1e69b729610d73a34355998a6cf0b"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-findings.json",
+      "sha256": "c9ae0bc9424d0b91b20f891fab49aefbc2b2a492cc64505be5856e033e0c95d5"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-leading-context.first.exit.json",
+      "sha256": "75d1ff290977d4daf754a54acc2a43e540551928eba0d1716a38b4e80bc23e08"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-leading-context.first.log",
+      "sha256": "e51f796029f7dd89337c9760090139d2538fd0e8f6eb640f56b153250a6450c9"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-leading-context.test.ts",
+      "sha256": "323e995d9030a57ebb2dddff175a48de4db627cca5d12d311166873a4c69bdc7"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-source-manifest.json",
+      "sha256": "166d7f69e2549e15b4eadcbf099468d4dccdab9473cf986146d128ba4f10f9b1"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-validation.json",
+      "sha256": "88f381472c1652f4b4b24d4704791a2cde8533c9558dc39b8b1488d74004bc91"
+    },
+    {
+      "receipt": "patch-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/patch.md",
+      "sha256": "322710c7a56fdb595404f62c484eaa906efca1ce14408e34fc013b7272c59e03"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "sha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-assemble.py",
+      "sha256": "4cd7e844f111bb67163ba8534f3925a6c861f57c89e47f240199a8fc29469c09"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-candidates.json",
+      "sha256": "a32342826e081d2ab2f02e92c5989dfaee4988afa1a2689c7bd4905b615bab57"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "sha256": "ca2678b930210ebf86f42eb40839c0edc51e472f0da03c8d5c841f7567e45d21"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.py",
+      "sha256": "8164c44c6888f7f473105d2757ea89389998f8eda8318b6ed4d8387233eea9d9"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log",
+      "sha256": "d77108a3dd1a57611c4729ee552aa8e141ea6f6d040442f9f403b2c4e1c0f611"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.receipt.json",
+      "sha256": "0470bf8ef623c9589cab6f9e883105f1a0507e76b135604ecf7a525d6d72feea"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+      "sha256": "32dbfd5f232bff93c5b794f88d968085e773b1eaddf534ecb5c522f89e32f098"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.log",
+      "sha256": "35338aa219a51a1b42bdfea45878b472515510b888bc2a1c8eb4e8333b8782d8"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.receipt.json",
+      "sha256": "96d80690cf806d3b8c8b123e5d97693b7107579c9eebf5e66c6616b7014bce72"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-external-sources.json",
+      "sha256": "421e630327e84d210ecc4015d4c1efea3eed0b132076fc363c3a24b55fce9c00"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-findings.json",
+      "sha256": "3f70b944a5af6e8610e958faa704f0bb65e18fc98ce06dbea53a1293fc8dddb4"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-metadata-notes.md",
+      "sha256": "8baca131c23dc3d52329f318f1288567fd2396567c86977f797671694d10ec8a"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-related.json",
+      "sha256": "f7b947146718442719af8925433b7c032b6a0dd9c3a06db6d92a24f2f76f77f9"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+      "sha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+    },
+    {
+      "receipt": "desktop-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+      "sha256": "65bf14bb17dc98c40f902c7a03c7096427e3ea5329309158cad2d0f21f263685"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-candidates.json",
+      "sha256": "54ffbe10b5154bbd3a2ec41b71420e6e29a878b98125812d9cdf85b3a69d2ce2"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+      "sha256": "7dfc81ebfefff583c8654306ddb1577426dad62fcc1b702fc6a5007e8ea8a3d5"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+      "sha256": "db434249ea6d2e98097b40fda17000bde582168d1e86623dfb9bb0d2d181b4e8"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-findings.json",
+      "sha256": "9f2ace7fa0d58f66499725b295346807e4b0141b4c0803f9af0d718ece3ec28f"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-key-events.first-exit.json",
+      "sha256": "a42bc8cbee915acc707e46c49b2138725aa8bcac6ac3657e26e034e51e09167c"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-key-events.first.log",
+      "sha256": "267089e86d88b08d4ce85f426cf1a6185484ff9f5fd895fede9862ed306d92c1"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-key-events.test.ts",
+      "sha256": "9222c2f41ffe17dd439b170fa06a7f286a12e6b87d86f5e2aff7b057248206fd"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-metadata-read-diagnostic.json",
+      "sha256": "32b492f2f4128d7616a8b926dc141ab1b013c8b78805e3f7e9aca8d3b666130e"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-official-sources.json",
+      "sha256": "c3123e6158ae33af366b359170d538ff356bdbaac22d0623ca7fef01f65f22c1"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-source-manifest.json",
+      "sha256": "e572e09e1ae3b3da06b3e3ea1eb3c0ef2579563e7d8b7938ce733d5c3a4b39fd"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-text-data.first-exit.json",
+      "sha256": "e5883013d5d3a78de9302c2209ab2acd3203cc339d8deebf895a674d6199bf4f"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-text-data.first.log",
+      "sha256": "5769d685e360e7b434d684b268c8ec24d337b183f360606750faf644a066ab95"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-text-data.test.ts",
+      "sha256": "b9b217c23c3609c5f9d8f2eaea82d878006f4dd5f98fb7e0fbedefdf49dd1f60"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-validation.json",
+      "sha256": "a8d2514fc9f7e28e4ed24e5f7e5f570aea64896fd3f26676dcd54aff6d75a8a1"
+    },
+    {
+      "receipt": "tui-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round12/tui-input.md",
+      "sha256": "9ed0975714f9b05cb5691efb8dc85c4b4a89a831b70a272f3a0293dbc299f344"
+    }
+  ],
+  "sourceCheckCount": 70,
+  "productTestsRerun": false
+}

@@ -1,0 +1,54 @@
+{
+  "baseline": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "findings": 4,
+  "priorities": {
+    "P3": 4
+  },
+  "candidates": 2,
+  "oldRelatedBoundaries": 1,
+  "totals": {
+    "firstBunShards": 6,
+    "completedCleanShards": 6,
+    "passedTests": 66,
+    "expectations": 413,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 0,
+    "existingBaselineTests": 35,
+    "newFocusedObservationsAndControls": 31
+  },
+  "selectedFrozenSourcePins": 69,
+  "workerSourceChecks": 70,
+  "workerArtifactHashChecks": 45,
+  "localLinksAtPrecommitCheck": 82,
+  "unresolvedLinks": [],
+  "reportHeadingChecks": 4,
+  "rawLogs": 6,
+  "checks": [
+    {
+      "check": "fullStagedDiffCheck",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "check": "nonLogStagedDiffCheck",
+      "exitCode": 0,
+      "output": ""
+    }
+  ],
+  "stagedPathsOnlyOwnedBatch": true,
+  "productReruns": 0,
+  "sourceScopeNote": "Selected pins and static consumers are not whole-file/transitive/full repository coverage",
+  "runtimeNote": "Bun first logs identify v1.3.11 af24e281; stringWidth chooses Bun.stringWidth in this runtime. No JS fallback validation claimed.",
+  "crossReviewNote": "Root independently reviewed Desktop/Patch; independent workers reviewed TUI/Patch/schedule and final aggregate. All completed without added product execution; no corrections required.",
+  "navigationNotes": [
+    "root-navigation-skip.md",
+    "root-metadata-edit-note.md",
+    "desktop-metadata-notes.md",
+    "tui-metadata-read-diagnostic.json",
+    "review-tui.md"
+  ],
+  "integrationSnapshot": "integration-final-before.json",
+  "ongoingGoal": true,
+  "aggregateReview": "review-aggregate.md",
+  "aggregateReportSubsetLocalLinks": 79
+}

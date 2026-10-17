@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round12/evidence/tui-text-data.test.ts:
+(pass) candidate: decomposed Latin grapheme metadata width differs from stringWidth [3.17ms]
+(pass) ASCII, CJK, and emoji width controls [0.08ms]
+(pass) ANSI style survives a streaming split and reset [0.42ms]
+(pass) complete canonical sequences survive every two-chunk boundary [0.27ms]
+(pass) tokenizer output treats CSI M as output sequence and preserves following text [0.16ms]
+(pass) line cache preserves measured widths across repeated calls and bounded eviction [0.90ms]
+(pass) content-width arithmetic subtracts both border and padding edges [0.20ms]
+
+ 7 pass
+ 0 fail
+ 165 expect() calls
+Ran 7 tests across 1 file. [512.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

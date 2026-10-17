@@ -1,0 +1,21 @@
+{
+  "accessDate": "2026-10-17",
+  "sources": [
+    {
+      "title": "XTerm Control Sequences — Alt and Meta Keys",
+      "url": "https://invisible-island.net/xterm/ctlseqs/ctlseqs.html",
+      "use": "mode 1/2/3, decimal character encoding, ESC-prefix Alt input; scope is public protocol, not live terminal evidence"
+    },
+    {
+      "title": "XTerm — Other Modified Keys",
+      "url": "https://invisible-island.net/xterm/modified-keys.html",
+      "use": "character decimal code format; case-preserving character values (not Kitty unshifted physical key codes)"
+    },
+    {
+      "title": "kitty Comprehensive Keyboard Handling",
+      "url": "https://sw.kovidgoyal.net/kitty/keyboard-protocol/",
+      "use": "CSI codepoint/modifier syntax and alt flag; Kitty codepoint is unshifted, so do not infer uppercase defect from Kitty CSI-u."
+    }
+  ],
+  "notes": "paraphrases only; no live browser/terminal input test; no cached page contents claimed"
+}
