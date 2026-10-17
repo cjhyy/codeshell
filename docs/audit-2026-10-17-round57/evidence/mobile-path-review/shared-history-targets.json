@@ -1,0 +1,621 @@
+{
+  "sourceBatchPin": {
+    "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+    "bytes": 1250596,
+    "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f"
+  },
+  "scope": {
+    "atUTC": "2026-10-17T18:54:27.390693+00:00",
+    "historyFiles": 5676,
+    "excludedFormalAtOrAbove": 57,
+    "jsonValueScalarsVisited": 4212456,
+    "capPerTarget": 100,
+    "errors": []
+  },
+  "targets": {
+    "packages/server/src/static-files.ts": {
+      "query": [
+        "packages/server/src/static-files.ts",
+        "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+      ],
+      "totalMatches": 31,
+      "retainedHits": [
+        {
+          "document": "docs/audit-2026-10-16/inventory.json",
+          "location": "/source_inventory/2104",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+          "location": "/files/1173",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+          "location": "/rankedCandidates/57/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+          "location": "/rankedCandidates/57/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/3692/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/3692/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14723/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14723/directSourcePathsInObject/0",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14724/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14724/sourceHashFields/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14724/directSourcePathsInObject/0",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+          "location": "/files/4014/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+          "location": "/files/4014/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+          "location": "/files/4014/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+          "location": "/files/4014/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+          "location": "/unknownPaths/3661",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+          "location": "/files/4015/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+          "location": "/files/4015/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+          "location": "/files/4015/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+          "location": "/files/4015/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+          "location": "/files/4015/oldSha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+          "location": "/files/4015/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+          "location": "/files/4015/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+          "location": "/files/4015/oldSha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+          "location": "/files/4015/path",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+          "location": "/files/4015/sha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+          "location": "/files/4015/oldSha256",
+          "matched": [
+            "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+          ],
+          "value": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "location": "/module_inventory/84740d56/paths/120",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "location": "/module_inventory/a66f4ef2/paths/121",
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "packages/server/src/static-files.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+          "location": 414,
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "- Create: `packages/server/src/static-files.ts`",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+          "location": 422,
+          "matched": [
+            "packages/server/src/static-files.ts"
+          ],
+          "value": "// packages/server/src/static-files.ts",
+          "truncatedValue": false
+        }
+      ]
+    },
+    "packages/server/src/mobile-remote/mobile-static.ts": {
+      "query": [
+        "packages/server/src/mobile-remote/mobile-static.ts",
+        "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+      ],
+      "totalMatches": 34,
+      "retainedHits": [
+        {
+          "document": "docs/audit-2026-10-16/inventory.json",
+          "location": "/source_inventory/2012",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round23/evidence/room-data-navigation.json",
+          "location": "/commands/3/stdout",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-chat-turn.ts\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.ts\npackages/server/src/mobile-remote/access-passcode.test.ts\npackages/server/src/mobile-remote/remote-host-manager.ts\npackages/server/src/mobile-remote/room-manager.test.ts\npackages/server/src/mobile-remote/trusted-device-store.ts\npackages/server/src/mobile-remote/mobile-chat-turn.test.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.test.ts\npackages/server/src/mobile-remote/mobile-limits.ts\npackages/server/src/mobile-remote/resident-agent.test.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackages/server/src/mobile-remote/resident-agent.ts\npackages/server/src/mobile-remote/remote-host-manager.native.test.ts\npackages/server/src/mobile-remote/pending-approvals.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/room-manager.append-scaling.test.ts\npackages/server/src/mobile-remote/room-manager.ts\npackages/server/src/mobile-remote/mobile-attachments.test.ts\npackages/server/src/mobile-remote/trusted-device-store.test.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/types.ts\npackages/server/src/mobile-remote/cloudflared-binary.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\npackages/server/src/mobile-remote/mobile-static.test.ts\npackages/server/src/mobile-remote/room-manager.rejected-s",
+          "truncatedValue": true
+        },
+        {
+          "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+          "location": "/files/42",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/3516/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "location": "/files/3516/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14158/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14158/directSourcePathsInObject/0",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14159/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14159/sourceHashFields/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+          "location": "/claims/14159/directSourcePathsInObject/0",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+          "location": "/files/3838/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+          "location": "/files/3838/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+          "location": "/files/3838/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+          "location": "/files/3838/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+          "location": "/unknownPaths/3491",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+          "location": "/files/3839/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+          "location": "/files/3839/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+          "location": "/files/3839/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+          "location": "/files/3839/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+          "location": "/files/3839/oldSha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+          "location": "/files/3839/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+          "location": "/files/3839/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+          "location": "/files/3839/oldSha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+          "location": "/files/3839/path",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+          "location": "/files/3839/sha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+          "location": "/files/3839/oldSha256",
+          "matched": [
+            "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+          ],
+          "value": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "location": "/module_inventory/84740d56/paths/49",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "location": "/module_inventory/a66f4ef2/paths/49",
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "packages/server/src/mobile-remote/mobile-static.ts",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+          "location": 411,
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "**背景:** `packages/server/src/serve/headless-server.ts:70-81` 的 `CONTENT_TYPES` 与 `packages/server/src/mobile-remote/mobile-static.ts:24-28` 的 MIME 表重复。两个 host(pairing host / headless serve)的装配差异是合理的,只合并静态文件原语,不合并 host。",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+          "location": 415,
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "- Modify: `packages/server/src/serve/headless-server.ts`、`packages/server/src/mobile-remote/mobile-static.ts`",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+          "location": 221,
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "> - 改动文件三个：`packages/server/src/mobile-remote/mobile-static.ts`、",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+          "location": 286,
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "- `packages/server/src/mobile-remote/mobile-static.ts:55-58` — 遏制判定是纯字符串的",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+          "location": 300,
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "- `packages/server/src/mobile-remote/mobile-static.ts`（`resolveSafe` 一处）",
+          "truncatedValue": false
+        },
+        {
+          "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+          "location": 751,
+          "matched": [
+            "packages/server/src/mobile-remote/mobile-static.ts"
+          ],
+          "value": "- **C2（server）**：`packages/server/src/mobile-remote/mobile-static.ts`、",
+          "truncatedValue": false
+        }
+      ]
+    }
+  },
+  "role": "Root shared machine metadata projection only, not full semantic history reading"
+}

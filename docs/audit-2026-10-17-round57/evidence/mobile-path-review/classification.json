@@ -1,0 +1,34 @@
+{
+  "formalPromotionRecommended": false,
+  "newFormalIds": [],
+  "newCandidateIds": [],
+  "newRelatedIds": [],
+  "supportsExistingRoot135ProposalAsCandidate": true,
+  "conditionalPriorityIfNormalProducerEstablished": "P3",
+  "decision": "Keep the same encoded-mobile-asset proposal as unconfirmed candidate; no duplicate independent candidate ID and no formal promotion.",
+  "conditionalTrigger": {
+    "input": "A regular file literally assets/icon one.svg exists in actually served root, request /mobile/assets/icon%20one.svg is an asset fetch rather than HTML navigation.",
+    "source": "mobileAssetPath27–31 keeps percent escape; serveMobile134→resolveSafe73–96 uses encoded name, no decoded equivalent checked; nonexistent encoded spelling follows404.",
+    "enforcedCondition": "Existing decoded file matters; if encoded literal file exists instead result differs. Accept text/html may fall back to index, not same404. DevUrl proxies unchanged and is outside this production-static case."
+  },
+  "missingNormalProducerProof": [
+    "No current public filename needing percent decoding: four public files ASCII, no spaces/%/query/fragment chars.",
+    "Actual mobile entry manifest/icon/sw URL references read here all ASCII.",
+    "208filename metadata across web/mobile also no special names, but not a complete emitted dependency bundle/import closure.",
+    "No release build or vendor output transformation analyzed; mobileRootDir override is documented for tests. A legal generic filename+custom root alone does not establish current production trigger."
+  ],
+  "counterevidence": "Config genuinely supplies publicDir and base/outDir, so potential future/other supported encoded assets are not logically ruled out. This review does not assert defect impossible.",
+  "rootReportedUnitEvidence": {
+    "reportedBy": "Root135, not opened/hashed/run by this reviewer",
+    "attemptsReported": 1,
+    "resultReported": "3pass/0fail/8expect",
+    "fixturePathReported": "docs/audit-2026-10-17-round57/evidence/static-path.test.ts",
+    "fixtureShaReported": "3a6830ff0c8dc594994f34d6507d383dc4cdfd4500df475141fe7041e69cd1a2",
+    "rawPrefixReported": "/tmp/codeshell-audit-round135-static-files/static-path-first.*",
+    "scope": "Plain200 control, decoded-existing file resolver success but encodedURL404, missing404 in temporary root; does not show current default built asset path or actual HTTP server/browser."
+  },
+  "otherRoutes": "Parent supplied headless/control decoder locators as contrast; reviewer did not open them or report them.",
+  "nextEvidenceNeeded": "Establish actual supported release/default-root asset producer with URL-escaped path by source contract or existing artifact, not arbitrary malformed DTO or merely another helper fixture.",
+  "existingRootProposalId": "STATIC-R135-C1 (Root supplied final label)",
+  "candidateOpinionCountForExistingProposal": 1
+}

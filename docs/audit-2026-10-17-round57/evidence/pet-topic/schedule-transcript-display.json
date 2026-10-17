@@ -1,0 +1,54 @@
+[
+  {
+    "path": "packages/core/src/session/transcript.ts",
+    "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+    "displayedLineRanges": [
+      [
+        528,
+        571
+      ]
+    ],
+    "pinReference": "schedule-transcript-pins-navigation.json",
+    "displayAt": "2026-10-17T18:58:58.905022+00:00"
+  },
+  {
+    "path": "packages/pet/src/follow-ups.ts",
+    "sha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+    "displayedLineRanges": [
+      [
+        79,
+        128
+      ]
+    ],
+    "pinReference": "schedule-transcript-pins-navigation.json",
+    "displayAt": "2026-10-17T18:58:58.907519+00:00"
+  },
+  {
+    "path": "packages/pet/src/registered-follow-ups.ts",
+    "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+    "displayedLineRanges": [
+      [
+        125,
+        163
+      ]
+    ],
+    "pinReference": "schedule-transcript-pins-navigation.json",
+    "displayAt": "2026-10-17T18:58:58.908406+00:00"
+  },
+  {
+    "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+    "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+    "displayedLineRanges": [
+      [
+        90,
+        130
+      ],
+      [
+        144,
+        177
+      ]
+    ],
+    "pinReference": "schedule-transcript-pins-navigation.json",
+    "displayAt": "2026-10-17T18:58:58.909403+00:00"
+  }
+]

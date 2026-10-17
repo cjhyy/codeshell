@@ -1,0 +1,34 @@
+[
+  {
+    "path": "packages/core/src/engine/run-session-open.ts",
+    "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+    "displayedLineRanges": [
+      [
+        138,
+        183
+      ],
+      [
+        205,
+        220
+      ]
+    ],
+    "pinReference": "entry-initial-pins.json or run-open-pin-navigation.json",
+    "displayAt": "2026-10-17T18:57:49.208042+00:00"
+  },
+  {
+    "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+    "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+    "displayedLineRanges": [
+      [
+        1048,
+        1078
+      ],
+      [
+        1988,
+        2030
+      ]
+    ],
+    "pinReference": "entry-initial-pins.json or run-open-pin-navigation.json",
+    "displayAt": "2026-10-17T18:57:49.210213+00:00"
+  }
+]

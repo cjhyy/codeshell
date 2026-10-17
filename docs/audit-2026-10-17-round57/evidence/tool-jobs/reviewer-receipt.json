@@ -1,0 +1,101 @@
+{
+  "frozenUTC": "2026-10-17T19:00:49.573622+00:00",
+  "root": "/tmp/codeshell-audit-round133-tool-jobs",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "canonical-old-cause.json",
+      "bytes": 8536,
+      "sha256": "aa3be66ceb980ef8f070972c8cea561b3eaa459b62a0d541d1ee2af2aa5546e8"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 2594,
+      "sha256": "4f37e1ee1e8181980062676f79f66a6d3d6e0c4e112130a14c6e445da8d64929"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1374,
+      "sha256": "dce81f1907bdb7e0a5cc8a43623ac4d6e02cf9d8f36832baf739849575c69917"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 6570,
+      "sha256": "da586b5408394d743bfe21f889ea7984695909dd1599389545e035fb8a3f832c"
+    },
+    {
+      "path": "executor-initial-pin.json",
+      "bytes": 314,
+      "sha256": "a57ef93d3d29e5d662aa1e07ce39731dba584a80a259dd6f2809d56585ee53af"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 15163,
+      "sha256": "9af4bbdce9e2ab7da682b008c715066eddf168642308ba83a6f75e9b7dbeb5ce"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 5311,
+      "sha256": "f32c4d22ad5c260a641a526b329595c687af47647e51843f2d025de9ba763c22"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1837,
+      "sha256": "b76f930d4d7da5d63ba3c1e2e2d19f62ad11f2cc8cd349d0fcb88d74e2c06429"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 988,
+      "sha256": "ee6f4d7d4c21019bd4ca04138c54cf8b4f359e04f07388da587507b26faf798b"
+    },
+    {
+      "path": "process-initial-pin.json",
+      "bytes": 317,
+      "sha256": "deb7a0913bb8670f6e1bfe1b93aff454bf98beff9d39fa72100ef9911a3a9a2d"
+    },
+    {
+      "path": "report.md",
+      "bytes": 6346,
+      "sha256": "b9084b460b9da9d9996bd3013f9331882b6033f7855f03ae2c7cf00c2f7d8cc0"
+    },
+    {
+      "path": "shared-history-pin.json",
+      "bytes": 307,
+      "sha256": "d4cca0e7504dec425db3fbb309857114867e76a67f429f04cec5b2aeda0663c5"
+    },
+    {
+      "path": "shared-history-targets.json",
+      "bytes": 23256,
+      "sha256": "025147dbc6340dfb4881c6d0ed07b1556ac045b7b47394e207edf4eb7c8ab78b"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 184132,
+      "sha256": "a8dbfa81db39bc300570808b6ea7976cb43035dcc7cbdfc635da64c1f76e5490"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 21592,
+      "sha256": "8e2b57c73e971cba443b8cee4ede6f31b25f93573c87e666019feeaf47993ff1"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 1037,
+      "sha256": "ea6c5d10c2f7cb4fa6a530dce3fec0f0dd7922251249e2f8759044284cecdc23"
+    },
+    {
+      "path": "targeted-history-hits.json",
+      "bytes": 3678,
+      "sha256": "d6b4d5f90084651d6d99b1b702f6a01f5e4fbc7a78f6ff9a38e827dc6c16a628"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1532,
+      "sha256": "4698c5e5275d50cfefbff41331da730ea38363dec5d2ddfb347f161aef05683b"
+    }
+  ],
+  "fileCountExcludingReceipt": 18,
+  "role": "Independent static actual tool-job lifecycle review, legacy R30 exact exclusion, Root shared history projection",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

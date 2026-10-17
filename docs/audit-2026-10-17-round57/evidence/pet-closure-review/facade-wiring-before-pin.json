@@ -1,0 +1,8 @@
+{
+  "path": "packages/core/src/engine/run-accounting.ts",
+  "bytes": 6970,
+  "lineCount": 174,
+  "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+  "pinnedAtUTC": "2026-10-17T19:08:20.860595+00:00",
+  "timing": "before body/nav; filename inventory44e9c6"
+}

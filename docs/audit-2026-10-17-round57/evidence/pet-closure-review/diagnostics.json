@@ -1,0 +1,22 @@
+{
+  "productExecutionAttempts": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0,
+  "firstNavigationDiagnostic": "first-navigation-diagnostic.json; exit2 wrong docs/plans inventory, partial filenames; transcript diagnostic only, no fabricated raw bytes",
+  "normalNavigationNoMatch": {
+    "chunkId": "1e5c18",
+    "combinedExit": 1,
+    "lastPattern": "this.deps.llm.",
+    "cause": "TurnLoop dependency is model, not llm; previous two commands in same shell printed matches, their individual exit codes not captured",
+    "resolution": "44e9c6 filename/bounded navigation found deps.model; no product run/retry"
+  },
+  "presentationTruncations": [],
+  "metadataFieldClarifications": {
+    "prior-metadata-inputs.first.json": "Preserves first wording; exact first byte-read UTC was not separately recorded; renamed timestamp to save time.",
+    "author-freeze-inputs.first.json": "Preserves first readScope wording. Actual classification/source/receipt read was hash-only, only peer report text was read."
+  },
+  "scopeTiming": "Initial source opinions and assistant-ID concern predate peer final report. After preliminary source-ended message, one necessary narrow assistant-ID counterevidence chain was read with new before pins; ended again after a31285. No later source semantic expansion during final metadata.",
+  "historyLimits": "Only four exact old canonical/MD inputs in this reviewer packet. Author132/Root shared history work is separate, not silently counted as independent all-history review. Root explicitly requested no full-history expansion.",
+  "authorPacketRead": "After confirmed freeze only; report full text compared, other3 anchors hashes only. Candidate timeline agrees;132 did not review assistant writer chain, this additional independent evidence is counted only136."
+}

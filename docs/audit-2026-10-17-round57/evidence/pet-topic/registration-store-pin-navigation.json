@@ -1,0 +1,21 @@
+{
+  "pin": {
+    "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+    "bytes": 17609,
+    "lines": 484,
+    "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+    "pinAt": "2026-10-17T19:00:42.499667+00:00",
+    "coverage": "hash-only before normal schedule admission navigation/body"
+  },
+  "navigation": {
+    "command": [
+      "rg",
+      "-n",
+      "register\\(|wakeAt|MAX_|catchUpUntil|timestamp",
+      "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "15:const MAX_ENTRIES = 1_000;\n16:const MAX_FILE_BYTES = 8 * 1024 * 1024;\n34:        input.wakeAt,\n51:        input.catchUpUntil ?? input.wakeAt + 24 * 60 * 60 * 1000,\n105:        \"wakeAt\",\n108:        \"catchUpUntil\",\n138:      wakeAt: row.wakeAt,\n141:      catchUpUntil: row.catchUpUntil,\n149:  if (!isFollowUpTimestamp(row.catchUpUntil) || row.catchUpUntil < row.wakeAt) return false;\n222:        info.size > MAX_FILE_BYTES ||\n227:      if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error(\"oversized follow-up store\");\n241:    if (file.version !== 1 || !Array.isArray(file.entries) || file.entries.length > MAX_ENTRIES)\n256:      .sort((a, b) => a.wakeAt - b.wakeAt || a.id.localeCompare(b.id))\n272:  register(input: RegisterPetFollowUpInput): Promise<PetRegisteredFollowUp> {\n289:      if (entries.size >= MAX_ENTRIES) throw new Error(\"follow-up registry is full\");\n290:      const at = this.timestamp();\n291:      if (snapshot.wakeAt <= at) throw new Error(\"follow-up wakeAt must be in the future\");\n296:        catchUpUntil: snapshot.catchUpUntil ?? snapshot.wakeAt + 24 * 60 * 60 * 1000,\n313:      wakeAt: number;\n316:      catchUpUntil?: number;\n330:      const at = this.timestamp();\n331:      if (input.wakeAt <= at) throw new Error(\"follow-up wakeAt must be in the future\");\n333:      row.wakeAt = input.wakeAt;\n336:      row.catchUpUntil = input.catchUpUntil ?? input.wakeAt + 24 * 60 * 60 * 1000;\n358:      row.updatedAt = Math.max(this.timestamp(), row.updatedAt);\n374:        row.wakeAt > this.timestamp()\n377:      row.wake = { revision, status: \"claimed\", claimedAt: this.timestamp() };\n405:      row.wake = { ...row.wake, ...snapshot, completedAt: this.timestamp() };\n421:          completedAt: this.timestamp(),\n431:  private timestamp(): number {\n455:        if (entries.size > MAX_ENTRIES || [...entries.values()].some((row) => !validRecord(row)))\n458:        if (Buffer.byteLength(body) > MAX_FILE_BYTES) throw new Error(\"oversized follow-up store\");\n",
+    "stderr": ""
+  }
+}

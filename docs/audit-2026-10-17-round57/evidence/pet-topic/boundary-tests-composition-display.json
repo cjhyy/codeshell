@@ -1,0 +1,70 @@
+[
+  {
+    "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+    "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+    "displayedLineRanges": [
+      [
+        93,
+        119
+      ],
+      [
+        143,
+        160
+      ],
+      [
+        176,
+        195
+      ]
+    ],
+    "pinReference": "work-memory-pin-navigation.json",
+    "displayAt": "2026-10-17T19:01:43.917019+00:00"
+  },
+  {
+    "path": "packages/pet/src/topic-segment.test.ts",
+    "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+    "displayedLineRanges": [
+      [
+        7,
+        14
+      ]
+    ],
+    "pinReference": "mechanism-initial-pins.json or entry-initial-pins.json",
+    "displayAt": "2026-10-17T19:01:43.918025+00:00"
+  },
+  {
+    "path": "packages/pet/src/segment-closure.test.ts",
+    "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+    "displayedLineRanges": [
+      [
+        19,
+        46
+      ]
+    ],
+    "pinReference": "mechanism-initial-pins.json or entry-initial-pins.json",
+    "displayAt": "2026-10-17T19:01:43.918466+00:00"
+  },
+  {
+    "path": "packages/pet/src/conversation-session-route.test.ts",
+    "sha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+    "displayedLineRanges": [
+      [
+        83,
+        120
+      ]
+    ],
+    "pinReference": "mechanism-initial-pins.json or entry-initial-pins.json",
+    "displayAt": "2026-10-17T19:01:43.918910+00:00"
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+    "displayedLineRanges": [
+      [
+        2160,
+        2182
+      ]
+    ],
+    "pinReference": "mechanism-initial-pins.json or entry-initial-pins.json",
+    "displayAt": "2026-10-17T19:01:43.920076+00:00"
+  }
+]

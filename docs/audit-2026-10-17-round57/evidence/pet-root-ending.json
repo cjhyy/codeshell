@@ -1,0 +1,31 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "sameAtEndRefresh": true
+    }
+  ],
+  "newUniqueCoverageClaim": false,
+  "scope": "Same-source artifact/actual source crosscheck, no product runtime."
+}

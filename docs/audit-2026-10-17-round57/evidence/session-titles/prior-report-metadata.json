@@ -1,0 +1,13 @@
+{
+  "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/report.md",
+  "bytes": 5010,
+  "sha256": "bb5d56ac6e881eb2c87f69016f3cc88dcbe451c497807bf348012f101e3c579a",
+  "lineCount": 25,
+  "readLineRanges": [
+    [
+      1,
+      25
+    ]
+  ],
+  "readType": "Full old limited report metadata; not new product reading"
+}

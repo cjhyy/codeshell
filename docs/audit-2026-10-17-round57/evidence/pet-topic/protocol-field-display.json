@@ -1,0 +1,42 @@
+[
+  {
+    "path": "packages/core/src/protocol/server.ts",
+    "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+    "displayedLineRanges": [
+      [
+        1798,
+        1823
+      ],
+      [
+        1975,
+        2001
+      ]
+    ],
+    "pinReference": "protocol-field-pins-navigation.json",
+    "displayAt": "2026-10-17T18:59:39.440662+00:00"
+  },
+  {
+    "path": "packages/core/src/protocol/chat-session.ts",
+    "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+    "displayedLineRanges": [
+      [
+        516,
+        533
+      ]
+    ],
+    "pinReference": "protocol-field-pins-navigation.json",
+    "displayAt": "2026-10-17T18:59:39.441698+00:00"
+  },
+  {
+    "path": "packages/core/src/protocol/dispatch.ts",
+    "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+    "displayedLineRanges": [
+      [
+        106,
+        114
+      ]
+    ],
+    "pinReference": "protocol-field-pins-navigation.json",
+    "displayAt": "2026-10-17T18:59:39.442124+00:00"
+  }
+]

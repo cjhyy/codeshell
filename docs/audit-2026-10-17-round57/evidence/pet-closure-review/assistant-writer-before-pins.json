@@ -1,0 +1,37 @@
+{
+  "reason": "Rule out assistant transcript row retaining same boundary ID despite injected-user filter. Narrow followup after preliminary source-ended message, not unrelated expansion.",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lineCount": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinnedAtUTC": "2026-10-17T19:07:09.906982+00:00",
+      "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "pinnedAtUTC": "2026-10-17T19:07:09.908544+00:00",
+      "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "lineCount": 310,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "pinnedAtUTC": "2026-10-17T19:07:09.908825+00:00",
+      "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "lineCount": 480,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "pinnedAtUTC": "2026-10-17T19:07:09.909283+00:00",
+      "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+    }
+  ]
+}

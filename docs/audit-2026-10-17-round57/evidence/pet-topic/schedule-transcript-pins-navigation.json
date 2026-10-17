@@ -1,0 +1,93 @@
+{
+  "typeLocator": {
+    "command": [
+      "rg",
+      "-l",
+      "export interface PetRegisteredFollowUp|export type PetRegisteredFollowUp",
+      "packages/pet/src"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/pet/src/follow-ups.ts\npackages/pet/src/registered-follow-ups.ts\n",
+    "stderr": ""
+  },
+  "pins": [
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lines": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "pinAt": "2026-10-17T18:58:43.620525+00:00",
+      "coverage": "hash-only before targeted source navigation/body"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "bytes": 7159,
+      "lines": 197,
+      "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "pinAt": "2026-10-17T18:58:43.628108+00:00",
+      "coverage": "hash-only before targeted source navigation/body"
+    },
+    {
+      "path": "packages/pet/src/follow-ups.ts",
+      "bytes": 10597,
+      "lines": 267,
+      "sha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "pinAt": "2026-10-17T18:58:43.634095+00:00",
+      "coverage": "hash-only before targeted source navigation/body"
+    },
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "bytes": 6245,
+      "lines": 199,
+      "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "pinAt": "2026-10-17T18:58:43.639876+00:00",
+      "coverage": "hash-only before targeted source navigation/body"
+    }
+  ],
+  "navigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "appendMessage\\(|injected|clientMessageId",
+        "packages/core/src/session/transcript.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "86:  clientMessageIds: Array<[string, number]>;\n136:    !Array.isArray(data.clientMessageIds)\n161:  for (const pair of data.clientMessageIds) {\n179:    clientMessageIds: data.clientMessageIds,\n530:   * `injected` marks a synthetic system-reminder turn (e.g. a background-job\n537:  appendMessage(\n541:      injected?: boolean;\n543:      clientMessageId?: string;\n551:    if (opts?.clientMessageId) {\n552:      const existing = this.findMessageByClientId(opts.clientMessageId);\n555:          clientMessageId: opts.clientMessageId,\n565:      ...(opts?.injected ? { injected: true } : {}),\n567:      ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),\n576:  hasClientMessageId(clientMessageId: string): boolean {\n577:    return this.findMessageByClientId(clientMessageId) !== undefined;\n585:  appendRunResult(clientMessageId: string, result: EngineResult): TranscriptEvent {\n586:    return this.append(\"run_result\", { clientMessageId, result });\n590:  findRunResultByClientMessageId(clientMessageId: string): EngineResult | undefined {\n593:      if (event.type !== \"run_result\" || event.data.clientMessageId !== clientMessageId) continue;\n701:   * carrying a clientMessageId, the LIVE index (its position in the returned\n712:   * - Only the FIRST emission of a duplicated clientMessageId is recorded\n715:   * - The clientMessageId is deliberately NOT attached to the Message objects\n750:        if (event.type === \"message\" && typeof event.data.clientMessageId === \"string\") {\n751:          if (!firstIndexByClientId.has(event.data.clientMessageId)) {\n752:            firstIndexByClientId.set(event.data.clientMessageId, index);\n805:        const clientMessageId =\n806:          typeof event.data.clientMessageId === \"string\" ? event.data.clientMessageId : undefined;\n807:        if (activeSpan && clientMessageId === activeSpan.toClientMessageId) {\n810:        if (!activeSpan && clientMessageId && spansByFromId.has(clientMessageId)) {\n811:          activeSpan = spansByFromId.get(clientMessageId)!;\n815:          spansByFromId.delete(clientMessageId);\n823:          const { role, content, clientMessageId } = event.data as {\n826:            clientMessageId?: unknown;\n832:            typeof clientMessageId === \"string\" &&\n833:            !liveIndexByClientMessageId.has(clientMessageId)\n835:            liveIndexByClientMessageId.set(clientMessageId, messages.length);\n909:      const clientIdByIndex = new Map(snapshot.clientMessageIds.map(([id, i]) => [i, id]));\n920:              ? { clientMessageId: clientIdByIndex.get(messageIndex) }\n977:  private findMessageByClientId(clientMessageId: string): TranscriptEvent | undefined {\n981:        (event.data as { clientMessageId?: unknown }).clientMessageId === clientMessageId,\n1280:        (event.data as { clientMessageId?: unknown }).clientMessageId === toClientMessageId,\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "dueAt|nextCheckAt|expiresAt|wakeAt|12|24|MAX|scheduledFor|scheduledAt|resume\\(",
+        "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "29:      resume(\n101:            job.runAt !== row.wakeAt ||\n113:            (row.missedPolicy === \"skip\" && now - row.wakeAt > 90_000)\n125:            runAt: row.wakeAt,\n147:    const match = /^mimi-follow-up:(registered-followup-[a-f0-9]{24}):(\\d+)$/u.exec(\n156:    if (now > item.catchUpUntil || (item.missedPolicy === \"skip\" && now - item.wakeAt > 90_000)) {\n166:          ? await this.deps.resume(item)\n185:    const match = /^mimi-follow-up:(registered-followup-[a-f0-9]{24}):(\\d+)$/u.exec(\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "dueAt|nextCheckAt|expiresAt|wakeAt|12|24|MAX|scheduledFor|scheduledAt|resume\\(",
+        "packages/pet/src/follow-ups.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "39:  wakeAt: number;\n62:    \"kind=registered rows are explicit user obligations or reminders, including revision, wakeAt and wakeState; they may have no Session. \" +\n72:      follow_up_id: { type: \"string\", minLength: 1, maxLength: 128 },\n73:      query: { type: \"string\", minLength: 1, maxLength: 128 },\n86:    \"missed_policy defaults to fire-once and catch_up_until defaults to 24 hours after wake_at; respect an explicit expiry. \" +\n95:      follow_up_id: { type: \"string\", minLength: 1, maxLength: 128 },\n97:      title: { type: \"string\", minLength: 1, maxLength: 512 },\n107:        maxLength: 128,\n114:        maxLength: 128,\n118:      task_id: { type: \"string\", minLength: 1, maxLength: 128 },\n173:    args.query.length > 128 ||\n176:    return \"Error: FollowUps search requires a 1 to 128 character query.\";\n215:      wakeAt: args.wake_at,\n238:      wakeAt: args.wake_at,\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "dueAt|nextCheckAt|expiresAt|wakeAt|12|24|MAX|scheduledFor|scheduledAt|resume\\(",
+        "packages/pet/src/registered-follow-ups.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "23:  wakeAt: number;\n49:  wakeAt: number;\n70:      wakeAt: number;\n82:      wakeAt: number;\n94:    value.length <= 128 &&\n109:  if (typeof value !== \"string\" || !value || value.length > 128 || value !== value.trim()) {\n140:        isFollowUpTimestamp(payload.wakeAt) &&\n141:        payload.catchUpUntil >= payload.wakeAt));\n148:        \"wakeAt\",\n156:      boundedText(payload.title, 512) &&\n158:      isFollowUpTimestamp(payload.wakeAt) &&\n177:        \"wakeAt\",\n183:      isFollowUpTimestamp(payload.wakeAt) &&\n",
+      "stderr": ""
+    }
+  ]
+}

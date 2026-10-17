@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "appendMessage|appendAssistant",
+    "packages/core/src/engine/turn-loop.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "2252:      this.deps.transcript.appendMessage(\"user\", content, {\n2297:      this.deps.transcript.appendMessage(\"user\", content, { steerId: id, clientMessageId });\n2340:    this.deps.transcript.appendMessage(\"user\", content, {\n",
+  "stderr": ""
+}

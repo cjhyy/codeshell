@@ -1,0 +1,45 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "bytes": 66162,
+      "lines": 1690,
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "beforeBodyOrLineNavigation": true,
+      "beforeBody": true,
+      "initialNavigationSha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "note": "Dedicated pin before body/line navigation"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "lines": 649,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "beforeBodyOrLineNavigation": true,
+      "beforeBody": true,
+      "initialNavigationSha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "note": "Dedicated pin before body/line navigation"
+    },
+    {
+      "path": "packages/server/src/project-runtime/control-server.ts",
+      "bytes": 16984,
+      "lines": 410,
+      "sha256": "0f4afbdbd9bf02d787d5b0076b04b8ddf32fb91c30212164cf3250e5be2e9346",
+      "beforeBodyOrLineNavigation": true,
+      "beforeBody": true,
+      "initialNavigationSha256": "0f4afbdbd9bf02d787d5b0076b04b8ddf32fb91c30212164cf3250e5be2e9346",
+      "note": "Dedicated pin before body/line navigation"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "bytes": 7555,
+      "lines": 181,
+      "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "beforeBodyOrLineNavigation": false,
+      "beforeBody": true,
+      "initialNavigationSha256": null,
+      "note": "First title-only rg384c54 occurred before dedicated pin, first navigation SHA unknown; current pin is before selected body, cannot backfill earlier navigation."
+    }
+  ],
+  "productExecution": 0
+}

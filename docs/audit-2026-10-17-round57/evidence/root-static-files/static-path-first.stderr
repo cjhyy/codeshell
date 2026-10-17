@@ -1,0 +1,10 @@
+
+docs/audit-2026-10-17-round57/evidence/static-path.test.ts:
+(pass) control: an existing plain asset streams successfully [11.59ms]
+(pass) observed defect: an existing space-named asset is 404 at its encoded URL [1.48ms]
+(pass) control: a genuinely missing asset is 404 [0.07ms]
+
+ 3 pass
+ 0 fail
+ 8 expect() calls
+Ran 3 tests across 1 file. [293.00ms]

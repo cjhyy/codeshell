@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "-i",
+    "pet-followup|follow.?up.{0,80}(topic|segment|话题|分段)|(topic|segment|话题|分段).{0,80}(follow.?up|唤醒)|injected.{0,60}(journal|closure)|(journal|closure).{0,60}injected",
+    "docs",
+    "bugs"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "bugs/2026-07-13-repo-audit.md",
+    "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+    "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+    "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+    "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+    "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+    "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+    "docs/review-2026-10-12/legacy-history-quality-round24.md",
+    "docs/review-2026-10-12/validation/original-legacy-history-round24/PLAN.md",
+    "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-stage-quality.md",
+    "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+    "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-history.raw.md",
+    "docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+    "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+    "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+    "docs/audit-2026-10-17-round32/evidence/taskparse-history.json"
+  ],
+  "scope": "only MD/JSON frozen files; keys/raw source references remain machine navigation"
+}

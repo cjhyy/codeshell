@@ -1,0 +1,94 @@
+{
+  "rootReportedBaseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "gitChecked": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T19:03:50.960109+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T19:03:50.962385+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "bytes": 2719,
+      "lineCount": 75,
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "pinnedAtUTC": "2026-10-17T19:03:50.963588+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "bytes": 6195,
+      "lineCount": 154,
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "pinnedAtUTC": "2026-10-17T19:03:50.964768+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "bytes": 11377,
+      "lineCount": 275,
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "pinnedAtUTC": "2026-10-17T19:03:50.966148+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "bytes": 11519,
+      "lineCount": 302,
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "pinnedAtUTC": "2026-10-17T19:03:50.966941+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "bytes": 121036,
+      "lineCount": 2912,
+      "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "pinnedAtUTC": "2026-10-17T19:03:50.968414+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "bytes": 7159,
+      "lineCount": 197,
+      "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "pinnedAtUTC": "2026-10-17T19:03:50.969461+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-service.ts",
+      "bytes": 9047,
+      "lineCount": 226,
+      "sha256": "8aa231b2db7313b5886d25ac8a437007e2a5b44b0c58cb5ce6b27e7bd0543a30",
+      "pinnedAtUTC": "2026-10-17T19:03:50.970164+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+      "bytes": 5768,
+      "lineCount": 131,
+      "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "pinnedAtUTC": "2026-10-17T19:03:50.970777+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-host.ts",
+      "bytes": 4323,
+      "lineCount": 110,
+      "sha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+      "pinnedAtUTC": "2026-10-17T19:03:50.971384+00:00",
+      "timing": "before this packet own body/navigation snippets"
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "frozenAtUTC": "2026-10-17T19:10:59.028673+00:00",
+  "files": [
+    {
+      "path": "admission-test-before-pins.json",
+      "bytes": 1282,
+      "sha256": "0f5ea4068fd99bfd40fc14df154d00218520c3bcf3fdab36a723ab2627f99d03"
+    },
+    {
+      "path": "assistant-writer-before-pins.json",
+      "bytes": 1598,
+      "sha256": "dc04987f79e1793935902a4cb09a6a886918eec296378779b056e1b95006f3b7"
+    },
+    {
+      "path": "author-freeze-inputs.first.json",
+      "bytes": 1573,
+      "sha256": "584de99b5d68147d6861e3b49e65c15b0beb2279eede1b86f479a8359f428883"
+    },
+    {
+      "path": "author-freeze-inputs.json",
+      "bytes": 1569,
+      "sha256": "45303e4806c9f1bd70ff727d51cfc3fa7f7889fe464e2eeb1d34f4f61b888250"
+    },
+    {
+      "path": "chain-before-pins.json",
+      "bytes": 2702,
+      "sha256": "2f76533541769a5efe8869a4396802e0e0a93d7f2237b659dd65119ff29e4148"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 2342,
+      "sha256": "177226d784716c35f77e46817f99b6405d0fe2d1dfc3b8b15cf699f74ec00507"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1812,
+      "sha256": "0367492e237ccc150eaf3f45f071a58f509141f5d395f2cb35bb9a8660fd6d32"
+    },
+    {
+      "path": "ending.json",
+      "bytes": 10856,
+      "sha256": "14b3f295224fee5d5998d23a0b34db0cbcb5b01e18f1844cf22033509a1b622d"
+    },
+    {
+      "path": "facade-wiring-before-pin.json",
+      "bytes": 286,
+      "sha256": "b99ae68600df05552d6114c6570c06387f1f65c1f7bc77e7a05fca65f6ea0bd1"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 20671,
+      "sha256": "2d7eb172ac8763bbfddca9aae20bfb235ddb3fc565eaf0daef733dca4309ff44"
+    },
+    {
+      "path": "first-navigation-diagnostic.json",
+      "bytes": 660,
+      "sha256": "72abd4b60cd7fedf7d5eb15e10d57c97b4dd1a50a4f3ad0389cb6528718ec72a"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 3707,
+      "sha256": "67bc7ba781704ddae89b3b72b4aa3e2d6c997e74ec1f5d686957c5ef0aa8fc41"
+    },
+    {
+      "path": "metadata-checks.json",
+      "bytes": 648,
+      "sha256": "89ae748b2cb1450601bf649ec540b9f29344c09e06eb5e4f797f4b30555a8a56"
+    },
+    {
+      "path": "prior-metadata-inputs.first.json",
+      "bytes": 1553,
+      "sha256": "18ca91845010464d10c35b9a44704e87f30f9764d9049b389bb5cd1f63e126d7"
+    },
+    {
+      "path": "prior-metadata-inputs.json",
+      "bytes": 1977,
+      "sha256": "ec9ff5613827e5626a7076e9cadbc8592d8ab90c356f568417c5bc62f845826b"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3249,
+      "sha256": "626819294fb567aa0b84c3a622f03e57bcc770fc3be99d14ea2141e0ab50d77f"
+    },
+    {
+      "path": "source-excerpts.txt",
+      "bytes": 105989,
+      "sha256": "8e7ba49545af702790b0bf75dcf5b95d59b3acaf1f1ed638edfa183886f637dc"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 50537,
+      "sha256": "e69aa62d62dc78b0d3aa7680a42fffe7deb08e9e5836f5ce683e4db956dab550"
+    }
+  ],
+  "fileCountExcludingSelf": 18,
+  "selfExcluded": "artifact-receipt.json",
+  "author": "/root/snapshot_round27_resume; independent source reviewer of132, no author132 file modified",
+  "counts": {
+    "formal": 0,
+    "candidateExistingSameItem": 1,
+    "newRelated": 0
+  },
+  "candidateAlias": "PET-R132-C1; Root planned PET-R57-01 same item not double counted",
+  "productExecutionAttempts": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0,
+  "sourceAndMetadataReadingEnded": true,
+  "immutableAfterReceipt": true
+}

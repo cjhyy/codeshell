@@ -1,0 +1,23 @@
+{
+  "metadataFailures": [],
+  "productFailures": [],
+  "presentationTruncations": [],
+  "normalNoMatchResults": [],
+  "runtimeAttempts": 0,
+  "gitCalls": 0,
+  "networkCalls": 0,
+  "productCalls": 0,
+  "existingTestsExecuted": 0,
+  "firstOutputPolicy": "No metadata command failures or output truncations occurred in this packet; no synthetic raw transcript output is invented. Commands used rg filename/line navigation and Python stdlib reads/metadata only.",
+  "bodyReadToolReferences": [
+    "8f1d84",
+    "a10509",
+    "c41551",
+    "f90d04",
+    "8e7ff4",
+    "36c50f",
+    "212c13"
+  ],
+  "historyTiming": "Pinned leaf before own body; exact R48 old canonical/report read before leaf. Shared423-hit projection was obtained after first leaf body, not backdated as prebody. Additional old R22 object/report read later, finite range.",
+  "historyLimits": "Shared batch5676 MD/JSON includes frozen56 excludes57+, recursive values with archives.423 target hits retained100 cap100. Navigation only; no independent exhaustive semantic history review, no novelty inferred from absence. No rerun shared method."
+}

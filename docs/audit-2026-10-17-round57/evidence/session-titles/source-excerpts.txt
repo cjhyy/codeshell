@@ -1,0 +1,967 @@
+packages/server/src/session-titles-store.ts
+1: /** Durable UI-side session titles, keyed by canonical engine session id. */
+2: 
+3: import { randomUUID } from "node:crypto";
+4: import { constants } from "node:fs";
+5: import * as fs from "node:fs";
+6: import * as path from "node:path";
+7: import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
+8: 
+9: interface TitleMap {
+10:   [sessionId: string]: string;
+11: }
+12: 
+13: const MAX_TITLE_ENTRIES = 20_000;
+14: const MAX_SESSION_ID_LENGTH = 256;
+15: const MAX_TITLE_LENGTH = 1_024;
+16: const MAX_TITLE_FILE_BYTES = 4 * 1024 * 1024;
+17: const FORBIDDEN_MAP_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+18: 
+19: export class SessionTitleConflictError extends Error {
+20:   constructor() {
+21:     super("Session title changed on another device");
+22:     this.name = "SessionTitleConflictError";
+23:   }
+24: }
+25: 
+26: function validSessionId(value: unknown): value is string {
+27:   return (
+28:     typeof value === "string" &&
+29:     value.length > 0 &&
+30:     value.length <= MAX_SESSION_ID_LENGTH &&
+31:     !FORBIDDEN_MAP_KEYS.has(value) &&
+32:     /^[A-Za-z0-9._-]+$/.test(value)
+33:   );
+34: }
+35: 
+36: function validTitle(value: unknown): value is string {
+37:   return typeof value === "string" && value.length <= MAX_TITLE_LENGTH && !value.includes("\0");
+38: }
+39: 
+40: function parseTitleMap(value: unknown, strict = false): TitleMap {
+41:   if (!value || typeof value !== "object" || Array.isArray(value)) {
+42:     if (strict) throw new Error("session title registry is malformed");
+43:     return Object.create(null) as TitleMap;
+44:   }
+45:   if (strict && Object.keys(value).length > MAX_TITLE_ENTRIES)
+46:     throw new Error("session title registry contains too many entries");
+47:   const result: TitleMap = Object.create(null) as TitleMap;
+48:   for (const [id, title] of Object.entries(value).slice(0, MAX_TITLE_ENTRIES)) {
+49:     if (!validSessionId(id) || !validTitle(title)) {
+50:       if (strict) throw new Error("session title registry contains malformed entries");
+51:       continue;
+52:     }
+53:     if (strict || title) result[id] = title;
+54:   }
+55:   return result;
+56: }
+57: 
+58: function load(target: string, strict = false): TitleMap {
+59:   let descriptor: number | undefined;
+60:   try {
+61:     const entry = fs.lstatSync(target);
+62:     if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_TITLE_FILE_BYTES)
+63:       throw new Error("session title registry must be a bounded regular file");
+64:     descriptor = fs.openSync(
+65:       target,
+66:       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+67:     );
+68:     const opened = fs.fstatSync(descriptor);
+69:     if (!opened.isFile() || opened.size > MAX_TITLE_FILE_BYTES)
+70:       throw new Error("session title registry must be a bounded regular file");
+71:     // A concurrent append must not turn a checked four-megabyte file into an
+72:     // unbounded allocation. Read at most the limit plus one sentinel byte.
+73:     const buffer = Buffer.alloc(Math.min(opened.size + 1, MAX_TITLE_FILE_BYTES + 1));
+74:     let bytes = 0;
+75:     while (bytes < buffer.length) {
+76:       const count = fs.readSync(descriptor, buffer, bytes, buffer.length - bytes, bytes);
+77:       if (!count) break;
+78:       bytes += count;
+79:     }
+80:     if (bytes > opened.size || bytes > MAX_TITLE_FILE_BYTES)
+81:       throw new Error("session title registry changed during read");
+82:     return parseTitleMap(JSON.parse(buffer.subarray(0, bytes).toString("utf8")), strict);
+83:   } catch (error) {
+84:     if (strict && (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+85:     return Object.create(null) as TitleMap;
+86:   } finally {
+87:     if (descriptor !== undefined) fs.closeSync(descriptor);
+88:   }
+89: }
+90: 
+91: function save(target: string, map: TitleMap): void {
+92:   const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+93:   try {
+94:     const parent = path.dirname(target);
+95:     fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
+96:     const parentInfo = fs.lstatSync(parent);
+97:     if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory())
+98:       throw new Error("session title directory must be a real directory");
+99:     try {
+100:       const targetInfo = fs.lstatSync(target);
+101:       if (targetInfo.isSymbolicLink() || !targetInfo.isFile())
+102:         throw new Error("session title target must be a regular file");
+103:     } catch (error) {
+104:       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+105:     }
+106:     const serialized = `${JSON.stringify(map, null, 2)}\n`;
+107:     if (Buffer.byteLength(serialized, "utf8") > MAX_TITLE_FILE_BYTES)
+108:       throw new Error("session title registry is too large");
+109:     fs.writeFileSync(temporary, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
+110:     fs.renameSync(temporary, target);
+111:   } finally {
+112:     try {
+113:       fs.rmSync(temporary, { force: true });
+114:     } catch {
+115:       /* preserve the original write error */
+116:     }
+117:   }
+118: }
+119: 
+120: /** Independent host stores share the same atomic title persistence and cross-process lock. */
+121: export function createSessionTitlesStore(
+122:   file: string,
+123:   options: { strictMutations?: boolean } = {},
+124: ) {
+125:   let mutationQueue: Promise<void> = Promise.resolve();
+126:   function serializeMutation(mutation: (target: string) => void): Promise<void> {
+127:     const target = file;
+128:     const result = mutationQueue.then(() => mutation(target));
+129:     mutationQueue = result.catch(() => undefined);
+130:     return result;
+131:   }
+132: 
+133:   async function listTitles(): Promise<TitleMap> {
+134:     await mutationQueue.catch(() => undefined);
+135:     return load(file);
+136:   }
+137: 
+138:   function setTitle(
+139:     id: string,
+140:     title: string,
+141:     expected: { expectedTitle?: string | null } = {},
+142:   ): Promise<void> {
+143:     if (!validSessionId(id)) throw new Error("invalid session id");
+144:     if (!validTitle(title)) throw new Error("invalid session title");
+145:     if (
+146:       expected.expectedTitle !== undefined &&
+147:       expected.expectedTitle !== null &&
+148:       !validTitle(expected.expectedTitle)
+149:     )
+150:       throw new Error("invalid expected session title");
+151:     return serializeMutation((target) => {
+152:       const parent = path.dirname(target);
+153:       fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
+154:       const parentInfo = fs.lstatSync(parent);
+155:       if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+156:         throw new Error("session title directory must be a real directory");
+157:       }
+158:       // A volume root such as /data is writable while its parent / is not.
+159:       // Keep both the lock anchor and its sibling lock inside that volume.
+160:       const anchor = path.join(parent, `.${path.basename(target)}.mutex`);
+161:       fs.mkdirSync(anchor, { recursive: true, mode: 0o700 });
+162:       const anchorInfo = fs.lstatSync(anchor);
+163:       if (!anchorInfo.isDirectory() || anchorInfo.isSymbolicLink())
+164:         throw new Error("session title lock anchor must be a real directory");
+165:       // No await inside this synchronous cross-process lock: a second store
+166:       // instance must never block the event loop while this holder waits for I/O.
+167:       const release = acquireLockOnPath(anchor);
+168:       try {
+169:         const map = load(target, options.strictMutations);
+170:         if (
+171:           expected.expectedTitle !== undefined &&
+172:           (map[id] ?? "") !== (expected.expectedTitle ?? "")
+173:         )
+174:           throw new SessionTitleConflictError();
+175:         if (title) {
+176:           if (!(id in map) && Object.keys(map).length >= MAX_TITLE_ENTRIES) {
+177:             throw new Error("session title registry is full");
+178:           }
+179:           map[id] = title;
+180:         } else delete map[id];
+181:         save(target, map);
+182:       } finally {
+183:         release();
+184:       }
+185:     });
+186:   }
+187: 
+188:   return { listTitles, setTitle };
+189: }
+
+packages/server/src/index.storage.ts
+1: /**
+2:  * Disk-backed session and attachment services.
+3:  *
+4:  * This entry intentionally excludes HTTP/WebSocket hosts and external-agent
+5:  * composition so storage-only consumers do not evaluate transport modules.
+6:  */
+7: export * from "./attachment-service.js";
+8: export * from "./client-message-id.js";
+9: export * from "./image-byte-probe.js";
+10: export * from "./sessions-service.js";
+11: export * from "./session-titles-store.js";
+12: export * from "./model-trace-history.js";
+13: export * from "./panels/storage-store.js";
+
+packages/desktop/src/main/session-titles-store.ts
+1: /** Desktop adapter for the shared host-side session title registry. */
+2: import { join } from "node:path";
+3: import { codeShellHome } from "@cjhyy/code-shell-core";
+4: import { createSessionTitlesStore } from "@cjhyy/code-shell-server/storage";
+5: 
+6: const defaultFile = () => join(codeShellHome(), "desktop", "session-titles.json");
+7: let store = createSessionTitlesStore(defaultFile());
+8: 
+9: /** Test-only isolation hook. */
+10: export function __setSessionTitlesFileForTest(next: string | null): void {
+11:   store = createSessionTitlesStore(next ?? defaultFile());
+12: }
+13: export const listTitles = () => store.listTitles();
+14: export const setTitle = (id: string, title: string) => store.setTitle(id, title);
+
+packages/desktop/src/main/activity-history-ipc.ts
+1: import type { BrowserWindow, IpcMain } from "electron";
+2: import { join } from "node:path";
+3: import { sessionsRoot } from "@cjhyy/code-shell-core";
+4: import { configureModelTracing } from "@cjhyy/code-shell-core/internal";
+5: import { archiveDiskSession, listSessions } from "@cjhyy/code-shell-server/storage";
+6: import { getSessionCwdIndex } from "./session-cwd-index.js";
+7: import { assertDesktopSessionId } from "./session-validation.js";
+8: import { listTitles, setTitle } from "./session-titles-store.js";
+9: import { tailLog, type LogBucket } from "./logs-service.js";
+10: import { readUsageHistory } from "./usage-history-service.js";
+11: import { listRunsForUi, getRunHistory } from "./run-history-service.js";
+12: import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+13: import { registerModelTraceIpc } from "./model-trace-ipc.js";
+14: 
+15: /** Activity history keeps its validation and store ownership outside the Desktop composition root. */
+16: export function registerActivityHistoryIpc(
+17:   ipcMain: Pick<IpcMain, "handle" | "removeHandler">,
+18:   windows: () => BrowserWindow[],
+19: ) {
+20:   configureModelTracing({ storageDir: join(sessionsRoot(), ".model-traces"), source: "desktop" });
+21:   ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
+22:     assertDesktopSessionId(id);
+23:     if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
+24:     await archiveDiskSession(id, archived ? Date.now() : undefined);
+25:     await getSessionCwdIndex().refresh(id);
+26:   });
+27:   ipcMain.handle("sessions:list", async () => listSessions());
+28:   ipcMain.handle("sessions:titles", async () => listTitles());
+29:   ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
+30:     assertDesktopSessionId(id);
+31:     if (typeof title !== "string" || title.length > 1_024 || title.includes("\0")) {
+32:       throw new Error("title must be a bounded string");
+33:     }
+34:     await setTitle(id, title);
+35:   });
+36: 
+37:   ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
+38:     if (bucket !== "ui-ink" && bucket !== "engine" && bucket !== "desktop") {
+39:       throw new Error("invalid bucket");
+40:     }
+41:     const boundedLines =
+42:       typeof lines === "number" && Number.isSafeInteger(lines) && lines > 0
+43:         ? Math.min(lines, 10_000)
+44:         : undefined;
+45:     return tailLog(bucket, boundedLines);
+46:   });
+47: 
+48:   ipcMain.handle("usage:summary", async (_e, query) => readUsageHistory(query));
+49: 
+50:   ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
+51:     listRunsForUi(options),
+52:   );
+53:   ipcMain.handle("runs:get", async (_e, runId: string) => {
+54:     if (typeof runId !== "string") throw new Error("runId required");
+55:     return getRunHistory(runId);
+56:   });
+57:   registerSessionTranscriptIpc(ipcMain);
+58:   return registerModelTraceIpc(ipcMain, windows);
+59: }
+
+packages/server/src/hub/session-management.ts
+14: import { createSessionTitlesStore, SessionTitleConflictError } from "../session-titles-store.js";
+150:   isAuthorized: (req: IncomingMessage) => Promise<boolean>;
+151:   isRunning: (sessionId: string) => boolean;
+152:   onChanged: (sessionId: string) => void;
+153: }) {
+154:   const manager = new SessionManager(options.sessionRootDir);
+155:   const titles = createSessionTitlesStore(join(options.dataDir, "session-titles.json"), {
+156:     strictMutations: true,
+157:   });
+158:   const cwd = resolve(options.cwd);
+159:   let activeExports = 0;
+160: 
+161:   function owned(sessionId: string): SessionState {
+162:     safeSessionId(sessionId);
+163:     try {
+164:       // Reading state alone avoids loading a large transcript for a rename.
+165:       const state = readHubSessionState(options.sessionRootDir, sessionId);
+166:       if (
+167:         !state ||
+168:         state.sessionId !== sessionId ||
+169:         typeof state.cwd !== "string" ||
+170:         resolve(state.cwd) !== cwd ||
+171:         state.parentSessionId ||
+172:         state.ephemeral
+173:       )
+174:         throw new Error();
+175:       return state;
+176:     } catch {
+177:       throw new SessionRequestError(404, "当前工作区没有这个会话。");
+178:     }
+179:   }
+180: 
+181:   function summary(
+182:     state: SessionState & { preview?: string; lastActiveAt?: number },
+183:     customTitle = "",
+184:   ) {
+185:     return {
+186:       sessionId: state.sessionId,
+187:       cwd: state.cwd,
+188:       title:
+189:         customTitle ||
+190:         hubSessionPreview(state.title) ||
+191:         hubSessionPreview(state.preview) ||
+192:         "新对话",
+193:       customTitle,
+194:       startedAt: state.startedAt,
+195:       lastActiveAt: state.lastActiveAt ?? state.startedAt,
+196:       model: state.model,
+197:       status: state.status,
+198:       turnCount: state.turnCount,
+199:       archivedAt: state.archivedAt ?? null,
+200:       running: options.isRunning(state.sessionId),
+201:       ...(state.preview ? { preview: hubSessionPreview(state.preview) } : {}),
+202:     };
+203:   }
+204: 
+205:   async function list(params: URLSearchParams = new URLSearchParams()) {
+206:     const archived = params.get("archived") ?? "false";
+207:     if (!["false", "true", "all"].includes(archived))
+208:       throw new SessionRequestError(400, "归档筛选无效。");
+209:     const query = (params.get("query") ?? "").trim();
+210:     if (query.length > 200) throw new SessionRequestError(400, "搜索内容过长。");
+211:     const limit = Number(params.get("limit") ?? 50);
+212:     if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+213:       throw new SessionRequestError(400, "每页数量必须在 1 到 100 之间。");
+214:     let before: { lastActiveAt: number; sessionId: string } | undefined;
+215:     const cursor = params.get("cursor");
+216:     if (cursor) {
+217:       try {
+218:         if (cursor.length > 1024) throw new Error();
+219:         const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+220:         if (!Number.isFinite(parsed.lastActiveAt) || !SAFE_ID.test(parsed.sessionId))
+221:           throw new Error();
+222:         before = { lastActiveAt: parsed.lastActiveAt, sessionId: parsed.sessionId };
+223:       } catch {
+224:         throw new SessionRequestError(400, "分页位置无效，请刷新会话列表。");
+225:       }
+226:     }
+227:     const customTitles = await titles.listTitles();
+228:     const search = query.toLocaleLowerCase();
+229:     const entries = manager.list(limit + 1, {
+230:       cwd,
+231:       rootsOnly: true,
+232:       ...(archived !== "all" ? { archived: archived === "true" } : {}),
+233:       ...(before ? { before } : {}),
+234:       filter: search
+235:         ? (state) =>
+236:             `${customTitles[state.sessionId] ?? ""}\n${hubSessionPreview(state.title) ?? ""}\n${hubSessionPreview(state.preview) ?? ""}\n${state.sessionId}`
+237:               .toLocaleLowerCase()
+238:               .includes(search)
+239:         : undefined,
+240:     });
+241:     const page = entries.slice(0, limit);
+242:     const last = page.at(-1);
+243:     return {
+244:       sessions: page.map((state) => summary(state, customTitles[state.sessionId])),
+245:       nextCursor:
+246:         entries.length > limit && last
+247:           ? Buffer.from(
+248:               JSON.stringify({ lastActiveAt: last.lastActiveAt, sessionId: last.sessionId }),
+249:             ).toString("base64url")
+250:           : null,
+251:     };
+252:   }
+253: 
+254:   async function handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+255:     const url = new URL(req.url ?? "/", "http://localhost");
+256:     if (url.pathname !== ROOT && !url.pathname.startsWith(`${ROOT}/`)) return false;
+257:     let exporting = false;
+258:     try {
+259:       if (!(await options.isAuthorized(req))) throw new SessionRequestError(401, "请重新登录。");
+260:       if (url.pathname === ROOT && req.method === "GET") {
+261:         const result = await list(url.searchParams);
+262:         if (!(await options.isAuthorized(req))) throw new SessionRequestError(401, "请重新登录。");
+263:         hubJson(res, 200, result);
+264:         return true;
+265:       }
+266:       const match = /^\/api\/v1\/sessions\/([^/]+)(\/export)?$/.exec(url.pathname);
+267:       if (!match) throw new SessionRequestError(404, "没有这个会话操作。");
+268:       let sessionId: string;
+269:       try {
+270:         sessionId = decodeURIComponent(match[1]!);
+271:       } catch {
+272:         throw new SessionRequestError(400, "会话标识无效。");
+273:       }
+274:       const state = owned(sessionId);
+275:       if (!match[2] && req.method === "GET") {
+276:         const customTitles = await titles.listTitles();
+277:         if (!(await options.isAuthorized(req))) throw new SessionRequestError(401, "请重新登录。");
+278:         hubJson(res, 200, summary(owned(sessionId), customTitles[sessionId]));
+279:       } else if (match[2] && req.method === "GET") {
+280:         if (options.isRunning(sessionId))
+281:           throw new SessionRequestError(409, "请等待当前任务完成后再导出完整对话。");
+282:         if (activeExports >= 2)
+283:           throw new SessionRequestError(429, "正在导出的对话过多，请稍后重试。");
+284:         activeExports++;
+285:         exporting = true;
+286:         const transcript = readHubTranscript(options.sessionRootDir, sessionId);
+287:         const format = url.searchParams.get("format") ?? "markdown";
+288:         if (format !== "json" && format !== "markdown")
+289:           throw new SessionRequestError(400, "不支持这个导出格式。");
+290:         const title =
+291:           (await titles.listTitles())[sessionId] ||
+292:           hubSessionPreview(state.title) ||
+293:           "CodeShell 对话";
+294:         const body =
+295:           format === "json"
+296:             ? JSON.stringify({ version: 1, title, state, transcript }, null, 2) + "\n"
+297:             : transcriptMarkdown(title, transcript);
+298:         if (Buffer.byteLength(body) > MAX_EXPORT_BYTES)
+299:           throw new SessionRequestError(413, "导出内容过大。");
+300:         if (!(await options.isAuthorized(req))) throw new SessionRequestError(401, "请重新登录。");
+301:         res.writeHead(200, {
+302:           "content-type":
+303:             format === "json" ? "application/json; charset=utf-8" : "text/markdown; charset=utf-8",
+304:           "content-disposition": `attachment; filename="codeshell-${sessionId}.${format === "json" ? "json" : "md"}"`,
+305:           "cache-control": "no-store",
+306:           "x-content-type-options": "nosniff",
+307:         });
+308:         res.end(body);
+309:       } else if (!match[2] && req.method === "PATCH") {
+310:         const input = await readBody(req);
+311:         if (!(await options.isAuthorized(req))) throw new SessionRequestError(401, "请重新登录。");
+312:         owned(sessionId);
+313:         if ("title" in input) {
+314:           if (Object.keys(input).some((key) => key !== "title" && key !== "expectedTitle"))
+315:             throw new SessionRequestError(400, "每次只修改一个会话属性。");
+316:           if (
+317:             typeof input.title !== "string" ||
+318:             input.title.length > 1024 ||
+319:             /[\0\r\n]/.test(input.title)
+320:           )
+321:             throw new SessionRequestError(400, "标题必须是 1024 字以内的单行文字。");
+322:           if (
+323:             input.expectedTitle !== undefined &&
+324:             input.expectedTitle !== null &&
+325:             (typeof input.expectedTitle !== "string" ||
+326:               input.expectedTitle.length > 1024 ||
+327:               input.expectedTitle.includes("\0"))
+328:           )
+329:             throw new SessionRequestError(400, "用于比较的原标题无效，请重新读取会话。");
+330:           await titles.setTitle(sessionId, input.title.trim(), {
+331:             expectedTitle: input.expectedTitle as string | null | undefined,
+332:           });
+333:         } else if (Object.keys(input).length === 1 && typeof input.archived === "boolean") {
+334:           if (options.isRunning(sessionId))
+335:             throw new SessionRequestError(409, "请等待当前任务完成后再归档或恢复会话。");
+336:           manager.setSessionArchived(sessionId, input.archived ? Date.now() : undefined);
+337:         } else throw new SessionRequestError(400, "不支持这个会话属性。");
+338:         options.onChanged(sessionId);
+339:         hubJson(res, 200, { ok: true });
+340:       } else throw new SessionRequestError(405, "不支持这个请求方式。");
+341:     } catch (cause) {
+342:       hubJson(
+343:         res,
+344:         cause instanceof SessionTitleConflictError
+345:           ? 409
+346:           : cause instanceof SessionRequestError
+347:             ? cause.status
+348:             : 500,
+349:         {
+350:           error:
+351:             cause instanceof SessionTitleConflictError
+352:               ? "另一设备已修改标题。你的草稿已保留，请读取最新标题后再确认保存。"
+353:               : cause instanceof SessionRequestError
+354:                 ? cause.message
+355:                 : "会话操作失败，原有记录仍保留在服务器。",
+356:         },
+357:       );
+373: /** Keep engine attachment wrappers out of title/search/preview surfaces. */
+395: export function transcriptMarkdown(title: string, transcript: readonly unknown[]): string {
+396:   const sections = [`# ${title.replace(/[\r\n]/g, " ")}`];
+
+packages/desktop/src/renderer/sessions/SessionsView.tsx
+36:   onSessionRenamed?: (id: string, title: string) => void;
+45:   | { kind: "rename" | "delete"; id: string; source: HTMLElement | null }
+59:   onSessionRenamed,
+65:   const [titles, setTitles] = useState<Record<string, string>>({});
+70:   const [titlesError, setTitlesError] = useState<string | null>(null);
+71:   const [refreshing, setRefreshing] = useState(false);
+90:   const renameRefs = useRef(new Map<string, HTMLButtonElement>());
+101:   const refresh = useCallback(async (retrySource?: HTMLElement) => {
+102:     const version = ++readVersion.current;
+103:     readPending.current = true;
+104:     setRefreshing(true);
+105:     try {
+106:       const [listResult, titlesResult] = await Promise.allSettled([
+107:         window.codeshell.listSessions(),
+108:         window.codeshell.listSessionTitles(),
+109:       ]);
+110:       if (!mounted.current || version !== readVersion.current) return;
+111:       if (listResult.status === "rejected") throw listResult.reason;
+112:       const list = listResult.value;
+113:       if (retrySource && document.activeElement === retrySource) {
+114:         restoreFocus.current = { kind: "search", source: retrySource };
+115:       }
+116:       setSessions(list);
+117:       setTitles((current) => ({
+118:         ...Object.fromEntries(list.map((session) => [session.id, session.title ?? ""])),
+119:         ...(titlesResult.status === "fulfilled" ? titlesResult.value : current),
+120:       }));
+121:       setTitlesError(titlesResult.status === "rejected" ? errorMessage(titlesResult.reason) : null);
+122:       setReadError(null);
+123:     } catch (error) {
+124:       if (mounted.current && version === readVersion.current) setReadError(errorMessage(error));
+125:     } finally {
+126:       if (mounted.current && version === readVersion.current) {
+127:         readPending.current = false;
+128:         setRefreshing(false);
+129:       }
+130:     }
+131:   }, []);
+132: 
+133:   useEffect(() => {
+134:     mounted.current = true;
+135:     void refresh();
+136:     return () => {
+137:       mounted.current = false;
+138:       readVersion.current += 1;
+139:     };
+140:   }, [refresh]);
+162:         ? ((request.kind === "rename" ? renameRefs : deleteRefs).current.get(request.id) ??
+177:     void refresh(retrySource);
+246:         kind: "rename",
+254:   const commitEdit = async () => {
+255:     if (!editing || savingRef.current) return;
+256:     const { id, draft } = editing;
+257:     const title = draft.trim();
+258:     if (title === (titles[id] ?? "")) {
+259:       closeEditor(id);
+260:       return;
+261:     }
+262:     savingRef.current = true;
+263:     setSaving(true);
+264:     setEditing((current) => current && { ...current, error: null });
+265:     try {
+266:       await window.codeshell.renameSession(id, title);
+267:       // An empty title removes the UI override; show the durable title now,
+268:       // just as the next refresh will, and keep the sidebar in sync.
+269:       const displayTitle = title || sessions?.find((session) => session.id === id)?.title || "";
+270:       onSessionRenamed?.(id, displayTitle);
+271:       if (!mounted.current) return;
+272:       setTitles((current) => ({ ...current, [id]: displayTitle }));
+273:       closeEditor(id);
+274:     } catch (error) {
+275:       if (!mounted.current) return;
+276:       setEditing((current) =>
+277:         current?.id === id ? { ...current, error: errorMessage(error) } : current,
+278:       );
+279:       if (editorRef.current?.contains(document.activeElement)) {
+280:         inputRef.current?.focus();
+281:       }
+282:     } finally {
+283:       savingRef.current = false;
+284:       if (mounted.current) setSaving(false);
+439:             aria-disabled={refreshing || locked}
+442:             <RefreshCw size={14} aria-hidden className={refreshing ? "animate-spin" : undefined} />
+443:             {t("auto.sessions.refresh")}
+462:               aria-disabled={refreshing || locked}
+471:           refreshing && (
+544:                                 void commitEdit();
+561:                               {t("auto.sessions.renameError", { error: editing.error })}
+580:                               onClick={() => void commitEdit()}
+599:                                   disabled={locked || refreshing}
+632:                               disabled={locked || refreshing}
+649:                                 disabled={(locked && opening !== session.id) || refreshing}
+667:                                 if (node) renameRefs.current.set(session.id, node);
+668:                                 else renameRefs.current.delete(session.id);
+674:                               disabled={locked || refreshing}
+678:                               {t("auto.sessions.rename")}
+689:                               disabled={locked || refreshing}
+768:                               aria-disabled={deleting === session.id || refreshing}
+
+packages/desktop/src/renderer/app/useSessionHistorySync.ts
+1: import {
+2:   useCallback,
+3:   useRef,
+4:   type Dispatch,
+5:   type MutableRefObject,
+6:   type SetStateAction,
+7: } from "react";
+8: import {
+9:   bucketKey,
+10:   clearPanelState,
+11:   deleteSessionLocal,
+12:   NO_REPO_KEY,
+13:   renameSessionLocal,
+14:   type SessionIndex,
+15: } from "../transcripts";
+16: import { forgetExternalRuntimeSession } from "../externalRuntimeRun";
+17: import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
+18: import type { QueuedInputState } from "../queuedInput";
+19: import type { ComposerDraftsMap, PanelBucketState } from "./appUtils";
+20: 
+21: interface Params {
+22:   untitledTitle: string;
+23:   sessionIndicesRef: MutableRefObject<Record<string, SessionIndex>>;
+24:   setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
+25:   activeBucketRef: MutableRefObject<string>;
+26:   setPanelByBucket: Dispatch<SetStateAction<Record<string, PanelBucketState>>>;
+27:   transcriptsRef: MutableRefObject<TranscriptsMap>;
+28:   dispatch: Dispatch<TranscriptsAction>;
+29:   engineToBucketRef: MutableRefObject<Map<string, string>>;
+30:   runningBucketRef: MutableRefObject<string | null>;
+31:   coalescersRef: MutableRefObject<Map<string, { discard(): void }>>;
+32:   coalescerSeqRef: MutableRefObject<Map<string, number>>;
+33:   appliedSeqRef: MutableRefObject<Map<string, number>>;
+34:   setBusyForKey: (bucket: string, busy: boolean) => void;
+35:   setUnreadBuckets: Dispatch<SetStateAction<Set<string>>>;
+36:   setQueuedInputs: Dispatch<SetStateAction<QueuedInputState>>;
+37:   setComposerDrafts: Dispatch<SetStateAction<ComposerDraftsMap>>;
+38: }
+39: 
+40: /** Reconcile a successful history-page mutation with the loaded sidebar projection. */
+41: export function useSessionHistorySync(params: Params) {
+42:   // An IPC may finish after its page unmounts or another session becomes active.
+43:   const latest = useRef(params);
+44:   latest.current = params;
+45: 
+46:   const onSessionRenamed = useCallback((engineId: string, title: string) => {
+47:     const current = latest.current;
+48:     const changed: Record<string, SessionIndex> = {};
+49:     for (const [key, index] of Object.entries(current.sessionIndicesRef.current)) {
+50:       const projectId = key === NO_REPO_KEY ? null : key;
+51:       for (const session of index.sessions) {
+52:         if ((session.engineSessionId ?? session.id) !== engineId) continue;
+53:         changed[key] = renameSessionLocal(
+54:           projectId,
+55:           session.id,
+56:           title.trim() || current.untitledTitle,
+57:           true,
+58:         );
+59:       }
+60:     }
+61:     if (Object.keys(changed).length === 0) return;
+62:     current.sessionIndicesRef.current = { ...current.sessionIndicesRef.current, ...changed };
+63:     current.setSessionIndices((previous) => ({ ...previous, ...changed }));
+64:   }, []);
+65: 
+66:   const onSessionDeleted = useCallback((engineId: string) => {
+67:     const current = latest.current;
+126:   return { onSessionRenamed, onSessionDeleted };
+
+packages/web/app/HubSessions.tsx
+24:   expectedTitle: string;
+124:   onChanged,
+130:   onChanged?: () => void;
+163:   const renameButtons = React.useRef(new Map<string, HTMLButtonElement>());
+242:                 : (renameButtons.current.get(focusIntent.id) ??
+258:   const callbacks = React.useRef({ onAuthLost, onChanged, onOpen });
+259:   callbacks.current = { onAuthLost, onChanged, onOpen };
+261:     if (!openAfterWrite || busy || loading || loadingMore) return;
+262:     // Let the settled busy/dirty notification commit in Workbench before it
+263:     // evaluates the existing navigation guard. Keep intent listeners active.
+264:     const frame = requestAnimationFrame(() => {
+265:       setOpenAfterWrite(null);
+266:       if (
+267:         openGeneration.current !== openAfterWrite.generation ||
+268:         filterIdentity.current !== openAfterWrite.identity
+269:       )
+270:         return;
+271:       const intent = focus.take(openAfterWrite.request);
+272:       if (intent) callbacks.current.onOpen(openAfterWrite.id, intent);
+273:     });
+274:     return () => cancelAnimationFrame(frame);
+275:   }, [busy, loading, loadingMore, openAfterWrite, focus.take]);
+276:   const report = React.useCallback((cause: unknown) => {
+277:     if (cause instanceof ApiError && cause.status === 401) callbacks.current.onAuthLost();
+278:     else setError(cause instanceof Error ? cause.message : "会话操作失败，请重试。");
+279:   }, []);
+280:   React.useEffect(() => {
+281:     const timer = setTimeout(() => setSearch(query.trim()), 200);
+282:     return () => clearTimeout(timer);
+283:   }, [query]);
+284:   React.useEffect(() => {
+285:     read.current?.abort();
+286:     const controller = new AbortController();
+287:     read.current = controller;
+288:     setLoading(true);
+289:     setLoadingMore(false);
+290:     setReadFailed(false);
+291:     setError("");
+292:     void readManagedSessions({ query: search, archived, signal: controller.signal })
+293:       .then((data) => {
+294:         if (!controller.signal.aborted) {
+295:           setEntries(data.sessions);
+296:           setCursor(data.nextCursor);
+297:         }
+298:       })
+299:       .catch((cause) => {
+300:         if (!controller.signal.aborted) {
+301:           setReadFailed(true);
+302:           report(cause);
+303:         }
+304:       })
+305:       .finally(() => {
+306:         if (!controller.signal.aborted) setLoading(false);
+307:       });
+308:     return () => controller.abort();
+309:   }, [search, archived, version, reload, report]);
+310:   React.useEffect(
+311:     () => () => {
+312:       read.current?.abort();
+313:       write.current?.abort();
+314:     },
+315:     [],
+316:   );
+353:       })
+354:       .finally(() => {
+355:         if (!controller.signal.aborted) setLoadingMore(false);
+356:       });
+357:   };
+358: 
+359:   const mutate = async (
+360:     id: string,
+361:     patch: { title: string; expectedTitle: string } | { archived: boolean },
+362:     open = false,
+363:     source: Element | null = document.activeElement,
+364:   ) => {
+365:     if (write.current) return;
+366:     const request = focus.capture(source);
+367:     const openIdentity = filterIdentity.current;
+368:     const generation = openGeneration.current;
+369:     const controller = new AbortController();
+370:     write.current = controller;
+371:     setBusy(id);
+372:     setError("");
+373:     setNotice("");
+374:     setActionFeedback(null);
+375:     if ("title" in patch) setEdit((current) => current && { ...current, error: "" });
+376:     try {
+377:       await api(`/api/v1/sessions/${encodeURIComponent(id)}`, {
+378:         method: "PATCH",
+379:         headers: { "content-type": "application/json" },
+380:         body: JSON.stringify(patch),
+381:         signal: controller.signal,
+382:       });
+383:       if (controller.signal.aborted) return;
+384:       if ("title" in patch) {
+385:         finishEdit(request);
+386:         setNotice(patch.title ? "标题已保存。" : "已恢复自动标题。");
+387:       } else {
+388:         setActionFeedback({
+389:           id,
+390:           kind: "success",
+391:           message: patch.archived ? "对话已归档，可以在“已归档”中恢复。" : "对话已恢复。",
+392:         });
+393:         if (!open) scheduleFocus(request, "action", id);
+394:       }
+395:       setLoading(true);
+396:       setReload((value) => value + 1);
+397:       callbacks.current.onChanged?.();
+398:       if (open) setOpenAfterWrite({ id, request, generation, identity: openIdentity });
+399:     } catch (cause) {
+400:       if (!controller.signal.aborted) {
+401:         if ("title" in patch && !(cause instanceof ApiError && cause.status === 401)) {
+402:           setEdit((current) =>
+403:             current?.id === id
+404:               ? {
+405:                   ...current,
+406:                   error: cause instanceof Error ? cause.message : "标题保存失败，请重试。",
+407:                   conflict: cause instanceof ApiError && cause.status === 409,
+408:                   unavailable: cause instanceof ApiError && cause.status === 404,
+409:                 }
+410:               : current,
+411:           );
+412:           scheduleFocus(request, "error", id);
+413:         } else if (cause instanceof ApiError && cause.status === 401) report(cause);
+414:         else {
+415:           setActionFeedback({
+416:             id,
+417:             kind: "error",
+418:             message: cause instanceof Error ? cause.message : "会话操作失败，请重试。",
+419:           });
+420:           scheduleFocus(request, "action", id);
+421:         }
+422:       }
+423:     } finally {
+424:       if (write.current === controller) write.current = null;
+425:       if (!controller.signal.aborted) setBusy("");
+426:     }
+428:   const refreshTitle = async (source: HTMLElement) => {
+429:     if (!edit || write.current) return;
+430:     const id = edit.id;
+431:     const request = focus.capture(source);
+432:     const controller = new AbortController();
+433:     write.current = controller;
+434:     setBusy(id);
+435:     setEdit((current) => current && { ...current, error: "" });
+436:     try {
+437:       const current = await api<ManagedSession>(`/api/v1/sessions/${encodeURIComponent(id)}`, {
+438:         signal: controller.signal,
+439:       });
+440:       if (controller.signal.aborted) return;
+441:       // Only an explicit read updates the compare-and-set baseline. Background
+442:       // list refreshes must never silently authorize replacing another device's title.
+443:       setEdit((draft) =>
+444:         draft?.id === id
+445:           ? {
+446:               ...draft,
+447:               expectedTitle: current.customTitle,
+448:               reviewedTitle: current.title,
+449:               conflict: false,
+450:               unavailable: false,
+451:               error: "",
+452:             }
+453:           : draft,
+454:       );
+455:       scheduleFocus(request, "input", id);
+550:         </label>
+551:       </div>
+552:       {edit ? (
+553:         <form
+554:           className="session-history-editor"
+555:           aria-labelledby="session-title-editor-heading"
+556:           onSubmit={(event) => {
+557:             event.preventDefault();
+558:             if (!busy && !edit.conflict && !edit.unavailable)
+559:               void mutate(
+560:                 edit.id,
+561:                 { title: edit.title, expectedTitle: edit.expectedTitle },
+562:                 false,
+563:                 (event.nativeEvent as SubmitEvent).submitter ?? document.activeElement,
+564:               );
+565:           }}
+566:         >
+567:           <div>
+568:             <h2 id="session-title-editor-heading">重命名对话</h2>
+619:                 onClick={(event) => void refreshTitle(event.currentTarget)}
+630:               取消
+631:             </button>
+632:             {edit.expectedTitle ? (
+633:               <button
+634:                 type="button"
+635:                 className="library-button"
+636:                 disabled={!!busy || edit.conflict || edit.unavailable}
+637:                 onClick={(event) =>
+638:                   void mutate(
+639:                     edit.id,
+640:                     { title: "", expectedTitle: edit.expectedTitle },
+641:                     false,
+642:                     event.currentTarget,
+643:                   )
+644:                 }
+700:                     if (node) renameButtons.current.set(entry.sessionId, node);
+701:                     else renameButtons.current.delete(entry.sessionId);
+707:                     const request = focus.capture(event.currentTarget);
+708:                     setNotice("");
+709:                     setActionFeedback(null);
+710:                     scheduleFocus(request, "edit", entry.sessionId);
+711:                     setEdit({
+712:                       id: entry.sessionId,
+713:                       title: entry.title,
+714:                       originalTitle: entry.title,
+715:                       expectedTitle: entry.customTitle,
+716:                     });
+717:                   }}
+718:                 >
+719:                   {edit?.id === entry.sessionId ? "正在编辑" : "重命名"}
+720:                 </button>
+
+packages/server/src/session-titles-store.test.ts
+1: import { afterEach, expect, test } from "bun:test";
+2: import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
+3: import { tmpdir } from "node:os";
+4: import { join } from "node:path";
+5: import { createSessionTitlesStore, SessionTitleConflictError } from "./session-titles-store.js";
+6: 
+7: const directories: string[] = [];
+8: afterEach(() => {
+9:   for (const directory of directories.splice(0))
+10:     rmSync(directory, { recursive: true, force: true });
+11: });
+12: function fixture() {
+13:   const directory = mkdtempSync(join(tmpdir(), "hub-title-review-"));
+14:   directories.push(directory);
+15:   const file = join(directory, "titles.json");
+16:   return { file, store: createSessionTitlesStore(file, { strictMutations: true }) };
+17: }
+18: 
+19: test("independent title stores serialize bounded writes without blocking each other's async lock holder", async () => {
+20:   const { file, store } = fixture();
+21:   const other = createSessionTitlesStore(file, { strictMutations: true });
+22:   await Promise.all(
+23:     Array.from({ length: 20 }, (_, index) =>
+24:       (index % 2 ? other : store).setTitle(`session-${index}`, `Title ${index}`),
+25:     ),
+26:   );
+27:   expect(Object.keys(await store.listTitles())).toHaveLength(20);
+28:   expect(JSON.parse(readFileSync(file, "utf8"))["session-19"]).toBe("Title 19");
+29: });
+30: 
+31: test("strict writes preserve malformed raw entries while tolerant Desktop reads still filter them", async () => {
+32:   const { file, store } = fixture();
+33:   for (const raw of [
+34:     '{"good":"Keep","bad":42}',
+35:     '{"good":"Keep","constructor":"invalid"}',
+36:     '{"good":"Keep", "bad":"unterminated}',
+37:   ]) {
+38:     writeFileSync(file, raw);
+39:     await expect(store.setTitle("new", "New")).rejects.toThrow();
+40:     expect(readFileSync(file, "utf8")).toBe(raw);
+41:   }
+42:   writeFileSync(file, '{"good":"Keep","bad":42}');
+43:   expect(await createSessionTitlesStore(file).listTitles()).toEqual({ good: "Keep" });
+44: });
+45: 
+46: test("title maps do not expose inherited Object prototype properties", async () => {
+47:   const { store } = fixture();
+48:   expect((await store.listTitles())["toString"]).toBeUndefined();
+49:   await store.setTitle("toString", "A real session");
+50:   expect((await store.listTitles())["toString"]).toBe("A real session");
+51: });
+52: 
+53: test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+54:   "non-root title writes work when only the data directory is writable",
+55:   async () => {
+56:     const { file } = fixture();
+57:     const parent = join(file, "..");
+58:     const data = join(parent, "data");
+59:     mkdirSync(data);
+60:     chmodSync(parent, 0o500);
+61:     try {
+62:       const store = createSessionTitlesStore(join(data, "titles.json"), { strictMutations: true });
+63:       await store.setTitle("session", "Writable volume root");
+64:       expect((await store.listTitles())["session"]).toBe("Writable volume root");
+65:     } finally {
+66:       chmodSync(parent, 0o700);
+67:     }
+68:   },
+69: );
+70: 
+71: test("expected custom titles compare atomically against the latest independent writer", async () => {
+72:   const { file, store } = fixture();
+73:   const other = createSessionTitlesStore(file, { strictMutations: true });
+74:   await store.setTitle("session", "First writer", { expectedTitle: null });
+75:   await expect(
+76:     other.setTitle("session", "Stale overwrite", { expectedTitle: "" }),
+77:   ).rejects.toBeInstanceOf(SessionTitleConflictError);
+78:   expect((await store.listTitles())["session"]).toBe("First writer");
+79:   await other.setTitle("session", "", { expectedTitle: "First writer" });
+80:   expect((await store.listTitles())["session"]).toBeUndefined();
+81: });

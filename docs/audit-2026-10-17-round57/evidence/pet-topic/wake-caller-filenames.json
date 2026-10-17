@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "wakeFollowUp",
+    "packages/desktop/src"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/desktop/src/main/pet/pet-follow-up-integration.test.ts\npackages/desktop/src/main/pet/pet-dispatch-service.ts\npackages/desktop/src/main/pet/pet-follow-up-runtime.ts\n",
+  "stderr": ""
+}

@@ -1,0 +1,44 @@
+{
+  "formalFindings": [],
+  "candidates": [
+    {
+      "id": "PET-R132-C1",
+      "priority": "P3",
+      "reviewDisposition": "supports static causal chain for single author candidate; no separate ID/count",
+      "rootPlannedFormalAlias": "PET-R57-01, Root decision after this review; not counted twice",
+      "conditions": [
+        "Existing active S0 not already journaled, at least3 meaningful ordinary messages, autoExtractEnabled true.",
+        "Legitimate future resume with valid idle nonexternal source, no pending decision, no paused/interrupted task direct-resume branch; Mimi last interaction at least12h ago.",
+        "Successful manager wake H run persists injected user with H; normal assistant writer does not copy H to message.data."
+      ],
+      "timeline": [
+        "T1: beginTurn(H) closesS0(nextH), opensS1(startH); H is injected. Immediately after run settles, filtered reader lacksH; S0 end lookup fails, close returnsnull before extraction.",
+        "T2<12h ordinary user does not open a new segment, so S1 boundary remainsH.",
+        "T2>=12h ordinary U opensS2, closesS1(startH,endU); filtered reader lacksH, start lookup fails. Later S2 has ordinary U anchor and can recover normally."
+      ],
+      "impact": "Those closed segments skip journal/auto-memory extraction. This is not a guarantee that a successful model would always yield memories, not actual observed data loss, and not a claim that all future segments fail.",
+      "notClaimed": [
+        "No runtime/model/UI observation.",
+        "No independent span/context archival failure, original message deletion, permission bypass, shutdown closure, or correctness of FS/locks/authority.",
+        "No exhaustive full-history novelty claim."
+      ]
+    }
+  ],
+  "relatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidates": 1,
+    "newRelated": 0
+  },
+  "oldEvidence": {
+    "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+    "readLineRanges": [
+      [
+        846,
+        876
+      ]
+    ],
+    "keyLine": 866,
+    "decision": "Explicit old injected/closure skip discussion. It describes independent client-ID span context archive not affected by closure index policy; it is not proof that journal closure can locate a filtered wake boundary, nor a claim history never mentioned injected."
+  }
+}

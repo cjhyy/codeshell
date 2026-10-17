@@ -1,0 +1,16 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "relatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "decision": "Finite negative for selected ordinary title-write/list/update contract. No proved ordinary new counterexample; no whole-store/permission/lock/runtime correctness conclusion.",
+  "exclusions": [
+    "Old manual-title vs automatic-title/double-source observations are existing evidence, not a new finding.",
+    "No invented requirement that Desktop optional CAS must be exposed or all list snapshots be globally transactional.",
+    "Title override removal via empty string differs from session archive/deletion. Full session deletion, account/owner semantics and underlying lock/native efficacy are outside this review."
+  ]
+}

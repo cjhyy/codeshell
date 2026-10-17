@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/core/src/session",
+    "-g",
+    "*transcript*"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/core/src/session/transcript-tool-result-normalization.test.ts\npackages/core/src/session/transcript.ts\npackages/core/src/session/transcript.flush-failure.test.ts\npackages/core/src/session/transcript.range-archive.test.ts\npackages/core/src/session/transcript.subagent.test.ts\n",
+  "stderr": ""
+}

@@ -1,0 +1,44 @@
+{
+  "role": "Independent source-only directed reviewer; did not execute Root fixture",
+  "executionsByThisReviewer": {
+    "product": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "browser": 0,
+    "HTTPserver": 0,
+    "network": 0,
+    "native": 0,
+    "models": 0,
+    "UI": 0,
+    "Git": 0,
+    "realUserData": 0
+  },
+  "sourceDisplayChunks": [
+    "9c73e6",
+    "6411c6",
+    "f4f16b",
+    "7eb32d",
+    "70c38c"
+  ],
+  "scopeTotals": {
+    "semanticFiles": 9,
+    "full": 0,
+    "selected": 9,
+    "productSemanticLines": 152,
+    "testDeclarationSemanticLines": 14,
+    "resourceMetadataSemanticLines": 2,
+    "semanticLines": 168,
+    "uniqueDisplayedLinesSummedAcrossFiles": 400,
+    "navigationOnlyFiles": 3,
+    "hashOnlyAssetFiles": 2,
+    "sourceAndInstructionBytePins": 16,
+    "partialExistingTestDeclarationsRead": 4,
+    "testsExecutedByReviewer": 0
+  },
+  "externalTestReport": "Root reported one guarded3pass/8expect attempt; this reviewer neither ran nor read/hashverified fixture or logs. Handler condition only, not product build reachability.",
+  "history": "Parent frozen5676batch static31/mobile34 allsaved cap100 and cause66/29; projection not all semantic historical reading.",
+  "boundaries": "No Vite build, package install, official-doc network fetch, vendor implementation execution, realpage, realstatic server, permissions/security/path-custody experiment.",
+  "metadataFirstFailure": "Own metadata parse error4f20c3 and original script preserved; corrected metadata generator5ae3ad exit0, product/test attempts unchanged0."
+}

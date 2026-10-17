@@ -1,0 +1,33 @@
+{
+  "productImports": 0,
+  "productHelperCalls": 0,
+  "fixtures": 0,
+  "testsRun": 0,
+  "realUserSessionsOrTraceData": 0,
+  "clockTimerExperiments": 0,
+  "ReactDOM": 0,
+  "nativeModelProductProcesses": 0,
+  "network": 0,
+  "GitCalls": 0,
+  "auditTools": [
+    "Python standard library metadata/hash/JSON/ranges",
+    "rg filename and exact source line navigation"
+  ],
+  "sourceCounts": {
+    "fullProductFiles": 3,
+    "selectedProductFiles": 17,
+    "selectedTestDeclarationFiles": 3,
+    "productSemanticLines": 2152,
+    "testDeclarationLines": 74,
+    "allSemanticDeclarationLines": 2226,
+    "sourceBodyDisplayedLines": 2680,
+    "navigationBeyondBodyLines": 180,
+    "allDisplayedSourceLinesIncludingNavigation": 2860,
+    "testRuns": 0
+  },
+  "endingSourcePins": 27,
+  "endingHistoryDocs": 33,
+  "endingAllPinsSame": true,
+  "history": "Shared5676 incl56/ex57+,4212456 value scalar machine visits,topic43hits all saved; no author whole-history rescan. Own focused12/16matched MD/JSON subset and10bounded actual windows, not semantic exhaustion.",
+  "classification": "0 formal /1 candidate PET-R132-C1 P3 static proposal /0 new-related; independent review pending, not automatically promoted."
+}

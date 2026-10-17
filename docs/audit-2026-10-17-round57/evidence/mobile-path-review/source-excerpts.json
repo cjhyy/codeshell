@@ -1,0 +1,1629 @@
+[
+  {
+    "path": "packages/server/src/mobile-remote/mobile-static.ts",
+    "sha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { createReadStream, existsSync, realpathSync, statSync } from \"node:fs\";"
+      },
+      {
+        "line": 2,
+        "text": "import { isAbsolute, join, normalize, relative, resolve, sep, extname } from \"node:path\";"
+      },
+      {
+        "line": 3,
+        "text": "import { request as httpRequest, type IncomingMessage, type ServerResponse } from \"node:http\";"
+      },
+      {
+        "line": 4,
+        "text": "import { contentTypeFor } from \"../static-files.js\";"
+      },
+      {
+        "line": 5,
+        "text": ""
+      },
+      {
+        "line": 6,
+        "text": "/**"
+      },
+      {
+        "line": 7,
+        "text": " * Serves the built mobile web app (out/mobile) as static assets for the"
+      },
+      {
+        "line": 8,
+        "text": " * `/mobile` route family, replacing the old inline `mobileRemoteHtml()` string."
+      },
+      {
+        "line": 9,
+        "text": " *"
+      },
+      {
+        "line": 10,
+        "text": " * Two modes:"
+      },
+      {
+        "line": 11,
+        "text": " *  - prod: read files from `out/mobile` (resolved relative to the bundled main)."
+      },
+      {
+        "line": 12,
+        "text": " *  - dev:  proxy to the mobile vite dev server (MOBILE_DEV_URL) for HMR."
+      },
+      {
+        "line": 13,
+        "text": " *"
+      },
+      {
+        "line": 14,
+        "text": " * The app is built/served with vite base \"/mobile/\" (vite.mobile.config.ts), so"
+      },
+      {
+        "line": 15,
+        "text": " * BOTH the built bundle's asset URLs and vite's dev HMR/module URLs live under"
+      },
+      {
+        "line": 16,
+        "text": " * the `/mobile` prefix — a single prefix route serves prod and dev, with no"
+      },
+      {
+        "line": 17,
+        "text": " * root-level asset shim or whole-server dev proxy."
+      },
+      {
+        "line": 18,
+        "text": " *"
+      },
+      {
+        "line": 19,
+        "text": " * Security (design §5): only files INSIDE out/mobile are served. The request"
+      },
+      {
+        "line": 20,
+        "text": " * path is normalized and re-resolved; anything that escapes the root → 404."
+      },
+      {
+        "line": 21,
+        "text": " * This closes the path-traversal hole the beta1 sweep fixed elsewhere."
+      },
+      {
+        "line": 22,
+        "text": " */"
+      },
+      {
+        "line": 23,
+        "text": ""
+      },
+      {
+        "line": 24,
+        "text": "/** Strip `/mobile` (and an optional trailing slash) off the request URL, drop"
+      },
+      {
+        "line": 25,
+        "text": " *  any query/hash, and return the asset sub-path. `/mobile` → \"\", `/mobile/` →"
+      },
+      {
+        "line": 26,
+        "text": " *  \"\", `/mobile/assets/x.js` → \"assets/x.js\". */"
+      },
+      {
+        "line": 27,
+        "text": "export function mobileAssetPath(reqUrl: string): string {"
+      },
+      {
+        "line": 28,
+        "text": "  const noQuery = reqUrl.split(\"?\")[0].split(\"#\")[0];"
+      },
+      {
+        "line": 29,
+        "text": "  let rest = noQuery.slice(\"/mobile\".length); // reqUrl always starts with /mobile here"
+      },
+      {
+        "line": 30,
+        "text": "  if (rest.startsWith(\"/\")) rest = rest.slice(1);"
+      },
+      {
+        "line": 31,
+        "text": "  return rest;"
+      },
+      {
+        "line": 32,
+        "text": "}"
+      },
+      {
+        "line": 33,
+        "text": ""
+      },
+      {
+        "line": 34,
+        "text": "/** If `reqUrl` is the bare `/mobile` entry (optionally with a query/hash but no"
+      },
+      {
+        "line": 35,
+        "text": " *  trailing slash), return the canonical `/mobile/`-prefixed target (query/hash"
+      },
+      {
+        "line": 36,
+        "text": " *  preserved) for a redirect. Returns null for `/mobile/` and any sub-path,"
+      },
+      {
+        "line": 37,
+        "text": " *  which need no redirect. */"
+      },
+      {
+        "line": 38,
+        "text": "export function mobileEntryRedirect(reqUrl: string): string | null {"
+      },
+      {
+        "line": 39,
+        "text": "  const qIdx = reqUrl.search(/[?#]/);"
+      },
+      {
+        "line": 40,
+        "text": "  const path = qIdx === -1 ? reqUrl : reqUrl.slice(0, qIdx);"
+      },
+      {
+        "line": 41,
+        "text": "  const suffix = qIdx === -1 ? \"\" : reqUrl.slice(qIdx);"
+      },
+      {
+        "line": 42,
+        "text": "  if (path === \"/mobile\") return \"/mobile/\" + suffix;"
+      },
+      {
+        "line": 43,
+        "text": "  return null;"
+      },
+      {
+        "line": 44,
+        "text": "}"
+      },
+      {
+        "line": 45,
+        "text": ""
+      },
+      {
+        "line": 46,
+        "text": "/** True when `target` is `root` itself or sits underneath it. Uses `relative`"
+      },
+      {
+        "line": 47,
+        "text": " *  rather than a `startsWith` prefix compare so a sibling directory sharing the"
+      },
+      {
+        "line": 48,
+        "text": " *  root's name prefix (`/srv/app-old` vs `/srv/app`) can't slip through. */"
+      },
+      {
+        "line": 49,
+        "text": "function isContained(root: string, target: string): boolean {"
+      },
+      {
+        "line": 50,
+        "text": "  const rel = relative(root, target);"
+      },
+      {
+        "line": 51,
+        "text": "  return rel === \"\" || (rel !== \"..\" && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));"
+      },
+      {
+        "line": 52,
+        "text": "}"
+      },
+      {
+        "line": 53,
+        "text": ""
+      },
+      {
+        "line": 54,
+        "text": "/** Resolve an asset sub-path to an absolute file inside `root`, or null if it"
+      },
+      {
+        "line": 55,
+        "text": " *  would escape the root (traversal) or does not resolve to a regular file. An"
+      },
+      {
+        "line": 56,
+        "text": " *  empty sub-path resolves to index.html (SPA entry)."
+      },
+      {
+        "line": 57,
+        "text": " *"
+      },
+      {
+        "line": 58,
+        "text": " *  Containment is checked on the REAL paths (both sides `realpathSync`d), not on"
+      },
+      {
+        "line": 59,
+        "text": " *  the lexical path: `statSync` follows symlinks, so a link sitting inside the"
+      },
+      {
+        "line": 60,
+        "text": " *  root but pointing outside it — e.g. a `node_modules` link left by a packaging"
+      },
+      {
+        "line": 61,
+        "text": " *  step — used to pass a string-prefix check and serve the target's contents."
+      },
+      {
+        "line": 62,
+        "text": " *  This covers symlinks (including chains and symlinked directories) but NOT"
+      },
+      {
+        "line": 63,
+        "text": " *  hardlinks: a hardlink IS a real name inside the root, so no path-level check"
+      },
+      {
+        "line": 64,
+        "text": " *  can see through it. Guarding that would need inode/device policy, and anyone"
+      },
+      {
+        "line": 65,
+        "text": " *  able to hardlink into the served root can already write files there."
+      },
+      {
+        "line": 66,
+        "text": " *"
+      },
+      {
+        "line": 67,
+        "text": " *  The returned path is the REQUESTED one, not the realpath: callers stream it"
+      },
+      {
+        "line": 68,
+        "text": " *  directly and the resolved-name contract is relied on elsewhere (on macOS the"
+      },
+      {
+        "line": 69,
+        "text": " *  realpath of a /var root is /private/var, which would change every result)."
+      },
+      {
+        "line": 70,
+        "text": " *  That leaves the same synchronous stat-then-read window this module always"
+      },
+      {
+        "line": 71,
+        "text": " *  had; closing it properly needs an open-then-fstat rework of both callers,"
+      },
+      {
+        "line": 72,
+        "text": " *  which is out of scope for this fix. */"
+      },
+      {
+        "line": 73,
+        "text": "export function resolveSafe(root: string, subPath: string): string | null {"
+      },
+      {
+        "line": 74,
+        "text": "  const rootResolved = resolve(root);"
+      },
+      {
+        "line": 75,
+        "text": "  const rel = normalize(subPath || \"index.html\");"
+      },
+      {
+        "line": 76,
+        "text": "  // Reject absolute paths and any normalized path still containing `..`."
+      },
+      {
+        "line": 77,
+        "text": "  if (rel.startsWith(\"..\") || rel.includes(`..${sep}`) || rel.startsWith(sep)) {"
+      },
+      {
+        "line": 78,
+        "text": "    return null;"
+      },
+      {
+        "line": 79,
+        "text": "  }"
+      },
+      {
+        "line": 80,
+        "text": "  const full = resolve(join(rootResolved, rel));"
+      },
+      {
+        "line": 81,
+        "text": "  if (!isContained(rootResolved, full)) return null;"
+      },
+      {
+        "line": 82,
+        "text": "  if (!existsSync(full) || !statSync(full).isFile()) return null;"
+      },
+      {
+        "line": 83,
+        "text": "  // realpathSync throws on a dangling link or a race-deleted file; a missing"
+      },
+      {
+        "line": 84,
+        "text": "  // target is a 404 through the normal contract, never a 500."
+      },
+      {
+        "line": 85,
+        "text": "  try {"
+      },
+      {
+        "line": 86,
+        "text": "    if (!isContained(realpathSync(rootResolved), realpathSync(full))) return null;"
+      },
+      {
+        "line": 87,
+        "text": "  } catch {"
+      },
+      {
+        "line": 88,
+        "text": "    return null;"
+      },
+      {
+        "line": 89,
+        "text": "  }"
+      },
+      {
+        "line": 90,
+        "text": "  return full;"
+      },
+      {
+        "line": 91,
+        "text": "}"
+      },
+      {
+        "line": 92,
+        "text": ""
+      },
+      {
+        "line": 93,
+        "text": "/** True when the request is a browser navigation (accepts text/html), used to"
+      },
+      {
+        "line": 94,
+        "text": " *  decide whether a path that doesn't resolve to a file should fall back to the"
+      },
+      {
+        "line": 95,
+        "text": " *  SPA shell. Asset/module fetches send `*\\/*` or a specific type and must NOT"
+      },
+      {
+        "line": 96,
+        "text": " *  fall back (so a missing asset 404s instead of returning HTML). */"
+      },
+      {
+        "line": 97,
+        "text": "function acceptsHtml(req: IncomingMessage): boolean {"
+      },
+      {
+        "line": 98,
+        "text": "  const accept = req.headers.accept;"
+      },
+      {
+        "line": 99,
+        "text": "  return typeof accept === \"string\" && accept.includes(\"text/html\");"
+      },
+      {
+        "line": 100,
+        "text": "}"
+      },
+      {
+        "line": 101,
+        "text": ""
+      },
+      {
+        "line": 102,
+        "text": "export interface MobileStaticOptions {"
+      },
+      {
+        "line": 103,
+        "text": "  /** Absolute path to the built mobile app (out/mobile). */"
+      },
+      {
+        "line": 104,
+        "text": "  rootDir: string;"
+      },
+      {
+        "line": 105,
+        "text": "  /** When set, dev mode: proxy /mobile/* to this base URL instead of disk. */"
+      },
+      {
+        "line": 106,
+        "text": "  devUrl?: string;"
+      },
+      {
+        "line": 107,
+        "text": "}"
+      },
+      {
+        "line": 108,
+        "text": ""
+      },
+      {
+        "line": 109,
+        "text": "/**"
+      },
+      {
+        "line": 110,
+        "text": " * Handle a `/mobile`-prefixed request. Returns true if it handled the response"
+      },
+      {
+        "line": 111,
+        "text": " * (wrote a status), false if the caller should fall through (it never does for"
+      },
+      {
+        "line": 112,
+        "text": " * /mobile — callers check the prefix first, so this always handles)."
+      },
+      {
+        "line": 113,
+        "text": " */"
+      },
+      {
+        "line": 114,
+        "text": "export function serveMobile("
+      },
+      {
+        "line": 115,
+        "text": "  req: IncomingMessage,"
+      },
+      {
+        "line": 116,
+        "text": "  res: ServerResponse,"
+      },
+      {
+        "line": 117,
+        "text": "  opts: MobileStaticOptions,"
+      },
+      {
+        "line": 118,
+        "text": "): void {"
+      },
+      {
+        "line": 119,
+        "text": "  // Canonicalize the entry URL to a trailing slash. The pairing URL is"
+      },
+      {
+        "line": 120,
+        "text": "  // `/mobile?pairing=...` (no slash); without the slash the served HTML's base"
+      },
+      {
+        "line": 121,
+        "text": "  // is `/`, so a relative ref would escape the routed prefix. Redirect the bare"
+      },
+      {
+        "line": 122,
+        "text": "  // entry → `/mobile/` (preserving the query) so the app always loads under"
+      },
+      {
+        "line": 123,
+        "text": "  // `/mobile/`. Sub-paths (/mobile/assets/*) are left untouched."
+      },
+      {
+        "line": 124,
+        "text": "  const redirect = mobileEntryRedirect(req.url ?? \"/mobile\");"
+      },
+      {
+        "line": 125,
+        "text": "  if (redirect) {"
+      },
+      {
+        "line": 126,
+        "text": "    res.writeHead(308, { location: redirect });"
+      },
+      {
+        "line": 127,
+        "text": "    res.end();"
+      },
+      {
+        "line": 128,
+        "text": "    return;"
+      },
+      {
+        "line": 129,
+        "text": "  }"
+      },
+      {
+        "line": 130,
+        "text": "  if (opts.devUrl) {"
+      },
+      {
+        "line": 131,
+        "text": "    proxyToDev(req, res, opts.devUrl);"
+      },
+      {
+        "line": 132,
+        "text": "    return;"
+      },
+      {
+        "line": 133,
+        "text": "  }"
+      },
+      {
+        "line": 134,
+        "text": "  const sub = mobileAssetPath(req.url ?? \"/mobile\");"
+      },
+      {
+        "line": 135,
+        "text": "  let file = resolveSafe(opts.rootDir, sub);"
+      },
+      {
+        "line": 136,
+        "text": "  // SPA fallback: a navigation to an unknown client route → index.html so the"
+      },
+      {
+        "line": 137,
+        "text": "  // React router can take over. Gate on the request ACCEPTing html (the browser"
+      },
+      {
+        "line": 138,
+        "text": "  // sends `Accept: text/html` for navigations, `*/*` or a specific type for"
+      },
+      {
+        "line": 139,
+        "text": "  // asset/module fetches), NOT on the absence of a file extension — a route"
+      },
+      {
+        "line": 140,
+        "text": "  // segment containing a dot (e.g. a version or dotted id) must still fall back,"
+      },
+      {
+        "line": 141,
+        "text": "  // and a genuinely-missing .js/.css must still 404 (returning HTML for a module"
+      },
+      {
+        "line": 142,
+        "text": "  // request would break module loading)."
+      },
+      {
+        "line": 143,
+        "text": "  if (!file && sub && acceptsHtml(req)) {"
+      },
+      {
+        "line": 144,
+        "text": "    file = resolveSafe(opts.rootDir, \"index.html\");"
+      },
+      {
+        "line": 145,
+        "text": "  }"
+      },
+      {
+        "line": 146,
+        "text": "  if (!file) {"
+      },
+      {
+        "line": 147,
+        "text": "    res.writeHead(404, { \"content-type\": \"text/plain; charset=utf-8\" });"
+      },
+      {
+        "line": 148,
+        "text": "    res.end(\"not found\");"
+      },
+      {
+        "line": 149,
+        "text": "    return;"
+      },
+      {
+        "line": 150,
+        "text": "  }"
+      },
+      {
+        "line": 151,
+        "text": "  const type = contentTypeFor(extname(file));"
+      },
+      {
+        "line": 152,
+        "text": "  // Hashed bundles under /assets are content-addressed → cache forever. The"
+      },
+      {
+        "line": 153,
+        "text": "  // entry HTML (index.html, served for \"\" or the SPA fallback) must NOT be"
+      },
+      {
+        "line": 154,
+        "text": "  // cached: after an app upgrade ships a new bundle with new hashed filenames, a"
+      },
+      {
+        "line": 155,
+        "text": "  // stale index.html would reference deleted assets → 404 → blank page until a"
+      },
+      {
+        "line": 156,
+        "text": "  // hard refresh."
+      },
+      {
+        "line": 157,
+        "text": "  const isHtml = type.startsWith(\"text/html\");"
+      },
+      {
+        "line": 158,
+        "text": "  res.writeHead(200, {"
+      },
+      {
+        "line": 159,
+        "text": "    \"content-type\": type,"
+      },
+      {
+        "line": 160,
+        "text": "    \"cache-control\": isHtml"
+      },
+      {
+        "line": 161,
+        "text": "      ? \"no-store\""
+      },
+      {
+        "line": 162,
+        "text": "      : sub.startsWith(\"assets/\")"
+      },
+      {
+        "line": 163,
+        "text": "        ? \"public, max-age=31536000, immutable\""
+      },
+      {
+        "line": 164,
+        "text": "        : \"no-cache\","
+      },
+      {
+        "line": 165,
+        "text": "  });"
+      },
+      {
+        "line": 166,
+        "text": "  createReadStream(file).pipe(res);"
+      },
+      {
+        "line": 167,
+        "text": "}"
+      },
+      {
+        "line": 168,
+        "text": ""
+      },
+      {
+        "line": 169,
+        "text": "/** Dev-only: forward the request to the mobile vite dev server. The mobile vite"
+      },
+      {
+        "line": 170,
+        "text": " *  config sets base \"/mobile/\", so vite serves its HMR client, module graph, and"
+      },
+      {
+        "line": 171,
+        "text": " *  asset URLs UNDER that prefix (/mobile/@vite/client, /mobile/src/main.tsx). We"
+      },
+      {
+        "line": 172,
+        "text": " *  therefore forward the request path UNCHANGED — stripping /mobile would ask"
+      },
+      {
+        "line": 173,
+        "text": " *  vite for /@vite/client, which a base-\"/mobile/\" server 404s, breaking HMR so"
+      },
+      {
+        "line": 174,
+        "text": " *  the phone never live-updates. The /mobile prefix belongs to vite here (its"
+      },
+      {
+        "line": 175,
+        "text": " *  base), not to us — only prod static serving strips it (files live flat under"
+      },
+      {
+        "line": 176,
+        "text": " *  out/mobile). */"
+      },
+      {
+        "line": 177,
+        "text": "function proxyToDev(req: IncomingMessage, res: ServerResponse, devUrl: string): void {"
+      },
+      {
+        "line": 178,
+        "text": "  const target = new URL(devUrl);"
+      },
+      {
+        "line": 179,
+        "text": "  const proxyReq = httpRequest("
+      },
+      {
+        "line": 180,
+        "text": "    {"
+      },
+      {
+        "line": 181,
+        "text": "      hostname: target.hostname,"
+      },
+      {
+        "line": 182,
+        "text": "      port: target.port,"
+      },
+      {
+        "line": 183,
+        "text": "      method: req.method,"
+      },
+      {
+        "line": 184,
+        "text": "      path: req.url ?? \"/mobile/\","
+      },
+      {
+        "line": 185,
+        "text": "      headers: { ...req.headers, host: target.host },"
+      },
+      {
+        "line": 186,
+        "text": "    },"
+      },
+      {
+        "line": 187,
+        "text": "    (proxyRes) => {"
+      },
+      {
+        "line": 188,
+        "text": "      // Never let a phone cache the DEV page/assets. Otherwise a stale static"
+      },
+      {
+        "line": 189,
+        "text": "      // build's HTML (hash-named assets) survives in the browser cache and its"
+      },
+      {
+        "line": 190,
+        "text": "      // asset requests hit the vite dev server, which has no hash files → 404."
+      },
+      {
+        "line": 191,
+        "text": "      // no-store on every dev response keeps the phone in lockstep with vite."
+      },
+      {
+        "line": 192,
+        "text": "      const headers = { ...proxyRes.headers, \"cache-control\": \"no-store\" };"
+      },
+      {
+        "line": 193,
+        "text": "      res.writeHead(proxyRes.statusCode ?? 502, headers);"
+      },
+      {
+        "line": 194,
+        "text": "      proxyRes.pipe(res);"
+      },
+      {
+        "line": 195,
+        "text": "    },"
+      },
+      {
+        "line": 196,
+        "text": "  );"
+      },
+      {
+        "line": 197,
+        "text": "  proxyReq.on(\"error\", () => {"
+      },
+      {
+        "line": 198,
+        "text": "    res.writeHead(502, { \"content-type\": \"text/plain; charset=utf-8\" });"
+      },
+      {
+        "line": 199,
+        "text": "    res.end(\"mobile dev server unavailable\");"
+      },
+      {
+        "line": 200,
+        "text": "  });"
+      },
+      {
+        "line": 201,
+        "text": "  req.pipe(proxyReq);"
+      },
+      {
+        "line": 202,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+    "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 23,
+        "text": " * and common VPN/tunnel ranges (198.18.x carrier-grade test net used by some"
+      },
+      {
+        "line": 42,
+        "text": "    ip.startsWith(\"192.168.\") || ip.startsWith(\"10.\") || /^172\\.(1[6-9]|2\\d|3[01])\\./.test(ip);"
+      },
+      {
+        "line": 70,
+        "text": "  onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;"
+      },
+      {
+        "line": 71,
+        "text": "  /**"
+      },
+      {
+        "line": 72,
+        "text": "   * Absolute path to the built mobile app (out/mobile). Defaults to the"
+      },
+      {
+        "line": 73,
+        "text": "   * sibling of the bundled main (out/main → ../mobile). Overridable for tests."
+      },
+      {
+        "line": 74,
+        "text": "   */"
+      },
+      {
+        "line": 75,
+        "text": "  mobileRootDir?: string;"
+      },
+      {
+        "line": 76,
+        "text": "  /**"
+      },
+      {
+        "line": 107,
+        "text": "  /** Where the built mobile app lives (out/mobile). */"
+      },
+      {
+        "line": 108,
+        "text": "  private readonly mobileRootDir: string;"
+      },
+      {
+        "line": 114,
+        "text": "    // Bundled main is out/main/index.mjs → mobile app is the sibling out/mobile."
+      },
+      {
+        "line": 115,
+        "text": "    const here = dirname(fileURLToPath(import.meta.url));"
+      },
+      {
+        "line": 116,
+        "text": "    this.mobileRootDir = opts.mobileRootDir ?? resolve(here, \"../mobile\");"
+      },
+      {
+        "line": 117,
+        "text": "    this.mobileDevUrl = opts.mobileDevUrl ?? process.env.MOBILE_DEV_URL;"
+      },
+      {
+        "line": 200,
+        "text": "        return;"
+      },
+      {
+        "line": 201,
+        "text": "      }"
+      },
+      {
+        "line": 202,
+        "text": "      const uploadPath = req.url"
+      },
+      {
+        "line": 203,
+        "text": "        ? new URL(req.url, \"http://localhost\").pathname.match("
+      },
+      {
+        "line": 204,
+        "text": "            /^\\/api\\/mobile\\/uploads\\/([A-Za-z0-9_-]+)$/,"
+      },
+      {
+        "line": 205,
+        "text": "          )"
+      },
+      {
+        "line": 206,
+        "text": "        : null;"
+      },
+      {
+        "line": 207,
+        "text": "      if (uploadPath && this.opts.uploads) {"
+      },
+      {
+        "line": 208,
+        "text": "        void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);"
+      },
+      {
+        "line": 209,
+        "text": "        return;"
+      },
+      {
+        "line": 210,
+        "text": "      }"
+      },
+      {
+        "line": 211,
+        "text": "      // The mobile app is built/served with vite base \"/mobile/\", so ALL of its"
+      },
+      {
+        "line": 212,
+        "text": "      // assets — and in dev, vite's HMR/module URLs — live under the /mobile"
+      },
+      {
+        "line": 213,
+        "text": "      // prefix. A single prefix route serves prod (static out/mobile) and dev"
+      },
+      {
+        "line": 214,
+        "text": "      // (proxy to the mobile vite server) symmetrically. Tunnel mode never"
+      },
+      {
+        "line": 215,
+        "text": "      // proxies dev: Vite's HMR socket and @fs module URLs don't survive a"
+      },
+      {
+        "line": 216,
+        "text": "      // public trycloudflare hop, so a public tunnel always serves the build."
+      },
+      {
+        "line": 217,
+        "text": "      // Match the route family exactly (\"/mobile\", \"/mobile/…\", \"/mobile?…\","
+      },
+      {
+        "line": 218,
+        "text": "      // \"/mobile#…\") — NOT a sibling like \"/mobilexyz\", which falls to 404."
+      },
+      {
+        "line": 219,
+        "text": "      if (req.url && /^\\/mobile(?:[/?#]|$)/.test(req.url)) {"
+      },
+      {
+        "line": 220,
+        "text": "        serveMobile(req, res, {"
+      },
+      {
+        "line": 221,
+        "text": "          rootDir: this.mobileRootDir,"
+      },
+      {
+        "line": 222,
+        "text": "          devUrl: publicAccess ? undefined : this.mobileDevUrl,"
+      },
+      {
+        "line": 223,
+        "text": "        });"
+      },
+      {
+        "line": 224,
+        "text": "        return;"
+      },
+      {
+        "line": 627,
+        "text": "    // manually injected bookkeeping (tests / future non-WS transports)."
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/vite.mobile.config.ts",
+    "sha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { defineConfig } from \"vite\";"
+      },
+      {
+        "line": 2,
+        "text": "import react from \"@vitejs/plugin-react\";"
+      },
+      {
+        "line": 3,
+        "text": "import { resolve } from \"node:path\";"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "/** Desktop-hosted Web entry: the same browser workbench as standalone Hub,"
+      },
+      {
+        "line": 6,
+        "text": " * adapted to the existing paired Desktop protocol, without renderer imports. */"
+      },
+      {
+        "line": 7,
+        "text": "export default defineConfig({"
+      },
+      {
+        "line": 8,
+        "text": "  root: resolve(__dirname, \"src/mobile\"),"
+      },
+      {
+        "line": 9,
+        "text": "  // MUST be the absolute \"/mobile/\" prefix, NOT \"./\". The app is served at"
+      },
+      {
+        "line": 10,
+        "text": "  // /mobile (the remote host only routes the /mobile prefix), so relative"
+      },
+      {
+        "line": 11,
+        "text": "  // \"./assets/*\" would resolve against the document base /mobile → /assets/*,"
+      },
+      {
+        "line": 12,
+        "text": "  // which falls outside the routed prefix and 404s (blank page). An absolute"
+      },
+      {
+        "line": 13,
+        "text": "  // /mobile/ base makes both the built bundle and vite's dev HMR/module URLs"
+      },
+      {
+        "line": 14,
+        "text": "  // (/mobile/@vite/client, /mobile/src/main.tsx) stay under the routed prefix."
+      },
+      {
+        "line": 15,
+        "text": "  base: \"/mobile/\","
+      },
+      {
+        "line": 16,
+        "text": "  publicDir: resolve(__dirname, \"../web/app/public\"),"
+      },
+      {
+        "line": 17,
+        "text": "  server: {"
+      },
+      {
+        "line": 18,
+        "text": "    // 5273 is the renderer dev server; mobile gets its own fixed port so the"
+      },
+      {
+        "line": 19,
+        "text": "    // remote host can proxy /mobile to it in dev (see scripts/dev.ts)."
+      },
+      {
+        "line": 20,
+        "text": "    // Bind 127.0.0.1 explicitly: the default binds IPv6-only ([::1]), which"
+      },
+      {
+        "line": 21,
+        "text": "    // makes the main-process proxy's target ambiguous (Node may resolve the"
+      },
+      {
+        "line": 22,
+        "text": "    // target to IPv4 and hit connection-refused). Pinning v4 keeps the proxy"
+      },
+      {
+        "line": 23,
+        "text": "    // target (127.0.0.1:5373) and the bind in lockstep."
+      },
+      {
+        "line": 24,
+        "text": "    host: \"127.0.0.1\","
+      },
+      {
+        "line": 25,
+        "text": "    port: 5373,"
+      },
+      {
+        "line": 26,
+        "text": "    strictPort: true,"
+      },
+      {
+        "line": 27,
+        "text": "  },"
+      },
+      {
+        "line": 28,
+        "text": "  build: {"
+      },
+      {
+        "line": 29,
+        "text": "    outDir: resolve(__dirname, \"out/mobile\"),"
+      },
+      {
+        "line": 30,
+        "text": "    emptyOutDir: true,"
+      },
+      {
+        "line": 31,
+        "text": "  },"
+      },
+      {
+        "line": 32,
+        "text": "  plugins: [react()],"
+      },
+      {
+        "line": 33,
+        "text": "  resolve: {"
+      },
+      {
+        "line": 34,
+        "text": "    alias: {"
+      },
+      {
+        "line": 35,
+        "text": "      // Workspace TS source package (web client logic layer): bundle straight"
+      },
+      {
+        "line": 36,
+        "text": "      // from src so dev/build never read a stale dist. Barrel imports only."
+      },
+      {
+        "line": 37,
+        "text": "      \"@cjhyy/code-shell-web\": resolve(__dirname, \"../web/src/index.ts\"),"
+      },
+      {
+        "line": 38,
+        "text": "    },"
+      },
+      {
+        "line": 39,
+        "text": "  },"
+      },
+      {
+        "line": 40,
+        "text": "});"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/mobile/index.html",
+    "sha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "<!doctype html>"
+      },
+      {
+        "line": 2,
+        "text": "<html lang=\"zh\" class=\"dark\">"
+      },
+      {
+        "line": 3,
+        "text": "  <head>"
+      },
+      {
+        "line": 4,
+        "text": "    <meta charset=\"utf-8\" />"
+      },
+      {
+        "line": 5,
+        "text": "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />"
+      },
+      {
+        "line": 6,
+        "text": "    <meta name=\"theme-color\" content=\"#09090b\" />"
+      },
+      {
+        "line": 7,
+        "text": "    <title>CodeShell</title>"
+      },
+      {
+        "line": 8,
+        "text": "    <link rel=\"manifest\" href=\"%BASE_URL%manifest.webmanifest\" />"
+      },
+      {
+        "line": 9,
+        "text": "  </head>"
+      },
+      {
+        "line": 10,
+        "text": "  <body>"
+      },
+      {
+        "line": 11,
+        "text": "    <div id=\"app\"></div>"
+      },
+      {
+        "line": 12,
+        "text": "    <script type=\"module\" src=\"./main.tsx\"></script>"
+      },
+      {
+        "line": 13,
+        "text": "  </body>"
+      },
+      {
+        "line": 14,
+        "text": "</html>"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/mobile/main.tsx",
+    "sha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { StrictMode } from \"react\";"
+      },
+      {
+        "line": 2,
+        "text": "import { createRoot } from \"react-dom/client\";"
+      },
+      {
+        "line": 3,
+        "text": "import { registerServiceWorker } from \"../../../web/app/register-service-worker.js\";"
+      },
+      {
+        "line": 4,
+        "text": "import { DesktopApp } from \"../../../web/app/DesktopApp.js\";"
+      },
+      {
+        "line": 5,
+        "text": ""
+      },
+      {
+        "line": 6,
+        "text": "import { LinkCallbackPage } from \"../../../web/app/LinkCallback.js\";"
+      },
+      {
+        "line": 7,
+        "text": "import { readBrowserLinkCallback } from \"../../../web/app/remote-link-authorization.js\";"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "const callback = readBrowserLinkCallback();"
+      },
+      {
+        "line": 10,
+        "text": "const element = document.getElementById(\"app\");"
+      },
+      {
+        "line": 11,
+        "text": "if (!element) throw new Error(\"#app mount node missing\");"
+      },
+      {
+        "line": 12,
+        "text": ""
+      },
+      {
+        "line": 13,
+        "text": "createRoot(element).render("
+      },
+      {
+        "line": 14,
+        "text": "  <StrictMode>{callback ? <LinkCallbackPage callback={callback} /> : <DesktopApp />}</StrictMode>,"
+      },
+      {
+        "line": 15,
+        "text": ");"
+      },
+      {
+        "line": 16,
+        "text": ""
+      },
+      {
+        "line": 17,
+        "text": "registerServiceWorker(\"/mobile/\");"
+      }
+    ]
+  },
+  {
+    "path": "packages/web/app/public/manifest.webmanifest",
+    "sha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "{"
+      },
+      {
+        "line": 2,
+        "text": "  \"id\": \".\","
+      },
+      {
+        "line": 3,
+        "text": "  \"name\": \"CodeShell\","
+      },
+      {
+        "line": 4,
+        "text": "  \"short_name\": \"CodeShell\","
+      },
+      {
+        "line": 5,
+        "text": "  \"lang\": \"zh-CN\","
+      },
+      {
+        "line": 6,
+        "text": "  \"start_url\": \".\","
+      },
+      {
+        "line": 7,
+        "text": "  \"scope\": \".\","
+      },
+      {
+        "line": 8,
+        "text": "  \"display\": \"standalone\","
+      },
+      {
+        "line": 9,
+        "text": "  \"background_color\": \"#0b0b0c\","
+      },
+      {
+        "line": 10,
+        "text": "  \"theme_color\": \"#151517\","
+      },
+      {
+        "line": 11,
+        "text": "  \"description\": \"连接你的 CodeShell 工作空间\","
+      },
+      {
+        "line": 12,
+        "text": "  \"icons\": ["
+      },
+      {
+        "line": 13,
+        "text": "    { \"src\": \"./icon.svg\", \"sizes\": \"any\", \"type\": \"image/svg+xml\", \"purpose\": \"any maskable\" }"
+      },
+      {
+        "line": 14,
+        "text": "  ]"
+      },
+      {
+        "line": 15,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/web/app/public/sw.js",
+    "sha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "/* global self, caches */"
+      },
+      {
+        "line": 2,
+        "text": "// Cache only this explicit public-file allowlist. Never store authenticated"
+      },
+      {
+        "line": 3,
+        "text": "// pages, chat data, API responses, uploads, or WebSocket credentials."
+      },
+      {
+        "line": 4,
+        "text": "const BASE = new URL(\"./\", self.location.href ?? `${self.location.origin}/sw.js`).pathname;"
+      },
+      {
+        "line": 5,
+        "text": "const CACHE_PREFIX = `codeshell-public-${encodeURIComponent(BASE)}-`;"
+      },
+      {
+        "line": 6,
+        "text": "const STATIC_CACHE = `${CACHE_PREFIX}v2`;"
+      },
+      {
+        "line": 7,
+        "text": "const PUBLIC_FILES = [\"offline.html\", \"icon.svg\", \"manifest.webmanifest\"].map("
+      },
+      {
+        "line": 8,
+        "text": "  (file) => BASE + file,"
+      },
+      {
+        "line": 9,
+        "text": ");"
+      },
+      {
+        "line": 10,
+        "text": "self.addEventListener(\"install\", (event) => {"
+      },
+      {
+        "line": 11,
+        "text": "  event.waitUntil("
+      },
+      {
+        "line": 12,
+        "text": "    caches"
+      },
+      {
+        "line": 13,
+        "text": "      .open(STATIC_CACHE)"
+      },
+      {
+        "line": 38,
+        "text": "  const url = new URL(request.url);"
+      }
+    ]
+  },
+  {
+    "path": "packages/web/app/register-service-worker.ts",
+    "sha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "export function registerServiceWorker(base = \"/\"): void {"
+      },
+      {
+        "line": 2,
+        "text": "  if (\"serviceWorker\" in navigator && window.isSecureContext) {"
+      },
+      {
+        "line": 3,
+        "text": "    void navigator.serviceWorker.register(`${base}sw.js`).catch(() => {"
+      },
+      {
+        "line": 4,
+        "text": "      // The online application remains usable when installation is unavailable."
+      },
+      {
+        "line": 5,
+        "text": "    });"
+      },
+      {
+        "line": 6,
+        "text": "  }"
+      },
+      {
+        "line": 7,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+    "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+    "captureTiming": "After actual source displays9c73e6/6411c6/f4f16b/7eb32d/70c38c; only previously displayed body/navigation lines, not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 6,
+        "text": "import { mobileAssetPath, mobileEntryRedirect, resolveSafe, serveMobile } from \"./mobile-static\";"
+      },
+      {
+        "line": 8,
+        "text": "test(\"mobileEntryRedirect canonicalizes the bare entry to a trailing slash\", () => {"
+      },
+      {
+        "line": 10,
+        "text": "  // to /mobile/ so the served HTML loads its /mobile/-based assets correctly."
+      },
+      {
+        "line": 16,
+        "text": "test(\"mobileEntryRedirect leaves /mobile/ and sub-paths untouched\", () => {"
+      },
+      {
+        "line": 17,
+        "text": "  // With vite base \"/mobile/\", all assets (prod + vite dev HMR/module URLs) are"
+      },
+      {
+        "line": 21,
+        "text": "  expect(mobileEntryRedirect(\"/mobile/assets/app.js\")).toBeNull();"
+      },
+      {
+        "line": 31,
+        "text": "  mkdirSync(join(root, \"assets\"));"
+      },
+      {
+        "line": 32,
+        "text": "  writeFileSync(join(root, \"assets\", \"app.js\"), \"console.log(1)\");"
+      },
+      {
+        "line": 39,
+        "text": "test(\"mobileAssetPath strips /mobile prefix + query\", () => {"
+      },
+      {
+        "line": 40,
+        "text": "  expect(mobileAssetPath(\"/mobile\")).toBe(\"\");"
+      },
+      {
+        "line": 41,
+        "text": "  expect(mobileAssetPath(\"/mobile/\")).toBe(\"\");"
+      },
+      {
+        "line": 42,
+        "text": "  expect(mobileAssetPath(\"/mobile/assets/app.js\")).toBe(\"assets/app.js\");"
+      },
+      {
+        "line": 43,
+        "text": "  expect(mobileAssetPath(\"/mobile?pairing=tok\")).toBe(\"\");"
+      },
+      {
+        "line": 44,
+        "text": "  expect(mobileAssetPath(\"/mobile/assets/app.js?v=1\")).toBe(\"assets/app.js\");"
+      },
+      {
+        "line": 45,
+        "text": "});"
+      },
+      {
+        "line": 46,
+        "text": ""
+      },
+      {
+        "line": 47,
+        "text": "test(\"resolveSafe maps empty path → index.html\", () => {"
+      },
+      {
+        "line": 48,
+        "text": "  expect(resolveSafe(root, \"\")).toBe(join(root, \"index.html\"));"
+      },
+      {
+        "line": 49,
+        "text": "});"
+      },
+      {
+        "line": 50,
+        "text": ""
+      },
+      {
+        "line": 51,
+        "text": "test(\"resolveSafe serves a real nested asset\", () => {"
+      },
+      {
+        "line": 52,
+        "text": "  expect(resolveSafe(root, \"assets/app.js\")).toBe(join(root, \"assets\", \"app.js\"));"
+      },
+      {
+        "line": 53,
+        "text": "});"
+      },
+      {
+        "line": 54,
+        "text": ""
+      },
+      {
+        "line": 55,
+        "text": "test(\"resolveSafe returns null for missing files\", () => {"
+      },
+      {
+        "line": 56,
+        "text": "  expect(resolveSafe(root, \"nope.js\")).toBeNull();"
+      },
+      {
+        "line": 59,
+        "text": "test(\"resolveSafe rejects path traversal\", () => {"
+      },
+      {
+        "line": 60,
+        "text": "  expect(resolveSafe(root, \"../secret\")).toBeNull();"
+      },
+      {
+        "line": 61,
+        "text": "  expect(resolveSafe(root, \"../../etc/passwd\")).toBeNull();"
+      },
+      {
+        "line": 62,
+        "text": "  expect(resolveSafe(root, \"assets/../../escape\")).toBeNull();"
+      },
+      {
+        "line": 63,
+        "text": "  expect(resolveSafe(root, \"/etc/passwd\")).toBeNull();"
+      },
+      {
+        "line": 71,
+        "text": "test(\"resolveSafe rejects a symlinked file escaping the root\", () => {"
+      },
+      {
+        "line": 80,
+        "text": "      expect(resolveSafe(root, \"leak.txt\")).toBeNull();"
+      },
+      {
+        "line": 89,
+        "text": "test(\"resolveSafe rejects a file reached through a symlinked directory\", () => {"
+      },
+      {
+        "line": 97,
+        "text": "      expect(resolveSafe(root, \"linked/secret.txt\")).toBeNull();"
+      },
+      {
+        "line": 111,
+        "text": "test(\"resolveSafe still serves a symlink whose target is inside the root\", () => {"
+      },
+      {
+        "line": 114,
+        "text": "  symlinkSync(join(root, \"assets\", \"app.js\"), link);"
+      },
+      {
+        "line": 116,
+        "text": "    expect(resolveSafe(root, \"alias.js\")).toBe(join(root, \"alias.js\"));"
+      },
+      {
+        "line": 124,
+        "text": "test(\"resolveSafe returns null for a dangling symlink instead of throwing\", () => {"
+      },
+      {
+        "line": 129,
+        "text": "    expect(resolveSafe(root, \"dangling.js\")).toBeNull();"
+      },
+      {
+        "line": 139,
+        "text": "test(\"serveMobile dev proxy preserves the /mobile prefix (HMR fix)\", async () => {"
+      }
+    ]
+  }
+]

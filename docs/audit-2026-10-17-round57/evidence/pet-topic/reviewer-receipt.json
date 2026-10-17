@@ -1,0 +1,345 @@
+{
+  "exactDirectory": "/tmp/codeshell-audit-round132-topic-segment",
+  "frozenAt": "2026-10-17T19:07:30.984537+00:00",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "actual-caller-filenames.json",
+      "bytes": 2185,
+      "sha256": "277058491aecec65e3f8bd090aed2e29ef6ff2e7a60e042c71efb5c4fb3570bd"
+    },
+    {
+      "path": "assistant-commit-navigation.json",
+      "bytes": 408,
+      "sha256": "97efd0ae56dd57e449fc35a5f2727f5d69d0485627ea9b0669ab3f9e0c03950f"
+    },
+    {
+      "path": "assistant-pin-navigation.json",
+      "bytes": 1472,
+      "sha256": "9f1901befbf1f046fe7e67894d0249f84ecc545248a88be3014f2eb397a5587c"
+    },
+    {
+      "path": "boundary-tests-composition-display.json",
+      "bytes": 1846,
+      "sha256": "97af81dfeed84cc1c6de4c258dad4c7a7a2582ff4ce9fb642cb542708dc0e7e1"
+    },
+    {
+      "path": "bridge-delivery-display.json",
+      "bytes": 317,
+      "sha256": "9da892d98aaf955d4987f863b6d716370112a264a21be5f1e743812f1954278d"
+    },
+    {
+      "path": "candidate-evidence.json",
+      "bytes": 13928,
+      "sha256": "902c2b60ab03800b8e24a3ce600c5c2baf1e91f24f462af11a3032dd2b6e1e74"
+    },
+    {
+      "path": "canonical-and-source-locators.json",
+      "bytes": 2142,
+      "sha256": "c116c5b8d983d2584b88065502783c970b1f01e383f89502b0877dfbba0fe862"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 5216,
+      "sha256": "f12d0e3708decb29bca9b1c4b3cfa2e733fca9dab718c3f32cf4292938bac46d"
+    },
+    {
+      "path": "closure-service-display.json",
+      "bytes": 324,
+      "sha256": "773fedd4bec5e13bbaf6c8c01c604a6a109a4df25a660aef2e97c733a75131a7"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 886,
+      "sha256": "acf59b7871af51f67bcb56fdd098d801fa29a1036e1ba51d825da414244130e8"
+    },
+    {
+      "path": "dispatch-main-display.json",
+      "bytes": 748,
+      "sha256": "ff98a97e538a2eca27209dacb673c763070befcd9563ab8211ebd70f1b2ad770"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 18370,
+      "sha256": "b3e310a5e794bae90226f9b08a0c75a787b41555524b85122f380d24f5033c00"
+    },
+    {
+      "path": "entry-initial-pins.json",
+      "bytes": 924,
+      "sha256": "b71832c8ce3b7ebf22eaa17598ac4d8e9bb8c148b7517805e471eba55327077b"
+    },
+    {
+      "path": "entry-navigation.json",
+      "bytes": 2491,
+      "sha256": "6a71d74ecb893c1ed8454db248fcab542c34f39102b932d5506586a1c5966d87"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 18223,
+      "sha256": "591d784e0df1159a1ded227c6772af2f419ffe780945ed25486a83f00d268101"
+    },
+    {
+      "path": "focused-oldcause-actually-read.json",
+      "bytes": 11869,
+      "sha256": "fa10304b65d1f75f1341c0f9b8b00ddf7b347168ad0aa6cffd170aec5edbe311"
+    },
+    {
+      "path": "focused-oldcause-contexts.json",
+      "bytes": 13040,
+      "sha256": "48ac7f451e3af6500f2c3a0b9e940a69e91a467c9066970adf0329f3e929078f"
+    },
+    {
+      "path": "focused-oldcause-locator.json",
+      "bytes": 1464,
+      "sha256": "a3a7fdcd2747107c51d25c199731e9883a16f90c9514144702740a9dd0dd3afb"
+    },
+    {
+      "path": "focused-oldcause-second-contexts.json",
+      "bytes": 33497,
+      "sha256": "f5e17408b25e364b5893b8df153f5c7985b89ad91a9b3b324cb4452f51b78940"
+    },
+    {
+      "path": "focused-oldcause-second-locator.json",
+      "bytes": 1610,
+      "sha256": "dcf44b84edc1d38cd0dff472f2060a614b5bbf67c01cc786e85a90bb9538a281"
+    },
+    {
+      "path": "follow-up-runtime-display.json",
+      "bytes": 321,
+      "sha256": "e3bb6e0dd9fe5c769513759e116af81a160e69645b94fb3a4074369693b1038c"
+    },
+    {
+      "path": "follow-up-runtime-initial-pin.json",
+      "bytes": 281,
+      "sha256": "56548d6e2cf7717490ab5191b05a4c7eea83fb2e4afb38aaf24ce1d12d6aefc0"
+    },
+    {
+      "path": "followup-main-navigation.json",
+      "bytes": 385,
+      "sha256": "adcef96e2178efc021a2e31cb2617a3aab3824bc47b3da526f2ebfba4ace3205"
+    },
+    {
+      "path": "guard-persist-display.json",
+      "bytes": 818,
+      "sha256": "a4c193257c7a9677a94325aeceb74f18820fb46556afd7548bf154d04868cfbb"
+    },
+    {
+      "path": "guard-test-navigation.json",
+      "bytes": 4023,
+      "sha256": "e8da6e4f033e444fbb8e341b6129d377b9774569196b48bfc24ef3df2c5551f8"
+    },
+    {
+      "path": "host-consumer-initial-pins.json",
+      "bytes": 1805,
+      "sha256": "9e1e0d3b2acf451cae9ed41d5962a14144a5502141b6f1a1bcdb327306d85cbb"
+    },
+    {
+      "path": "host-state-display.json",
+      "bytes": 701,
+      "sha256": "7c8ee2c53c60509fcda5f6eb46b8c4aeeaf42763972eab697523469e2c5bc380"
+    },
+    {
+      "path": "host-wake-navigation.json",
+      "bytes": 1896,
+      "sha256": "cfa05b8c055659fcd6884c797fbff3ee7a58331a1f696356aa0fe8e037e6fd41"
+    },
+    {
+      "path": "host-wake-producer-display.json",
+      "bytes": 313,
+      "sha256": "de7d4cd116805a8c00cb8ed5a35ffe5e1c6a7a37a22bc10b2efaf081bfce1726"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1018,
+      "sha256": "e20d5f2ecaef0bc227f8dc463f555ba3512958b956e83f632ad2b7f71d7c921e"
+    },
+    {
+      "path": "injected-producer-filenames.json",
+      "bytes": 713,
+      "sha256": "1a45ba1dec42153774ae83fbed74acb3acb185a5a9d1767ba83ab11d62faadf9"
+    },
+    {
+      "path": "injected-producer-pins-navigation.json",
+      "bytes": 1922,
+      "sha256": "2e348495792f1fe5a7199121b5a04bc5eeda9e37d4e90ce663d47208fac45e2e"
+    },
+    {
+      "path": "mechanism-initial-pins.json",
+      "bytes": 1432,
+      "sha256": "47ca7313404e2f7a0b4187840fd874d0442554d821109b721a0e25957242706c"
+    },
+    {
+      "path": "prior-canonical-objects.json",
+      "bytes": 1157,
+      "sha256": "f1df7c7183ed5585083ad72687ec6df2c2deced3445809539f38fbb050148ff4"
+    },
+    {
+      "path": "prior-closure-canonical.json",
+      "bytes": 681,
+      "sha256": "1fd9bb0211fc9f60af05ef662fffb11485943f3fa594aa70d5dc62be22851c83"
+    },
+    {
+      "path": "prior-md-locators.json",
+      "bytes": 384,
+      "sha256": "6ba5cf1d1054194261ffc6f1e6c4826a473b9cb7a7db3775ee7012077a9277b9"
+    },
+    {
+      "path": "prior-md-selected.json",
+      "bytes": 16337,
+      "sha256": "ea120dbe0fc8ca04aa079a1d7f130d72489d0261cf978746e2abdaac7165ac41"
+    },
+    {
+      "path": "prior-plan-exact-locator.json",
+      "bytes": 398,
+      "sha256": "6ed827475851f2d300e17bb5a5ebb1a465a118715b7bd0d9f305f4b962e972ba"
+    },
+    {
+      "path": "protocol-field-display.json",
+      "bytes": 1050,
+      "sha256": "c79a6eb9b5e3a3a6e0bcb3677edb9422d3abf8445d3abad81b4ba8ea46071f5f"
+    },
+    {
+      "path": "protocol-field-pins-navigation.json",
+      "bytes": 2531,
+      "sha256": "1c1f30ac3bc046b810225234b993a43beeccc97e23c3345687ce5964675bc2c1"
+    },
+    {
+      "path": "registration-admission-display.json",
+      "bytes": 336,
+      "sha256": "c5b090041f2ddb8bf8024bd70bb79b9d4ced8eddf4dae33ed36f6a7b09e00aad"
+    },
+    {
+      "path": "registration-store-pin-navigation.json",
+      "bytes": 2625,
+      "sha256": "973a3d3d6d327ea97ab861b8dbde51ec391d06c013f9a3a701b604172cc745f7"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5300,
+      "sha256": "a6881ff02fcea9d7d94b3c941b3e60857c48beef7067913f3deab1c6ff798c4b"
+    },
+    {
+      "path": "request-chat-display.json",
+      "bytes": 262,
+      "sha256": "e1777c3332f7de9bca17990f2a4e7492c7b28141f76e1fbd8866cf79a8422250"
+    },
+    {
+      "path": "route-display.json",
+      "bytes": 306,
+      "sha256": "01edd8c048e20fa9ed7463ccb038a6d18e84be1d19409653b6dcf002cc02bd55"
+    },
+    {
+      "path": "run-open-pin-navigation.json",
+      "bytes": 1900,
+      "sha256": "3a093fa0efe34e24bdc16cb0f86beffbc69ab154114329a2f1c14b01ad93b9b6"
+    },
+    {
+      "path": "schedule-transcript-display.json",
+      "bytes": 1416,
+      "sha256": "bf75e2286810cd4a225727b562f97618cf6ab4b8d6071230a94421cf8e63749a"
+    },
+    {
+      "path": "schedule-transcript-pins-navigation.json",
+      "bytes": 7540,
+      "sha256": "af92b19b746ccb447ee5c057d662cff27e364e656a62f82802eaae98b666d2c1"
+    },
+    {
+      "path": "shared-history-projection.json",
+      "bytes": 17118,
+      "sha256": "ad93822bb74dba0ef890f6d11ee466f635c301b7f55b811a38079efe729bafdb"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 39532,
+      "sha256": "b29c26853ae81955824fde33a0ecf76eb58660f1bf77390a0bec836a1bc274e6"
+    },
+    {
+      "path": "topic-closure-display.json",
+      "bytes": 806,
+      "sha256": "af6bf5f781d8aed423b095fcfed0dce480207bc6765527648bc91c51100850b5"
+    },
+    {
+      "path": "transcript-filenames.json",
+      "bytes": 447,
+      "sha256": "26aad4156390b46bd1bad93691c23190c475b31b655ed794edfc3b189086d0b4"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1204,
+      "sha256": "17fdbc72690b617bf4d7b42d72e2d7da781b3cc7454d7b0e5002ca5b42cda443"
+    },
+    {
+      "path": "wake-caller-filenames.json",
+      "bytes": 315,
+      "sha256": "63d35f8533ac93d49f67a89dcf76633e33b753b05474093632106434ff8ed880"
+    },
+    {
+      "path": "work-memory-pin-navigation.json",
+      "bytes": 1825,
+      "sha256": "33b0c08923e3364ec3a6053df35ed3fd2e68f93061f975890e734c6a028d4e28"
+    }
+  ],
+  "artifactCountExcludingReceipt": 55,
+  "totalFileCountIncludingReceipt": 56,
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "prior-canonical-objects.json",
+      "exists": true
+    },
+    {
+      "target": "prior-md-selected.json",
+      "exists": true
+    },
+    {
+      "target": "prior-closure-canonical.json",
+      "exists": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "target": "candidate-evidence.json",
+      "exists": true
+    },
+    {
+      "target": "prior-plan-exact-locator.json",
+      "exists": true
+    },
+    {
+      "target": "focused-oldcause-actually-read.json",
+      "exists": true
+    },
+    {
+      "target": "shared-history-projection.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "diagnostics.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true
+    }
+  ],
+  "classification": "author0formal/1candidate PET-R132-C1(P3)/0newrelated unchanged",
+  "productExecutions": 0,
+  "GitCalls": 0
+}

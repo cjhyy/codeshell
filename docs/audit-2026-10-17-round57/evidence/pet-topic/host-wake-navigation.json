@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "hostWake:|clientMessageId:.*wake|runHostWake|hostWake\\)|command.hostWake",
+    "packages/desktop/src/main/pet/pet-dispatch-service.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "1187:        hostWake: item,\n1998:          command.hostWake?.completionTarget ??\n2069:          if (command.hostWake?.sourceSessionId)\n2070:            requestedSelectors.push(reusableSessionId(command.hostWake.sourceSessionId));\n2144:            (command.hostWake && candidate.sessionId !== command.hostWake.sourceSessionId) ||\n2196:        const wakeTasks = command.hostWake\n2200:                  task.sessionId === command.hostWake!.sourceSessionId &&\n2201:                  (!command.hostWake!.taskId || task.taskId === command.hostWake!.taskId),\n2207:            message: command.hostWake?.text ?? command.message.trim(),\n2209:            eventKind: command.hostWake ? \"follow-up-wake\" : \"chat\",\n2211:              command.hostWake?.completionTarget ?? command.source,\n2233:        const hostActionKinds = command.hostWake\n2284:          currentMessageSource: command.hostWake\n2292:          ...(command.hostWake\n2294:                hostWake: {\n2295:                  id: command.hostWake.id,\n2296:                  revision: command.hostWake.revision,\n2297:                  sourceSessionId: command.hostWake.sourceSessionId,\n2348:          ...(command.hostWake ? { injected: true, disableGoal: true, skillAllowlist: [] } : {}),\n2469:          command.hostWake &&\n2473:                reusableSession?.sessionId !== command.hostWake!.sourceSessionId,\n2506:                if (command.hostWake) {\n2510:                      (row) => row.agentSessionId === command.hostWake!.sourceSessionId,\n2520:                  await this.options.validateFollowUpContinuation?.(command.hostWake);\n",
+  "stderr": "",
+  "at": "2026-10-17T18:56:24.759724+00:00"
+}

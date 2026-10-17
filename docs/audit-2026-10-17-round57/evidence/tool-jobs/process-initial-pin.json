@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T18:56:06.120338+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "bytes": 44502,
+      "lines": 1136,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "capturedUTC": "2026-10-17T18:54:31.144738+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/panels/tool-jobs-storage.ts",
+      "bytes": 6995,
+      "lines": 193,
+      "sha256": "42b534c5aeadbb9299bc892c79154ffa7b3b9357a3effc1adf4c460ef34a6c01",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/shared-tool-jobs.ts",
+      "bytes": 3868,
+      "lines": 85,
+      "sha256": "f762637c6ab5d43f6b5502d74655229405060d2ef347a43e4829322d31680566",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs.test.ts",
+      "bytes": 31610,
+      "lines": 748,
+      "sha256": "5a69a680c113eb70b0742741b1675ebdf070d60967382cc20bcd1a30e7400932",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/panels/runtime.ts",
+      "bytes": 95157,
+      "lines": 2276,
+      "sha256": "ca4967fc5531b17780c12fb25d02ca3b8f7ae1194c9959a7941f66809fa9fc2a",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

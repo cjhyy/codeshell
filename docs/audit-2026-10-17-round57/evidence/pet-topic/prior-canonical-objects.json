@@ -1,0 +1,35 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+    "bytes": 9153,
+    "sha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+    "readAt": "2026-10-17T18:54:10.937929+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/0",
+        "value": {
+          "path": "packages/pet/src/topic-segment.ts",
+          "frozenSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+          "currentSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+          "matchesFrozen": true
+        }
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17/evidence/pet-source-manifest.json",
+    "bytes": 3569,
+    "sha256": "edbc9da97765fe320db364592ff0cbdf5028c1eb6151701a62fac408ce1590f5",
+    "readAt": "2026-10-17T18:54:10.940004+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/productionSources/8",
+        "value": {
+          "path": "packages/pet/src/topic-segment.ts",
+          "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+          "matchesFrozenGitBlob": true
+        }
+      }
+    ]
+  }
+]

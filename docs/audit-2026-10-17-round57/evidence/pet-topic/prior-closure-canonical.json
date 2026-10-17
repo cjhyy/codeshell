@@ -1,0 +1,18 @@
+{
+  "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+  "bytes": 9153,
+  "sha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+  "readAt": "2026-10-17T19:03:25.511109+00:00",
+  "timing": "Supplemental canonical metadata after current body; no pre-body timing claim",
+  "selectedObjects": [
+    {
+      "pointer": "/files/1",
+      "value": {
+        "path": "packages/pet/src/segment-closure.ts",
+        "frozenSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+        "currentSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+        "matchesFrozen": true
+      }
+    }
+  ]
+}

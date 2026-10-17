@@ -1,0 +1,29 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "-i",
+    "hostWake.{0,80}segment|segment.{0,80}hostWake|injected.{0,80}boundary|boundary.{0,80}injected|synthetic.{0,80}segment|segment.{0,80}synthetic",
+    "docs",
+    "bugs"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+    "docs/audit-2026-10-17-round5/prompt.md",
+    "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+    "docs/audit-2026-10-17-round52/evidence/live-activity/declined-hypotheses.json",
+    "docs/audit-2026-10-17-round52/evidence/live-activity/source-excerpts.json",
+    "docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts",
+    "docs/audit-2026-10-17-round50/evidence/goal-progress/group-source-excerpts.json",
+    "docs/review-2026-10-12/validation/original-server-routing-round17/hub-routing.act-warnings.log",
+    "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+    "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+    "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+    "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+    "docs/audit-2026-10-17-round49/evidence/session-usage-gate/history-contexts.json",
+    "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md"
+  ],
+  "scope": "bounded exact-related files only; not full history scanner"
+}

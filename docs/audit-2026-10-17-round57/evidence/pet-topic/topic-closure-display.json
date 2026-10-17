@@ -1,0 +1,30 @@
+[
+  {
+    "path": "packages/pet/src/topic-segment.ts",
+    "bytes": 2719,
+    "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+    "displayedLineRanges": [
+      [
+        1,
+        75
+      ]
+    ],
+    "initialPinReference": "initial-pins.json or mechanism-initial-pins.json",
+    "displayAt": "2026-10-17T18:54:31.548989+00:00",
+    "oldFullOverlapRetained": true
+  },
+  {
+    "path": "packages/pet/src/segment-closure.ts",
+    "bytes": 6195,
+    "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+    "displayedLineRanges": [
+      [
+        1,
+        154
+      ]
+    ],
+    "initialPinReference": "initial-pins.json or mechanism-initial-pins.json",
+    "displayAt": "2026-10-17T18:54:31.549832+00:00",
+    "oldFullOverlapRetained": true
+  }
+]

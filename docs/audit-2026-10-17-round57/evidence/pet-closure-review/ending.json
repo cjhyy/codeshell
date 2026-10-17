@@ -1,0 +1,256 @@
+{
+  "atUTC": "2026-10-17T19:10:36.997803+00:00",
+  "sourceInstructionChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameSha256": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "bytes": 2719,
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "initialSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "bytes": 6195,
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "initialSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "bytes": 11377,
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "initialSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "bytes": 11519,
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "initialSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "bytes": 121036,
+      "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "initialSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "bytes": 7159,
+      "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "initialSha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-service.ts",
+      "bytes": 9047,
+      "sha256": "8aa231b2db7313b5886d25ac8a437007e2a5b44b0c58cb5ce6b27e7bd0543a30",
+      "initialSha256": "8aa231b2db7313b5886d25ac8a437007e2a5b44b0c58cb5ce6b27e7bd0543a30",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+      "bytes": 5768,
+      "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "initialSha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-host.ts",
+      "bytes": 4323,
+      "sha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+      "initialSha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "initialSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "bytes": 6984,
+      "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "initialSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+      "bytes": 17609,
+      "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "initialSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "initialSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "bytes": 23896,
+      "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "initialSha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "initialSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "bytes": 6245,
+      "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "initialSha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.test.ts",
+      "bytes": 2315,
+      "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "initialSha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.test.ts",
+      "bytes": 3238,
+      "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "initialSha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.test.ts",
+      "bytes": 8539,
+      "sha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+      "initialSha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "initialSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "initialSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "initialSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "initialSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "bytes": 6970,
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "initialSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "sameSha256": true
+    }
+  ],
+  "all27SourceInstructionPinsSameSHA": true,
+  "metadataChecks": [
+    {
+      "path": "docs/audit-2026-10-17/pet-data.md",
+      "bytes": 4254,
+      "sha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8",
+      "initialSha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/pet.md",
+      "bytes": 7487,
+      "sha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab",
+      "initialSha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "bytes": 9153,
+      "sha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "initialSha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "bytes": 38591,
+      "sha256": "53ea123bdcff5ad6bc7a41f63a4d27ea3f578d48ff13a9abc45a7668bc6a62f6",
+      "initialSha256": "53ea123bdcff5ad6bc7a41f63a4d27ea3f578d48ff13a9abc45a7668bc6a62f6",
+      "sameSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/report.md",
+      "bytes": 5300,
+      "sha256": "a6881ff02fcea9d7d94b3c941b3e60857c48beef7067913f3deab1c6ff798c4b",
+      "initialSha256": "a6881ff02fcea9d7d94b3c941b3e60857c48beef7067913f3deab1c6ff798c4b",
+      "sameSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/source-manifest.json",
+      "bytes": 39532,
+      "sha256": "b29c26853ae81955824fde33a0ecf76eb58660f1bf77390a0bec836a1bc274e6",
+      "initialSha256": "b29c26853ae81955824fde33a0ecf76eb58660f1bf77390a0bec836a1bc274e6",
+      "sameSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/classification.json",
+      "bytes": 5216,
+      "sha256": "f12d0e3708decb29bca9b1c4b3cfa2e733fca9dab718c3f32cf4292938bac46d",
+      "initialSha256": "f12d0e3708decb29bca9b1c4b3cfa2e733fca9dab718c3f32cf4292938bac46d",
+      "sameSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/reviewer-receipt.json",
+      "bytes": 10409,
+      "sha256": "f5f49ed312c281556e5e1fc1e6d12193a69a2d476f5d05a23658e956620f077a",
+      "initialSha256": "f5f49ed312c281556e5e1fc1e6d12193a69a2d476f5d05a23658e956620f077a",
+      "sameSha256": true
+    }
+  ],
+  "all8BoundedInputsSameSHA": true,
+  "allComparedSameSHA": true,
+  "scope": "No current Git certification, no complete original history inventory rehash. Metadata means bounded4 old inputs+4 peer frozen anchors, not re-review of all old source."
+}

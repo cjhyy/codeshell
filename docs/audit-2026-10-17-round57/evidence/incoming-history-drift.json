@@ -1,0 +1,10 @@
+{
+  "baseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "main": "ccceee3a05f8493af3d1e62c9d99cfa87b92fcb0",
+  "frozenHistoryFiles": 5676,
+  "changed": [
+    "docs/todo/release-real-operations-2026-10-16.md"
+  ],
+  "missing": [],
+  "scope": "Ending bytes only; original history batch not recomputed or backfilled."
+}

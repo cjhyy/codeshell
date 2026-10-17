@@ -1,0 +1,1855 @@
+{
+  "prep": 132,
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedBaseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "bytes": 2719,
+      "lines": 75,
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          75
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          75
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 75,
+      "uniqueBodyDisplayedLines": 75,
+      "scope": "Pure topic contract/threshold/carryover/memory primitive, all75 read; known prior same-SHA full R10 /files/0 and earlierMD retained.",
+      "initialPinAt": "2026-10-17T18:53:59.119275+00:00",
+      "initialSemanticReadSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "endingSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "bytes": 6195,
+      "lines": 154,
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          154
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          154
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 154,
+      "uniqueBodyDisplayedLines": 154,
+      "scope": "Pure boundary locator/parser/prompt data primitives, all154 read; known prior full MD and supplemental same-SHA R10 /files/1 checked after current read, not retroactive pre-body timing.",
+      "initialPinAt": "2026-10-17T18:54:19.182386+00:00",
+      "initialSemanticReadSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "endingSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.ts",
+      "bytes": 12852,
+      "lines": 369,
+      "sha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          369
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          369
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 369,
+      "uniqueBodyDisplayedLines": 369,
+      "scope": "Complete local notify/bound/create/parse/enter/leave/suspend/inbound/expiry/stale state functions. No authority conclusion from this DTO/domain module alone.",
+      "initialPinAt": "2026-10-17T18:54:19.181857+00:00",
+      "initialSemanticReadSha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "endingSha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "bytes": 11377,
+      "lines": 275,
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          51
+        ],
+        [
+          53,
+          105
+        ],
+        [
+          108,
+          275
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          275
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 263,
+      "uniqueBodyDisplayedLines": 275,
+      "scope": "Actual serialized beginTurn/manual clear, prior/new boundaries, carryover and close sink; no models/timers invoked.",
+      "initialPinAt": "2026-10-17T18:55:16.181667+00:00",
+      "initialSemanticReadSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "endingSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/conversation-session-route-store.ts",
+      "bytes": 10967,
+      "lines": 305,
+      "sha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          27,
+          245
+        ],
+        [
+          248,
+          256
+        ],
+        [
+          278,
+          305
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          305
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 256,
+      "uniqueBodyDisplayedLines": 305,
+      "scope": "Actual staged serialized route state transitions, expiry and notification selection. Neighboring bounded JSON/FS quarantine implementation not certified; helper not imported.",
+      "initialPinAt": "2026-10-17T18:55:16.180669+00:00",
+      "initialSemanticReadSha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "endingSha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "bytes": 11519,
+      "lines": 302,
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          15
+        ],
+        [
+          38,
+          51
+        ],
+        [
+          60,
+          111
+        ],
+        [
+          135,
+          302
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          302
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 249,
+      "uniqueBodyDisplayedLines": 302,
+      "scope": "Actual transcript filter, window→null early return, journal/memory source effects, backfill and read projection. Secret-redaction and settings/SDK native/client mechanism adjacency excluded; no actual user transcript/client call.",
+      "initialPinAt": "2026-10-17T18:55:16.181447+00:00",
+      "initialSemanticReadSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "endingSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/session-conversation-bridge.ts",
+      "bytes": 8489,
+      "lines": 223,
+      "sha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          96,
+          178
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          96,
+          187
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          111,
+          111
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          121,
+          121
+        ],
+        [
+          154,
+          154
+        ],
+        [
+          176,
+          176
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 83,
+      "uniqueBodyDisplayedLines": 92,
+      "scope": "Actual route caller expiry→bound state, explicit leave/status, direct-message/health gates, confirmed delivery then inbound stamp. External health/authorization implementation not fully traversed or certified.",
+      "initialPinAt": "2026-10-17T18:55:54.454298+00:00",
+      "initialSemanticReadSha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+      "endingSha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "bytes": 121036,
+      "lines": 2912,
+      "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1051,
+          1075
+        ],
+        [
+          1078,
+          1093
+        ],
+        [
+          1178,
+          1202
+        ],
+        [
+          1991,
+          2020
+        ],
+        [
+          2185,
+          2223
+        ],
+        [
+          2338,
+          2348
+        ],
+        [
+          2372,
+          2398
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1048,
+          1109
+        ],
+        [
+          1145,
+          1202
+        ],
+        [
+          1988,
+          2030
+        ],
+        [
+          2165,
+          2250
+        ],
+        [
+          2330,
+          2415
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          357,
+          357
+        ],
+        [
+          362,
+          362
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          967,
+          967
+        ],
+        [
+          1052,
+          1052
+        ],
+        [
+          1110,
+          1110
+        ],
+        [
+          1184,
+          1185
+        ],
+        [
+          1187,
+          1187
+        ],
+        [
+          1228,
+          1228
+        ],
+        [
+          1915,
+          1915
+        ],
+        [
+          1918,
+          1918
+        ],
+        [
+          1991,
+          1991
+        ],
+        [
+          1998,
+          1998
+        ],
+        [
+          2069,
+          2070
+        ],
+        [
+          2144,
+          2144
+        ],
+        [
+          2196,
+          2196
+        ],
+        [
+          2200,
+          2201
+        ],
+        [
+          2207,
+          2207
+        ],
+        [
+          2209,
+          2209
+        ],
+        [
+          2211,
+          2211
+        ],
+        [
+          2218,
+          2218
+        ],
+        [
+          2233,
+          2233
+        ],
+        [
+          2284,
+          2284
+        ],
+        [
+          2292,
+          2292
+        ],
+        [
+          2294,
+          2297
+        ],
+        [
+          2348,
+          2348
+        ],
+        [
+          2373,
+          2373
+        ],
+        [
+          2375,
+          2377
+        ],
+        [
+          2379,
+          2379
+        ],
+        [
+          2382,
+          2383
+        ],
+        [
+          2388,
+          2388
+        ],
+        [
+          2393,
+          2393
+        ],
+        [
+          2469,
+          2469
+        ],
+        [
+          2473,
+          2473
+        ],
+        [
+          2506,
+          2506
+        ],
+        [
+          2510,
+          2510
+        ],
+        [
+          2520,
+          2520
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 173,
+      "uniqueBodyDisplayedLines": 335,
+      "scope": "Real accepted follow-up manager admission→chat fixedID→unconditional topic beginTurn→injected worker params→post-settle closure. Other world/host/permission branches displayed incidentally, no whole dispatcher or permission certification.",
+      "initialPinAt": "2026-10-17T18:55:54.453269+00:00",
+      "initialSemanticReadSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "endingSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2163,
+          2181
+        ],
+        [
+          2211,
+          2231
+        ],
+        [
+          2600,
+          2638
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          2160,
+          2182
+        ],
+        [
+          2184,
+          2240
+        ],
+        [
+          2600,
+          2638
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          212,
+          212
+        ],
+        [
+          2163,
+          2163
+        ],
+        [
+          2177,
+          2177
+        ],
+        [
+          2214,
+          2214
+        ],
+        [
+          2219,
+          2219
+        ],
+        [
+          2228,
+          2228
+        ],
+        [
+          2622,
+          2622
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 79,
+      "uniqueBodyDisplayedLines": 119,
+      "scope": "Production follow-up runtime/dispatch/controller wiring, default12h and closure/backfill sink. No whole main or native startup execution.",
+      "initialPinAt": "2026-10-17T18:55:54.456940+00:00",
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "lines": 292,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          140,
+          142
+        ],
+        [
+          175,
+          181
+        ],
+        [
+          211,
+          218
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          138,
+          183
+        ],
+        [
+          205,
+          220
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          84,
+          85
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          134,
+          134
+        ],
+        [
+          142,
+          144
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          178,
+          180
+        ],
+        [
+          212,
+          212
+        ],
+        [
+          215,
+          217
+        ],
+        [
+          274,
+          274
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 18,
+      "uniqueBodyDisplayedLines": 62,
+      "scope": "Actual resumed/new user message producer carries injected and clientMessageId to Transcript; other open/dedup/ownership state adjacency excluded.",
+      "initialPinAt": "2026-10-17T18:57:40.118167+00:00",
+      "initialSemanticReadSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "endingSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+      "bytes": 5768,
+      "lines": 131,
+      "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          17,
+          45
+        ],
+        [
+          46,
+          104
+        ],
+        [
+          105,
+          129
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          131
+        ]
+      ],
+      "navigationLineRanges": [],
+      "sourceKind": "product",
+      "semanticLineCount": 113,
+      "uniqueBodyDisplayedLines": 131,
+      "scope": "Actual due resume eligibility and dispatch.wakeFollowUp branch; valid idle source without taskId is allowed. Selected continuation guards are source only, no universal authorization certification.",
+      "initialPinAt": "2026-10-17T18:58:11.557348+00:00",
+      "initialSemanticReadSha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "endingSha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lines": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          528,
+          543
+        ],
+        [
+          550,
+          570
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          528,
+          571
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          86,
+          86
+        ],
+        [
+          136,
+          136
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          179,
+          179
+        ],
+        [
+          530,
+          530
+        ],
+        [
+          537,
+          537
+        ],
+        [
+          541,
+          541
+        ],
+        [
+          543,
+          543
+        ],
+        [
+          551,
+          552
+        ],
+        [
+          555,
+          555
+        ],
+        [
+          565,
+          565
+        ],
+        [
+          567,
+          567
+        ],
+        [
+          576,
+          577
+        ],
+        [
+          585,
+          586
+        ],
+        [
+          590,
+          590
+        ],
+        [
+          593,
+          593
+        ],
+        [
+          701,
+          701
+        ],
+        [
+          712,
+          712
+        ],
+        [
+          715,
+          715
+        ],
+        [
+          750,
+          752
+        ],
+        [
+          805,
+          807
+        ],
+        [
+          810,
+          811
+        ],
+        [
+          815,
+          815
+        ],
+        [
+          823,
+          823
+        ],
+        [
+          826,
+          826
+        ],
+        [
+          832,
+          833
+        ],
+        [
+          835,
+          835
+        ],
+        [
+          909,
+          909
+        ],
+        [
+          920,
+          920
+        ],
+        [
+          977,
+          977
+        ],
+        [
+          981,
+          981
+        ],
+        [
+          1280,
+          1280
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 37,
+      "uniqueBodyDisplayedLines": 44,
+      "scope": "Documented synthetic-user metadata and exact message.data injected/clientMessageId producer; no disk IO executed or all transcript folding branches assessed.",
+      "initialPinAt": "2026-10-17T18:58:43.620525+00:00",
+      "initialSemanticReadSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "endingSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/follow-ups.ts",
+      "bytes": 10597,
+      "lines": 267,
+      "sha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          79,
+          128
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          79,
+          128
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          39,
+          39
+        ],
+        [
+          62,
+          62
+        ],
+        [
+          72,
+          73
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          97,
+          97
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          114,
+          114
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          176,
+          176
+        ],
+        [
+          215,
+          215
+        ],
+        [
+          238,
+          238
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 50,
+      "uniqueBodyDisplayedLines": 50,
+      "scope": "Real explicit future wake-at/resume tool contract. Contract admits intent but is not treated as Host permission enforcement.",
+      "initialPinAt": "2026-10-17T18:58:43.634095+00:00",
+      "initialSemanticReadSha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "endingSha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "bytes": 6245,
+      "lines": 199,
+      "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          129,
+          163
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          125,
+          163
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          23,
+          23
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          109,
+          109
+        ],
+        [
+          140,
+          141
+        ],
+        [
+          148,
+          148
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          177,
+          177
+        ],
+        [
+          183,
+          183
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 35,
+      "uniqueBodyDisplayedLines": 39,
+      "scope": "Shared payload validation normal future-time field shape; no authorization defect alleged.",
+      "initialPinAt": "2026-10-17T18:58:43.639876+00:00",
+      "initialSemanticReadSha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "endingSha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "bytes": 7159,
+      "lines": 197,
+      "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          90,
+          130
+        ],
+        [
+          145,
+          173
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          90,
+          130
+        ],
+        [
+          144,
+          177
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          29,
+          29
+        ],
+        [
+          101,
+          101
+        ],
+        [
+          113,
+          113
+        ],
+        [
+          125,
+          125
+        ],
+        [
+          147,
+          147
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          166,
+          166
+        ],
+        [
+          185,
+          185
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 70,
+      "uniqueBodyDisplayedLines": 75,
+      "scope": "Actual one-shot runAt=wakeAt scheduling, claim→resume selection; no clock/scheduler/claim/notification execution or custody/lease certification.",
+      "initialPinAt": "2026-10-17T18:58:43.628108+00:00",
+      "initialSemanticReadSha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "endingSha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1809,
+          1821
+        ],
+        [
+          1987,
+          1999
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1798,
+          1823
+        ],
+        [
+          1975,
+          2001
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          1801,
+          1802
+        ],
+        [
+          1814,
+          1814
+        ],
+        [
+          1821,
+          1821
+        ],
+        [
+          1978,
+          1979
+        ],
+        [
+          1995,
+          1995
+        ],
+        [
+          1999,
+          1999
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 26,
+      "uniqueBodyDisplayedLines": 53,
+      "scope": "Actual session/legacy run forwarding of injected and clientMessageId, not overall protocol authorization review.",
+      "initialPinAt": "2026-10-17T18:59:16.764074+00:00",
+      "initialSemanticReadSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "endingSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "bytes": 23896,
+      "lines": 586,
+      "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          516,
+          527
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          516,
+          533
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          525,
+          525
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 12,
+      "uniqueBodyDisplayedLines": 18,
+      "scope": "Normal queue→Engine forwarding same injected/client ID/archive option; adjacent permission fields not certified.",
+      "initialPinAt": "2026-10-17T18:59:16.756618+00:00",
+      "initialSemanticReadSha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "endingSha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "bytes": 8824,
+      "lines": 228,
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          111,
+          113
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          106,
+          114
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          111,
+          111
+        ],
+        [
+          125,
+          125
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 3,
+      "uniqueBodyDisplayedLines": 9,
+      "scope": "Actual injected boolean validation only; no other dispatch policy conclusions.",
+      "initialPinAt": "2026-10-17T18:59:16.742165+00:00",
+      "initialSemanticReadSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "endingSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+      "bytes": 17609,
+      "lines": 484,
+      "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          272,
+          305
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          272,
+          305
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          15,
+          16
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          108,
+          108
+        ],
+        [
+          138,
+          138
+        ],
+        [
+          141,
+          141
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          222,
+          222
+        ],
+        [
+          227,
+          227
+        ],
+        [
+          241,
+          241
+        ],
+        [
+          256,
+          256
+        ],
+        [
+          272,
+          272
+        ],
+        [
+          289,
+          291
+        ],
+        [
+          296,
+          296
+        ],
+        [
+          313,
+          313
+        ],
+        [
+          316,
+          316
+        ],
+        [
+          330,
+          331
+        ],
+        [
+          333,
+          333
+        ],
+        [
+          336,
+          336
+        ],
+        [
+          358,
+          358
+        ],
+        [
+          374,
+          374
+        ],
+        [
+          377,
+          377
+        ],
+        [
+          405,
+          405
+        ],
+        [
+          421,
+          421
+        ],
+        [
+          431,
+          431
+        ],
+        [
+          455,
+          455
+        ],
+        [
+          458,
+          458
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 34,
+      "uniqueBodyDisplayedLines": 34,
+      "scope": "Actual registration admission validates ordinary payload then requires wakeAt>now, with no <12h upper bound in selected admitted branch; no user file or mutation operation executed.",
+      "initialPinAt": "2026-10-17T19:00:42.499667+00:00",
+      "initialSemanticReadSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "endingSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "bytes": 6984,
+      "lines": 207,
+      "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          93,
+          119
+        ],
+        [
+          143,
+          153
+        ],
+        [
+          156,
+          160
+        ],
+        [
+          179,
+          188
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          93,
+          119
+        ],
+        [
+          143,
+          160
+        ],
+        [
+          176,
+          195
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          11,
+          11
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          75,
+          76
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          109,
+          109
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          116,
+          116
+        ],
+        [
+          143,
+          143
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          182,
+          182
+        ]
+      ],
+      "sourceKind": "product",
+      "semanticLineCount": 53,
+      "uniqueBodyDisplayedLines": 65,
+      "scope": "Actual active/all/boundary segments and whole segment object staged/persist snapshot; normal boundary retained. Physical IO/owner security not certified.",
+      "initialPinAt": "2026-10-17T19:01:27.526690+00:00",
+      "initialSemanticReadSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "endingSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.test.ts",
+      "bytes": 2315,
+      "lines": 69,
+      "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          7,
+          14
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          7,
+          14
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          58,
+          58
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "semanticLineCount": 8,
+      "uniqueBodyDisplayedLines": 8,
+      "scope": "Two existing idle threshold declarations, read only, never executed.",
+      "initialPinAt": "2026-10-17T18:54:19.183372+00:00",
+      "initialSemanticReadSha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "endingSha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.test.ts",
+      "bytes": 3238,
+      "lines": 86,
+      "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          19,
+          46
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          46
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          41,
+          41
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          67,
+          67
+        ],
+        [
+          74,
+          74
+        ],
+        [
+          81,
+          81
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "semanticLineCount": 28,
+      "uniqueBodyDisplayedLines": 28,
+      "scope": "Existing exact boundary and absent-ID→null declarations, read only, never executed.",
+      "initialPinAt": "2026-10-17T18:54:19.184299+00:00",
+      "initialSemanticReadSha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "endingSha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.test.ts",
+      "bytes": 8610,
+      "lines": 217,
+      "sha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          83,
+          120
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          83,
+          120
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          41,
+          41
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          124,
+          124
+        ],
+        [
+          132,
+          132
+        ],
+        [
+          138,
+          138
+        ],
+        [
+          148,
+          148
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          167,
+          167
+        ],
+        [
+          176,
+          176
+        ],
+        [
+          188,
+          188
+        ],
+        [
+          201,
+          201
+        ],
+        [
+          206,
+          206
+        ]
+      ],
+      "sourceKind": "test-declaration",
+      "semanticLineCount": 38,
+      "uniqueBodyDisplayedLines": 38,
+      "scope": "Existing enter/leave/suspend state declarations, read only, never executed.",
+      "initialPinAt": "2026-10-17T18:54:19.183824+00:00",
+      "initialSemanticReadSha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+      "endingSha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+      "endingMatchesInitial": true
+    }
+  ],
+  "navigationOrHashOnlyFiles": [
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lines": 2412,
+      "coverage": "navigation-matches-only",
+      "selectedLineRanges": [],
+      "navigationLineRanges": [
+        [
+          203,
+          203
+        ],
+        [
+          206,
+          206
+        ],
+        [
+          208,
+          208
+        ],
+        [
+          210,
+          210
+        ],
+        [
+          2252,
+          2252
+        ],
+        [
+          2263,
+          2263
+        ],
+        [
+          2265,
+          2265
+        ],
+        [
+          2267,
+          2267
+        ],
+        [
+          2280,
+          2280
+        ],
+        [
+          2284,
+          2284
+        ],
+        [
+          2297,
+          2298
+        ],
+        [
+          2300,
+          2300
+        ],
+        [
+          2309,
+          2309
+        ],
+        [
+          2340,
+          2340
+        ]
+      ],
+      "semanticLineCount": 0,
+      "scope": "No body semantic read; engine/assistant field-location navigation was not a complete branch review."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lines": 5082,
+      "coverage": "navigation-matches-only",
+      "selectedLineRanges": [],
+      "navigationLineRanges": [
+        [
+          1156,
+          1156
+        ],
+        [
+          1168,
+          1168
+        ],
+        [
+          1175,
+          1175
+        ],
+        [
+          1181,
+          1181
+        ],
+        [
+          1216,
+          1217
+        ],
+        [
+          1651,
+          1651
+        ],
+        [
+          1662,
+          1662
+        ],
+        [
+          1901,
+          1901
+        ],
+        [
+          1904,
+          1904
+        ],
+        [
+          2138,
+          2139
+        ],
+        [
+          2308,
+          2308
+        ],
+        [
+          2730,
+          2730
+        ],
+        [
+          2733,
+          2733
+        ],
+        [
+          3306,
+          3306
+        ],
+        [
+          3346,
+          3346
+        ],
+        [
+          3349,
+          3349
+        ],
+        [
+          3471,
+          3472
+        ],
+        [
+          3474,
+          3475
+        ]
+      ],
+      "semanticLineCount": 0,
+      "scope": "No body semantic read; engine/assistant field-location navigation was not a complete branch review."
+    }
+  ],
+  "instructionHashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only same as prior actually read instructions",
+      "newInstructionReadLines": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only same as prior actually read instructions",
+      "newInstructionReadLines": 0
+    }
+  ],
+  "totals": {
+    "fullProductFiles": 3,
+    "selectedProductFiles": 17,
+    "selectedTestDeclarationFiles": 3,
+    "productSemanticLines": 2152,
+    "testDeclarationLines": 74,
+    "allSemanticDeclarationLines": 2226,
+    "sourceBodyDisplayedLines": 2680,
+    "navigationBeyondBodyLines": 180,
+    "allDisplayedSourceLinesIncludingNavigation": 2860,
+    "testRuns": 0
+  },
+  "overlap": "Topic75 and closure154 explicitly old full in canonical MD, same SHA manifest rows retained. Other mechanism prior coverage not claimed absent. Counts are this read, not unique new/global coverage. Full local file reading does not certify transitive authorization, persistence or runtime behavior."
+}

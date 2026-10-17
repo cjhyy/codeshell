@@ -1,0 +1,36 @@
+{
+  "historyFiles": 5676,
+  "jsonValueScalarsVisited": 4212456,
+  "errors": 0,
+  "targetCounts": {
+    "static-files": 31,
+    "mobile-static": 34
+  },
+  "capPerTarget": 100,
+  "semanticScope": "Root actually read old optimization-sweep.md402–450 and claude-repository-optimization-2026-08-30.md280–304, MIME extraction/old symlink cause; other batch/cause66 windows are navigation only for Root. Independent137 records its own selected windows. No exact-source canonical full located is not proof of never-read or novel cause.",
+  "oldMetadataSelected": [
+    {
+      "path": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+      "ranges": [
+        [
+          402,
+          450
+        ]
+      ],
+      "initialReadTiming": "Batch pin exists; do not infer per-body initial timestamp"
+    },
+    {
+      "path": "docs/todo/claude-repository-optimization-2026-08-30.md",
+      "ranges": [
+        [
+          280,
+          304
+        ]
+      ],
+      "initialReadTiming": "Batch pin exists; do not infer per-body initial timestamp"
+    }
+  ],
+  "causeHistoryHits": 66,
+  "causeMatchedFiles": 29,
+  "fullHistorySemanticRead": false
+}

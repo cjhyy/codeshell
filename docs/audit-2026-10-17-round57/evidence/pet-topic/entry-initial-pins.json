@@ -1,0 +1,26 @@
+[
+  {
+    "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+    "bytes": 121036,
+    "lines": 2912,
+    "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+    "pinAt": "2026-10-17T18:55:54.453269+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/desktop/src/main/pet/session-conversation-bridge.ts",
+    "bytes": 8489,
+    "lines": 223,
+    "sha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+    "pinAt": "2026-10-17T18:55:54.454298+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "bytes": 299337,
+    "lines": 7330,
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+    "pinAt": "2026-10-17T18:55:54.456940+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  }
+]

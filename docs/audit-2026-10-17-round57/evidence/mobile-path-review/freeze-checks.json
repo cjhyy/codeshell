@@ -1,0 +1,205 @@
+{
+  "checkedUTC": "2026-10-17T19:09:39.162681+00:00",
+  "role": "Own-author metadata finalization, not extra independent source reading",
+  "files": [],
+  "sourceRangeChecks": [
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/desktop/vite.mobile.config.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/index.html",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/main.tsx",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/web/app/public/manifest.webmanifest",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/web/app/public/sw.js",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/web/app/register-service-worker.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "semanticCountMatches": true,
+      "displayUnionMatches": true,
+      "semanticWithinDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true
+    }
+  ],
+  "links": [
+    {
+      "label": "分类",
+      "target": "classification.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最初pins",
+      "target": "initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "资源/测试pins",
+      "target": "support-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "实际入口pins",
+      "target": "entry-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "public库存",
+      "target": "public-assets-inventory.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "208个相关filename库存",
+      "target": "source-resource-name-inventory.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "共享history pins",
+      "target": "shared-history-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "path/SHA投影",
+      "target": "shared-history-targets.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "cause投影",
+      "target": "cause-history-projection.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "gate decision",
+      "target": "gate-decision.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "source manifest",
+      "target": "source-manifest.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "摘录",
+      "target": "source-excerpts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "首诊断",
+      "target": "diagnostics.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "首错误",
+      "target": "metadata-first-error.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "原脚本",
+      "target": "finalize-metadata.first.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "metadata脚本",
+      "target": "finalize-metadata.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最后核对",
+      "target": "freeze-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "self-excluded receipt",
+      "target": "reviewer-receipt.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    }
+  ],
+  "linkCount": 20,
+  "allLinksValid": true,
+  "productRuns": 0,
+  "GitOperations": 0
+}

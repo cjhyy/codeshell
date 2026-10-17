@@ -1,0 +1,38 @@
+{
+  "capturedUTC": "2026-10-17T19:04:44.612524+00:00",
+  "files": [
+    {
+      "path": "packages/web/app/public/icon.svg",
+      "bytes": 286,
+      "sha256": "9fea5fa5acff4876d11d897516a8ba74cb06a2da0aea0a7f435b90ef5cd5dee2",
+      "filenameASCII": true,
+      "hasLiteralSpaceOrPercent": false,
+      "semanticRead": false
+    },
+    {
+      "path": "packages/web/app/public/manifest.webmanifest",
+      "bytes": 381,
+      "sha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "filenameASCII": true,
+      "hasLiteralSpaceOrPercent": false,
+      "semanticRead": true
+    },
+    {
+      "path": "packages/web/app/public/offline.html",
+      "bytes": 1178,
+      "sha256": "d43bfd5a415433b1b466c62b1022df42be18631acec0bd18d7721d17854f818c",
+      "filenameASCII": true,
+      "hasLiteralSpaceOrPercent": false,
+      "semanticRead": false
+    },
+    {
+      "path": "packages/web/app/public/sw.js",
+      "bytes": 1787,
+      "sha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "filenameASCII": true,
+      "hasLiteralSpaceOrPercent": false,
+      "semanticRead": true
+    }
+  ],
+  "scope": "Actual top-level files returned by rg inventory; no build or file injection, icon/offline body hash-only."
+}

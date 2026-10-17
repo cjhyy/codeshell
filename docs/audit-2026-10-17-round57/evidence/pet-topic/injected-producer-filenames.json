@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "options.injected|params.injected|injected:.*injected",
+    "packages/core/src/engine",
+    "packages/core/src/protocol"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/core/src/protocol/server.run-model.test.ts\npackages/core/src/protocol/chat-session-goal-resume.test.ts\npackages/core/src/protocol/server.bg-shell-wakeup.test.ts\npackages/core/src/protocol/dispatch.ts\npackages/core/src/protocol/server.goal-resume-cold.test.ts\npackages/core/src/protocol/chat-session.ts\npackages/core/src/protocol/server.ts\npackages/core/src/engine/run-session-open.ts\npackages/core/src/engine/engine.ts\npackages/core/src/protocol/server.session-message.test.ts\n",
+  "stderr": ""
+}

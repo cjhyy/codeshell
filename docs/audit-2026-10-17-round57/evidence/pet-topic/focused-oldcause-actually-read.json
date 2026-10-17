@@ -1,0 +1,106 @@
+{
+  "windows": [
+    {
+      "querySet": "first",
+      "index": 2,
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "pointer": "/8/displayedLines/39/text",
+      "offset": 11,
+      "text": "  // A non-injected user message is always a turn boundary. An injected one",
+      "length": 75,
+      "bounded": true
+    },
+    {
+      "querySet": "first",
+      "index": 3,
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "pointer": "/8/displayedLines/55/text",
+      "offset": 7,
+      "text": "    // Injected: only a boundary if a done assistant precedes it since the last",
+      "length": 79,
+      "bounded": true
+    },
+    {
+      "querySet": "first",
+      "index": 13,
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md",
+      "pointer": "",
+      "offset": 801,
+      "text": "ze。它不是外层loop开始就追加boundary。实际停止、异常和其它分支只读已声明片段，没有执行模型或完整engine循环。\n\ncontextSelection的finish若segment没有真实user，会把它追加到previous.eventIds并推进toEventId；因此同一user任务的后续模型迭代、工具和注入reminder不会仅因多一个boundary就成为另一picker任务。UI分组也排除injected/reminder作为新任务。既有9个测试声明涵盖完整task、reminder continuation、连续范围、alignment等，全文223行只读，0执行。\n\nMessageStream打开选择前拒绝liveTurnActive，取真实getSessionRawEvents后buildTurns(raw,false)，通过durable源事件/提交字段alignment后才用selectedTurnRange创建summary fork；没有用UI行号猜原事件范围。raw API→IPC→raw reader保持原始顺序和事件字段，读取窗口/跳过畸形行是源码边界，本次没有实际用户历史或容量压力实验。\n\n## 独立backend范围反证\n\n本reviewer额外静态跟随preload fork、protocol summary、Engine委托、SessionManager、Transcript。summary必须from/to，先selectContextPackage后摘要；",
+      "length": 2812,
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 0,
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "pointer": "",
+      "offset": 2886,
+      "length": 40889,
+      "text": "时压成约 1ms，任务会提前执行并可能持续高频触发。\n- **证据**：`packages/core/src/automation/scheduler.ts:602-619,630-665` 将完整远期 delay 直接传给 `setTimeout`，没有分段长定时器。\n- **复现/测试**：最小复现 25ms 内触发 21 次；现有测试没有覆盖 `2^31-1ms` 以上 delay。\n- **建议修复**：用最大安全 delay 分段唤醒，到达最终时间才 fire；同时为 interval 与 cron 两条路径加 fake-clock 边界测试。\n\n## P1 — 高影响正确性、安全与数据一致性\n\n### P1-01 工具调用无进展 busy-loop 没有运行时熔断（确认）\n\n- **影响**：模型可反复调用逻辑相同、结果相同的工具数十至数百轮，消耗巨量 token，任务看似“卡住”但持续执行。\n- **证据**：含工具调用会清零 stop block：`packages/core/src/engine/turn-loop.ts:988`；Goal judge 只在无工具响应时介入：`turn-loop.ts:1153`；工具结果后固定继续：`turn-loop.ts:1361,1563`；默认 Goal 上限为 300 turns：`packages/core/src/engine/goal.ts:232`。`DriveAgentJobs` 又绕过 `packages/core/src/tool-system/investigation-guard.ts:68,137,175` 的有限去重。\n- **复现/测试**：真实会话 turn 37–44 连续 8 次相同参数、相同结果 digest，累计 11,519",
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 18,
+      "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+      "pointer": "",
+      "offset": 2481,
+      "length": 9754,
+      "text": "ject/root/clientMessageId/attachments/permissionMode，没有 displayText 或 injected。当前 `mobile-chat-turn.ts:95–106` 同样如此。\n2. prejournal `protocol/server.ts:2020–2038/2195–2217` 将缺失的 `params.displayText` 归一为 undefined、`params.injected===true` 为 false；prejournal `chat-session.ts:509/515` 直接透传。当前对应 `server.ts:2021–2039/2196–2218`、`chat-session.ts:514–527`，没有从 task 自动补干净 displayText。\n3. 当前 `run-session-open.ts:153–156/189–192` 把 content 和上述 metadata 写入 Transcript；prejournal 同字段一致。修订 seed 显式写 `injected:false`、clientMessageId、`displayText:undefined`，符合该特定 producer，而非任意删字段造例。\n4. 独立 `git rev-parse` 已核 run-image-input.ts 的 prejournal parent 与84740 blob同为 `4a28a57c65b7748820c207b3ece2c7031687865f`；input-attachments.ts 同为 `c49f0dd6e9db2876111bd0473b9812af9af4478b`。当前 `run-image-input.ts:194–224` 确实用实际 staged p",
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 19,
+      "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+      "pointer": "",
+      "offset": 2723,
+      "length": 9754,
+      "text": "se；prejournal `chat-session.ts:509/515` 直接透传。当前对应 `server.ts:2021–2039/2196–2218`、`chat-session.ts:514–527`，没有从 task 自动补干净 displayText。\n3. 当前 `run-session-open.ts:153–156/189–192` 把 content 和上述 metadata 写入 Transcript；prejournal 同字段一致。修订 seed 显式写 `injected:false`、clientMessageId、`displayText:undefined`，符合该特定 producer，而非任意删字段造例。\n4. 独立 `git rev-parse` 已核 run-image-input.ts 的 prejournal parent 与84740 blob同为 `4a28a57c65b7748820c207b3ece2c7031687865f`；input-attachments.ts 同为 `c49f0dd6e9db2876111bd0473b9812af9af4478b`。当前 `run-image-input.ts:194–224` 确实用实际 staged path 生成 wrapper 与 image blocks。无需手造 XML。\n\n因此应限定**旧 paired native chat.send**，不扩为所有 Desktop、TUI、Room 或 external runtime 旧输入。fixture 的 `origin:\"mobile\"` 与此限定一致。没有运行 Engine、AgentServer、真实模型；writer/helper 重建格式与真实旧 producer 的关系由上述源码证明。\n\n## 正式门禁与兼容分",
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 24,
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+      "pointer": "",
+      "offset": 3416,
+      "length": 10752,
+      "text": "id not hand-author XML, start Engine/model inference, or delete a modern journal to manufacture legacy fallback.\n\nThe omitted clean `displayText` is also a producer fact. Current `mobile-chat-turn.ts:95-106` and the pre-journal parent's corresponding request omit displayText and injected. Current/pre-journal AgentServer reads only `params.displayText`, normalizes its absence to undefined, and enqueues `injected:false`; ChatSession forwards those fields; `openRunSession` passes them to appendMessage. The fixture explicitly used `{injected:false,clientMessageId:\"prejournal-image-input\",displayText:undefined}`. This report does **not** generalize wrapper prose to Desktop or Panel producers that supply clean displayText.\n\n## Supported fallback and TODO/retention limits\n\n- `mobileOutputRecovery.ts:49-89` returns null for a never-pu",
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 25,
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+      "pointer": "",
+      "offset": 3731,
+      "length": 10752,
+      "text": "Server reads only `params.displayText`, normalizes its absence to undefined, and enqueues `injected:false`; ChatSession forwards those fields; `openRunSession` passes them to appendMessage. The fixture explicitly used `{injected:false,clientMessageId:\"prejournal-image-input\",displayText:undefined}`. This report does **not** generalize wrapper prose to Desktop or Panel producers that supply clean displayText.\n\n## Supported fallback and TODO/retention limits\n\n- `mobileOutputRecovery.ts:49-89` returns null for a never-published unavailable native journal; `mobileOutputClient.ts:190-193` invokes legacy; `useRemoteApp.ts:538-541` requests `session.history`. The fixture observed that actual sequence and consumed the real response from `handleClientEvent` → `getSessionTranscript` → `buildSessionHistory`.\n- `",
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 28,
+      "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "pointer": "",
+      "offset": 32562,
+      "length": 33682,
+      "text": "test`\nExpected: 全绿。\n\n```bash\ngit add packages/core/src/engine/restart-respects-archive.test.ts\ngit commit -m \"test(core): restart replays trimmed context from persisted archive boundary\"\n```\n\n---\n\n## 风险与边界（实现时对照检查）\n\n- **injected 合成消息**：span 匹配按 clientMessageId 精确命中，与 index 无关，closure 的「跳过 injected」口径不影响本机制；但 closure 传给 `archiveTurnRange` 的 index range 仍是旧口径，两者并行、互不依赖。\n- **归档区间切断 tool_use/tool_result 对**：切片边界永远是 user 消息（clientMessageId 只在 user turn 上），完整的 assistant+tool 轮次要么整体在区间内要么整体在外；resume 路径另有 `patchOrphanedToolUses` 兜底。\n- **单写者**：transcript 只由 agent-server 进程的 Engine 追加，`archive_marker`/`archive_range` 都经 worker query 进入同一写者，无跨进程并发写（对照记忆里 CronStore 锁的教训——这里不引入第二个写者）。\n- **失败开放**：坏标记（to 锚点找不到）被忽略、回放退化为全量历史——宁可上下文大，不可吞消息。\n- **不删数据**：原提案第 5 条的承诺保持——迁移只追加事件，transcript.jsonl 里所有原始消息永久保留，UI 查看历史不受影响（UI 走 transcript-reader，不走",
+      "bounded": true
+    },
+    {
+      "querySet": "second",
+      "index": 29,
+      "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "pointer": "",
+      "offset": 32632,
+      "length": 33682,
+      "text": "respects-archive.test.ts\ngit commit -m \"test(core): restart replays trimmed context from persisted archive boundary\"\n```\n\n---\n\n## 风险与边界（实现时对照检查）\n\n- **injected 合成消息**：span 匹配按 clientMessageId 精确命中，与 index 无关，closure 的「跳过 injected」口径不影响本机制；但 closure 传给 `archiveTurnRange` 的 index range 仍是旧口径，两者并行、互不依赖。\n- **归档区间切断 tool_use/tool_result 对**：切片边界永远是 user 消息（clientMessageId 只在 user turn 上），完整的 assistant+tool 轮次要么整体在区间内要么整体在外；resume 路径另有 `patchOrphanedToolUses` 兜底。\n- **单写者**：transcript 只由 agent-server 进程的 Engine 追加，`archive_marker`/`archive_range` 都经 worker query 进入同一写者，无跨进程并发写（对照记忆里 CronStore 锁的教训——这里不引入第二个写者）。\n- **失败开放**：坏标记（to 锚点找不到）被忽略、回放退化为全量历史——宁可上下文大，不可吞消息。\n- **不删数据**：原提案第 5 条的承诺保持——迁移只追加事件，transcript.jsonl 里所有原始消息永久保留，UI 查看历史不受影响（UI 走 transcript-reader，不走 toMessages）。\n\n## Self-Review 记录\n",
+      "bounded": true
+    }
+  ],
+  "count": 10,
+  "scope": "Actual bounded windows only; compact locators and machine count/cap are not all contexts semantically read."
+}

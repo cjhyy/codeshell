@@ -1,0 +1,408 @@
+{
+  "input": {
+    "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+    "bytes": 1250596,
+    "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+    "pinAt": "2026-10-17T18:55:54.498891+00:00"
+  },
+  "snapshotAt": "2026-10-17T18:54:27.390693+00:00",
+  "excludedFormalAtOrAbove": 57,
+  "sharedHistoryFiles": 5676,
+  "machineValueScalarVisits": 4212456,
+  "query": [
+    "packages/pet/src/topic-segment.ts",
+    "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+  ],
+  "count": 43,
+  "cap": 100,
+  "hits": [
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1954",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "location": "/files/0/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "location": "/files/0/frozenSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "location": "/files/0/currentSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "location": "/files/80/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "location": "/files/80/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/852/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/852/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/852/claims/0/sourceSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3420/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3420/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "location": "/hits/rect_clip_terms/109/context",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": ".\n\n**Goal:** 把 Mimi 时间切片的归档结果持久化为 transcript 事件，使应用重启后模型上下文仍然只包含「归档摘要 + 当前切片」，而不是全量历史消息。\n\n**Architecture:** 新增一种 transcript 事件 `range_archive`（摘要文本 + clientMessageId 锚点），`Transcript.toMessages()` 回放时把锚点区间内的消息**替换**为摘要（现有 `summary` 事件是追加语义，不动它）。`Engine.archiveTurnRange` 归档成功后追加该事件；重启后 `run-session-open.ts` 现有的 `transcript.toMessages()` fallback 自动得到裁剪后的上下文，恢复路径零改动。老会话迁移用 journal 已有的小结拼接出一条迁移摘要，零模型调用。\n\n**Tech Stack:** TypeScript + Bun test。涉及 `packages/core`（transcript / engine / protocol）与 `packages/desktop`（pet 闭环 + 迁移）。\n\n---\n\n## 对原始提案的评估与优化（设计依据）\n\n原提案的三个事实判断全部核实成立：\n\n1. 12 小时闲置开新切片 — `packages/pet/src/topic-segment.ts:75`（`DEFAULT_SEGMENT_IDLE_MS`）。\n2. 归档只写进程内 `Map` — `packages/core/src/engine/engine.ts:345`（`compactedMessagesBySession`），`archiveTurnRange` 的终点是 `Map.set`（engine.ts:3642），没有任何落盘。\n3. 重启后全量回放 — `packages/core/src/engine/run-session-open.ts:87` 在缓存为空时回落到 `session.transcript.toMessages()`，后者无条件回放每条 message 事件。\n\n对原提案的四点优化（本计划采用）：\n\n- **不新建存储层。** 四层数据里三层已存在：transcript.jsonl＝原始聊天记录，`pet/journal.json`＝事件日志，PetMemoryStore＝长期记忆。缺的只是",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13827/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13827/directSourcePathsInObject/0",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13828/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13828/sourceHashFields/frozenSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13828/sourceHashFields/currentSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13828/directSourcePathsInObject/0",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13829/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13829/sourceHashFields/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13829/directSourcePathsInObject/0",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/3742/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/3742/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/3742/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/3742/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/3400",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/3743/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/3743/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3743/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3743/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3743/oldSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3743/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3743/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3743/oldSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3743/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3743/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3743/oldSha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17/evidence/pet-source-manifest.json",
+      "location": "/productionSources/8/path",
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "packages/pet/src/topic-segment.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17/evidence/pet-source-manifest.json",
+      "location": "/productionSources/8/sha256",
+      "matched": [
+        "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b"
+      ],
+      "value": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/superpowers/plans/2026-07-17-mimi-session-archival.md",
+      "location": 1241,
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "- Create: `packages/pet/src/topic-segment.ts`（纯函数:`shouldStartNewSegment`、`buildCarryoverBrief`、`buildWorkMemoryEntry`;类型 `PetTopicSegment`/`PetWorkMemoryEntry`）",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/superpowers/plans/2026-07-17-mimi-session-archival.md",
+      "location": 1361,
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "git add packages/pet/src/topic-segment.ts packages/pet/src/topic-segment.test.ts packages/pet/src/profile.ts packages/pet/src/index.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "location": 17,
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "1. 12 小时闲置开新切片 — `packages/pet/src/topic-segment.ts:75`（`DEFAULT_SEGMENT_IDLE_MS`）。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/todo/mimi-architecture-review-2026-09-05.md",
+      "location": 191,
+      "matched": [
+        "packages/pet/src/topic-segment.ts"
+      ],
+      "value": "- `packages/pet/src/topic-segment.ts`：12 小时默认阈值；`packages/desktop/src/main/pet/pet-segment-controller.ts:109`：任务结束无 turnRange 时不归档。",
+      "truncatedValue": false
+    }
+  ],
+  "note": "Only target projection from frozen shared machine metadata; not all historical semantic reading and not author rerun."
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "beginTurn|completeSegmentClosure|archiveSummary|closedSegment|query\\(",
+      "packages/desktop/src/main/pet/pet-dispatch-service.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "357:   * Topic-segment controller. beginTurn (before each chat turn) may return a\n362:    beginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined>;\n364:    completeSegmentClosure(closed: PetSegmentClosed): Promise<void>;\n1228:        const previous = await links.query({ originId: input.originRef.id, limit: 8 });\n2218:          this.options.segmentController?.beginTurn(command.clientMessageId),\n2373:          ...(segmentTurn?.closedSegment && command.clientMessageId\n2376:                  ...(segmentTurn.closedSegment.closingBoundaryMessageId &&\n2377:                  !segmentTurn.archiveSummary\n2379:                        fromClientMessageId: segmentTurn.closedSegment.closingBoundaryMessageId,\n2382:                  segmentId: segmentTurn.closedSegment.segmentId,\n2383:                  ...(segmentTurn.archiveSummary ? { summary: segmentTurn.archiveSummary } : {}),\n2388:          if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;\n2393:            ?.completeSegmentClosure(segmentTurn.closedSegment)\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "consumeStalePrompt|recordInbound|upsert|async enter|expireStale|boundRoute|authorize|async route",
+      "packages/desktop/src/main/pet/session-conversation-bridge.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "111:  private async route(inbound: BoundSessionInbound): Promise<BoundSessionDisposition> {\n118:    await this.deps.routes.expireStaleBoundRoutes();\n121:    const route = await this.deps.routes.boundRoute(routeKey);\n154:    const notice = (await this.deps.routes.consumeStalePrompt(route.id))\n176:    await this.deps.routes.recordInbound(route.id);\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "beginTurn\\(|completeSegmentClosure\\(|requestContextClear\\(|onSegmentClosed:",
+      "packages/desktop/src/main/index.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "2214:          await petSegmentController.requestContextClear();\n2219:          const brief = await petSegmentController.beginTurn(clientMessageId);\n2228:          petSegmentController?.completeSegmentClosure(closed) ?? Promise.resolve(),\n2622:        onSegmentClosed: async (closed) => {\n",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,185 @@
+{
+  "checkedUTC": "2026-10-17T19:00:49.545775+00:00",
+  "role": "Own-author metadata finalization, not additional independent source reviewer",
+  "files": [],
+  "sourceRangeChecks": [
+    {
+      "path": "packages/server/src/panels/tool-jobs.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs-storage.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/shared-tool-jobs.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/runtime.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs.test.ts",
+      "semanticCountMatches": true,
+      "capturedDisplayUnionMatches": true,
+      "semanticWithinCapturedDisplay": true,
+      "rangeBoundsValid": true,
+      "prebodyPin": true,
+      "allGeneratedNavigationClaimed": false
+    }
+  ],
+  "links": [
+    {
+      "label": "分类",
+      "target": "classification.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最初pin",
+      "target": "initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "storage/shared/test/runtime pins",
+      "target": "support-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "executor pin",
+      "target": "executor-initial-pin.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "process pin",
+      "target": "process-initial-pin.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "14个精确历史命中",
+      "target": "targeted-history-hits.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "R30原报告",
+      "target": "canonical-old-cause.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "批量历史投影",
+      "target": "shared-history-targets.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "原batch pin",
+      "target": "shared-history-pin.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "gate decision",
+      "target": "gate-decision.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "source manifest",
+      "target": "source-manifest.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "摘录",
+      "target": "source-excerpts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "首诊断",
+      "target": "diagnostics.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "metadata脚本",
+      "target": "finalize-metadata.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最后核对",
+      "target": "freeze-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "self-excluded receipt",
+      "target": "reviewer-receipt.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    }
+  ],
+  "linkCount": 18,
+  "allLinksValid": true,
+  "displayTotalKind": "Known fully-captured lower bound because three first navigation outputs truncated; semantic totals exact selected unions.",
+  "productRuns": 0,
+  "GitOperations": 0
+}

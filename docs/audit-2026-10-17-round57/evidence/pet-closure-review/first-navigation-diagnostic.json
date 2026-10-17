@@ -1,0 +1,10 @@
+{
+  "toolChunkId": "ba4f2d",
+  "exitCode": 2,
+  "command": "rg --files -g CODESHELL.md -g AGENTS.md -g *topic*segment* -g *closure* -g *host*wake* -g *pet* packages docs/plans",
+  "cause": "docs/plans does not exist; partial filename inventory in packages was returned",
+  "stderrTranscriptExcerpt": "rg: docs/plans: No such file or directory (os error 2)",
+  "rawBytesArchived": false,
+  "limitation": "Original mixed tool output remains in transcript; this JSON is a diagnostic transcription, not claimed original stdout/stderr bytes. No product operation was attempted.",
+  "retry": "No guessed docs/plans retry; await peer exact canonical history path."
+}

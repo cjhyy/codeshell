@@ -1,0 +1,25 @@
+{
+  "pins": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinAt": "2026-10-17T18:57:02.675530+00:00",
+      "coverage": "hash-only before targeted navigation/body"
+    }
+  ],
+  "navigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "injected:|options.injected|params.injected|clientMessageId",
+        "packages/core/src/engine/engine.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "1156:    clientMessageId?: string,\n1168:        clientMessageId,\n1175:    const next = enqueueSteerItem(q, entryId, text, clientMessageId, attachments);\n1181:      clientMessageId,\n1216:      clientMessageIds: drained.flatMap((item) =>\n1217:        item.clientMessageId ? [item.clientMessageId] : [],\n1651:    const clientMessageId = options?.clientMessageId;\n1662:          ? { ...event, runId, previousRunId, clientMessageId }\n1901:    if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {\n1904:          toClientMessageId: options.clientMessageId,\n2138:          if (options?.clientMessageId) {\n2139:            appendClientRunReceipt(session, options.clientMessageId, finalized);\n2308:    toolCtx.originClientMessageId = options?.clientMessageId;\n2730:      clientMessageId: string | undefined,\n2733:    releaseClientMessageId: (clientMessageId: string) => void;\n3306:        injected: options?.injected === true,\n3346:      clientMessageId: string | undefined,\n3349:    releaseClientMessageId: (clientMessageId: string) => void;\n3471:        claimClientMessageId: (clientMessageId, source) =>\n3472:          claimClientMessageId(session, clientMessageId, source),\n3474:        setOriginClientMessageId: (clientMessageId) => {\n3475:          toolCtx.originClientMessageId = clientMessageId;\n",
+      "stderr": ""
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T18:55:35.157950+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "lines": 666,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

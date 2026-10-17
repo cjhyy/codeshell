@@ -1,0 +1,26 @@
+[
+  {
+    "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+    "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+    "displayedLineRanges": [
+      [
+        1,
+        275
+      ]
+    ],
+    "pinReference": "host-consumer-initial-pins.json",
+    "displayAt": "2026-10-17T18:55:22.547863+00:00"
+  },
+  {
+    "path": "packages/desktop/src/main/pet/conversation-session-route-store.ts",
+    "sha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+    "displayedLineRanges": [
+      [
+        1,
+        305
+      ]
+    ],
+    "pinReference": "host-consumer-initial-pins.json",
+    "displayAt": "2026-10-17T18:55:22.549491+00:00"
+  }
+]

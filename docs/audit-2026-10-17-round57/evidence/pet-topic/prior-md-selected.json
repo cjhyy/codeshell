@@ -1,0 +1,306 @@
+[
+  {
+    "path": "docs/audit-2026-10-17/pet-data.md",
+    "bytes": 4254,
+    "sha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8",
+    "readAt": "2026-10-17T18:54:19.179397+00:00",
+    "selectedLines": [
+      {
+        "line": 1,
+        "text": "# Pet 普通数据投影 / 内容定位审查"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "基线 `ab8b03f86ad38835939d4125b56bf4513cae7f15`，仅写此文件与 `evidence/pet-*`。产品/Git/依赖只读；不执行权限/认证流程、真实发送或模型。先读旧 `docs/audit-2026-10-16/findings.json` 查重，与当前chat分审范围隔离。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "## 第一轮：disclosure 内容搜索"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "读取 `disclosure/{search,catalog,jsonl,latest-result,todo-snapshot,selector}.ts`、`sessions-tool.ts` 关键接线，以及 `session-index.ts`、`projection-extension.ts` 关键投影段。已知旧R56的500候选截断提示不重复报告。源码候选：搜索先在JSON原文做substring预筛，正常内容中的引号/反斜杠被JSON编码后可能被过滤。聚焦自有tmp源码实验 `evidence/pet-search-json-text.test.ts` 首次成功，完整首跑日志 `evidence/pet-search-json-text.log`：3 pass /7 expect /0 fail/skip /Completed。"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 10,
+        "text": ""
+      },
+      {
+        "line": 11,
+        "text": "- 位置：`packages/pet/src/disclosure/search.ts:123`，在JSON.parse与真实content查找前，用未编码query对JSON原文做includes预筛。"
+      },
+      {
+        "line": 12,
+        "text": "- 触发：健康消息正文 `Use console.log(\"hello\") and file C:\\work\\notes.txt`，正常JSON.stringify写入transcript；内容搜索输入 `console.log(\"hello\")` 或 `C:\\work\\notes.txt`。"
+      },
+      {
+        "line": 13,
+        "text": "- 预期：全文substring搜索应按消息解码后的正文匹配，并返回该条对话片段。"
+      },
+      {
+        "line": 14,
+        "text": "- 实际：JSON中引号/反斜杠已被编码，raw文字不包含原query，进入实际解码搜索前就continue。两个query均得 `matches=[] /scannedSessions=1 /truncated=false`；普通 `hello` 对照返回同消息，snippet完整保留引号代码。"
+      },
+      {
+        "line": 15,
+        "text": "- 影响：正常聊天里的代码表达式、带反斜杠路径无法按原文查找。`sessions-tool.ts:196` 的Sessions search与Desktop `main/index.ts:5026–5031` 内容搜索均消费这个helper；真实工具/IPC/UI为静态接线，未执行发送或模型。"
+      },
+      {
+        "line": 16,
+        "text": "- 证据：`evidence/pet-search-json-text.test.ts` 直接相对导入生产helper，使用自有tmp健康state/transcript和真实本地reader；完整日志 `evidence/pet-search-json-text.log`。首跑3 pass /7 expect /0 fail/skip /Completed，自有目录finally删除。"
+      },
+      {
+        "line": 17,
+        "text": "- 查重：10-16主findings无同项；10-12 R56为500候选超出却不提示，本项单一已扫描候选内因JSON编码错误预筛，独立根因。相关search-routing/quality主报告未检出引号/反斜杠同项（有限查重）。"
+      },
+      {
+        "line": 18,
+        "text": ""
+      },
+      {
+        "line": 19,
+        "text": "## 第二轮：segment / 投影普通生命周期"
+      },
+      {
+        "line": 20,
+        "text": ""
+      },
+      {
+        "line": 21,
+        "text": "已阅读 `topic-segment.ts` / `segment-closure.ts` 的完整纯函数、`session-index.ts` 的生命周期归属/世代、`im-session-list.ts` 的状态和编号、`session-visit-receipt.ts` / `context-recall.ts` 的文本与选择边界，另对 Desktop `pet-segment-closure-service.ts` reader/range关键段、Core transcript/Engine已存在anchor归档注释作只读接线核对。"
+      },
+      {
+        "line": 22,
+        "text": ""
+      },
+      {
+        "line": 23,
+        "text": "- 第二个独立guarded首跑 `evidence/pet-projection-segment.test.ts`：3 pass /11 expect /0 fail/skip /Completed，完整日志 `evidence/pet-projection-segment.log`。实际纯函数动态确认旧run终态/子agent终态不能关闭当前parent，旧cursor拒绝；重复prose按精确client ID定位segment；归档行过滤后ordinal匹配真实渲染列表。"
+      },
+      {
+        "line": 24,
+        "text": "- Segment closure原始范围与live归档范围的潜在差异，有现有Engine anchored归档路径明确反证：带anchors时忽略raw index范围重新定位，因此没有把未执行的错位猜测发布为bug。"
+      },
+      {
+        "line": 25,
+        "text": "- Latest-result/todo reader保留有界tail设计，超大单行/任意导入格式/真实renderer消费没有动态验证；未据此扩大正式发现。"
+      },
+      {
+        "line": 29,
+        "text": ""
+      },
+      {
+        "line": 30,
+        "text": "2个独立guarded首次shard，合计6 pass /18 expect /0 fail/skip，全部Completed；没有失败支架或重试。`evidence/pet-source-manifest.json`记录关键生产源码与证据SHA-256，关键生产源码均逐字节匹配冻结Git blob。"
+      },
+      {
+        "line": 31,
+        "text": ""
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round10/pet.md",
+    "bytes": 7487,
+    "sha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab",
+    "readAt": "2026-10-17T18:54:19.180535+00:00",
+    "selectedLines": [
+      {
+        "line": 1,
+        "text": "# Pet 普通数据投影与 disclosure 审查"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "冻结源码：`6966dc0f98d21dbc2ecced6cdd6467d17b81bc39`。本分审只新增报告、fixture 与证据；没有改动产品。确认 **2 项 P3**，无额外候选。两次 guarded 首跑合计 **91 pass / 225 expect / 0 fail / 0 skip**，均 Completed；其中 89 项是既有基线，2 项新增测试刻画当前错误行为，测试通过不代表产品已修复。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "## PET-R10-01 [P3] 并发搜索超过默认结果上限后静默丢行"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "- **位置：** [search.ts:154](../../packages/pet/src/disclosure/search.ts#L154)，最终 `slice(0, maxSessions)` 没有把已找到但被裁掉的命中计入 `truncated`。94–95 行仅用 `cursor < candidates.length` 标记尚未分配的候选，无法覆盖已经分配并在异步读取后追加的命中。"
+      },
+      {
+        "line": 8,
+        "text": "- **正常触发：** 21 个普通 Work Session 均有相同查询词，单个 transcript 很小且健康；使用生产默认 `maxSessions=20`。此次首跑中，8 个并发 worker 已实际扫描全部 21 个候选，最终命中被截成 20 行却返回 `truncated:false`。并发情况下，已分配的读取在命中上限判断之后仍可能完成并追加结果，而最终裁切没有补记这些被省略的命中。"
+      },
+      {
+        "line": 9,
+        "text": "- **实际证据：** 真实 `searchSessionTranscripts()` 对自有临时目录得到 `{scannedSessions:21,matches.length:20,truncated:false}`；不同 transcript mtime 明确排序，最新 `work-20` 保留、最旧 `work-00` 被裁掉。20 个匹配会话的正常对照为 20/20/false。"
+      },
+      {
+        "line": 10,
+        "text": "- **预期与影响：** 保留 20 行上限合理，但有命中被省略时应返回不完整信号。Desktop 主进程 [index.ts:5031](../../packages/desktop/src/main/index.ts#L5031) 和 Mimi [sessions-tool.ts:196](../../packages/pet/src/sessions-tool.ts#L196) 都使用默认结果上限；Desktop [SessionSearchModal.tsx:179](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L179) 只在该布尔值为真时显示“结果不完整（已达搜索上限）”。本例会隐藏已有的提示；Mimi 同样收到错误的完整性字段。"
+      },
+      {
+        "line": 11,
+        "text": "- **查重：** 旧 R56/W22 是 500 候选带之外从未扫描的会话漏报；本项仅 21 个候选，全部实际扫描且全部命中，错误发生在并发命中后的结果裁切。旧 PET-01 是 JSON 编码预筛，本例内容只有普通 ASCII，未触发该根因。历史 `docs/bugs` 审查/归档 MD 和解析 JSON 共 1,054 文件逐层检索，未检出同根因记录。"
+      },
+      {
+        "line": 15,
+        "text": ""
+      },
+      {
+        "line": 16,
+        "text": "- **位置：** [search.ts:59](../../packages/pet/src/disclosure/search.ts#L59) 至 63 行。`text.toLowerCase()` 中的索引直接交给原文 `buildSnippet(text, index, query.length)`；大小写转换并非恒长。"
+      },
+      {
+        "line": 17,
+        "text": "- **正常触发：** 用户正文包含多个大写土耳其字母 `İ`，之后出现 ASCII 查询词。`İ` 转为 `i` 加组合点（两个 UTF-16 code units），在匹配词之前累积的扩长会把 snippet 起点移到真实命中之后。"
+      },
+      {
+        "line": 25,
+        "text": ""
+      },
+      {
+        "line": 26,
+        "text": "完整读取普通纯函数 `topic-segment`、`segment-closure`、`migration-summary`、`context-recall`、`session-visit-receipt`、`im-session-list`，以及 `session-index`、`projection-extension`、`types`、disclosure 的 `catalog/jsonl/latest-result/todo-snapshot/selector/search`。对 `sessions-tool` 做完整只读接线检查；Desktop 搜索入口、片段展示、提示文案以及 Core message producer 只查相关段，不能当成完整文件审查。"
+      },
+      {
+        "line": 27,
+        "text": ""
+      },
+      {
+        "line": 28,
+        "text": "既有 12 文件基线覆盖 topic 阈值、closure range/parser、迁移顺序、memory 预算与排序、visit receipt、IM 状态/编号、投影运行归属及 generation/version fence、catalog/reader 的正常过滤和文本截断等，共 89 pass / 212 expect。未发现第二组强契约的新投影缺陷；没有把未被生产使用的任意 SessionIndex 调用序列，或有界 tail 的既定读取设计，当成正式发现。没有执行真实 DelegateWork、Host action、IM/outbound、服务器、模型、原生应用或实际用户状态读取。"
+      },
+      {
+        "line": 29,
+        "text": ""
+      },
+      {
+        "line": 31,
+        "text": ""
+      },
+      {
+        "line": 32,
+        "text": "- 新增首跑：[fixture](evidence/pet-search-display.test.ts)、[raw combined stdout/stderr](evidence/pet-search-display.first.log)、[exit 收据](evidence/pet-search-display.first-exit.json)：2 pass / 13 expect / 0 fail/skip。"
+      },
+      {
+        "line": 33,
+        "text": "- 既有基线首跑：[raw combined stdout/stderr](evidence/pet-pure-baseline.first.log)、[命令与 exit](evidence/pet-pure-baseline.first-exit.json)：89 pass / 212 expect / 0 fail/skip。"
+      },
+      {
+        "line": 34,
+        "text": "- 所有首跑仅使用 `node scripts/run-bun-test-shard.mjs --timeout 30000 FILES`。先保存原始合并输出及 exit 再阅读，没有修支架重跑或另路恢复失败方向。新增 fixture 的临时目录在 finally 删除；既有测试自身使用隔离临时目录，没有改写其 cleanup 方式。"
+      },
+      {
+        "line": 35,
+        "text": "- [结构化查重](evidence/pet-dedup.json) 扫描历史 `docs/bugs` 审查、review、archive/_archive MD 与解析 JSON 叶节点，排除本批；保存有限上下文而非巨大 minified 行。第一次查重正则把 `İ` 放入 IGNORECASE，导致过宽匹配，随后只修正元数据，见 [说明](evidence/pet-dedup-first-metadata-note.json)。此操作没有重跑或修复产品测试。"
+      },
+      {
+        "line": 36,
+        "text": "- [源码 manifest](evidence/pet-source-manifest.json) 记录所读/所引文件的冻结 Git blob SHA-256，不能据此宣称每个大文件均完整阅读。[validation](evidence/pet-validation.json) 与 [artifact receipts](evidence/pet-artifact-receipts.json) 记录本分审交付。"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round10/evidence/cross-review-pet.md",
+    "bytes": 3757,
+    "sha256": "8646c1a8e9a7eb4a4d4f395aa905d46983e6591517fa86758154b8988c3073f4",
+    "readAt": "2026-10-17T18:54:19.180999+00:00",
+    "selectedLines": [
+      {
+        "line": 1,
+        "text": "# Pet 只读交叉复核"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "冻结源 `6966dc0f98d21dbc2ecced6cdd6467d17b81bc39`。复核 `pet.md`、findings/validation/source manifest、fixture、两个首次原始合并日志及 exit 收据，并阅读真实 search/catalog/text reader、Core 消息写入和 Desktop/Mimi 消费段。**接受 2 项 P3；没有发现阻止收录的问题。** 本次只新增此 review，没有运行测试、产品代码、浏览器、Host 或 Git 写操作。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "## PET-R10-01"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "`search.ts:94–95` 只在尚有未分配候选时设置 `truncated`；8 个异步 worker 可先分配完 21 个候选，再完成命中。实际首次日志明确记录 scanned=21、matches=20、truncated=false；fixture 还断言最新 work-20 保留、最旧 work-00 被裁掉，避免把目录排序差异当成丢行原因。20 个健康匹配会话的对照返回 20/20/false。最终 `:154` 的 slice 造成结果省略，却没有反馈该省略，合同和根因成立。"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "Desktop 入口 `main/index.ts:5031` 只改 budget，没有覆盖默认 maxSessions=20；Mimi `sessions-tool.ts:196` 传空选项。Modal `:179` 按 truncated 显示既有不完整提示，`:192` 使用首个 snippet；中文 i18n `panels.ts:301` 对应“结果不完整（已达搜索上限）”。这些是静态接线，报告已明确没有 UI/IPC/工具动态验证。"
+      },
+      {
+        "line": 10,
+        "text": ""
+      },
+      {
+        "line": 11,
+        "text": "历史 R56/W22 的 500 候选问题在 catalog slice 之后仍有未被搜索的健康会话；本例只有 21 个候选且实际全被搜索，问题在已完成匹配的最终裁切。虽然共享 truncated 字段，两者阶段和根因不同，不重复计数。查重材料也指出既定 20 命中/500 候选设计；本报告合理保留容量限制，只要求已有不完整信号准确。"
+      },
+      {
+        "line": 12,
+        "text": ""
+      },
+      {
+        "line": 20,
+        "text": ""
+      },
+      {
+        "line": 21,
+        "text": "- focused log：2 pass / 13 expect；existing baseline log：89 pass / 212 expect / 12 files。两者都有 guarded Completed、0 fail/skip 和 exitCode=0，与 validation 的 **91 pass / 225 expect / 2 clean shards** 一致。没有补跑。"
+      },
+      {
+        "line": 22,
+        "text": "- 32 个 source-manifest 条目的 frozen SHA-256 均与冻结 Git blob 相符；12 个 artifact receipts 的字节数及 SHA-256 均匹配当前材料。pet.md 的本地链接没有缺失。"
+      },
+      {
+        "line": 23,
+        "text": "- 所引用关键行号与当前冻结源码一致。候选数组为空，不将未验证的任意 SessionIndex 调用序列或 tail 设计充作缺陷。"
+      },
+      {
+        "line": 24,
+        "text": "- 旧 500 候选缺陷与 JSON 预筛缺陷有明确相关但不同根因说明。元数据查重的第一次过宽正则已在独立 note 披露，不是产品测试失败或重试。"
+      },
+      {
+        "line": 25,
+        "text": ""
+      }
+    ]
+  }
+]

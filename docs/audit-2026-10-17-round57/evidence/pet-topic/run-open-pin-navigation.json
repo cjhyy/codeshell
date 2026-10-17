@@ -1,0 +1,21 @@
+{
+  "pin": {
+    "path": "packages/core/src/engine/run-session-open.ts",
+    "bytes": 11804,
+    "lines": 292,
+    "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+    "pinAt": "2026-10-17T18:57:40.118167+00:00",
+    "coverage": "hash-only before targeted producer navigation/body"
+  },
+  "navigation": {
+    "command": [
+      "rg",
+      "-n",
+      "injected|clientMessageId|appendUser|appendMessage",
+      "packages/core/src/engine/run-session-open.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "3: * valid session shapes, clientMessageId claiming (duplicate submits return\n51:    clientMessageId: string | undefined,\n54:  releaseClientMessageId: (clientMessageId: string) => void;\n79:    clientMessageId: string | undefined,\n82:    if (!clientMessageId) return true;\n84:      claimedClientMessageIds.has(clientMessageId) ||\n85:      bundle.transcript.hasClientMessageId(clientMessageId)\n89:        clientMessageId,\n94:    claimedClientMessageIds.add(clientMessageId);\n134:    // Restore cost state from previous session, if the caller injected a store\n142:    if (!claimClientMessageId(session, options?.clientMessageId, \"submit\")) {\n143:      const replayed = options?.clientMessageId\n144:        ? session.transcript.findRunResultByClientMessageId(options.clientMessageId)\n149:          clientMessageId: options?.clientMessageId,\n178:    runId = session.transcript.appendMessage(\"user\", args.userMessageContent, {\n179:      injected: options?.injected === true,\n180:      clientMessageId: options?.clientMessageId,\n212:    claimClientMessageId(session, options?.clientMessageId, \"submit\");\n215:    runId = session.transcript.appendMessage(\"user\", args.userMessageContent, {\n216:      injected: options?.injected === true,\n217:      clientMessageId: options?.clientMessageId,\n274:    options?.clientMessageId,\n",
+    "stderr": ""
+  }
+}

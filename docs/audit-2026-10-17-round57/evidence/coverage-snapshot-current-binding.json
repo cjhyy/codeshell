@@ -1,0 +1,16 @@
+{
+  "sourcePaths": 4643,
+  "changedPaths": [],
+  "missingPaths": [],
+  "currentFilteredPaths": 4644,
+  "addedPaths": [
+    "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+  ],
+  "removedPaths": [],
+  "counts": {
+    "full": 304,
+    "selected": 168,
+    "unknown": 4171
+  },
+  "scope": "Hash/filename inventory only. Prior snapshot remains same bytes, no semantic increment normalization. New audit fixture is not a product full-read certification."
+}

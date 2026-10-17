@@ -1,0 +1,135 @@
+[
+  {
+    "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+    "sourceSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 1178,
+        "end": 1188,
+        "text": "  /** Rebuild trusted PetWorld at wake time and fence continuation to the exact source. */\n  async wakeFollowUp(\n    item: PetRegisteredFollowUp,\n  ): Promise<{ launched: boolean; text: string; taskId?: string }> {\n    if (item.intent !== \"resume\" || !item.sourceSessionId)\n      throw new Error(\"invalid resume follow-up\");\n    const result = await this.withManagerTurn(() =>\n      this.dispatchNow({\n        type: \"chat\",\n        hostWake: item,\n        clientMessageId: `pet-followup-${item.id}-${item.revision}`,\n",
+        "textSha256": "b00fd176850513f46915beadb805092c14d27061b5effa3d569c85d36fd45de2"
+      },
+      {
+        "start": 2217,
+        "end": 2223,
+        "text": "        const [segmentTurn, worldExtrasRaw, personalization] = await Promise.all([\n          this.options.segmentController?.beginTurn(command.clientMessageId),\n          this.options.worldContext?.(contextInput),\n          this.currentPersonalization(),\n        ]);\n        const carryoverBrief = segmentTurn?.carryoverBrief;\n        const worldExtras = worldExtrasRaw ?? {};\n",
+        "textSha256": "3190a9df9210df8c0d50809f45163a0597bf638cccfe0c7b5b45b731bb00c328"
+      },
+      {
+        "start": 2345,
+        "end": 2348,
+        "text": "        const response = await this.requestChatRun(command, {\n          sessionId: metadata.petSessionId,\n          task: command.message.trim(),\n          ...(command.hostWake ? { injected: true, disableGoal: true, skillAllowlist: [] } : {}),\n",
+        "textSha256": "cbf10a65f3e064c3b9cc263f52df0b38812fc4fde0cb505fcefe314225093b63"
+      },
+      {
+        "start": 2372,
+        "end": 2395,
+        "text": "          clientMessageId: command.clientMessageId,\n          ...(segmentTurn?.closedSegment && command.clientMessageId\n            ? {\n                archiveBeforeCurrentTurn: {\n                  ...(segmentTurn.closedSegment.closingBoundaryMessageId &&\n                  !segmentTurn.archiveSummary\n                    ? {\n                        fromClientMessageId: segmentTurn.closedSegment.closingBoundaryMessageId,\n                      }\n                    : {}),\n                  segmentId: segmentTurn.closedSegment.segmentId,\n                  ...(segmentTurn.archiveSummary ? { summary: segmentTurn.archiveSummary } : {}),\n                },\n              }\n            : {}),\n        }).finally(() => {\n          if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;\n          // Journal/memory extraction is intentionally background work. It\n          // starts only after agent/run has settled, so its end anchor is no\n          // longer racing the transcript append.\n          void this.options.segmentController\n            ?.completeSegmentClosure(segmentTurn.closedSegment)\n            .catch(() => undefined);\n        });\n",
+        "textSha256": "1434cec92a4c4bd93bdfd6668a7673b100accb7429d4e6e3c96485ca5095e3df"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+    "sourceSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 191,
+        "end": 205,
+        "text": "  private async runBeginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined> {\n    const now = this.options.now();\n    const lastInteractionAt = this.options.store.lastInteractionAt();\n    const manualClear = this.manualClearPending;\n    // The very first interaction has no preceding segment to close, so it only\n    // establishes the interaction baseline — never a visible boundary. Without\n    // this guard `shouldStartNewSegment(0, now, idleMs)` is always true and the\n    // user's first message would render a bare \"new topic\" divider (with no\n    // brief, since work memory is still empty). Only a *later* turn that crosses\n    // the idle gap opens a visible new segment.\n    const isFirstInteraction = lastInteractionAt === 0;\n    const openNew =\n      manualClear ||\n      (!isFirstInteraction &&\n        shouldStartNewSegment({ lastInteractionAt, now, idleMs: this.options.idleMs }));\n",
+        "textSha256": "0e08082ac792399ebe92cadfe63a4c57b593398e5b0fea10e5a5a11a363ce8be"
+      },
+      {
+        "start": 219,
+        "end": 245,
+        "text": "    // Capture the segment that is about to close before we append the new one.\n    const closing = this.options.store.activeSegment();\n    const closedSegment = closing\n      ? {\n          segmentId: closing.id,\n          ...(closing.boundaryBeforeMessageId\n            ? { closingBoundaryMessageId: closing.boundaryBeforeMessageId }\n            : {}),\n          ...(clientMessageId ? { nextBoundaryMessageId: clientMessageId } : {}),\n          startedAt: closing.startedAt,\n          endedAt: now,\n        }\n      : undefined;\n    const brief = manualClear ? \"\" : this.buildBrief();\n    const briefText = brief.length > 0 ? brief : undefined;\n    await this.options.store.openSegment({\n      id: `seg-${randomUUID()}`,\n      startedAt: now,\n      ...(clientMessageId ? { boundaryBeforeMessageId: clientMessageId } : {}),\n      ...(briefText ? { brief: briefText } : {}),\n    });\n    await this.options.store.setLastInteractionAt(now);\n    if (manualClear) this.manualClearPending = false;\n    return {\n      ...(briefText ? { carryoverBrief: briefText } : {}),\n      ...(closedSegment ? { closedSegment } : {}),\n      ...(manualClear ? { archiveSummary: PET_MANUAL_CLEAR_ARCHIVE_SUMMARY } : {}),\n",
+        "textSha256": "e3ccd8255dd200cfb56b2d3e62a977a4055ba76225d0a81636f63605dbbe713c"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+    "sourceSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 78,
+        "end": 91,
+        "text": "    if (event.type !== \"message\") continue;\n    const data = event.data ?? {};\n    const role = data.role;\n    if (role !== \"user\" && role !== \"assistant\") continue;\n    // Injected synthetic user turns (background-job notifications) are not real\n    // conversation and must not shift indices relative to Engine.toMessages.\n    if (role === \"user\" && data.injected === true) continue;\n    messages.push({\n      role,\n      text: contentText(data.content),\n      ...(typeof data.clientMessageId === \"string\"\n        ? { clientMessageId: data.clientMessageId }\n        : {}),\n    });\n",
+        "textSha256": "cf101160e714b9ab7e38d235fc70652251ba76cec684d07a6c2d9b5980815435"
+      },
+      {
+        "start": 195,
+        "end": 208,
+        "text": "      const window = locateClosureWindow(\n        messages,\n        input.closingBoundaryMessageId,\n        input.nextBoundaryMessageId,\n      );\n      if (!window) return null;\n      const meaningful = window.messages.filter((message) => message.text.trim().length > 0);\n      if (meaningful.length < MIN_CLOSURE_MESSAGES) return null;\n\n      // Extraction (journal + memory) is gated by the preference; context\n      // archival is not — the caller still archives the returned range so a\n      // disabled toggle cannot let the model context grow without bound.\n      if (deps.autoExtractEnabled()) {\n        const promptInput = sanitize(buildClosureInput(window.messages));\n",
+        "textSha256": "556d5e770495375bc512a52f2adce1eed9310f4b1321c659f44ab49afc18fd56"
+      },
+      {
+        "start": 249,
+        "end": 275,
+        "text": "    async backfill(segments, now) {\n      // Every segment except the active (last) one has settled. Skip those the\n      // journal already recorded; the last segment stays open until its own\n      // boundary closes it.\n      if (segments.length <= 1) return;\n      await deps.journal.load().catch(() => undefined);\n      const recorded = deps.journal.recordedSegmentIds();\n      const settled = segments.slice(0, -1);\n      for (let index = 0; index < settled.length; index += 1) {\n        const segment = settled[index]!;\n        if (recorded.has(segment.id)) continue;\n        const next = segments[index + 1];\n        try {\n          const result = await this.close({\n            segmentId: segment.id,\n            ...(segment.boundaryBeforeMessageId\n              ? { closingBoundaryMessageId: segment.boundaryBeforeMessageId }\n              : {}),\n            ...(next?.boundaryBeforeMessageId\n              ? { nextBoundaryMessageId: next.boundaryBeforeMessageId }\n              : {}),\n            startedAt: segment.startedAt,\n            endedAt: next?.startedAt ?? now,\n          });\n          // Backfill does NOT archive: the range may already have been archived\n          // in the previous run, and re-archiving a shifted window would corrupt\n          // live context. It only recovers the missing journal + memory record.\n",
+        "textSha256": "4a4c826793c21bd14bd72711a8623427507fe052230eb47cb10c1d25a90d072d"
+      }
+    ]
+  },
+  {
+    "path": "packages/pet/src/segment-closure.ts",
+    "sourceSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 61,
+        "end": 75,
+        "text": "export function locateClosureWindow(\n  messages: readonly ClosureMessage[],\n  closingBoundaryMessageId: string | undefined,\n  nextBoundaryMessageId: string | undefined,\n): ClosureWindow | null {\n  const start = closingBoundaryMessageId\n    ? indexOfClientMessage(messages, closingBoundaryMessageId)\n    : 0;\n  if (start < 0) return null;\n  const end =\n    nextBoundaryMessageId !== undefined\n      ? indexOfClientMessage(messages, nextBoundaryMessageId)\n      : messages.length;\n  if (end < 0 || end <= start) return null;\n  return { messages: messages.slice(start, end), range: { start, end } };\n",
+        "textSha256": "b3c45e8fd9840ff8fae796ae021854dcc226dd785f3b9af22bbfe08f21c9e418"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/session/transcript.ts",
+    "sourceSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 562,
+        "end": 567,
+        "text": "    return this.append(\"message\", {\n      role,\n      content,\n      ...(opts?.injected ? { injected: true } : {}),\n      ...(opts?.steerId ? { steerId: opts.steerId } : {}),\n      ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),\n",
+        "textSha256": "3dcc6ac12deb61b913c0da835bb968e06cb1294b2be2f5d26d70cc3c7eebc142"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+    "sourceSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 289,
+        "end": 305,
+        "text": "      if (entries.size >= MAX_ENTRIES) throw new Error(\"follow-up registry is full\");\n      const at = this.timestamp();\n      if (snapshot.wakeAt <= at) throw new Error(\"follow-up wakeAt must be in the future\");\n      const row: PetRegisteredFollowUp = {\n        id: `registered-followup-${createHash(\"sha256\").update(operationKey).digest(\"hex\").slice(0, 24)}`,\n        ...snapshot,\n        missedPolicy: snapshot.missedPolicy ?? \"fire-once\",\n        catchUpUntil: snapshot.catchUpUntil ?? snapshot.wakeAt + 24 * 60 * 60 * 1000,\n        registrationKey: key,\n        revision: 1,\n        status: \"open\",\n        createdAt: at,\n        updatedAt: at,\n        wake: { revision: 1, status: \"scheduled\" },\n      };\n      entries.set(row.id, row);\n      return row;\n",
+        "textSha256": "e829896501cbcc36983f23352cdefda96450d923ba61cd522c388e0c444db878"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+    "sourceSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+    "note": "Copied after actual display, not a new semantic read or pre-read snapshot",
+    "ranges": [
+      {
+        "start": 143,
+        "end": 153,
+        "text": "  async openSegment(segment: PetTopicSegment): Promise<void> {\n    return this.enqueueMutation(async () => {\n      const previous = this.segments;\n      this.segments = [...this.segments, segment].slice(-MAX_SEGMENTS);\n      try {\n        await this.enqueuePersist();\n      } catch (error) {\n        this.segments = previous;\n        throw error;\n      }\n    });\n",
+        "textSha256": "3aea6e8a2df04f2aaaa154c9a092878e8c13df64feb05113a480ca8b3edccd60"
+      },
+      {
+        "start": 179,
+        "end": 188,
+        "text": "  private enqueuePersist(): Promise<void> {\n    const snapshot: PersistedWorkMemory = {\n      version: 1,\n      lastInteractionAt: this.last,\n      ...(this.segments.length > 0 ? { segments: [...this.segments] } : {}),\n      entries: [...this.entriesList],\n    };\n    const persisted = this.writeQueue.then(() => this.persist(snapshot));\n    this.writeQueue = persisted.catch(() => undefined);\n    return persisted;\n",
+        "textSha256": "db95240eee288c8d8b811a229aa02bf35a3b425834125ff833f8cec4958fe24d"
+      }
+    ]
+  }
+]

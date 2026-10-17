@@ -1,0 +1,143 @@
+{
+  "checkedUTC": "2026-10-17T19:08:45.131165+00:00",
+  "sourceInstructionAndAssetChecks": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.ts",
+      "bytes": 9561,
+      "sha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "initialSha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "initialSha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/vite.mobile.config.ts",
+      "bytes": 1784,
+      "sha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "initialSha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/index.html",
+      "bytes": 439,
+      "sha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+      "initialSha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/main.tsx",
+      "bytes": 706,
+      "sha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "initialSha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "bytes": 11542,
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "initialSha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/styles.css",
+      "bytes": 4489,
+      "sha256": "5ba86fe857141999a19f726aeaef434029fdb636ca2fa9ac9d0381679cbcc3cd",
+      "initialSha256": "5ba86fe857141999a19f726aeaef434029fdb636ca2fa9ac9d0381679cbcc3cd",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/app/public/manifest.webmanifest",
+      "bytes": 381,
+      "sha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "initialSha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/app/public/sw.js",
+      "bytes": 1787,
+      "sha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "initialSha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "bytes": 7555,
+      "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "initialSha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "bytes": 21945,
+      "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "initialSha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/app/register-service-worker.ts",
+      "bytes": 289,
+      "sha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "initialSha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/app/public/icon.svg",
+      "bytes": 286,
+      "sha256": "9fea5fa5acff4876d11d897516a8ba74cb06a2da0aea0a7f435b90ef5cd5dee2",
+      "initialSha256": "9fea5fa5acff4876d11d897516a8ba74cb06a2da0aea0a7f435b90ef5cd5dee2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/web/app/public/offline.html",
+      "bytes": 1178,
+      "sha256": "d43bfd5a415433b1b466c62b1022df42be18631acec0bd18d7721d17854f818c",
+      "initialSha256": "d43bfd5a415433b1b466c62b1022df42be18631acec0bd18d7721d17854f818c",
+      "matchesInitial": true
+    }
+  ],
+  "allBytePinsMatch": true,
+  "sharedHistoryFileChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+      "bytes": 1250596,
+      "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+      "matchesProjection": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round135-static-files/cause-history.json",
+      "bytes": 77867,
+      "sha256": "2b89e71d8f8280cfb4e7858a63c52003436d7d174b2c297b01424c6a405dd835",
+      "matchesProjection": true
+    }
+  ],
+  "allSharedHistoryBytesMatch": true,
+  "resourceNameInventory": {
+    "samePaths": true,
+    "initialCount": 208,
+    "endingCount": 208,
+    "rgExitCode": 0,
+    "stderr": "",
+    "notBodyHashOrBuildCheck": true
+  },
+  "ownGitOperations": 0,
+  "endingHashIsNewSemanticReading": false
+}

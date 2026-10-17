@@ -1,0 +1,1948 @@
+{
+  "schema": "targeted-static-review-ranges/v1",
+  "createdAt": "2026-10-17T19:10:36.975981+00:00",
+  "rootReportedBaseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "bytes": 2719,
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "lineCount": 75,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          26,
+          50
+        ],
+        [
+          75,
+          75
+        ]
+      ],
+      "selectedLineCount": 26,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          75
+        ]
+      ],
+      "bodyDisplayedLineCount": 75,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          75
+        ]
+      ],
+      "displayedLineCount": 75,
+      "initialPinUTC": "2026-10-17T19:03:50.963588+00:00",
+      "initialSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Targeted threshold/boundary DTO reread of known same-SHA old full. Prompt/other helpers physically displayed, no first/new full claim.",
+      "originalPinRow": {
+        "path": "packages/pet/src/topic-segment.ts",
+        "bytes": 2719,
+        "lineCount": 75,
+        "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+        "pinnedAtUTC": "2026-10-17T19:03:50.963588+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "bytes": 6195,
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "lineCount": 154,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          13,
+          32
+        ],
+        [
+          37,
+          37
+        ],
+        [
+          53,
+          83
+        ]
+      ],
+      "selectedLineCount": 52,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          154
+        ]
+      ],
+      "bodyDisplayedLineCount": 154,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          154
+        ]
+      ],
+      "displayedLineCount": 154,
+      "initialPinUTC": "2026-10-17T19:03:50.964768+00:00",
+      "initialSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Targeted exact-boundary lookup/null semantics, overlapping old full. Prompt/parser body display is not added semantic coverage.",
+      "originalPinRow": {
+        "path": "packages/pet/src/segment-closure.ts",
+        "bytes": 6195,
+        "lineCount": 154,
+        "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+        "pinnedAtUTC": "2026-10-17T19:03:50.964768+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "bytes": 11377,
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "lineCount": 275,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          120,
+          131
+        ],
+        [
+          151,
+          165
+        ],
+        [
+          168,
+          189
+        ],
+        [
+          191,
+          252
+        ]
+      ],
+      "selectedLineCount": 111,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          275
+        ]
+      ],
+      "bodyDisplayedLineCount": 275,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          275
+        ]
+      ],
+      "displayedLineCount": 275,
+      "initialPinUTC": "2026-10-17T19:03:50.966148+00:00",
+      "initialSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Serial beginTurn, first/idle/manual branches, persisted boundary and close callback. Other delegation/archive code displayed boundary only.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+        "bytes": 11377,
+        "lineCount": 275,
+        "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+        "pinnedAtUTC": "2026-10-17T19:03:50.966148+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "bytes": 11519,
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "lineCount": 302,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          60,
+          94
+        ],
+        [
+          171,
+          202
+        ],
+        [
+          204,
+          246
+        ],
+        [
+          249,
+          283
+        ]
+      ],
+      "selectedLineCount": 145,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          109
+        ],
+        [
+          171,
+          302
+        ]
+      ],
+      "bodyDisplayedLineCount": 241,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          109
+        ],
+        [
+          171,
+          302
+        ]
+      ],
+      "displayedLineCount": 241,
+      "initialPinUTC": "2026-10-17T19:03:50.966941+00:00",
+      "initialSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Default reader filter and IDs, close null before extraction, journal/memory call order, identical backfill anchors. No model/IO/redaction/security behavior certified.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+        "bytes": 11519,
+        "lineCount": 302,
+        "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+        "pinnedAtUTC": "2026-10-17T19:03:50.966941+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "bytes": 121036,
+      "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "lineCount": 2912,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          1051,
+          1075
+        ],
+        [
+          1078,
+          1103
+        ],
+        [
+          1178,
+          1204
+        ],
+        [
+          2139,
+          2147
+        ],
+        [
+          2188,
+          2223
+        ],
+        [
+          2343,
+          2349
+        ],
+        [
+          2368,
+          2398
+        ]
+      ],
+      "selectedLineCount": 161,
+      "bodyDisplayedLineRanges": [
+        [
+          1045,
+          1103
+        ],
+        [
+          1173,
+          1204
+        ],
+        [
+          2127,
+          2155
+        ],
+        [
+          2188,
+          2228
+        ],
+        [
+          2332,
+          2400
+        ]
+      ],
+      "bodyDisplayedLineCount": 230,
+      "additionalNavigationSnippetLines": [
+        183,
+        357,
+        362,
+        364,
+        1998,
+        2069,
+        2070,
+        2233,
+        2260,
+        2284,
+        2292,
+        2294,
+        2295,
+        2296,
+        2297,
+        2469,
+        2473,
+        2506,
+        2510,
+        2520
+      ],
+      "displayedLineRanges": [
+        [
+          183,
+          183
+        ],
+        [
+          357,
+          357
+        ],
+        [
+          362,
+          362
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          1045,
+          1103
+        ],
+        [
+          1173,
+          1204
+        ],
+        [
+          1998,
+          1998
+        ],
+        [
+          2069,
+          2070
+        ],
+        [
+          2127,
+          2155
+        ],
+        [
+          2188,
+          2228
+        ],
+        [
+          2233,
+          2233
+        ],
+        [
+          2260,
+          2260
+        ],
+        [
+          2284,
+          2284
+        ],
+        [
+          2292,
+          2292
+        ],
+        [
+          2294,
+          2297
+        ],
+        [
+          2332,
+          2400
+        ],
+        [
+          2469,
+          2469
+        ],
+        [
+          2473,
+          2473
+        ],
+        [
+          2506,
+          2506
+        ],
+        [
+          2510,
+          2510
+        ],
+        [
+          2520,
+          2520
+        ]
+      ],
+      "displayedLineCount": 250,
+      "initialPinUTC": "2026-10-17T19:03:50.968414+00:00",
+      "initialSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Ordinary host wake guard/manager serialization, H, beginTurn, unchanged worker params, settle-finally closure. Selector/authority/later host action internals not exhaustively reviewed.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+        "bytes": 121036,
+        "lineCount": 2912,
+        "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+        "pinnedAtUTC": "2026-10-17T19:03:50.968414+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "bytes": 7159,
+      "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "lineCount": 197,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          109,
+          130
+        ],
+        [
+          145,
+          180
+        ]
+      ],
+      "selectedLineCount": 58,
+      "bodyDisplayedLineRanges": [
+        [
+          100,
+          180
+        ]
+      ],
+      "bodyDisplayedLineCount": 81,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          100,
+          180
+        ]
+      ],
+      "displayedLineCount": 81,
+      "initialPinUTC": "2026-10-17T19:03:50.969461+00:00",
+      "initialSha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Future once scheduling, claim/expiry and resume selection. No scheduler/claim/notification runtime efficacy claim.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+        "bytes": 7159,
+        "lineCount": 197,
+        "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+        "pinnedAtUTC": "2026-10-17T19:03:50.969461+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+      "bytes": 5768,
+      "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "lineCount": 131,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          32,
+          46
+        ],
+        [
+          67,
+          102
+        ]
+      ],
+      "selectedLineCount": 51,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          105
+        ]
+      ],
+      "bodyDisplayedLineCount": 105,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          105
+        ]
+      ],
+      "displayedLineCount": 105,
+      "initialPinUTC": "2026-10-17T19:03:50.970777+00:00",
+      "initialSha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Actual composition and guards; no-taskId ordinary idle source reaches dispatch. Publish/notify bodies shown only.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+        "bytes": 5768,
+        "lineCount": 131,
+        "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+        "pinnedAtUTC": "2026-10-17T19:03:50.970777+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-host.ts",
+      "bytes": 4323,
+      "sha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+      "lineCount": 110,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          24,
+          80
+        ]
+      ],
+      "selectedLineCount": 57,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "bodyDisplayedLineCount": 110,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "displayedLineCount": 110,
+      "initialPinUTC": "2026-10-17T19:03:50.971384+00:00",
+      "initialSha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+      "initialPinTiming": "before this packet own body/navigation snippets",
+      "scope": "Real register host path validates resume/source, optionally derives task, forwards future definition. Context/authentication and registry persistence only static call boundaries.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-follow-up-host.ts",
+        "bytes": 4323,
+        "lineCount": 110,
+        "sha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+        "pinnedAtUTC": "2026-10-17T19:03:50.971384+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "bytes": 6984,
+      "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "lineCount": 207,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          39,
+          43
+        ],
+        [
+          67,
+          87
+        ],
+        [
+          93,
+          113
+        ],
+        [
+          143,
+          153
+        ],
+        [
+          179,
+          188
+        ]
+      ],
+      "selectedLineCount": 68,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          113
+        ],
+        [
+          143,
+          153
+        ],
+        [
+          179,
+          188
+        ]
+      ],
+      "bodyDisplayedLineCount": 134,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          113
+        ],
+        [
+          143,
+          153
+        ],
+        [
+          179,
+          188
+        ]
+      ],
+      "displayedLineCount": 134,
+      "initialPinUTC": "2026-10-17T19:04:13.711728+00:00",
+      "initialSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "Load retains segment object/ID, append+snapshot retain it, allSegments feeds backfill. Native FS persistence not executed or certified.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+        "bytes": 6984,
+        "lineCount": 207,
+        "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+        "pinnedAtUTC": "2026-10-17T19:04:13.711728+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+      "bytes": 17609,
+      "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "lineCount": 484,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          272,
+          305
+        ]
+      ],
+      "selectedLineCount": 34,
+      "bodyDisplayedLineRanges": [
+        [
+          272,
+          305
+        ]
+      ],
+      "bodyDisplayedLineCount": 34,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          272,
+          305
+        ]
+      ],
+      "displayedLineCount": 34,
+      "initialPinUTC": "2026-10-17T19:04:13.712662+00:00",
+      "initialSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "Actual registration admission rejects nonfuture time but has no below-12h cap. Other registry/mutation/identity mechanisms not reviewed.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+        "bytes": 17609,
+        "lineCount": 484,
+        "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+        "pinnedAtUTC": "2026-10-17T19:04:13.712662+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "bytes": 6245,
+      "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "lineCount": 199,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          100,
+          102
+        ],
+        [
+          129,
+          168
+        ]
+      ],
+      "selectedLineCount": 43,
+      "bodyDisplayedLineRanges": [
+        [
+          94,
+          168
+        ]
+      ],
+      "bodyDisplayedLineCount": 75,
+      "additionalNavigationSnippetLines": [
+        3,
+        23,
+        31,
+        49,
+        54,
+        70,
+        75,
+        82,
+        177,
+        183
+      ],
+      "displayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          75,
+          75
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          94,
+          168
+        ],
+        [
+          177,
+          177
+        ],
+        [
+          183,
+          183
+        ]
+      ],
+      "displayedLineCount": 85,
+      "initialPinUTC": "2026-10-17T19:04:52.595831+00:00",
+      "initialSha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "initialPinTiming": "before this packet body/navigation",
+      "scope": "Ordinary finite timestamp and valid resume payload contract. Timezone Intl expression only read, never executed.",
+      "originalPinRow": {
+        "path": "packages/pet/src/registered-follow-ups.ts",
+        "bytes": 6245,
+        "lineCount": 199,
+        "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+        "pinnedAtUTC": "2026-10-17T19:04:52.595831+00:00",
+        "timing": "before this packet body/navigation"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "lineCount": 7330,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          2163,
+          2181
+        ],
+        [
+          2211,
+          2231
+        ],
+        [
+          2597,
+          2608
+        ],
+        [
+          2615,
+          2638
+        ]
+      ],
+      "selectedLineCount": 76,
+      "bodyDisplayedLineRanges": [
+        [
+          2160,
+          2184
+        ],
+        [
+          2207,
+          2234
+        ],
+        [
+          2594,
+          2645
+        ]
+      ],
+      "bodyDisplayedLineCount": 105,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          2160,
+          2184
+        ],
+        [
+          2207,
+          2234
+        ],
+        [
+          2594,
+          2645
+        ]
+      ],
+      "displayedLineCount": 105,
+      "initialPinUTC": "2026-10-17T19:04:13.709689+00:00",
+      "initialSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "Production Runtime/controller/default-reader wiring and startup backfill. No replacement readMessages supplied. Later independent context migration only displayed boundary, not claimed broken.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "lineCount": 7330,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "pinnedAtUTC": "2026-10-17T19:04:13.709689+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "lineCount": 4949,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          1809,
+          1824
+        ],
+        [
+          1987,
+          2002
+        ]
+      ],
+      "selectedLineCount": 32,
+      "bodyDisplayedLineRanges": [
+        [
+          1803,
+          1827
+        ],
+        [
+          1977,
+          2005
+        ]
+      ],
+      "bodyDisplayedLineCount": 54,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1803,
+          1827
+        ],
+        [
+          1977,
+          2005
+        ]
+      ],
+      "displayedLineCount": 54,
+      "initialPinUTC": "2026-10-17T19:04:13.714088+00:00",
+      "initialSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "Two selected run branches preserve injected/clientMessageId. No complete authorization/protocol validation claim.",
+      "originalPinRow": {
+        "path": "packages/core/src/protocol/server.ts",
+        "bytes": 195050,
+        "lineCount": 4949,
+        "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+        "pinnedAtUTC": "2026-10-17T19:04:13.714088+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "bytes": 23896,
+      "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "lineCount": 586,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          515,
+          528
+        ]
+      ],
+      "selectedLineCount": 14,
+      "bodyDisplayedLineRanges": [
+        [
+          506,
+          539
+        ]
+      ],
+      "bodyDisplayedLineCount": 34,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          506,
+          539
+        ]
+      ],
+      "displayedLineCount": 34,
+      "initialPinUTC": "2026-10-17T19:04:13.715063+00:00",
+      "initialSha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "Queued run forwards explicit opts to Engine; stream envelope correlation is distinct from persisted transcript data.",
+      "originalPinRow": {
+        "path": "packages/core/src/protocol/chat-session.ts",
+        "bytes": 23896,
+        "lineCount": 586,
+        "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+        "pinnedAtUTC": "2026-10-17T19:04:13.715063+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "lineCount": 292,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          176,
+          181
+        ],
+        [
+          211,
+          218
+        ]
+      ],
+      "selectedLineCount": 14,
+      "bodyDisplayedLineRanges": [
+        [
+          168,
+          184
+        ],
+        [
+          208,
+          223
+        ]
+      ],
+      "bodyDisplayedLineCount": 33,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          168,
+          184
+        ],
+        [
+          208,
+          223
+        ]
+      ],
+      "displayedLineCount": 33,
+      "initialPinUTC": "2026-10-17T19:04:13.715969+00:00",
+      "initialSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "Existing/fresh ordinary user append carries ID/injected. No session/account/permission mechanism assessment.",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/run-session-open.ts",
+        "bytes": 11804,
+        "lineCount": 292,
+        "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+        "pinnedAtUTC": "2026-10-17T19:04:13.715969+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "lineCount": 1377,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          407,
+          418
+        ],
+        [
+          527,
+          571
+        ]
+      ],
+      "selectedLineCount": 57,
+      "bodyDisplayedLineRanges": [
+        [
+          407,
+          440
+        ],
+        [
+          526,
+          571
+        ]
+      ],
+      "bodyDisplayedLineCount": 80,
+      "additionalNavigationSnippetLines": [
+        109,
+        157,
+        296,
+        466,
+        586,
+        606,
+        616,
+        629,
+        634,
+        647,
+        653,
+        655,
+        684,
+        688,
+        794,
+        837,
+        850,
+        851
+      ],
+      "displayedLineRanges": [
+        [
+          109,
+          109
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          296,
+          296
+        ],
+        [
+          407,
+          440
+        ],
+        [
+          466,
+          466
+        ],
+        [
+          526,
+          571
+        ],
+        [
+          586,
+          586
+        ],
+        [
+          606,
+          606
+        ],
+        [
+          616,
+          616
+        ],
+        [
+          629,
+          629
+        ],
+        [
+          634,
+          634
+        ],
+        [
+          647,
+          647
+        ],
+        [
+          653,
+          653
+        ],
+        [
+          655,
+          655
+        ],
+        [
+          684,
+          684
+        ],
+        [
+          688,
+          688
+        ],
+        [
+          794,
+          794
+        ],
+        [
+          837,
+          837
+        ],
+        [
+          850,
+          851
+        ]
+      ],
+      "displayedLineCount": 98,
+      "initialPinUTC": "2026-10-17T19:04:13.716913+00:00",
+      "initialSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialPinTiming": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81",
+      "scope": "append stores explicit data without adding run ID; appendMessage only writes ID from opts. Sync/native machinery shown but not evaluated.",
+      "originalPinRow": {
+        "path": "packages/core/src/session/transcript.ts",
+        "bytes": 51303,
+        "lineCount": 1377,
+        "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "pinnedAtUTC": "2026-10-17T19:04:13.716913+00:00",
+        "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          2790,
+          2794
+        ],
+        [
+          3402,
+          3413
+        ],
+        [
+          4343,
+          4345
+        ]
+      ],
+      "selectedLineCount": 20,
+      "bodyDisplayedLineRanges": [
+        [
+          2784,
+          2805
+        ],
+        [
+          3398,
+          3413
+        ]
+      ],
+      "bodyDisplayedLineCount": 38,
+      "additionalNavigationSnippetLines": [
+        106,
+        949,
+        1014,
+        1023,
+        1053,
+        1440,
+        1675,
+        2041,
+        2158,
+        2450,
+        2707,
+        2742,
+        2936,
+        3334,
+        3358,
+        3363,
+        3455,
+        3660,
+        4341,
+        4342,
+        4343,
+        4344,
+        4345,
+        4346,
+        4347,
+        4348,
+        4349,
+        4352
+      ],
+      "displayedLineRanges": [
+        [
+          106,
+          106
+        ],
+        [
+          949,
+          949
+        ],
+        [
+          1014,
+          1014
+        ],
+        [
+          1023,
+          1023
+        ],
+        [
+          1053,
+          1053
+        ],
+        [
+          1440,
+          1440
+        ],
+        [
+          1675,
+          1675
+        ],
+        [
+          2041,
+          2041
+        ],
+        [
+          2158,
+          2158
+        ],
+        [
+          2450,
+          2450
+        ],
+        [
+          2707,
+          2707
+        ],
+        [
+          2742,
+          2742
+        ],
+        [
+          2784,
+          2805
+        ],
+        [
+          2936,
+          2936
+        ],
+        [
+          3334,
+          3334
+        ],
+        [
+          3358,
+          3358
+        ],
+        [
+          3363,
+          3363
+        ],
+        [
+          3398,
+          3413
+        ],
+        [
+          3455,
+          3455
+        ],
+        [
+          3660,
+          3660
+        ],
+        [
+          4341,
+          4349
+        ],
+        [
+          4352,
+          4352
+        ]
+      ],
+      "displayedLineCount": 66,
+      "initialPinUTC": "2026-10-17T19:07:09.906982+00:00",
+      "initialSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "initialPinTiming": "before own body/navigation; filename-only appendMessage inventory bd0ab3",
+      "scope": "Actual same transcript→wireRunModelFacade and same facade→TurnLoop. injectContext writer navigation carries no ID. Other grep fields are navigation only, not mechanism proof.",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210666,
+        "lineCount": 5082,
+        "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+        "pinnedAtUTC": "2026-10-17T19:07:09.906982+00:00",
+        "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          2148,
+          2156
+        ],
+        [
+          2204,
+          2211
+        ]
+      ],
+      "selectedLineCount": 17,
+      "bodyDisplayedLineRanges": [
+        [
+          2143,
+          2162
+        ],
+        [
+          2200,
+          2213
+        ]
+      ],
+      "bodyDisplayedLineCount": 34,
+      "additionalNavigationSnippetLines": [
+        39,
+        204,
+        551,
+        558,
+        568,
+        828,
+        950,
+        1261,
+        1322,
+        1405,
+        1425,
+        1431,
+        1512,
+        1530,
+        1598,
+        1659,
+        1661,
+        1684,
+        1699,
+        1708,
+        1810,
+        1890,
+        1905,
+        1907,
+        2045,
+        2089,
+        2091,
+        2248,
+        2249,
+        2250,
+        2251,
+        2252,
+        2253,
+        2254,
+        2255,
+        2256,
+        2293,
+        2294,
+        2295,
+        2296,
+        2297,
+        2298,
+        2299,
+        2300,
+        2301,
+        2336,
+        2337,
+        2338,
+        2339,
+        2340,
+        2341,
+        2342,
+        2343,
+        2344
+      ],
+      "displayedLineRanges": [
+        [
+          39,
+          39
+        ],
+        [
+          204,
+          204
+        ],
+        [
+          551,
+          551
+        ],
+        [
+          558,
+          558
+        ],
+        [
+          568,
+          568
+        ],
+        [
+          828,
+          828
+        ],
+        [
+          950,
+          950
+        ],
+        [
+          1261,
+          1261
+        ],
+        [
+          1322,
+          1322
+        ],
+        [
+          1405,
+          1405
+        ],
+        [
+          1425,
+          1425
+        ],
+        [
+          1431,
+          1431
+        ],
+        [
+          1512,
+          1512
+        ],
+        [
+          1530,
+          1530
+        ],
+        [
+          1598,
+          1598
+        ],
+        [
+          1659,
+          1659
+        ],
+        [
+          1661,
+          1661
+        ],
+        [
+          1684,
+          1684
+        ],
+        [
+          1699,
+          1699
+        ],
+        [
+          1708,
+          1708
+        ],
+        [
+          1810,
+          1810
+        ],
+        [
+          1890,
+          1890
+        ],
+        [
+          1905,
+          1905
+        ],
+        [
+          1907,
+          1907
+        ],
+        [
+          2045,
+          2045
+        ],
+        [
+          2089,
+          2089
+        ],
+        [
+          2091,
+          2091
+        ],
+        [
+          2143,
+          2162
+        ],
+        [
+          2200,
+          2213
+        ],
+        [
+          2248,
+          2256
+        ],
+        [
+          2293,
+          2301
+        ],
+        [
+          2336,
+          2344
+        ]
+      ],
+      "displayedLineCount": 88,
+      "initialPinUTC": "2026-10-17T19:07:09.908544+00:00",
+      "initialSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "initialPinTiming": "before own body/navigation; filename-only appendMessage inventory bd0ab3",
+      "scope": "Only facade call/callWithoutStreaming connection semantic. Other assistant/append grep contexts navigation, no broad fallback/tool audit.",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/turn-loop.ts",
+        "bytes": 108774,
+        "lineCount": 2412,
+        "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+        "pinnedAtUTC": "2026-10-17T19:07:09.908544+00:00",
+        "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "lineCount": 310,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          174,
+          183
+        ],
+        [
+          258,
+          265
+        ],
+        [
+          273,
+          305
+        ]
+      ],
+      "selectedLineCount": 51,
+      "bodyDisplayedLineRanges": [
+        [
+          174,
+          184
+        ],
+        [
+          258,
+          305
+        ]
+      ],
+      "bodyDisplayedLineCount": 59,
+      "additionalNavigationSnippetLines": [
+        115,
+        222,
+        306,
+        307
+      ],
+      "displayedLineRanges": [
+        [
+          115,
+          115
+        ],
+        [
+          174,
+          184
+        ],
+        [
+          222,
+          222
+        ],
+        [
+          258,
+          307
+        ]
+      ],
+      "displayedLineCount": 63,
+      "initialPinUTC": "2026-10-17T19:07:09.908825+00:00",
+      "initialSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "initialPinTiming": "before own body/navigation; filename-only appendMessage inventory bd0ab3",
+      "scope": "Both normal call variants recordResponse; assistant append supplies no opts/clientMessageId. No actual model call.",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/model-facade.ts",
+        "bytes": 10149,
+        "lineCount": 310,
+        "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+        "pinnedAtUTC": "2026-10-17T19:07:09.908825+00:00",
+        "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "lineCount": 480,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          224,
+          224
+        ]
+      ],
+      "selectedLineCount": 1,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228
+      ],
+      "displayedLineRanges": [
+        [
+          128,
+          136
+        ],
+        [
+          220,
+          228
+        ]
+      ],
+      "displayedLineCount": 18,
+      "initialPinUTC": "2026-10-17T19:07:09.909283+00:00",
+      "initialSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "initialPinTiming": "before own body/navigation; filename-only appendMessage inventory bd0ab3",
+      "scope": "Selected navigation writer for system verification assistant has authority only, not H. Other goal injection context incidental; no finalize lifecycle review.",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/run-finalize.ts",
+        "bytes": 19306,
+        "lineCount": 480,
+        "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+        "pinnedAtUTC": "2026-10-17T19:07:09.909283+00:00",
+        "timing": "before own body/navigation; filename-only appendMessage inventory bd0ab3"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "bytes": 6970,
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "lineCount": 174,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          91,
+          105
+        ]
+      ],
+      "selectedLineCount": 15,
+      "bodyDisplayedLineRanges": [
+        [
+          91,
+          108
+        ]
+      ],
+      "bodyDisplayedLineCount": 18,
+      "additionalNavigationSnippetLines": [
+        27
+      ],
+      "displayedLineRanges": [
+        [
+          27,
+          27
+        ],
+        [
+          91,
+          108
+        ]
+      ],
+      "displayedLineCount": 19,
+      "initialPinUTC": "2026-10-17T19:08:20.860595+00:00",
+      "initialSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "initialPinTiming": "before body/nav; filename inventory44e9c6",
+      "scope": "Factory creates actual ModelFacade on supplied transcript; accounting/budget mechanisms out of scope.",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/run-accounting.ts",
+        "bytes": 6970,
+        "lineCount": 174,
+        "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+        "pinnedAtUTC": "2026-10-17T19:08:20.860595+00:00",
+        "timing": "before body/nav; filename inventory44e9c6"
+      }
+    },
+    {
+      "path": "packages/pet/src/topic-segment.test.ts",
+      "bytes": 2315,
+      "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "lineCount": 69,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          6,
+          14
+        ]
+      ],
+      "selectedLineCount": 9,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "bodyDisplayedLineCount": 23,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "displayedLineCount": 23,
+      "initialPinUTC": "2026-10-17T19:04:52.598154+00:00",
+      "initialSha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "initialPinTiming": "before this packet body/navigation",
+      "scope": "Threshold declarations only; unrelated carryover declaration partially displayed.",
+      "originalPinRow": {
+        "path": "packages/pet/src/topic-segment.test.ts",
+        "bytes": 2315,
+        "lineCount": 69,
+        "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+        "pinnedAtUTC": "2026-10-17T19:04:52.598154+00:00",
+        "timing": "before this packet body/navigation"
+      }
+    },
+    {
+      "path": "packages/pet/src/segment-closure.test.ts",
+      "bytes": 3238,
+      "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "lineCount": 86,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          9,
+          46
+        ]
+      ],
+      "selectedLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "bodyDisplayedLineCount": 46,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "displayedLineCount": 46,
+      "initialPinUTC": "2026-10-17T19:04:52.598941+00:00",
+      "initialSha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "initialPinTiming": "before this packet body/navigation",
+      "scope": "Existing exact ID/missing/empty-window declarations only; no execution.",
+      "originalPinRow": {
+        "path": "packages/pet/src/segment-closure.test.ts",
+        "bytes": 3238,
+        "lineCount": 86,
+        "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+        "pinnedAtUTC": "2026-10-17T19:04:52.598941+00:00",
+        "timing": "before this packet body/navigation"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.test.ts",
+      "bytes": 8539,
+      "sha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+      "lineCount": 249,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          80,
+          107
+        ],
+        [
+          212,
+          247
+        ]
+      ],
+      "selectedLineCount": 64,
+      "bodyDisplayedLineRanges": [
+        [
+          80,
+          107
+        ],
+        [
+          212,
+          249
+        ]
+      ],
+      "bodyDisplayedLineCount": 66,
+      "additionalNavigationSnippetLines": [
+        54,
+        120,
+        149,
+        173,
+        199
+      ],
+      "displayedLineRanges": [
+        [
+          54,
+          54
+        ],
+        [
+          80,
+          107
+        ],
+        [
+          120,
+          120
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          199,
+          199
+        ],
+        [
+          212,
+          249
+        ]
+      ],
+      "displayedLineCount": 71,
+      "initialPinUTC": "2026-10-17T19:04:52.599689+00:00",
+      "initialSha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+      "initialPinTiming": "before this packet body/navigation",
+      "scope": "Existing fake-reader short-window and backfill declarations. They inject readMessages and do not prove default parser/injected integration.",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-segment-closure-service.test.ts",
+        "bytes": 8539,
+        "lineCount": 249,
+        "sha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+        "pinnedAtUTC": "2026-10-17T19:04:52.599689+00:00",
+        "timing": "before this packet body/navigation"
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-service.ts",
+      "bytes": 9047,
+      "sha256": "8aa231b2db7313b5886d25ac8a437007e2a5b44b0c58cb5ce6b27e7bd0543a30",
+      "lineCount": 226,
+      "kind": "product-hash-only",
+      "coverage": "hash-only-this-packet",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:03:50.970164+00:00",
+      "originalPinRow": {
+        "path": "packages/desktop/src/main/pet/pet-follow-up-service.ts",
+        "bytes": 9047,
+        "lineCount": 226,
+        "sha256": "8aa231b2db7313b5886d25ac8a437007e2a5b44b0c58cb5ce6b27e7bd0543a30",
+        "pinnedAtUTC": "2026-10-17T19:03:50.970164+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      },
+      "scope": "No body read in this packet; AGENTS previously read instructions reused, unused follow-up service pin not promoted."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "kind": "instruction",
+      "coverage": "instruction-read-full-this-packet",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "bodyDisplayedLineCount": 217,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "displayedLineCount": 217,
+      "initialPinUTC": "2026-10-17T19:03:50.960109+00:00",
+      "originalPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T19:03:50.960109+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      },
+      "scope": "Current instruction read before evidence edits."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "kind": "instruction",
+      "coverage": "hash-only-this-packet",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:03:50.962385+00:00",
+      "originalPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T19:03:50.962385+00:00",
+        "timing": "before this packet own body/navigation snippets"
+      },
+      "scope": "No body read in this packet; AGENTS previously read instructions reused, unused follow-up service pin not promoted."
+    }
+  ],
+  "counts": {
+    "productSelectedRows": 21,
+    "productSelectedLines": 1103,
+    "testDeclarationSelectedLines": 111,
+    "displayedProductAndTestLines": 2262,
+    "displayedInstructionLines": 217,
+    "productSemanticFullRows": 0,
+    "sourceInstructionPins": 27,
+    "productExecutionAttempts": 0,
+    "semanticProductAndTestSelectedLines": 1214
+  },
+  "rangeConvention": "One-based inclusive; canonical display = body union navigation; selected may be from bounded navigation, is subset of display. Repeats counted once per file. Display/full file bytes do not imply semantic full. Old pure-function full overlap not new coverage.",
+  "priorOverlap": "docs/audit-2026-10-17/pet-data.md21–24 / R10pet26–28 with R10files0/1 sameSHA explicitly establish old pure-function full; own canonical check occurred after concrete-candidate leaf read, not a prebody first-coverage gate."
+}

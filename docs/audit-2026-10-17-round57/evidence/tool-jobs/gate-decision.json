@@ -1,0 +1,36 @@
+{
+  "createdUTC": "2026-10-17T19:00:01.983899+00:00",
+  "exactOwnHitFiles": 14,
+  "method": "Exact raw path/SHA filename search and hit byte pins only; not exhaustive escaped JSON-value search or whole corpus scalar rerun. Root shared batch owns full value scan.",
+  "actualCanonicalReading": "Legacy runtime-round3 actual1–15 fully read in d32a7d and resource-quality-round8 actual31–41 in699490; earlier combined old-source locator output truncated and not full-read claim. Current inventory/hash references do not prove old full or unread.",
+  "sharedBatch": {
+    "pin": {
+      "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+      "bytes": 1250596,
+      "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+      "capturedUTC": "2026-10-17T18:57:28.893258+00:00",
+      "role": "Root shared machine scan only, not own corpus semantic reading"
+    },
+    "scope": {
+      "atUTC": "2026-10-17T18:54:27.390693+00:00",
+      "historyFiles": 5676,
+      "excludedFormalAtOrAbove": 57,
+      "jsonValueScalarsVisited": 4212456,
+      "capPerTarget": 100,
+      "errors": []
+    },
+    "targets": {
+      "packages/server/src/panels/tool-jobs.ts": {
+        "totalMatches": 29,
+        "retainedHits": 29
+      },
+      "packages/server/src/panels/tool-jobs-storage.ts": {
+        "totalMatches": 27,
+        "retainedHits": 27
+      }
+    },
+    "role": "Root full scalar scan projection only, no own million-scalar rerun and no semantic claim to all retained values."
+  },
+  "specificCauseDedup": "R30 exact terminal persistence source cause excluded; no new candidate requiring other same-cause promotion. All old failures stay skipped.",
+  "coverageClaim": "Selected actual mechanisms required for normal lifecycle, no global correctness or permission/identity/OS guarantee."
+}

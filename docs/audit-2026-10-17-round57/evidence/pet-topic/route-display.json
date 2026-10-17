@@ -1,0 +1,12 @@
+{
+  "path": "packages/pet/src/conversation-session-route.ts",
+  "sha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+  "displayedLineRanges": [
+    [
+      1,
+      369
+    ]
+  ],
+  "pinReference": "mechanism-initial-pins.json",
+  "displayAt": "2026-10-17T18:54:36.080907+00:00"
+}

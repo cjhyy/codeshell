@@ -1,0 +1,49 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "oldCauseExclusions": [
+    {
+      "id": "R30 (legacy runtime/resource review)",
+      "status": "Existing precise cause, not newly counted or runtime revalidated",
+      "source": "commit430–434 + pump768–774 + run806–830",
+      "scope": "Completion outcome not published after final storage write rejects; no permission/storage failure experiment repeated."
+    }
+  ],
+  "decision": "Finite normal lifecycle negative after actual producer/service/executor/process-close chain review; old IO failure excluded, not complete guarantee.",
+  "counterevidence": [
+    {
+      "subject": "Preparation/admission cancelled before execute",
+      "source": "start653–705 and final717–722; source-only",
+      "reason": "Separate controller, preparation tracking and serial queued publication abort check; no arbitrary preparer mock used to prove bug."
+    },
+    {
+      "subject": "Running cancel resolves before executor/native close",
+      "source": "cancel833–856; run/pump768–831; executor549–609/650–662; process-service854–882/909–916",
+      "reason": "cancelling commit precedes abort, cancel awaits active.done; real execute awaits exit and finally cleanup. Actual close awaits termination before waiter/event, pump removesactive/finishes only after run settles."
+    },
+    {
+      "subject": "Terminal state races clobber cancellation or retry",
+      "source": "run806–831 reads latest stored job in serial fence; retry866–882 active/status/error checks",
+      "reason": "Abort/stopping determines cancelled/interrupted; Error producesfailed, normal result produces succeeded. Retry requires finished active cleanup. No normal undefined rejection producer shown, so arbitrary Promise.reject(undefined) not used as bug."
+    },
+    {
+      "subject": "Shutdown/recovery reexecutes work",
+      "source": "stop934–961 and load412–423",
+      "reason": "Stops admission, drains preparations/active exit before closingstorage; loadedunfinished checkpoints become interrupted rather than executed automatically. Actual OS failure/durability not tested."
+    }
+  ],
+  "unreviewedBoundaries": [
+    "complete execute input materializer/resource/cookie/credential policy",
+    "process spawn/kill-group OS implementation",
+    "all storage locking/path custody guarantees",
+    "full permission/identity enforcement across Host transports",
+    "all UI or actual external tool protocols",
+    "old IO failure directions"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "baseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+      ],
+      "stdout": "evidence/root-static-files/static-path-first.stdout",
+      "stderr": "evidence/root-static-files/static-path-first.stderr",
+      "exit": "evidence/root-static-files/static-path-first-exit.json",
+      "exitCode": 0,
+      "firstAttempt": true
+    }
+  ],
+  "totals": {
+    "productAttempts": 1,
+    "passedTests": 3,
+    "expectations": 8,
+    "failedTests": 0,
+    "productReruns": 0
+  },
+  "mode": "One guarded static-handler unit shard only, real owned temporary files and Writable response recorder; no actual server/socket/proxy/browser/model/worker/Core Engine/native/account/business-network experiments. PET finding is static only; its independent reviewers ran no product. Existing test declarations not executed."
+}
