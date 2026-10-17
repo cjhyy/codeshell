@@ -16,6 +16,10 @@ Windows receipts unverified. CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
 and earlier CI15 native failures remain separate source-bound evidence.
 
+CI18 freezes the latest reviewed code and four additional product repairs. Its
+local gates pass; new native and browser execution is still pending. See the
+[CI18 preparation record](#ci18--frozen-candidate-awaiting-native-execution).
+
 ## Reproduced and repaired
 
 | Area                                       | Real trigger and failure                                                                                                                                                                                                                                           | Repair and regression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -1445,3 +1449,88 @@ runner and installed Playwright registry resolved that same path locally; this
 is not Linux execution. Action tag existence was checked through read-only
 GitHub API calls. The acceptance branch remains local pending push authorization;
 no remote job, main push, release tag or publication has been performed.
+
+## CI18 — frozen candidate awaiting native execution
+
+The code checkpoint is `814f7921bd6c4f3151c93ee7a07a1c3591858804`, containing
+local main `9b667863e8a8eb91db7b1f99eb9876169dcf19ec`, the scoped AI Review
+feature and repeated-edit previews. This section records preparation, not a new
+passing matrix. CI17's Windows NSIS phase/cause, missing Windows receipts and the
+earlier CI15 observations remain unresolved. Later source changes belong to a
+subsequent source-bound cycle.
+
+Four additional product repairs are included:
+
+- `6a3c3f299b2044f9f603279903689a22e5dcccfe`: completed CRLF lines retain
+  their text while bare carriage returns retain the existing progress-frame
+  behavior. Four expected-output failures were reproduced before the fix. This
+  leaf repair does not assemble chunks across separate output reads.
+- `82ed60fec408f422bac656bb44aab3dd9035f041`: a real reducer sequence showed
+  that an earlier agent card could hide its later successful Write behind a
+  parent Write. Different writer lanes now retain each successful tool preview
+  as independent opaque hunks under one file header. This does not infer a
+  global physical final version. Standard built-in writes within one lane remain
+  sequential through Core's unsafe queue and retain their existing composition.
+- `5296d7ec216501fdc9cd59c096a70af637520ed3`: `/branch feature-cache` and
+  `/branch feature--create` no longer create a different, shortened branch.
+  Creation flags match complete argument tokens. Actual temporary Git
+  repositories reproduced both failures; the normal guarded runner passes
+  without a TypeScript path override on the combined built dependencies.
+- `e51c88810f45b83e8bf2dd9528ad2917807b571f`: a literal root filename
+  `__all__` has a distinct selection from All files. The viewer and AI snapshot
+  receive the selected original path; special names and obsolete selections have
+  component regressions. These tests use mounted React components and public
+  props; the special-filename interaction has not yet run in a native browser.
+
+The original native fixtures retain their 83-operation/12-Main scope. The
+original eleven-operation Review fixture and shared launch/custody helpers
+remain unchanged. New
+`e2e-review-draft-operations.mjs` adds a separate planned three operations/one
+Main: staged draft plus focus/prefix preservation, stale scope completion, and
+stale Session completion. It observes five actual production prepare IPC results
+and three composer events; two responses are delayed only after the original
+handler completes. Catalog data and owned Session/Git fixtures are controlled.
+No model turn is sent. Its eleven pure contracts pass, including LF/CRLF final
+HOME/error gates; the three operations themselves still require native CI.
+
+Windows NSIS diagnostics now mirror bounded synchronous checkpoint metadata and
+original first errors to CI stdout, including already-observed stderr tails.
+Negative cached spawn exit codes are preserved. Write failure, short write or
+caps latch the existing failure gate while leaving original cleanup intact. The
+six process labels, sixteen installer phases, two thirteen-operation installed
+UI runs, custody/registry/cache gates and budgets are unchanged. This improves
+failure evidence and is not a repair claim for CI17's unknown installer cause.
+
+The workflow adds an explicit 90-entry public Windows evidence allowlist
+before NSIS; the final always-upload allowlist has 162 entries. The early list
+is a strict subset. New entries are owned logs, Git fixtures, receipts and PNGs; no
+private HOME/profile/cache or packaged binary is added. Removing the six added
+steps, one new NSIS contract argument and 21 added final paths reproduces the
+original workflow AST. Original steps, permissions and budgets are preserved.
+
+Root independently verified the frozen combined source:
+
+| Local gate                      | Verified result                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Backend Review/Git/TUI Review   | 75 tests / 301 assertions / 5 files                                                                                                  |
+| Renderer/reducer/Review/IPC     | 187 tests / 686 assertions / 12 files                                                                                                |
+| Actual owned Git branch command | 15 tests / 50 assertions / 1 file; standard runner                                                                                   |
+| CRLF/progress output leaf       | 16 tests / 32 assertions / 1 file                                                                                                    |
+| Node diagnostic contracts       | 55 tests: NSIS/signal 31, original Review 13, new draft 11                                                                           |
+| Build/type boundaries           | Root build and all 14 workspace typechecks pass                                                                                      |
+| Desktop compilation             | Main, preload, renderer and mobile bundles pass                                                                                      |
+| Static gates                    | 47 changed product source files lint with zero warnings and pass format; six changed MJS files parse                                 |
+| Workflow                        | 44 Bash blocks / 5 inline Node blocks parse; six actual harmless pipeline exit-code combinations pass; 43 literal script paths exist |
+
+All listed test shards report zero failures and zero skips. They are not native
+operation counts. Local execution was limited to builds, pure contracts, React
+and reducer fixtures, and temporary Git repositories. Complete Desktop/native
+builds and browser launches remain CI-only; the general local Desktop build is
+not used because it executes the native Cua Driver version check.
+
+The frozen Root gate receipt is
+`ci18-frozen-source-gates-proof-20261017.json`, SHA-256
+`38fbe5d867cf9079a7fcdd1f3c7ab654a3b051ff16546204e040778254713df0`.
+It binds all 47 product source hashes, twelve unchanged native/harness files,
+individual check-log hashes, original workflow preservation and author receipts.
+No CI18 native result is asserted by this preparation record.
