@@ -8,14 +8,15 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI23, failed overall. Web, macOS and Linux pass their
+The latest completed run, CI24, failed overall. Web, macOS and Linux pass their
 audited scopes. Windows completes original 83 operations/12 Main launches, separate
-new Review drafts three/one and installed/replaced UI 13+13, then fails because its
-owned installation path still exists after normal uninstaller exit. Cache cleanup
-and final OS restoration are not reached; the residual entry and cause are unknown.
-See the [CI23 actual record](#ci23--actual-platform-results-and-windows-uninstall-failure).
-The child fallback repair and added NSIS metadata diagnostics have local guarded-test
-validation; fresh CI24 native/browser runtime acceptance remains pending.
+new Review drafts three/one and installed/replaced UI 13+13, then fails the unchanged
+post-uninstaller absence gate. The new complete metadata observation finds an empty
+ordinary installation directory at that time; the cause remains unconfirmed. Cache
+cleanup and final OS restoration are not reached. See the
+[CI24 actual record](#ci24--actual-platform-results-and-empty-uninstall-directory).
+A minimal production NSIS working-directory repair is being prepared; no source
+repair or fresh native validation is claimed yet.
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2525,3 +2526,123 @@ These are local pure/mocked or owned-filesystem checks, with no local native App
 browser, PowerShell, process-query, real installer or provider validation. Historical
 GC, Setup, inode, revoked CI21 custody and discovery-incident effects/descendants
 remain unresolved; neither local green gate nor diagnostics establishes a new runtime pass.
+
+## CI24 — actual platform results and empty uninstall directory
+
+[Run 39049375903](https://github.com/cjhyy/codeshell/actions/runs/39049375903),
+attempt 1 / push, binds source `9a2d118502fe184dc0271360f97c8fdbe06deb01`.
+Web, macOS and Linux pass their audited scopes; Windows fails only step 39, the
+production NSIS lifecycle. Step 40 successfully uploads its failed evidence.
+CI14 remains the last fully passing matrix; earlier failures and preparation-only
+records above are retained at their original source and scope.
+
+Web passes 31 actual behaviors: SW 11, Auth four, child eight and annotations eight.
+Image unit nine/45 and lifecycle Node 64 pass separately. The old-reducer negative
+run retains two passing controls and six expected UI failures, with the private
+HOME/profile checked retained; those failures are not added to the 31 passes.
+Normal browser exits, observed birth custody, late ledgers and successful HOME
+cleanup pass their source-bound predicates, without an OS-wide confinement claim.
+
+macOS passes original 83 operations/12 Main launches, separate new Review drafts
+three/one and DMG installed/reinstalled UI 13+13 across two detached readonly mounts.
+Linux passes original 83/12 and separate new drafts three/one. Actual AppImage Main
+9262 and runtime 9258 both exit normally; ten manifest GETs cover checks/retries,
+with zero asset downloads, Worker, model or nativeStorage calls. Enabled sandbox,
+owned image/cache identity and 75 approved mode normalizations remain checked.
+Both platforms pass their original normal-exit, captured-incarnation chronology,
+settlement and inner-HOME gates. Linux launcher scratch retention is intentional.
+These are fixture-scoped successes, not signing, automatic update installation or
+persistent user-data migration acceptance.
+
+Windows independently passes original 83/12 and separate new drafts three/one.
+Five real preparation IPCs produce three attempts and three accepted composer seeds;
+full A/B inputs and model/permission controls remain bound to the actual receipts.
+NSIS then passes install, replacement and both 13-action installed UI sequences.
+Actual installed Mains 7832 and 2212 exit `0/null`; both private UI HOMEs are removed.
+All six build/install/UI/replace/UI/uninstall native or controller roots exit
+`0/null`, with empty signal-request ledgers and cleaned custody. All uploaded 28
+full-birth map copies have 374 parent edges and no chronology contradiction;
+this is not an exhaustive OS process or signal-delivery audit.
+
+The unchanged uninstall absence gate still fails at source line 719,
+`await absent(installation)`, with firstError
+`Error: Preexisting owned destination refused`. The complete 48-record journal
+orders uninstaller exit at 45, settled process-final at 46, first-error at 47 and
+controller-final at 48. The original first error is synchronously retained before
+awaiting the new passive observation. The controller exits 1 and retains its owned
+NSIS root; uninstall, cache cleanup and final-integrity phases do not complete.
+
+`postUninstallObservation` now records schema 1, trigger
+`post-uninstall-absence-failure`, scope `exact-owned-installation-direct-children`,
+status `observed`, rootType `directory`, complete `true`, entries `[]` and reason
+`none`, in 2.7152 ms. The fixed limits are 128 entries/65,536 compact metadata bytes
+and a 2,000 ms soft deadline, with pending IO and directory close awaited. The
+actual CRLF checkout helper pin `fe55e3456e4a075f48b1a6463ec3e3eb2e16bc21951f06f0ee23f0e17b746e3d`
+matches Git LF source `140f12cc942eed8b97a09fa3edcce0d7ec42a9b84113bc40a186d71281968f55`.
+This proves an empty ordinary directory only at that single observation time.
+`reason: none` means diagnostic completion, not absence of an installer failure.
+There is no uninstalled registry/shortcut snapshot, cache-cleanup record or final
+OS-state snapshot; OS restoration is not approved. No compensating delete, retry,
+new process query or registry write follows the failure.
+
+The locked template's working-directory/removal sequence and official NSIS
+current-directory restriction are a conditional source clue, not a confirmed
+cause from this observation alone. A minimal production `customUnInit` working-
+directory repair is being prepared and is not yet natively verified. No template,
+installer predicate or cleanup authority is relaxed in CI24. Historical GC, Setup
+failure, inode drift and discovery-incident consequences remain unresolved.
+
+Pure counts are separate: actual aggregation is 417/3,502 across thirty files on
+macOS, 417/3,499/30 on Linux and 417/3,493/30 on Windows, all zero failures/skips.
+Review Node 13 and combined draft/lineage/invocation 72 pass; Windows NSIS Node 55
+passes. Write 11/38, output-clean 16/32 and branch 15/50 are separate. No overlapping
+author totals or metadata checks are added to native operations.
+
+Frozen terminal APIs under `codeshell-real-operation-cycles-20261016` are:
+
+- `ci-39049375903-final-run-api.json`, SHA-256
+  `da69d46788ffa7560b6ea974649ef49ef5d443fe85345cf8c4e1f47d2fd23f10`.
+- `ci-39049375903-jobs-progress-20261017T164357Z.json`, SHA-256
+  `800d33a90c1c8108986b60c4a4fc5827327d8f3890186fe0c3c138e4757fbebb`.
+- `ci-39049375903-final-artifacts-api.json`, SHA-256
+  `1a449918a7360fe568ce611b23c82cc90c517067edfa9e44568d640e257a3faa`.
+
+The four source-bound summaries and two independent peers are:
+
+- Web `ci-39049375903-web-independent-20261018/ci-39049375903-web-independent-audit.json`,
+  SHA-256 `dfe8cab9479db5ccefcdd569316091516e9de97d4b18c82500fb8a369225e049`.
+- Mac `ci-39049375903-mac-independent-20261018/verified-summary.json`,
+  SHA-256 `9c71593080854d00fc0610080f29647dfbee6d7af48e8deae770f1044bcc2ef3`;
+  `independent-web-final-peer.json` SHA-256
+  `52757af05370fdce5f0c45b537afab7fd520f8b13253608bf81e88296919e84a`.
+- Linux `ci-39049375903-linux-panel-independent-20261018/verified-summary.json`,
+  SHA-256 `740a95b94443ca95cdd8fa10e84cf3776a31dda29cb15f97d32ccf48fb3f3ab0`.
+- Windows `ci-39049375903-windows-independent-20261018/verified-failed-summary-v2.json`,
+  SHA-256 `6ce7a90d28ed5d039a5fe86ec972c0b8757f286d3f4ef860e83d3579447c53e2`;
+  `independent-panel-nsis-failed-peer.json` SHA-256
+  `7ac552442277dc30c2cd6779c6be8b0cf6628d2b09815bc7f610667e7fad845a`.
+
+Windows final artifact 12107362814 has SHA-256
+`af4367fe69b4833e39091e71b6aa04ad2e27c094c598044a7f10fef16289e32e`:
+169 finite-allowlist public files pass CRC, with no private HOME or raw installer/
+ASAR bytes uploaded. All 127 early files remain byte-identical in the final ZIP.
+Installed payload identity is cross-bound through recorded hashes, not independently
+rehashed uploaded binaries. Five Windows PNGs are actually viewed; metadata for
+49 PNGs does not mean 49 independent visual approvals. The first offline reader
+summary selected an earlier source-line number for the same `absent` text; the
+retained v2 scopes line 719 correctly, without changing any runtime evidence or
+acceptance condition.
+
+The NSIS-specific corrected summary `nsis-verified-failed-summary-v3.json` has
+SHA-256 `0f33bfef8944de3d8f87cd157ffcddd69c0bdf495f360039f6a609391a1be410`.
+A separate offline output-field correction replaces a journal-object count/hash
+that shadowed the already-validated first inventory. The actual retained inventory
+has 910 rows and compact JSON SHA-256
+`714e8e457607feb6dae9596b97f862d389460a3b92ec4f1e0691f2d408333d51`,
+matching the runtime integrity record. All 892 original predicate results and raw
+records remain unchanged; there is no reader, test or native rerun. The original
+summaries remain retained. `nsis-output-field-correction.json` SHA-256 is
+`75d79ef9ab8f19f5c8bf1889d30507ddbf93a2013e1b4473b6f723ec656cad9b`.
+The independent output-correction peer preserves the earlier 82-check peer and
+has SHA-256 `b39c552b80110a05e31945561e0803cdb354edf90ca092f6561261cc377f5ddf`
+(`independent-panel-nsis-output-correction-peer.json`); it performs no rerun.
