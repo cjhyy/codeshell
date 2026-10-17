@@ -8,17 +8,20 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI17, is failed overall. Web, Linux and macOS pass
-their independently audited scopes. Windows passes the corrected test gate and
-its eight native steps according to API/stdout, then fails the actual NSIS step;
-artifact upload also fails, leaving the installer phase/cause and complete
-Windows receipts unverified. CI14 remains the latest fully passing matrix. The
-[CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
-and earlier CI15 native failures remain separate source-bound evidence.
+The latest completed run, CI18, is failed overall. Web passes its job; all three
+Desktop jobs stop at the new Review draft fixture during Session preparation.
+The original startup and Review receipts cover a completed 18-operation/four-Main
+subset per platform; the remaining original suites, new draft operations and
+installer acceptance are incomplete. See the
+[CI18 failure record](#ci18--review-draft-session-preparation-failure).
 
-CI18 freezes the latest reviewed code and four additional product repairs. Its
-local gates pass; new native and browser execution is still pending. See the
-[CI18 preparation record](#ci18--frozen-candidate-awaiting-native-execution).
+CI14 remains the latest fully passing matrix. The
+[CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
+and earlier CI15 native failures remain separate source-bound evidence. CI17's
+Windows installer phase/cause and missing Windows receipts remain unverified;
+CI18 skips NSIS after the earlier failure. The
+[CI18 preparation record](#ci18--frozen-candidate-awaiting-native-execution)
+retains its original local-only scope and does not assert native success.
 
 ## Reproduced and repaired
 
@@ -1534,3 +1537,121 @@ The frozen Root gate receipt is
 It binds all 47 product source hashes, twelve unchanged native/harness files,
 individual check-log hashes, original workflow preservation and author receipts.
 No CI18 native result is asserted by this preparation record.
+
+## CI18 — Review draft Session preparation failure
+
+[Run 39028835292](https://github.com/cjhyy/codeshell/actions/runs/39028835292),
+attempt 1, is a completed failure from the authorized acceptance-branch push of
+`8aebc273d1f044627b112cc3cecf72e563a0b726`. This is the frozen code checkpoint
+`814f7921bd6c4f3151c93ee7a07a1c3591858804` plus its preparation documentation;
+all 47 product source hashes and workflow bytes were rechecked before the push.
+Only the authorized acceptance branch was pushed. No remote main, tag, PR or
+release was created.
+
+| Job                    | Conclusion | Actual boundary                                                                                              |
+| ---------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| Web `117385062384`     | success    | 31 browser cases pass independently; 106 source hashes and 33 PNGs verified.                                 |
+| Linux `117385062394`   | failure    | Startup 7 operations/3 Main and original Review 11/1 pass; new draft completes 0 of 3, with one failed Main. |
+| macOS `117385062157`   | failure    | Same completed original 18/4 subset and new draft 0/3; no packaged UI, updater or DMG acceptance this run.   |
+| Windows `117385062416` | failure    | Original 18/4 subset passes; new draft 0/3, one failed Main. Early evidence upload and NSIS are skipped.     |
+
+Linux and macOS first-error journals both locate the timeout in
+`review-session-seed`, before any actual Review prepare IPC is recorded. The
+failure is `Timed out waiting for an asynchronous UI condition`; its stack points
+to the shared async UI wait helper. The final IPC ledger is empty. Each durable
+deny ledger contains one `agent:msg` channel record and no RPC method. Therefore
+this run does not establish that the denied method was `goalGet`, nor that a
+product Review result or scope/session fence is wrong.
+
+The new fixture's source denies every `agent:msg`. Static tracing separately
+shows that ordinary Session loading can issue read-only goal/registry requests;
+Main has existing no-worker production fallback handlers for them. A subsequent
+fixture repair must narrowly validate owned Session identities and exact
+read-only parameter shapes, call the original listener, and retain denial of
+model turns, configuration, fork/compact and writes. The production
+SessionManager may initialize directories and clean its owned staging inside the
+isolated HOME; these reads must not be described as zero filesystem mutation.
+This is a proposed source correction, not a successful native repeat or proof of
+the specific denied RPC in this run.
+
+Cleanup evidence remains separate from the first timeout. Linux Main 5665 and
+macOS Main 26196 do not close normally; the existing authorized monitor then
+records termination requests and observes `null/SIGKILL`. Their complete observed
+custody settles with 15 owned identities, zero remaining, no query failure and no
+truncation. Both failed private HOMEs are recorded retained. An empty prepare
+ledger subsequently produces a JSON parse error; it is a later ledger failure,
+not evidence of a completed request. Neither artifact contains the attempted
+`failure.png`, so no failed-draft screenshot is asserted. Main stderr supplies no
+additional owned product stack explaining the initial timeout. Cleanup signals
+are not promoted to a preexisting crash cause.
+
+The completed original subset is source-bound independently: three startup
+processes and one original Review process exit `0/null`, custody settles, final
+deny/Worker ledgers are empty, and their successful private HOMEs are removed.
+The source drivers and shared launch/custody files retain their prior reviewed
+bytes. Later native suites are skipped, so this is 18/4 rather than 83/12. The new
+failed Main remains separate, with zero accepted draft operations; five prepare
+results and three composer seeds have not been observed.
+
+The native pure gates pass separately: Write label 11 tests/38 assertions,
+completed CRLF output 16/32, aggregation/Review 140/421 across three files, branch
+command 15/50, original Review diagnostic contracts 13 and draft contracts 11.
+These are not additional native operations. The four product repairs retain
+their local proof; this failed matrix is not release acceptance.
+
+The macOS artifact is `12099513385`, 576,283 bytes, SHA-256
+`468636010d966bf24b34b00036fd7a03b37ca1b1a26d24c09f7e5037d7599b93`.
+All 55 safe regular ZIP entries pass CRC; expanded bytes are 712,322. Root's
+37-check partial-failure audit has no failed evidence checks, SHA-256
+`532e4d76c5cd09471140d1304f9a4e2c87a99204ed9a97f9b1f5b518f33c74f3`.
+Two uploaded original-subset PNGs were visually inspected; the new failure PNG
+is absent. The audit helper initially indexed an unavailable optional `main`
+field, then used an absent/None check; this corrected only the local evidence
+reader, not product behavior or test results.
+
+The Linux artifact is `12099831811`, 586,894 bytes, SHA-256
+`c937589c1aff9ab29f3491d93ed1124128a89e43db0f1dd3261e77be41da3a5f`.
+All 57 safe regular ZIP entries pass CRC; expanded bytes are 724,500. Its
+independent failed-summary SHA-256 is
+`c030d7fad0d5f972e6898c6418646d2192449ff1048606c5576157d62245fd2e`.
+
+The Windows artifact is `12099945854`, 451,149 bytes, SHA-256
+`22ec933ad5274f50c22157833e2c2965be702b1f3599c769f83162ec87c01911`.
+All 57 public regular entries pass CRC; expanded bytes are 594,473. Its
+42-check independent partial-failure summary has zero failed evidence checks,
+SHA-256 `d8dbccce1ebacfb74054366e877cf9c7f3c2af88d46e6dd36f564604133978dd`.
+First error is the same Session-preparation timeout at 44.293 seconds. No
+ChildProcess exit for Main 3788 has been observed then; the monitor starts
+cleanup at 57.465 seconds and records
+root `SIGTERM` at 59.819 seconds, before observing `1/null` at 59.864 seconds.
+This is not evidence of a crash before cleanup. Observed custody settles
+21 identities to zero, query failure/truncation are false, and the failed HOME
+is retained. The deny is channel-only, the prepare ledger is empty, and no
+failure PNG is uploaded. The original 18/4 subset is independently normal and
+clean; the later six suites, early upload and NSIS are skipped. Windows also
+passes the 31 pure NSIS/signal contracts, which do not execute an installer.
+Root independently rechecked API/ZIP/receipts and all seven unit-log hashes;
+its three fixture source fingerprints match the exact CRLF conversion of Git
+bytes. The initial LF-only evidence comparison was corrected in the reader,
+without modifying source or rerunning native tests.
+
+The Web artifact is `12098824470`, 1,476,417 bytes, SHA-256
+`2019579e5eaf47a2b55c8f7cf48b4f52efeff2367213528747a2d4a393c5c03f`.
+The independent reader verifies 31 actual browser cases: service worker 11,
+authentication 4, child state 8 and annotations 8. The nine attachment/image
+regressions with 45 assertions and 64 lifecycle contracts are separate pure
+counts. All 106 recorded source hashes match the exact Git blobs and all 33
+PNG chunks, CRCs and dimensions validate. Early child capture, full birth
+custody, normal browser exits, zero remaining identities, bounded raw logs and
+successful private HOME removal pass. The old reducer negative control retains
+its two expected controls, six expected UI failures, actual Node-1/tee-0 pipeline
+and physically verified failed-profile retention; these are not additional
+passing browser cases. Root visually inspected two exact uploaded PNGs. The
+Web audit SHA-256 is
+`fbcc5b76ac2afdc1d66d7201ce6e4b51d7409baf57add76efd0ccafb1afe6434`.
+
+macOS and Windows partial-failure summaries were independently peer checked.
+Their evidence-reader corrections do not explain the native failure. No local
+browser, Electron, native application, Keychain, PowerShell, installer, provider
+or external account operation was run for this cycle. The overall
+release-operation goal remains active.
