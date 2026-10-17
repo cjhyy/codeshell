@@ -239,7 +239,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       - name: Review first-error and cleanup observation contracts
         timeout-minutes: 2
@@ -247,11 +247,11 @@ jobs:
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/review-operation-diagnostics.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/review-diagnostic-contracts.log"
 
-      - name: Review draft response and session contracts
+      - name: Review draft, process identity and invocation contracts
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/review-draft-response-gate.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/review-draft-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/review-draft-response-gate.test.mjs packages/desktop/scripts/process-lineage-custody.test.mjs scripts/run-isolated-node-smoke.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/review-draft-contracts.log"
 
       - name: verify local package authority and output ownership
         run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
@@ -286,7 +286,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts packages/desktop/src/renderer/types.test.ts packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx packages/desktop/src/renderer/messages/externalFileTargets.test.tsx packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx packages/desktop/src/renderer/Markdown.test.tsx packages/desktop/src/renderer/diff/composeFileEdits.test.ts packages/desktop/src/renderer/diff/composeFileEdits.containment.test.ts packages/coding/src/capability.file-history.test.ts packages/coding/src/tools/apply-patch/backup-targets.execution.test.ts packages/coding/src/tools/apply-patch/backup-targets.test.ts packages/core/src/engine/engine.turn-diff.test.ts packages/core/src/engine/file-history-hook.execution.test.ts packages/core/src/session/turn-diff.fork.test.ts packages/core/src/session/turn-diff.test.ts packages/desktop/src/main/transcript-reader.turn-diff.test.ts packages/desktop/src/renderer/types.turn-diff.test.ts packages/core/src/session/turn-diff.case-alias.test.ts packages/core/src/session/turn-diff.bom.test.ts packages/core/src/runtime/background-shell.utf8-frontier.test.ts packages/core/src/runtime/utf8-cut.test.ts packages/core/src/runtime/ring-file.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/review-file-aggregation.log"
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts packages/desktop/src/renderer/types.test.ts packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx packages/desktop/src/renderer/messages/externalFileTargets.test.tsx packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx packages/desktop/src/renderer/Markdown.test.tsx packages/desktop/src/renderer/diff/composeFileEdits.test.ts packages/desktop/src/renderer/diff/composeFileEdits.containment.test.ts packages/coding/src/capability.file-history.test.ts packages/coding/src/tools/apply-patch/backup-targets.execution.test.ts packages/coding/src/tools/apply-patch/backup-targets.test.ts packages/core/src/engine/engine.turn-diff.test.ts packages/core/src/engine/file-history-hook.execution.test.ts packages/core/src/session/turn-diff.fork.test.ts packages/core/src/session/turn-diff.test.ts packages/desktop/src/main/transcript-reader.turn-diff.test.ts packages/desktop/src/renderer/types.turn-diff.test.ts packages/core/src/session/turn-diff.case-alias.test.ts packages/core/src/session/turn-diff.bom.test.ts packages/core/src/runtime/background-shell.utf8-frontier.test.ts packages/core/src/runtime/utf8-cut.test.ts packages/core/src/runtime/ring-file.test.ts packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx packages/desktop/src/renderer/settings/McpSection.plugin.test.ts packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts packages/core/src/plugins/pluginCatalog.test.ts packages/desktop/src/main/plugins-service.test.ts packages/desktop/src/renderer/extensions/uninstallTarget.test.ts packages/desktop/src/main/plugins-service.installation-origin.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/review-file-aggregation.log"
 
       - name: branch command argument token regressions
         timeout-minutes: 2
@@ -695,6 +695,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/journal.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install-crash-evidence.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/baseline-inventory.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/payload-inventory.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/first-inventory.json
