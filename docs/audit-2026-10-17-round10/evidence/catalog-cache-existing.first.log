@@ -1,0 +1,18 @@
+bun test v1.3.11 (af24e281)
+
+tests/model-cache.test.ts:
+(pass) model-cache > returns undefined when file missing [0.93ms]
+(pass) model-cache > writeCache writes and readCache reads back [3.17ms]
+(pass) model-cache > isStale flips at the 7-day boundary [0.36ms]
+(pass) model-cache > writeCache creates the directory if missing [1.70ms]
+(pass) model-cache > readCache returns undefined on malformed JSON [3.57ms]
+
+tests/model-pool-cache-ctx.test.ts:
+(pass) ModelPool reads contextLength from cache > populates maxContextTokens from cache when entry omits it [1.27ms]
+(pass) ModelPool reads contextLength from cache > does not override an explicit maxContextTokens in the entry [0.89ms]
+
+ 7 pass
+ 0 fail
+ 10 expect() calls
+Ran 7 tests across 2 files. [128.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

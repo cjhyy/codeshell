@@ -1,0 +1,96 @@
+{
+  "frozenCommit": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "summary": {
+    "cleanShards": 3,
+    "pass": 55,
+    "fail": 0,
+    "skip": 0,
+    "expect": 278,
+    "existingTests": 51,
+    "focusedControls": 4,
+    "failedBunShards": 0,
+    "staticCommandFailures": 1
+  },
+  "runs": [
+    {
+      "name": "catalog-existing",
+      "kind": "existing",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/model-catalog/params.test.ts",
+        "packages/core/src/model-catalog/upsert.test.ts",
+        "packages/core/src/model-catalog/types.test.ts",
+        "packages/core/src/model-catalog/catalog.test.ts",
+        "packages/core/src/model-catalog/origins.test.ts",
+        "packages/core/src/model-catalog/builtin-text.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "catalog-existing.first.log",
+      "exitReceipt": "catalog-existing.first.exit.json",
+      "completed": true,
+      "pass": 44,
+      "fail": 0,
+      "skip": 0,
+      "expect": 258,
+      "files": 6
+    },
+    {
+      "name": "catalog-cache-existing",
+      "kind": "existing",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "tests/model-cache.test.ts",
+        "tests/model-pool-cache-ctx.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "catalog-cache-existing.first.log",
+      "exitReceipt": "catalog-cache-existing.first.exit.json",
+      "completed": true,
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "expect": 10,
+      "files": 2
+    },
+    {
+      "name": "catalog-data-controls",
+      "kind": "focused-controls",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round10/evidence/catalog-data-controls.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "catalog-data-controls.first.log",
+      "exitReceipt": "catalog-data-controls.first.exit.json",
+      "completed": true,
+      "pass": 4,
+      "fail": 0,
+      "skip": 0,
+      "expect": 10,
+      "files": 1
+    }
+  ],
+  "staticSkipped": [
+    {
+      "direction": "cache refresh producer/caller contract",
+      "exitCode": 2,
+      "reason": "Guessed nonexistent packages/core/src/engine.ts; following && reads never ran.",
+      "note": "catalog-static-read-failure.md",
+      "retry": false
+    }
+  ],
+  "limitations": [
+    "No real model/provider HTTP request, live credential, package build, Desktop/TUI UI, or upstream capability/pricing fact verification.",
+    "The cache baseline tests cover initial backfill and explicit override preservation, not cache refresh after a previously inferred value.",
+    "Catalog builtin-text existing assertions are repository consistency checks, not fresh confirmation of vendor facts."
+  ]
+}

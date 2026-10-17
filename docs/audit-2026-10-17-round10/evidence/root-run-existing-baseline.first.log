@@ -1,0 +1,20 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/run/RunQueue.test.ts:
+(pass) RunQueue > starts previously queued work when an executor is installed [12.94ms]
+(pass) RunQueue > a synchronous executor failure releases capacity for the next run [6.51ms]
+(pass) RunQueue > dedups enqueues and preserves FIFO order [11.41ms]
+(pass) RunQueue > isPending reflects membership and cancel removes it [0.37ms]
+
+packages/core/src/run/FileRunStore.list-pagination.test.ts:
+(pass) FileRunStore.list pagination guards > default list returns all newest-first [30.14ms]
+(pass) FileRunStore.list pagination guards > negative offset does not return a surprise tail slice [16.60ms]
+(pass) FileRunStore.list pagination guards > negative limit yields an empty page, not a reversed window [12.97ms]
+(pass) FileRunStore.list pagination guards > offset past the end yields empty [12.12ms]
+(pass) FileRunStore.list pagination guards > normal pagination still works [11.60ms]
+
+ 9 pass
+ 0 fail
+ 20 expect() calls
+Ran 9 tests across 2 files. [328.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

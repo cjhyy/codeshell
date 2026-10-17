@@ -1,0 +1,11 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "tests/model-cache.test.ts",
+    "tests/model-pool-cache-ctx.test.ts"
+  ],
+  "exitCode": 0
+}

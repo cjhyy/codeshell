@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/browser-devtools/src/inspector.test.ts"
+  ],
+  "exitCode": 0,
+  "wallSeconds": 0.287,
+  "rawCombinedOutput": "docs/audit-2026-10-17-round10/evidence/diagnostics-existing-inspector.first.log",
+  "firstAttempt": true
+}

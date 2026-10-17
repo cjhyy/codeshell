@@ -1,0 +1,19 @@
+{
+  "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "kind": "Labeled tool-response transcription excerpts; not raw Bun logs",
+  "failures": [
+    {
+      "command": "rg -n 'BrowserInspect|createBrowserInspector|mode: \"performance\"|mode: \"dom\"' packages/core/src/browser packages/desktop/src/browser-library docs --glob '*.md' --glob '*.ts' --glob '!audit-2026-10-17-round10/**' --max-count 20",
+      "exitCode": 2,
+      "toolOutputExcerpt": "rg: packages/core/src/browser: No such file or directory (os error 2)\n",
+      "scope": "The same response also had valid Desktop/docs matches, not reproduced here. Guessed Core path skipped; no correction or rerun."
+    },
+    {
+      "command": "cat docs/audit-2026-10-17-round9/evidence/attachments-findings.json docs/audit-2026-10-17-round9/evidence/attachments-validation.json",
+      "exitCode": 1,
+      "toolOutputExcerpt": "cat: docs/audit-2026-10-17-round9/evidence/attachments-findings.json: No such file or directory\n",
+      "scope": "The same response also returned existing attachments-validation.json. Guessed prior findings file skipped; no correction or rerun."
+    }
+  ],
+  "productTestsAffected": false
+}

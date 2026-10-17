@@ -1,0 +1,71 @@
+{
+  "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "bytes": 6661,
+      "sha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-assemble.py",
+      "bytes": 7934,
+      "sha256": "b003b93d55384c2af953d5d0f7c387b4bda3a897295ea03d1b24dd50f2bc85bc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.first.exit.json",
+      "bytes": 358,
+      "sha256": "8a86da733c1233b252d7dc27abcefdb9928f841178106750e6392429b2d6be13"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.first.log",
+      "bytes": 893,
+      "sha256": "5a52a23b01c0caba4838b6e344aaecdc80e898f592fa390e115e0cf9838142e4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.test.ts",
+      "bytes": 6140,
+      "sha256": "a9eda34a6f87c31c05527a8f33cd57694db58dce94419ca5d7e7c1547b0460ba"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-candidates.json",
+      "bytes": 412,
+      "sha256": "ad861f63f0b86d597a3c0ba4a167c1b14afd11da03f968058355a44fde5d5dc2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-existing-inspector.first.exit.json",
+      "bytes": 328,
+      "sha256": "51a73b2f60d1a0d86deded4f3f7bc2db7b3dda2b22dd88b0741813a1eaff65dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-existing-inspector.first.log",
+      "bytes": 740,
+      "sha256": "64d8c0ac6bf83fa5a295cad2ac563dd4925d3430fa3804fe9c8f9f494b50a5c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-findings.json",
+      "bytes": 1598,
+      "sha256": "3c7737e9350c3414821ccc6f29cfe882384f12c1c59d574d45da24187ee004a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-history-search.json",
+      "bytes": 26778,
+      "sha256": "dffbbf15eb2ad46d4fcfc90ebba4e7bc70aa6fa221e1f6077a6227710572db64"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "bytes": 4011,
+      "sha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-static-lookup-failures.json",
+      "bytes": 1187,
+      "sha256": "ed1c02b1864d56c1d62c4fc9e235a9e40d4554e6d25296bc0031fcac7cc44183"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-validation.json",
+      "bytes": 4725,
+      "sha256": "4e3f2b4eca4528e130490ec451bae6d6ba286303190d62e2df8bd949ccec7b16"
+    }
+  ],
+  "selfHashExcluded": true
+}

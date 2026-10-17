@@ -1,0 +1,10 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round10/evidence/catalog-data-controls.test.ts"
+  ],
+  "exitCode": 0
+}

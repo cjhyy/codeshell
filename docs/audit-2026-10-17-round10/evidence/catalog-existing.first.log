@@ -1,0 +1,63 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/model-catalog/upsert.test.ts:
+(pass) upsertCatalogEntry > adds a new entry to an empty list [0.65ms]
+(pass) upsertCatalogEntry > appends when the id is new
+(pass) upsertCatalogEntry > replaces the existing entry with the same id (update), in place [0.33ms]
+(pass) upsertCatalogEntry > does not mutate the input array
+(pass) upsertModelPreset > appends a new model without changing existing presets
+(pass) upsertModelPreset > updates an existing model by value without duplicating it
+
+packages/core/src/model-catalog/catalog.test.ts:
+(pass) getMergedCatalog > returns built-in entries when no user file [3.51ms]
+(pass) getMergedCatalog > user entry with a new id is appended [4.98ms]
+(pass) getMergedCatalog > user entry with same id overrides built-in [2.13ms]
+(pass) getMergedCatalog > merge-mode user entry adds and overrides models without hiding built-ins [4.22ms]
+(pass) getMergedCatalog > invalid user file is ignored (built-in still works) [6.36ms]
+(pass) findCatalogEntry > by exact id [0.38ms]
+(pass) findCatalogEntry > falls back to adapterKind when id missing (legacy instance) [0.35ms]
+(pass) findCatalogEntry > adapterKind fallback without tag returns first match (any tag) [0.32ms]
+(pass) findCatalogEntry > paramsDoc is present for built-in entries [0.48ms]
+
+packages/core/src/model-catalog/types.test.ts:
+(pass) catalogEntrySchema — tag=text > accepts a text-tagged entry with protocol + needsKey [0.22ms]
+(pass) catalogEntrySchema — tag=text > still accepts legacy image/video entries (backward compatible)
+(pass) catalogEntrySchema — tag=text > rejects an unknown tag
+(pass) ModelPreset.params — per-entry-per-model param schema > a preset carries its own params + token/vision metadata [0.35ms]
+(pass) paramSpecSchema — one generic shape, no special-casing > enum control (e.g. reasoning effort / image size) [0.04ms]
+(pass) paramSpecSchema — one generic shape, no special-casing > number control (e.g. anthropic thinking budget) [0.05ms]
+(pass) paramSpecSchema — one generic shape, no special-casing > toggle control (e.g. deepseek thinking) [0.04ms]
+(pass) paramSpecSchema — one generic shape, no special-casing > text control [0.09ms]
+(pass) paramSpecSchema — one generic shape, no special-casing > rejects an unknown control type [0.03ms]
+
+packages/core/src/model-catalog/builtin-text.test.ts:
+(pass) BUILTIN_CATALOG text entries > ships text entries for the major providers
+(pass) BUILTIN_CATALOG text entries > openai text entry has gpt-5.5 preset with reasoning enum [0.30ms]
+(pass) BUILTIN_CATALOG text entries > anthropic text entry has a budget-reasoning preset (claude 4.x ≤4.5) [0.02ms]
+(pass) BUILTIN_CATALOG text entries > text entries declare protocol + needsKey
+(pass) BUILTIN_CATALOG text entries > every text preset declares a real maxContextTokens (no 200k fallback) [0.19ms]
+(pass) BUILTIN_CATALOG text entries > known model context windows match vendor docs [0.04ms]
+(pass) BUILTIN_CATALOG text entries > known vision-capable text presets are marked for the composer [0.04ms]
+(pass) BUILTIN_CATALOG text entries > every text preset's params parse against the schema (well-formed) [0.03ms]
+
+packages/core/src/model-catalog/origins.test.ts:
+(pass) catalogEntryOrigins > marks a builtin id as builtin when no user override [0.95ms]
+(pass) catalogEntryOrigins > marks a user-only id as user [3.01ms]
+(pass) catalogEntryOrigins > marks an overridden builtin id as user-override-of-builtin [2.58ms]
+
+packages/core/src/model-catalog/params.test.ts:
+(pass) applyParams > lands an enum value on its wire.field [0.11ms]
+(pass) applyParams > lands a nested wire.field as a deep object [0.01ms]
+(pass) applyParams > falls back to param name when no wire is given [0.02ms]
+(pass) applyParams > omits params the user didn't set [0.03ms]
+(pass) applyParams > ignores paramValues with no matching spec [0.02ms]
+(pass) applyParams > empty params or values → empty body
+(pass) buildParamsDoc > joins each param's doc into a note [0.02ms]
+(pass) buildParamsDoc > includes the enum options so the agent knows allowed values
+(pass) buildParamsDoc > returns empty string for no params
+
+ 44 pass
+ 0 fail
+ 258 expect() calls
+Ran 44 tests across 6 files. [327.00ms]
+Completed Bun shard: 44 tests, 0 skipped; 0 failures.

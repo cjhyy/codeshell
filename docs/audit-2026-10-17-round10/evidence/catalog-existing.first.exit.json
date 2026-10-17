@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/model-catalog/params.test.ts",
+    "packages/core/src/model-catalog/upsert.test.ts",
+    "packages/core/src/model-catalog/types.test.ts",
+    "packages/core/src/model-catalog/catalog.test.ts",
+    "packages/core/src/model-catalog/origins.test.ts",
+    "packages/core/src/model-catalog/builtin-text.test.ts"
+  ],
+  "exitCode": 0
+}

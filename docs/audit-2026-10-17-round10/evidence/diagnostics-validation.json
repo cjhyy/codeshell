@@ -1,0 +1,106 @@
+{
+  "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "confirmedFindings": [
+    {
+      "id": "DIAG-R10-01",
+      "priority": "P3",
+      "title": "DOM bounded traversal eagerly enumerates complete child collections before queue cap",
+      "file": "packages/browser-devtools/src/inspector.ts",
+      "line": 167,
+      "additionalLines": [
+        168,
+        171,
+        172
+      ],
+      "contract": [
+        "packages/browser-devtools/README.md:43-44",
+        "docs/todo/browser-automation-library-reuse.md:81",
+        "packages/browser-devtools/src/inspector.ts:132-134"
+      ],
+      "observed": "Actual callback in Node VM fully enumerated 20000 ordinary light children and 20000 open-shadow children independently at maxEntries=1; output stayed one node/truncated=true.",
+      "controls": "Four-child complete summary, Network mixed response/failure metadata, Performance count/timing projection, existing inspector baseline.",
+      "evidenceLevel": "Actual production inspector callback + fake iterable collection; real HTMLCollection enumeration and Desktop consumers source-only.",
+      "limitations": "No real browser, CSS/layout engine, measured browser latency or memory peak, timeout/hang, complete tool-chain or platform acceptance.",
+      "dedup": "CDP-R3-03 visibility hidden pruning has a different cause and is excluded; no eager collection cap finding found in parsed historical MD/JSON.",
+      "report": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "fixture": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.test.ts"
+    }
+  ],
+  "runs": [
+    {
+      "name": "diagnostics-bounded-projection",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.test.ts"
+      ],
+      "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+      "attempt": 1,
+      "kind": "focused observations and normal controls",
+      "tests": 5,
+      "expectCalls": 20,
+      "skipped": 0,
+      "failures": 0,
+      "exitCode": 0,
+      "guardedCompletionPresent": true,
+      "fixtures": [
+        {
+          "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.test.ts",
+          "bytes": 6140,
+          "sha256": "a9eda34a6f87c31c05527a8f33cd57694db58dce94419ca5d7e7c1547b0460ba"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.first.log",
+      "rawLogSha256": "5a52a23b01c0caba4838b6e344aaecdc80e898f592fa390e115e0cf9838142e4",
+      "exitFile": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.first.exit.json",
+      "exitFileSha256": "8a86da733c1233b252d7dc27abcefdb9928f841178106750e6392429b2d6be13"
+    },
+    {
+      "name": "diagnostics-existing-inspector",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/browser-devtools/src/inspector.test.ts"
+      ],
+      "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+      "attempt": 1,
+      "kind": "existing targeted unit baseline",
+      "tests": 5,
+      "expectCalls": 24,
+      "skipped": 0,
+      "failures": 0,
+      "exitCode": 0,
+      "guardedCompletionPresent": true,
+      "fixtures": [
+        {
+          "path": "packages/browser-devtools/src/inspector.test.ts",
+          "bytes": 5243,
+          "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round10/evidence/diagnostics-existing-inspector.first.log",
+      "rawLogSha256": "64d8c0ac6bf83fa5a295cad2ac563dd4925d3430fa3804fe9c8f9f494b50a5c6",
+      "exitFile": "docs/audit-2026-10-17-round10/evidence/diagnostics-existing-inspector.first.exit.json",
+      "exitFileSha256": "51a73b2f60d1a0d86deded4f3f7bc2db7b3dda2b22dd88b0741813a1eaff65dc"
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 2,
+    "tests": 10,
+    "newFocusedTests": 5,
+    "baselineTests": 5,
+    "expectCalls": 44,
+    "failures": 0,
+    "skipped": 0,
+    "failedShards": 0,
+    "retries": 0
+  },
+  "firstRunPolicy": "Combined raw stdout/stderr and exit receipts were saved before inspection. No failed shard, repairs or reruns.",
+  "staticLookupFailures": "docs/audit-2026-10-17-round10/evidence/diagnostics-static-lookup-failures.json",
+  "scope": "Actual inspector callback through fake injected page and Node VM; no browser/network/CDP/native/tool process, user data or models. Desktop consumer read only.",
+  "sourceManifest": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json"
+}

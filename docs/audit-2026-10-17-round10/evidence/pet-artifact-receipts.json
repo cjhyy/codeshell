@@ -1,0 +1,66 @@
+{
+  "frozen": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "scope": "Own Pet deliverables excluding this receipt itself; no Git mutation or product edits.",
+  "artifacts": [
+    {
+      "path": "evidence/pet-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/pet-dedup-first-metadata-note.json",
+      "bytes": 269,
+      "sha256": "63e2f51bbe8deefced9ca20d46412d94560ca45f481038e2b326058dbb723df4"
+    },
+    {
+      "path": "evidence/pet-dedup.json",
+      "bytes": 55275,
+      "sha256": "0bbab7621b4dcf8da3e990b2a29a4263e8aca466d6e84e2d3776c484b9d32f99"
+    },
+    {
+      "path": "evidence/pet-findings.json",
+      "bytes": 1643,
+      "sha256": "d043784fdb2c92d49a69a38e7b1d7a97c536ea1df177e36bcbad6061c78867bd"
+    },
+    {
+      "path": "evidence/pet-pure-baseline.first-exit.json",
+      "bytes": 813,
+      "sha256": "0c698297f4d969b04f6476d63cc166c50ada486d3051bf903e03d6d246b3d8d1"
+    },
+    {
+      "path": "evidence/pet-pure-baseline.first.log",
+      "bytes": 9368,
+      "sha256": "664e859e2c8a63c0aa284c40cd6a166478cf9fad20596da21cf5732c94af3fb4"
+    },
+    {
+      "path": "evidence/pet-search-display.first-exit.json",
+      "bytes": 280,
+      "sha256": "242f97697eeac64f91422d9665eba578ccbdc0b58a328f18b9167af9a166d628"
+    },
+    {
+      "path": "evidence/pet-search-display.first.log",
+      "bytes": 969,
+      "sha256": "a7b0930e8e513ec1784b04aa28dc95a5e19a797b84b0926c04fcbe5e1beee7a9"
+    },
+    {
+      "path": "evidence/pet-search-display.test.ts",
+      "bytes": 3420,
+      "sha256": "274437f012dbfe5c57c8ce5b895e8264d61232cf0a6de8312b62d9d41266d011"
+    },
+    {
+      "path": "evidence/pet-source-manifest.json",
+      "bytes": 9153,
+      "sha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208"
+    },
+    {
+      "path": "evidence/pet-validation.json",
+      "bytes": 2155,
+      "sha256": "7051d2a82c8b4da12462867a61edf28565ce8f09f8de608d7d471b0e8b4996a0"
+    },
+    {
+      "path": "pet.md",
+      "bytes": 7487,
+      "sha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab"
+    }
+  ]
+}

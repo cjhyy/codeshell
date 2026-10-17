@@ -1,0 +1,28 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "reviewedMain": "3f9fcfdafece38ee21715431e05477201e4e55d4",
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/packaged-appimage-runtime.mjs",
+    "packages/desktop/scripts/packaged-appimage-runtime.test.mjs",
+    "packages/desktop/src/renderer/Markdown.tsx",
+    "packages/desktop/src/renderer/chat/InlineMedia.tsx",
+    "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+    "packages/desktop/src/renderer/digital-humans/DigitalHumansView.tsx",
+    "packages/desktop/src/renderer/nativePath.test.ts",
+    "packages/desktop/src/renderer/nativePath.ts",
+    "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+    "packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx",
+    "packages/desktop/src/renderer/tool-cards/AttachmentCard.native-paths.test.tsx",
+    "packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx"
+  ],
+  "directFindingAndCandidateSourcesMatchFrozen": {
+    "packages/browser-devtools/src/inspector.ts": true,
+    "packages/pet/src/disclosure/search.ts": true,
+    "packages/core/src/run/CheckpointWriter.ts": true
+  },
+  "runtimeRetested": false,
+  "sourceReviewOnly": true,
+  "notes": "Concurrent main changes Desktop native-path/UI labels, AppImage acceptance runtime, CI and docs. No real native/UI/process tests by this audit. Initial current dirty status and all original untracked bytes remain equal."
+}

@@ -1,0 +1,80 @@
+{
+  "scope": "Catalog-owned report/evidence; receipt excludes itself.",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round10/catalog.md",
+      "bytes": 4690,
+      "sha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-cache-existing.first.exit.json",
+      "bytes": 194,
+      "sha256": "2fd197052736628aec3f8a70e5c38cff1f0b715427b2f5d123ffea6d3a350e9d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-cache-existing.first.log",
+      "bytes": 812,
+      "sha256": "e122857bb6b61fe764dc9cfb8040af514bdf1bc5bf1117ea216a3c5ebe7bb128"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-candidates.json",
+      "bytes": 967,
+      "sha256": "e51c944c5e0835ab9ae1561861189be3d4cc8d19923ae940fee430e1b045f120"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-data-controls.first.exit.json",
+      "bytes": 195,
+      "sha256": "ce8f737ce1703b70fa9c8a3610dacdd8db1fca0450069be904daa7c853fe8c47"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-data-controls.first.log",
+      "bytes": 561,
+      "sha256": "fd2e2525cde91f5e22749db22dfe39afd4b62e3a49ad7f8af61e52be8026dd72"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-data-controls.test.ts",
+      "bytes": 3036,
+      "sha256": "e1c6a80a0b3092812db42e8c8c3cbd724622666e5bb8bb8c4a3fbed399acd86f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-initial.json",
+      "bytes": 131658,
+      "sha256": "c903c8a8b1e4ccbd05af0ac28d3dde7848afe920f9c63e1f487d0f80d8443945"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-summary.json",
+      "bytes": 13030,
+      "sha256": "aa542abb6741dfe6588d18fa0f0674aec134451abd4baa87afe3c2e12dfb1737"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-existing.first.exit.json",
+      "bytes": 450,
+      "sha256": "86ea7788b54c70a69989c3617be452c7fcd4bb716c56a5ddb080501329d015dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-existing.first.log",
+      "bytes": 4304,
+      "sha256": "c16caa5561228d76107079123b110158ace4982b26cfcc2e6432523c76c639ee"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-findings.json",
+      "bytes": 83,
+      "sha256": "eda0c478ec5a1e43afe7079794187af5704a08dda9ddc77ff5579d56dd8ec92b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+      "bytes": 7143,
+      "sha256": "1bb1472806c05b9756a18700ef03b8fb8fd785275d2d9bcf4f0e0fde9c971ae1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+      "bytes": 570,
+      "sha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-validation.json",
+      "bytes": 2866,
+      "sha256": "c091a08b73a9296161535afc25de8c4121de6b2e62d8a95041e9ffc5811835f8"
+    }
+  ]
+}

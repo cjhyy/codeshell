@@ -1,0 +1,61 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "count": 3,
+  "priorities": {
+    "P3": 3
+  },
+  "findings": [
+    {
+      "id": "DIAG-R10-01",
+      "priority": "P3",
+      "title": "DOM bounded traversal eagerly enumerates complete child collections before queue cap",
+      "source": "packages/browser-devtools/src/inspector.ts",
+      "line": 167,
+      "report": "diagnostics.md",
+      "reportLine": 5,
+      "log": "evidence/diagnostics-bounded-projection.first.log",
+      "evidenceLevel": "Actual production inspector callback + fake iterable collection; real HTMLCollection enumeration and Desktop consumers source-only.",
+      "limitations": "No real browser, CSS/layout engine, measured browser latency or memory peak, timeout/hang, complete tool-chain or platform acceptance.",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": "direct-source-unchanged-at-reviewed-main",
+      "runtimeRetested": false
+    },
+    {
+      "id": "PET-R10-01",
+      "priority": "P3",
+      "title": "并发搜索超过默认结果上限后静默丢行",
+      "source": "packages/pet/src/disclosure/search.ts",
+      "line": 154,
+      "report": "pet.md",
+      "reportLine": 5,
+      "log": "evidence/pet-search-display.first.log",
+      "evidenceLevel": "production searchSessionTranscripts over owned temporary healthy persisted-format JSON",
+      "limitations": [
+        "Desktop UI/IPC and Sessions forwarding are static only",
+        "No data deletion or unbounded-search requirement"
+      ],
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": "direct-source-unchanged-at-reviewed-main",
+      "runtimeRetested": false
+    },
+    {
+      "id": "PET-R10-02",
+      "priority": "P3",
+      "title": "Unicode 小写扩长后 snippet 不含命中词",
+      "source": "packages/pet/src/disclosure/search.ts",
+      "line": 63,
+      "report": "pet.md",
+      "reportLine": 14,
+      "log": "evidence/pet-search-display.first.log",
+      "evidenceLevel": "production searchSessionTranscripts over owned temporary healthy Unicode message JSON; ASCII prefix control",
+      "limitations": [
+        "Synthetic repeated valid Unicode stress prefix",
+        "Core appendMessage producer checked statically; fixture writes compatible JSON",
+        "UI and Sessions consumers static only"
+      ],
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": "direct-source-unchanged-at-reviewed-main",
+      "runtimeRetested": false
+    }
+  ]
+}

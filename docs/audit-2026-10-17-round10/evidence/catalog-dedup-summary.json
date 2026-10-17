@@ -1,0 +1,254 @@
+{
+  "method": "All prior audit/review/archive/_archive Markdown lines and parsed JSON scalar strings, round10 excluded. Initial hit record preserved; semantic view removes artifact metadata noise only.",
+  "filesScanned": 1054,
+  "corpusDigestSha256": "6a0ac296328a9ffcdca6c30047776197ad9c33c91e886adbc95b76dbd8e25bf1",
+  "hitCount": 523,
+  "semanticHits": [
+    [
+      "docs/bug-review-report-2026-08-13.md",
+      57,
+      "- Model catalog：provider/model/param/option/text/number 全部有 schema 上限；目录文件 4MB 有界；编辑在跨进程锁内重读，备份后缀防路径注入，备份排他创建，保存 owner-only 原子替换。"
+    ],
+    [
+      "docs/archive/core-complete-review.md",
+      2949,
+      "- `llm/model-cache.ts`"
+    ],
+    [
+      "docs/archive/model-catalog-讨论稿.md",
+      103,
+      "- 用户 B:`~/.code-shell/` 下一份 `model-catalog.user.json`(或并入 settings)。"
+    ],
+    [
+      "docs/archive/model-catalog-讨论稿.md",
+      184,
+      "2. 用户自定义条目(B)存哪:独立 `model-catalog.user.json` 还是并进 settings?"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      14,
+      "- ✅ 对**参数**(temperature 等)—— 该 catalog 数据驱动,机制已造好(`applyParams`),只差接线。"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      33,
+      "- `model-catalog/params.ts:16-29` 的 `applyParams(values, params)` 能把**任意 paramValues 按 `wire.field` 写进请求体**(支持深路径如 `thinking.type`)。测试通过。"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      46,
+      "- `model-catalog/types.ts:83` 定义 `shape: \"generic-sync\" | \"fal-queue\"`。"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      67,
+      "| 参数下发(temperature/top_p/max_tokens/thinking) | ✅ 能,机制已造好 | `applyParams` 已实现,只差调用 |"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      77,
+      "### P1 — 接上 `applyParams`(最高价值,基础已就绪)"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      78,
+      "**做什么**:在请求构造时调用 `applyParams(connection.paramValues, preset.params)`,把结果合并进请求体。让 catalog 声明的任意参数真正下发。"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      81,
+      "- 要碰 client 请求构造层(openai.ts），需与现有 sampling 规则(rules.ts 的 rejectedParams）协调 —— `applyParams` 下发的参数仍要过 rejectedParams 过滤,否则给 gpt-5 发 temperature 会 400。**这是设计要点:applyParams 是「按 catalog 下发」,rejectedParams 是「按厂商契约拦截」,两者叠加。**"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      101,
+      "- **关联设计稿**:`docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md`(统一 catalog 原始设计 —— wire/params 机制就是那时埋的口,P1 是兑现它)。"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      116,
+      "- 参数下发机制:`packages/core/src/model-catalog/params.ts:16-29`(applyParams,未接线)"
+    ],
+    [
+      "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+      122,
+      "- shape 定义(零消费):`packages/core/src/model-catalog/types.ts:83`"
+    ],
+    [
+      "docs/archive/core-risk-signal-index.md",
+      75,
+      "| `llm/model-cache.ts` | `catch {`×1, `writeFileSync`×2, `join(`×3 |"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      52,
+      "> - **bug-scan 第一批(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 \"ask\" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      111,
+      "> | `2f83a6c1`(你 merge) | **P1 通用参数下发完成**:extraBody 字段 + applyParams 接线 + openai 注入 + needsKey 贯通(凭证缺失早报错非 401) | — |"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      353,
+      "- EditModelCatalog 工具(`tool-system/builtin/edit-model-catalog.ts`)**零测试**(catalog 库本身覆盖良好):补**未提交的** `summarizeWrite()`(回显 params/options/default,处理 enum/number/无 presets)+ schema 校验穿透 + 错误路径(`saveCatalogEntry` 失败 → `\"Error: …\"`)。"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      381,
+      "- `docs/research-cc-vs-codex-image-handling.md` —— **被源码注释引用**(`packages/core/src/tool-system/mcp-manager.ts`、`engine/image-policy.ts`)。**绝不动**(动路径=源码断链,同 §4.3 model-catalog 教训)。"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      389,
+      "- **Model Catalog**(3 份):留 `2026-06-15-unified-model-catalog-design.md`。⚠️**原建议「归档 2026-06-11」已撤销**:经 grep,`2026-06-11-model-catalog-design.md` 仍被 `packages/core/src/model-catalog/builtin.ts`、`types.ts` 的源码注释 + 06-15 设计稿引用,归档会留断链——保留为活 rationale。**注意还有本仓最新的 `5f1cf56d`「删 legacy 模型存储·全量切 catalog」设计稿**,应作为该簇的最新落地稿对齐。"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      520,
+      "| model catalog resolve/merge | 干净(id Map 去重 user 覆盖 builtin 恰一次·corrupt 档降级不污染) |"
+    ],
+    [
+      "docs/archive/beta-prep-audit-2026-06-23.md",
+      575,
+      "| model-catalog resolveInstance + 默认选择 | 干净(亲核,补 agent review):baseUrl 回退 `inst??cred??entry.defaultBaseUrl`(末项 schema 必填恒非空)·cred 缺→apiKey undefined→client resolveApiKey 兜底·entry 缺→null caller skip·paramValues??{};**stale `defaults.text`(指向已删连接)经 `pool.list().some(key===defaultText)` 存在性检查才用**→否则落 activeKey→model-name 三级 graceful 回退,不破池。68 测 |"
+    ],
+    [
+      "docs/review-remaining-2026-10-12/core.md",
+      93,
+      "| model-catalog | 8/9 | Pricing/model identity consumers inspected, no dedicated review. |"
+    ],
+    [
+      "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      129,
+      "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。"
+    ],
+    [
+      "docs/archive/architecture/03-module-map.md",
+      31,
+      "| [`src/data`](../../src/data) | Static and synced model catalogs | `static-catalogs.ts`, `openrouter-sync.ts`, JSON catalogs |"
+    ],
+    [
+      "docs/archive/architecture/09-build-test-ops.md",
+      126,
+      "- `sync-models` is part of build, so network/model catalog failures can affect publishing."
+    ],
+    [
+      "docs/archive/architecture/05-state-config-storage.md",
+      105,
+      "- [`model-cache.ts`](../../src/llm/model-cache.ts) for cached catalog data;"
+    ],
+    [
+      "docs/archive/architecture/05-state-config-storage.md",
+      108,
+      "`ModelPool.reloadCachedContextWindows()` patches model entries with cached context lengths when available."
+    ],
+    [
+      "docs/archive/architecture/07-llm-model-layer.md",
+      98,
+      "- [`model-cache.ts`](../../src/llm/model-cache.ts)"
+    ],
+    [
+      "docs/archive/core-modules/engine.md",
+      26,
+      "| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params). |"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      1,
+      "# model-catalog"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      18,
+      "| `params.ts` | `applyParams` (param values → request-body fields via `wire.field`, dotted paths nest) and `buildParamsDoc` (param specs → natural-language note for the tool description). |"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      29,
+      "function userCatalogPath(): string;             // ~/.code-shell/model-catalog.user.json"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      54,
+      "function applyParams(values: Record<string, unknown>, params: ParamSpec[]): Record<string, unknown>;"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      67,
+      "import { getMergedCatalog } from \"../model-catalog/index.js\";"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      68,
+      "import { resolveInstance, type ModelInstance, type Credential } from \"../model-catalog/resolve.js\";"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      82,
+      "import { getMergedCatalog, findCatalogEntry } from \"../../model-catalog/index.js\";"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      83,
+      "import { genInstancesFromConnections } from \"../../model-catalog/gen-connections.js\";"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      94,
+      "import { userCatalogPath } from \"../../model-catalog/index.js\";"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      95,
+      "import { saveCatalogEntry } from \"../../model-catalog/save-entry.js\";"
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      105,
+      "- **User file is best-effort, never fatal.** `loadUserCatalog` returns `[]` (and logs `model_catalog_user_invalid`/`model_catalog_user_read_failed`) on a missing, malformed, or schema-invalid file — a bad user file must never break `BUILTIN_CATALOG`."
+    ],
+    [
+      "docs/archive/core-modules/model-catalog.md",
+      109,
+      "- **Per-param divergence lives in data, not `if` branches.** `wire.field` decides where a param lands (e.g. reasoning → `reasoning_effort` on OpenAI vs `thinking.budget_tokens` on Anthropic); `applyParams` supports dotted paths that nest. Params are declared per-entry-per-model on `modelPreset.params`."
+    ],
+    [
+      "docs/archive/core-modules/data.md",
+      3,
+      "**One-line role.** Bundled JSON model catalogs (OpenRouter snapshot + hand-maintained per-provider tables) plus the lazy loaders that read them at runtime."
+    ],
+    [
+      "docs/archive/core-modules/README.md",
+      3,
+      "core 是无界面的引擎包(`@cjhyy/code-shell-core`),被 tui 与 desktop 两个宿主共享。整套代码约 32 个模块、~64k LOC。整体大致按层次铺开:最外层是 **protocol/transport**(进程边界的线协议与传输);往里 **engine** 驱动整个 turn loop;每一轮真正干活的是 **tool-system + llm + context**;**session/run** 负责落盘与生命周期持久化;**settings/capability-control/prompt** 负责配置与裁剪;**plugins/skills/hooks/credentials/model-catalog** 负责扩展能力;最上层是 **arena/automation/remote** 这类更高级的功能特性。"
+    ],
+    [
+      "docs/archive/core-modules/README.md",
+      30,
+      "- **[model-catalog](./model-catalog.md)** — model catalog (built-in + user.json), instances, apiKeyRef, paramsDoc"
+    ],
+    [
+      "docs/archive/core-modules/llm.md",
+      25,
+      "| `capabilities/param-specs.ts` | `paramSpecsFromCapability` — projects a capability into model-catalog param specs. |"
+    ],
+    [
+      "docs/archive/core-modules/llm.md",
+      30,
+      "| `model-cache.ts` | `readCache`/`writeCache`/`isStale`/`defaultCacheDir` — on-disk model-list cache. |"
+    ],
+    [
+      "docs/archive/core-modules/llm.md",
+      75,
+      "  reloadCachedContextWindows(): void;"
+    ],
+    [
+      "docs/archive/core-modules/llm.md",
+      113,
+      "pool.reloadCachedContextWindows();          // backfill context windows"
+    ]
+  ],
+  "alreadyRecorded": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md:129"
+}
