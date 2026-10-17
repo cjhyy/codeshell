@@ -1,0 +1,37 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "cleanRuns": 0,
+    "failedRuns": 0,
+    "pass": 0,
+    "fail": 0,
+    "skipped": 0,
+    "expect": 0,
+    "existingTests": 0,
+    "focusedTests": 0
+  },
+  "staticSourceCounts": {
+    "files": 5,
+    "lines": 3081,
+    "authOperationExpectations": 4,
+    "serviceWorkerOperationExpectations": 11,
+    "subagentCaseExpectations": 8,
+    "existingTestDeclarations": 17
+  },
+  "metadataOnlyReceipts": [
+    "evidence/browser-scenes-dedup-first.exit.json"
+  ],
+  "scope": "Full static five scene/test sources only; no fixture/import/browser/server/process/SDK/model/network/auth/permission/security/custody/realHOME/VM/AST/unit or native experiment.",
+  "limits": [
+    "4/11/8 scene and17test declarations are expectations, not tests run/passed.",
+    "Success/failure/cleanup/receipt dataflows static only, not guarantee of arbitrary error or actual platform outcomes.",
+    "Shared helper internals handled separately; source hash checks not semantic or runtime proof.",
+    "No old failure recovery, no prior browser acceptance added to current counts, no build/lint/typecheck/fullsuite/E2E."
+  ]
+}

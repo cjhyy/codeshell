@@ -1,0 +1,191 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "sourceChecks": [
+    {
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "sha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+      "sha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "sha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+      "sha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-observe.ps1",
+      "sha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-app-integrity.mjs",
+      "sha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "sha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/run-packaged-ui-acceptance.mjs",
+      "sha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-local-package.mjs",
+      "sha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "currentMatchesFrozen": true
+    }
+  ],
+  "reportLinks": [
+    {
+      "reference": "evidence/windows-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-source-manifest.json",
+      "exists": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L29",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L157",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L52",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L285",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L175",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L257",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/smoke-windows-nsis-install.mjs#L622",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L319",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/smoke-windows-nsis-install.mjs#L677",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/windows-nsis-acceptance.mjs#L270",
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/smoke-windows-nsis-install.mjs#L357",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/smoke-windows-nsis-install.mjs#L744",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/e2e-ui-packaged.mjs#L94",
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../../packages/desktop/scripts/smoke-windows-nsis-install.mjs#L389",
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../todo/release-real-operations-2026-10-16.md#L315",
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "evidence/windows-dedup.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/windows-dedup-decisions.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup-decisions.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/windows-validation.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-validation.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/windows-contract-review.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-contract-review.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/windows-selected-history.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-selected-history.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-author-receipt.json",
+      "exists": true
+    }
+  ],
+  "jsonParseErrors": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "productReruns": 0
+}

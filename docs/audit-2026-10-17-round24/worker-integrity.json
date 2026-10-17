@@ -1,0 +1,328 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "artifactChecks": [
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/workflow-fixture-report.md",
+      "sha256": "4370e27fb9cb86dd8939dfe3b67181b341d25d42373d628b4d6387dd97f8c59c"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-candidates.json",
+      "sha256": "82ebb0b7102072855ab598af6d3257414b3365b7d12cf3b64067f7825a0d35c8"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-dedup-decisions.json",
+      "sha256": "bea4566c57ac8ae3bdf67ea912efee04ce56635e827415acb5229650ff7da480"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-dedup.json",
+      "sha256": "7c8a21fc1361b6ca7385a26ef03ddeaa6429047e2d55ebda8d6a69ad4fb5a37b"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-dedup.py",
+      "sha256": "0bada4b8fa1a87b948a13aefd2782e0cacd1ab667781f3b61bb7bc6ba0a96583"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-findings.json",
+      "sha256": "f93dea99a884a3dd71048b141cf9bac573aac70516b891e716dd75421bd2a060"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-metadata-notes.json",
+      "sha256": "dc37395d310934e868c1c68fd3333205d8065a582fefb2643830e0646f6b2599"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "sha256": "05cac3927bd8b1ebbdcd7a063d97cc815de8e084fc311e2b03f3b0d044d44c71"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-related.json",
+      "sha256": "798b0ceb3e8b49b4007dc5e60123747dc3f5d5e54489eeaf66251386a6b08c72"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "sha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.py",
+      "sha256": "54da793f30208b30dc2feff640f3fde2ed41005788a83233b4befe0af0e39ada"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-source-manifest.json",
+      "sha256": "07a591f90f098819ce39d0febf661ef42ccfe11b1abc94ec21577bd4101eef1a"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-target-inventory.json",
+      "sha256": "e4bd681ea1f19820c31871d8438944fddd8386ef22f17442f46f2ca787426ab6"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/artifacts.json",
+      "sha256": "b4a65f7e1be3c8e9bd9e7fcc7c7b2168a3c4e83b4e0432517d1c964e82f172a7"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/dedup.py",
+      "sha256": "84f48a9715413de84d3c74fc122bc95eda648727033cfbd0318067710ea604ee"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "sha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "sha256": "f46c47265d8ac8dda06459c94d119f936845559f6bdb9d6e3f8912c66aff44aa"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/metadata-notes.json",
+      "sha256": "b3984a1917afb8e07751fa7dc7437d3b62e209388339281309452b55a87a54ab"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "sha256": "89fdf5f5001defd71cb4e20866240873835d1aefbb4bee3f8f8a0d34c65459dd"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/proposal.json",
+      "sha256": "e50425ef22d7b4467370f829d54afa5ea8c2581a26e67462ee607db62752a4f8"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/selected-history.json",
+      "sha256": "fc53daa4febca616539d857110fa9d22d06541b8ef463bab57130bdf4f41b926"
+    },
+    {
+      "receipt": "root-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-candidates.json",
+      "sha256": "82ebb0b7102072855ab598af6d3257414b3365b7d12cf3b64067f7825a0d35c8"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-contract-review.json",
+      "sha256": "5b49644ab63ff6d7b768c09f0bbbfc5c2402c8192222bb224cd2248d267a8891"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup-decisions.json",
+      "sha256": "0c1e861c8db49e0adc8190b917220ce201697ed352c673696b7fa6637fee05c2"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+      "sha256": "2f97179bed408b25a03e1e9bea557a2f261b005b2ba8f778c53d178b2ab4338a"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.py",
+      "sha256": "195fd8e431c46b0ebaa1f013a397425f0f1f9ad2726a60fb0f408aa646abce0e"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-findings.json",
+      "sha256": "f93dea99a884a3dd71048b141cf9bac573aac70516b891e716dd75421bd2a060"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-metadata-check.json",
+      "sha256": "f0e4cadbcb87024740d775c90eb7081cdcce43ba7e04baa4432a229cd9dca154"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-metadata-notes.json",
+      "sha256": "1c870407360ceebe491be6cc4517dac4c7ed8a8073c3870ea5f78b78be3117a5"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-receipt.py",
+      "sha256": "bb80855736e81bf0a5940895cef2a958a2d6d8d7b81c027ea937b9b39ad5f837"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-related.json",
+      "sha256": "350f17986969465c7c08cc477b6d45529dffc2c6aed87f8263bc0634e2eb67cb"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-selected-history.json",
+      "sha256": "5744f067d7dc27c6d112d7290138caae2e2e6b64480967944412d8a892a67a1e"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-source-manifest.json",
+      "sha256": "3ee0c73bd98cda60efaad44f8095640491ed64b93a2ba3f81614fce4e3c568ed"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/windows-validation.json",
+      "sha256": "a23eb5b818e41f6f39b41ff63124802d5c448ecd7e8e75b8c68463afcbbbcdce"
+    },
+    {
+      "receipt": "windows-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/windows-report.md",
+      "sha256": "7bb799fe2796b8fb9b8e2a5abb08d563cc1893dd56ccd1b70e715d6d01b4e1fc"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/browser-helpers-report.md",
+      "sha256": "1c9a7532e2345e31f1422f4b785d024f31921e892a1aaa69608559acd3f11251"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-candidates.json",
+      "sha256": "2a77756a74d2682c1327e46d6b02c2a40fbf133ab3ff2aa15c952b65f00383b4"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup-decisions.json",
+      "sha256": "969f65e4f28d592362e407a58ae5cecf982fa7d793296ba7c6c15a1bf4e5ada5"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.json",
+      "sha256": "e69964ea9c28ece5679c46e73689709290de169ff00c8b53ad3746c8615f632d"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.py",
+      "sha256": "dc054a244a82574c06e71ba31fa516085416a76bd236b4474e614533b50f7e56"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-findings.json",
+      "sha256": "dac8418f6d871145d3288b8a4eaef35654a80692d0c93115bd861bf1dd0066e8"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-history-selected.json",
+      "sha256": "ca2c6ae9e3cf8c5e5356756759b09552e5ff97bf16652708fdfd8daf72e35a0e"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-metadata-notes.json",
+      "sha256": "96805d6ca54f032553e67d2ebfccc290005deddd2f7d06537b581fb8192b3c8a"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-related.json",
+      "sha256": "9cb747ac0de8ec7e6205060a85c6d5472f7bfe12746ca61de2c772eb6630e949"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-source-manifest.json",
+      "sha256": "df9944c10e68b7c45be25cf572519b71b17a9475afd1c1523720eef7b663a4cc"
+    },
+    {
+      "receipt": "browser-helpers-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-validation.json",
+      "sha256": "5cc8fc3cba29615fd65fb315cca3cf3b95ec6c9777f51771ff12eba529481654"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/browser-scenes-report.md",
+      "sha256": "f17cd1eb7ff0735cd22249509b247b02c923e2e92e299dc3f9d8d4243c96166e"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-assemble.py",
+      "sha256": "2fd7a778c72981e47abea562a90fab6ad7a6be0c166bf3584304e2a89df59fb8"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-decisions.json",
+      "sha256": "37e7e44dedd3fbbbb8c209131e868c0e4288c4b9285cc62319765c442607eed8"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-first.exit.json",
+      "sha256": "2c826c75d721f685fcd38d0597de9fb61f443551c8eba03ed05397a383fd4fe6"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-first.txt",
+      "sha256": "05b84bfeed864afd9e624ed7c806ea19b27e93918e7b85c4efda73153722e649"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+      "sha256": "5d68a33d710902998e4bc9b5a28c905ac9694bf2a5d1fb6563167b003a7a0fa9"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.json",
+      "sha256": "11b4082dcb4264f555019a1cde72b7ccdcf9ab63200d214825a06451f7cf7c9a"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.py",
+      "sha256": "ee48a6c169fcd2a109af4754c4c1d034a199703c5100599c0477e77138281138"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-metadata-notes.json",
+      "sha256": "c77aec26bb2d17b0c37b75824274f25d50e2a71074044d9c1aef7b0e2947a168"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-navigation.json",
+      "sha256": "af38546c7c417ffd8d9e0d6122520ccbb67c110e0fff044a669e87e4b2adb1a0"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-prior-navigation.json",
+      "sha256": "35adaefaf24d601449dced4953e23b67c5e694b2a4014b9279e211cb82a1c7e8"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-source-checks.json",
+      "sha256": "abe89b3bd15d7f6dacc5340baceea07a6d2053d2f0d99023883cff9986277a00"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-source-manifest.json",
+      "sha256": "8265882c55e7d87364f7102679a67c6b06d64ecf5556b1acbabfbe770b8086b8"
+    },
+    {
+      "receipt": "browser-scenes-author-receipt.json",
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-validation.json",
+      "sha256": "406bbb22f9b16e4be3be6c0b36f834c04580208b7b7656abcb6250eb2e94a2b3"
+    }
+  ],
+  "sourceCheckCount": 43,
+  "prepHashOnlyCheckCount": 135,
+  "productTestsRerun": false
+}

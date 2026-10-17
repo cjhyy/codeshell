@@ -1,0 +1,13 @@
+{
+  "kind": "Manual firstresponse metadata transcription,not original product log",
+  "firstError": {
+    "command": "Root initial in-memory assembly after prep copy/hash revalidation",
+    "exitCode": 1,
+    "error": "AssertionError",
+    "stdinLine": 34,
+    "reason": "release-real-operations selected command bound1156 exceeded actualEOF1155 byone;source bytes allmatch frozen"
+  },
+  "correction": "Only metadata range changed1130-1155;all13actual frozen/current byte flags rechecked. No product/fixture/test/runtime ran or reran.",
+  "fetch": "Initialsession63586 polledsamehandle exit0; finalfetch separate receipt/plan",
+  "productAttempts": 0
+}

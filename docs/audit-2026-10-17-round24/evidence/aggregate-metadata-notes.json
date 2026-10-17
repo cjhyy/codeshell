@@ -1,0 +1,32 @@
+{
+  "type": "Aggregate metadata provenance correction",
+  "firstObservation": "Independent reviewer found previousRefresh shallow copy had shared nested changedSelectedSources/readScope; release e754 SHA overwritten by70 current value and second-refresh scope inserted.",
+  "corrections": [
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "before": {
+        "mainSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+        "mainBytes": 33037
+      },
+      "after": {
+        "mainSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+        "mainBytes": 33037
+      }
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "before": {
+        "mainSha256": "3a8e251255d41687f76056ed3aaacd75726f213b1b8d533b1ad4c2305e9a35d9",
+        "mainBytes": 150208
+      },
+      "after": {
+        "mainSha256": "64df6ba66611c30888a4862af1f35c653bafdc3795aed96a04cc7067433094fb",
+        "mainBytes": 143430
+      }
+    }
+  ],
+  "previousReadScopeCorrection": "Removed only Secondrefresh entry from previousRefresh.readScope; current/frozen/source-author pins unchanged.",
+  "productAttempts": 0,
+  "productReruns": 0,
+  "sourceChanged": false
+}

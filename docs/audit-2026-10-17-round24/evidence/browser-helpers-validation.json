@@ -1,0 +1,30 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "runs": [],
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "totals": {
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "runtimeImports": 0,
+    "constructorCalls": 0,
+    "cleanRuns": 0,
+    "failedRuns": 0,
+    "pass": 0,
+    "fail": 0,
+    "skipped": 0,
+    "expect": 0,
+    "existingTests": 0,
+    "focusedTests": 0
+  },
+  "scope": "Static source/metadata only. No product/test/browser/native/process/HOME/network/model/SDK/CLI/auth/custody/security/identity experiment; no fixture/mirror/capture stub. Git read-only blob SHA checks are audit metadata, not execution of verifier/runtime Git path.",
+  "historicalOnly": "Prior Node64 tests (including38custody9resolver) and31browser behaviors/negative2pass6fail are old records, not current runs.",
+  "notVerified": [
+    "OS process identity, signaling, clean shutdown and true descendant completeness",
+    "Actual browser registry metadata/executable/binary layout/current OS compatibility",
+    "Actual failure-retention profile/receipt/tmp paths and final-write outcomes",
+    "Whole SW/Auth/subagent scenarios, full watchdog snapshot/custody graph",
+    "Any current browser, security or authority acceptance"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "history": {
+    "files": 2375,
+    "markdown": 1223,
+    "json": 1152,
+    "stringLeaves": 370703,
+    "scalarLeaves": 523455,
+    "parseErrors": 0
+  },
+  "matches": {
+    "workflowSource": 13,
+    "fixtureSource": 6,
+    "sourceIntegrity": 2,
+    "shutdownExact": 1,
+    "uiScript": 2,
+    "retentionContext": 490
+  },
+  "contextCap": 100,
+  "decisions": [
+    "Workflow/fixture hits mainlyinventory/mainrefresh and releaseparent,not independentnewbug.",
+    "KnownWeb finalreport afterHOMEremove explicitlyprior250-313,no newclassification.",
+    "Signaldiagnostics requests notOSdeliveries;truncated flag preserveslimit.",
+    "Genericsettle canCleanup authority notuniversal allassertion retention;existing3rdtest explicitlyattemptscleanup withprimaryerror.",
+    "UI latepostchecks ordering isstatic observation only, no new ordinaryfailure or universalretentioncontract.",
+    "Workflow diagnostic sourceprints/artifactpatterns notindividual existence/assertion or actual CI proof.",
+    "Packageprep135pins arehash-only/provenance,no newdist/SDK/type smoke."
+  ],
+  "limitation": "retention490matches cap100;otherpatterns allsaved. Bounded keywordcontext notsemantic exhaustion.0productattempts."
+}

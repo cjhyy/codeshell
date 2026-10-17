@@ -1,0 +1,62 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "show",
+        "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272:packages/web/scripts/test-auth-boundary-browser.mjs"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 38352,
+      "stdoutSha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272:packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 11184,
+      "stdoutSha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272:packages/web/scripts/test-service-worker-browser.mjs"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 27094,
+      "stdoutSha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272:packages/web/scripts/test-service-worker-browser.test.mjs"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 8518,
+      "stdoutSha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272:packages/web/scripts/test-subagent-state-browser.mjs"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 32008,
+      "stdoutSha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "stderr": ""
+    }
+  ],
+  "sourceChecks": 5,
+  "sourceBytesChanged": false
+}

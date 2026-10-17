@@ -1,0 +1,17 @@
+# Root 静态审查 QC
+
+前一 goal turn 为 progress：新增 public cwd API 配置缺口、独立静态复核与13项其它叶子控制已记录并提交 c9056c804。当前轮继续全仓目标，未重定义为只审几个容易通过的叶子；实际转向此前未深审的近期验收脚本，19主目标7776行全文静态，另release history选读。没有真实程序/import/fixture/测试、native/浏览器/authority或构建执行；0运行不能冒充通过。
+
+当前分类0formal/0candidate/0related。Root读完整workflow580、packagedfixture493、signal28/test42；额外helper/测试全文及UI/updater/Pet selected收尾给出正常反证。Windows5文件2041、helpers5文件1511、scenes5文件3081均按作者明确阅读范围，17测试声明、4/11/8操作矩阵与其它旧验收统计不加成本批测试。Root全历史与各分审同一读数2375/370703strings/523455scalars，有界context上限分开，未作语义穷尽结论。
+
+四份作者 source manifest共43条校验（Root13+Windows11+helpers14+scenes5），含重复/额外依赖/历史资料，不等于43独立新运行。package prep135pins仅hash/provenance重核；8原artifact+第9原receipt copy保留，不扩张阅读。Root22+Windows14+helpers11+scenes17=64作者材料hash，作者report最终修订后刷新；review和aggregate材料由最终索引单独覆盖。每个源码SHA绑定冻结Git blob，current flags仅表示作者读时快照。
+
+交叉review分别核windows、helpers、scenes与Root source/normalproducer/范围。UI在settlement后有postcheck、genericcleanup可在错误仍保留时获准，这是scope差异而非未证的新实际失败；已有第三个shutdown测试支持这个合同。signal诊断仅请求，不声称送达；负例矩阵不独证失败原因；旧Web report-after-removal不重新定级。没有为了凑新bug或测试数制造无普通producer的异常输入。
+
+Root初次元数据汇总 range上界1156超发布文档实际EOF1155，触发AssertionError；所有13源码bytes仍同冻结，已只修范围并留下首响应转录，不重跑产品。Source anchors62/422和Gitwrite归属措辞在交叉review前后对齐并刷新作者hash；Root Git写用于隔离审查文档和集成，不笼统说主审0Git写。其它显示截断/metadata导航范围由作者notes明确。
+
+初始fetch session63586、结束fetch13448均确认running后使用同handle读至exit0；没有restart。并行main新增5commits含merge、7paths到e7543，原dirty除HEAD外逐项一致。Root已FF latestmain；两个选定file（workflow/releasehistory）发生预期9/125插入，main-source-review列old/newSHA，作者frozen不篡改。Final verifier按frozenSHA核旧Git blob、currentSHA/mainSHA核最新文件/主线；不强行要求known2changes仍等旧SHA，也不把新5个非选定script算已审或已运行。
+
+最终verify检查索引文件全集/bytes/hash、172unique pins的frozen/current/main各自SHA、作者收据、MD本地链接/行号及零执行分类。暂存集合与cachedblob、full/nonlog whitespace、commit/主checkout逐字节与dirty快照最终核验保存在本批独占/tmp收据，不修改用户删除或本地资料。保持目标active、独占worktree继续使用，不push，不声称全仓完成。
+
+第二次结束刷新：新增2commits/2paths到70d2e，累计7commits/7paths；workflow差异仍+9，release history累计+214。读第二段docdiff前112输出行，Review test变化不作新全文审查/新运行/新bug。main-source-review保存previousRefresh，Root作者报告追加时点并刷新原22artifact收据；不更改冻结作者SHA。primary原dirty仍仅HEAD改变。

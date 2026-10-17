@@ -1,0 +1,108 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "findings": 0,
+  "candidates": 0,
+  "related": 0,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "checks": [
+    {
+      "scope": "launch/source",
+      "staticEvidence": "gate before product observation; HEAD/clean/buildreceipt source checks",
+      "source": "smoke-windows-nsis-install.mjs:291-318",
+      "limit": "finite environment refusal, notVM attestation",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "preflight",
+      "staticEvidence": "complete expectedregistry/path/absent/noApp predicates",
+      "source": "windows-nsis-acceptance.mjs:126-173",
+      "limit": "snapshot only; noOS immutable-state proof",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "build/payload",
+      "staticEvidence": "production NSIS config and pinned helper-only payload delta",
+      "source": "smoke-windows-nsis-install.mjs:428-578",
+      "limit": "builder and NSIS actual behavior unexecuted",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "process verdict",
+      "staticEvidence": "root fullbirth/parent/PID plus0exit/no signal/no recordedcleanup/complete cleanedsettlement",
+      "source": "windows-nsis-acceptance.mjs:285-317",
+      "limit": "observed identities only, noallOSdescendant claim",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "installedregistration",
+      "staticEvidence": "exact registration/shortcuts/defaultpaths/cache and payload+uninstaller",
+      "source": "windows-nsis-acceptance.mjs:175-222,257-266",
+      "limit": "Windows API behavior notindependently executed",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "UI verdict",
+      "staticEvidence": "controller plus receipt actions/Main/guard/transport/bytes/removedHOME",
+      "source": "smoke-windows-nsis-install.mjs:622-653; windows-nsis-acceptance.mjs:319-383",
+      "limit": "no runtime or peroperationstatus assumption",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "replacement",
+      "staticEvidence": "first identity/UI thenownedmarker, replace, marker absent,secondidentity/UI",
+      "source": "smoke-windows-nsis-install.mjs:655-676",
+      "limit": "samebuild/freshHOME only, no userdata migration",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "uninstall",
+      "staticEvidence": "pinexact copied uninstaller and fixedtail; installabsence/initialregistry/shortcuts",
+      "source": "smoke-windows-nsis-install.mjs:677-701",
+      "limit": "noinstaller/uninstaller operation performed",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "cache",
+      "staticEvidence": "absentbefore/sole plaininstaller.exe/setuphash thenexact cleanup andfinalpreflight",
+      "source": "smoke-windows-nsis-install.mjs:702-743",
+      "limit": "noforeigncache authority or parentdeletion claim",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "failure/final",
+      "staticEvidence": "syncfirsterror before cleanupawait; nolaterstagecompensation;finalintegrity/status/recordingchecks",
+      "source": "smoke-windows-nsis-install.mjs:357-406,744-780",
+      "limit": "rawreceipt alone cannotreplaceprocess exit status",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "actionproducer counterevidence",
+      "staticEvidence": "step onlypushes actionafterawait succeeds, receipt status fromresult.errors andthrows onerrors",
+      "source": "e2e-ui-packaged.mjs:94-101,444-477",
+      "limit": "selected actualproducer static, nofakebadreceipt",
+      "runtimeVerified": false
+    },
+    {
+      "scope": "CIcounterevidence",
+      "staticEvidence": "directWindowsdriver and pipefail while contracts separately guarded",
+      "source": "desktop-ui-acceptance.yml:237-242,426-431",
+      "limit": "no CI dispatch or acceptanceexecution",
+      "runtimeVerified": false
+    }
+  ],
+  "rejectedPromotions": [
+    {
+      "claim": "UI action rows lack individual status so failedactions canpass",
+      "reason": "Actualselected step pushes onlyafter awaitsuccess; finalerrors also controlstatus/throw; noordinarycounterexample."
+    },
+    {
+      "claim": "Savedstatus passed alone provesuccess",
+      "reason": "Driver/normalprocess/childreceipt/pipefail require independentprocesssuccess andfinalgates; receiptstatus notentirecontract."
+    },
+    {
+      "claim": "Environmentabsence checks proveVM isolation orallOSdescendants",
+      "reason": "Sourceexplicitly disclaims those strongerclaims; no experiment attempted."
+    }
+  ]
+}

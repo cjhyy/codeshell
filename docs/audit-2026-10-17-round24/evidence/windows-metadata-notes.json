@@ -1,0 +1,10 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "productReruns": 0,
+  "metadataFailures": [],
+  "notes": [
+    "No targetmodule/test/PowerShellimportorexecution. Metadatatools usedcat/sed/rg/Pythonstandardlibrarypath/hash/JSONandreadonlyGitfrozenblobchecks only.",
+    "mechanismregexcontains caseinsensitiveNSIS that matchesordinaryconsistencywordnoise. Full7exact/44mechanismoccurrences arepreserved; notnoveltyorissuecounts.",
+    "Priorcontractdocumentselectedonly; external /tmp raw/CI artifacts listedthere werenotread,executed or reattributed."
+  ]
+}

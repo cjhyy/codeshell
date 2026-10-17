@@ -1,0 +1,212 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "files": [
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "bytes": 32518,
+      "sha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "scope": "Full static;3contiguous chunks;no CI/action execution",
+      "selectedLineRanges": [
+        [
+          1,
+          580
+        ]
+      ],
+      "lineCount": 580,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-pet-fixture.mjs",
+      "bytes": 19848,
+      "sha256": "690ae8907676c70adf984bae4777143c2f99a8cb6ab388c5c4cff7e64a55d23b",
+      "scope": "Full static;2contiguous chunks;no import/native/browser/identity/watchdog/FS",
+      "selectedLineRanges": [
+        [
+          1,
+          493
+        ]
+      ],
+      "lineCount": 493,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-signal-diagnostics.mjs",
+      "bytes": 927,
+      "sha256": "e42129f3b612d567d60a4dfd077b96feb209102fc94360aefb6988e32f9c6d20",
+      "scope": "Full static;request-intent diagnostics only,no signal/callback experiment",
+      "selectedLineRanges": [
+        [
+          1,
+          28
+        ]
+      ],
+      "lineCount": 28,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-signal-diagnostics.test.mjs",
+      "bytes": 1601,
+      "sha256": "fb569026f6edb5c53c03a5b3094e17507362cf2ec909c41b3504fd1448ffe2e8",
+      "scope": "Full static;2Node declarations unexecuted",
+      "selectedLineRanges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "lineCount": 42,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "scripts/check-workflow-test-paths.mjs",
+      "bytes": 2487,
+      "sha256": "ad6e11576534eeb568a5cdb6c0d5e90c24849fc5136aa1733514948c588e4710",
+      "scope": "Full static;prior baseline acknowledged,not run",
+      "selectedLineRanges": [
+        [
+          1,
+          59
+        ]
+      ],
+      "lineCount": 59,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "bytes": 18779,
+      "sha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "scope": "Selected source close/step/final only,no fixture/runtime",
+      "selectedLineRanges": [
+        [
+          1,
+          150
+        ],
+        [
+          395,
+          477
+        ]
+      ],
+      "lineCount": 477,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-updater-packaged.mjs",
+      "bytes": 15652,
+      "sha256": "4afe203b6cbff51f1c31702f7b6dd5d9306c69e58160a321a835a4b4e2fa7ee9",
+      "scope": "Selected close/final gates,no updater/native/runtime",
+      "selectedLineRanges": [
+        [
+          130,
+          170
+        ],
+        [
+          330,
+          399
+        ]
+      ],
+      "lineCount": 399,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-pet-packaged.mjs",
+      "bytes": 22005,
+      "sha256": "867f01af753a341eeac9d0fb7d8f14ac01623ba5b4ad836191995a34fc76325e",
+      "scope": "Selected catch/settlement/receipt plus bounded literal status references,no runtime",
+      "selectedLineRanges": [
+        [
+          485,
+          570
+        ]
+      ],
+      "lineCount": 570,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-process-exits.mjs",
+      "bytes": 2780,
+      "sha256": "065b6783c10397c8ee43cf609c33d3b80d6aec9a78d008c2782ca82607cd575c",
+      "scope": "Full static,no exit-proof/identity/FS runtime",
+      "selectedLineRanges": [
+        [
+          1,
+          78
+        ]
+      ],
+      "lineCount": 78,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-pet-shutdown.mjs",
+      "bytes": 1113,
+      "sha256": "0f5fdb9365abb5cfad30d26f2a2a6375dcae88a3eb8de7b1167b8dbab88b044a",
+      "scope": "Full static,no callback/cleanup/error injection",
+      "selectedLineRanges": [
+        [
+          1,
+          44
+        ]
+      ],
+      "lineCount": 44,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-pet-shutdown.test.mjs",
+      "bytes": 2372,
+      "sha256": "b7d3599fe36275461e703953f4591a68d7bc41af4e8e80354fd3546b0b3a20b5",
+      "scope": "Full static;3Bun declarations unexecuted",
+      "selectedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "lineCount": 74,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "bytes": 134232,
+      "sha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "scope": "Selected prior contract/history;last sed request1156 naturally ended at EOF1155,not new execution;plus bounded rg snippets",
+      "selectedLineRanges": [
+        [
+          250,
+          315
+        ],
+        [
+          1052,
+          1076
+        ],
+        [
+          1130,
+          1155
+        ]
+      ],
+      "lineCount": 1155,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "bytes": 6327,
+      "sha256": "c699204f70c8f9f4dbc040d6cd56f7ac7c6d818042df7060e25964240badd44d",
+      "scope": "Full prior selection metadata;not current snapshot or authority",
+      "selectedLineRanges": null,
+      "lineCount": 112,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  ],
+  "note": "4primarytarget fullstatic1143lines;extra helpers limited scope;135prep checks not new reading. Corrected metadataEOF bound only,0product runs."
+}

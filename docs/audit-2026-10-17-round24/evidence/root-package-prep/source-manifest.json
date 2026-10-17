@@ -1,0 +1,1088 @@
+{
+  "frozenComparisonBase": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "initialReadHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "currentHead": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "sources": [
+    {
+      "path": "docs/architecture/12-package-boundaries-and-release-units.md",
+      "bytes": 23643,
+      "frozenSha256": "0f09b9775a6248936d3e47f9b8a0d7845735c03dee78dfc682cf1e8cef5e0308",
+      "currentSha256": "0f09b9775a6248936d3e47f9b8a0d7845735c03dee78dfc682cf1e8cef5e0308",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "bytes": 2847,
+      "frozenSha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "currentSha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+      "bytes": 64579,
+      "frozenSha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "currentSha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "bytes": 31923,
+      "frozenSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "currentSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/root-and-video-download.md",
+      "bytes": 10090,
+      "frozenSha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65",
+      "currentSha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "frozenSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields: name/private/type/main/types/exports/bin/files/build scripts; no runtime execution"
+    },
+    {
+      "path": "packages/arena/package.json",
+      "bytes": 1188,
+      "frozenSha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "currentSha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/arena/src/index.exports.test.ts",
+      "bytes": 1459,
+      "frozenSha256": "e0197815c4cd0effc76ca556bc9a8c7357fbe11aa06b5b48a5ecc1e7b3d82a2d",
+      "currentSha256": "e0197815c4cd0effc76ca556bc9a8c7357fbe11aa06b5b48a5ecc1e7b3d82a2d",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/index.runtime.ts",
+      "bytes": 1560,
+      "frozenSha256": "1a4a464da62cda6c362e925d2b1369f9f2eecbedfd58d3038d1c33151f9af63b",
+      "currentSha256": "1a4a464da62cda6c362e925d2b1369f9f2eecbedfd58d3038d1c33151f9af63b",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/index.ts",
+      "bytes": 2094,
+      "frozenSha256": "e1ed0327d7e92da43710cf4bac8ea692fa8b5ee9fce6060fbe7674316dd582cb",
+      "currentSha256": "e1ed0327d7e92da43710cf4bac8ea692fa8b5ee9fce6060fbe7674316dd582cb",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/iterate/formats/index.ts",
+      "bytes": 12743,
+      "frozenSha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "currentSha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/iterate/index.ts",
+      "bytes": 777,
+      "frozenSha256": "fca5381634c8d489aa4b27028f3adc25dff956d47e7c6e39967b4bad35a88277",
+      "currentSha256": "fca5381634c8d489aa4b27028f3adc25dff956d47e7c6e39967b4bad35a88277",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/lenses/index.ts",
+      "bytes": 1910,
+      "frozenSha256": "3cba6fbf4a6dad32217df6f108ddf00e1bedd14772e8783a85b9b5416dec4e8f",
+      "currentSha256": "3cba6fbf4a6dad32217df6f108ddf00e1bedd14772e8783a85b9b5416dec4e8f",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/providers/index.ts",
+      "bytes": 5728,
+      "frozenSha256": "22622e6446a8d5b5c4f0d70dbcc6aa3b312489d6642939a93e0693c6b3ef86ef",
+      "currentSha256": "22622e6446a8d5b5c4f0d70dbcc6aa3b312489d6642939a93e0693c6b3ef86ef",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/src/strategies/index.ts",
+      "bytes": 1164,
+      "frozenSha256": "3600f972f9e6b4a48c5c21be399016cb05c55a5c2bd960221e9b7189d3ed6984",
+      "currentSha256": "3600f972f9e6b4a48c5c21be399016cb05c55a5c2bd960221e9b7189d3ed6984",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/arena/tsconfig.json",
+      "bytes": 523,
+      "frozenSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "bytes": 910,
+      "frozenSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "currentSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "bytes": 189,
+      "frozenSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/browser-devtools/tsconfig.json",
+      "bytes": 404,
+      "frozenSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "currentSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/cdp/package.json",
+      "bytes": 1146,
+      "frozenSha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "currentSha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/cdp/src/index.ts",
+      "bytes": 1186,
+      "frozenSha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "currentSha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/cdp/tsconfig.json",
+      "bytes": 554,
+      "frozenSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/chat/README.md",
+      "bytes": 24150,
+      "frozenSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "currentSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "matchesFrozen": true,
+      "coverage": "selected1-82 public standalone/factory contract; no account/action/SDK"
+    },
+    {
+      "path": "packages/chat/package.json",
+      "bytes": 2936,
+      "frozenSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "currentSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "bytes": 10201,
+      "frozenSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "currentSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "matchesFrozen": true,
+      "coverage": "selected1-88 and literal import reference navigation; no transitive graph or adapter runtime"
+    },
+    {
+      "path": "packages/chat/src/codeshell.ts",
+      "bytes": 278,
+      "frozenSha256": "4d8800592c357f57b3d6b0f92b680450630398a86b71b6e5f11ec3b1dfcff7da",
+      "currentSha256": "4d8800592c357f57b3d6b0f92b680450630398a86b71b6e5f11ec3b1dfcff7da",
+      "matchesFrozen": true,
+      "coverage": "full static seven-line re-export list only"
+    },
+    {
+      "path": "packages/chat/src/index.ts",
+      "bytes": 453,
+      "frozenSha256": "04f01b99d649c8756e925ec887daacc67e1516daaf1a06265fcd91290825393e",
+      "currentSha256": "04f01b99d649c8756e925ec887daacc67e1516daaf1a06265fcd91290825393e",
+      "matchesFrozen": true,
+      "coverage": "full static root export list only"
+    },
+    {
+      "path": "packages/chat/tsconfig.json",
+      "bytes": 533,
+      "frozenSha256": "2f22bd4eda957e3937eee27452c2fa9424492d0eadc78e46b5c28ba039f03baa",
+      "currentSha256": "2f22bd4eda957e3937eee27452c2fa9424492d0eadc78e46b5c28ba039f03baa",
+      "matchesFrozen": true,
+      "coverage": "full static"
+    },
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "frozenSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "currentSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/index.ts",
+      "bytes": 422,
+      "frozenSha256": "ab4b9a927eb700da0684bba072d7a7772f8b2894754a65748dc69caec539d657",
+      "currentSha256": "ab4b9a927eb700da0684bba072d7a7772f8b2894754a65748dc69caec539d657",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/index.ts",
+      "bytes": 376,
+      "frozenSha256": "545e48bea6882780e96687945300332ae7bc1b0596f26153dbd9230153e0e9bb",
+      "currentSha256": "545e48bea6882780e96687945300332ae7bc1b0596f26153dbd9230153e0e9bb",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/index.ts",
+      "bytes": 3131,
+      "frozenSha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "currentSha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/index.ts",
+      "bytes": 198,
+      "frozenSha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "currentSha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 10967,
+      "frozenSha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "currentSha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/index.exports.test.ts",
+      "bytes": 3056,
+      "frozenSha256": "520d33dfcf8feddd4d3dccf19f46e023216a60f325b29ace69a0895b2dd70364",
+      "currentSha256": "520d33dfcf8feddd4d3dccf19f46e023216a60f325b29ace69a0895b2dd70364",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "bytes": 177,
+      "frozenSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "currentSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/index.orchestration.ts",
+      "bytes": 595,
+      "frozenSha256": "c0e4aa1c37bab43641143b8865875d6fb9a9da682aaabcc79c2d09cc983ca43a",
+      "currentSha256": "c0e4aa1c37bab43641143b8865875d6fb9a9da682aaabcc79c2d09cc983ca43a",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/index.ts",
+      "bytes": 869,
+      "frozenSha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "currentSha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/quota/index.test.ts",
+      "bytes": 8337,
+      "frozenSha256": "eac8c39111133672f905d71061f4779849109e0a6f7dddc1e9b6ef543e3e2e7e",
+      "currentSha256": "eac8c39111133672f905d71061f4779849109e0a6f7dddc1e9b6ef543e3e2e7e",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/quota/index.ts",
+      "bytes": 9981,
+      "frozenSha256": "d635615e41db31098e72da255556358e2962fa1f2124659ae8f29d015b2ba6ff",
+      "currentSha256": "d635615e41db31098e72da255556358e2962fa1f2124659ae8f29d015b2ba6ff",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/index.ts",
+      "bytes": 4352,
+      "frozenSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "currentSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/coding/tsconfig.json",
+      "bytes": 554,
+      "frozenSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "frozenSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "currentSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/core/src/automation/index.ts",
+      "bytes": 3049,
+      "frozenSha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "currentSha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/capabilities/index.ts",
+      "bytes": 2505,
+      "frozenSha256": "e0c6016bde42e087254bb5c22dcc57a84427712591272cb6c680d373aa9802bc",
+      "currentSha256": "e0c6016bde42e087254bb5c22dcc57a84427712591272cb6c680d373aa9802bc",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/capability-control/index.ts",
+      "bytes": 337,
+      "frozenSha256": "114d7898aa669cace88b07b3fc8c506d73e920afc874b2cf6e42f67cc31d10b0",
+      "currentSha256": "114d7898aa669cace88b07b3fc8c506d73e920afc874b2cf6e42f67cc31d10b0",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/composition/index.ts",
+      "bytes": 566,
+      "frozenSha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "currentSha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/cost-ledger/index.ts",
+      "bytes": 424,
+      "frozenSha256": "897c9702b2e202c6fe927d3c0d3a97214f0b2ffc7c76c8e411c264174c723498",
+      "currentSha256": "897c9702b2e202c6fe927d3c0d3a97214f0b2ffc7c76c8e411c264174c723498",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/credentials/index.ts",
+      "bytes": 1623,
+      "frozenSha256": "2781ee20f07eff6e24d9e92cfa8ad10354e2b31ef54af40a8524c0e73d01064b",
+      "currentSha256": "2781ee20f07eff6e24d9e92cfa8ad10354e2b31ef54af40a8524c0e73d01064b",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/index.exports.test.ts",
+      "bytes": 18450,
+      "frozenSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "currentSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/index.extension.tool-host.test.ts",
+      "bytes": 2047,
+      "frozenSha256": "421984d561307e1a9bf2282bea309b3a9b54c7f84db273d022979b6eb82895e3",
+      "currentSha256": "421984d561307e1a9bf2282bea309b3a9b54c7f84db273d022979b6eb82895e3",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/index.extension.ts",
+      "bytes": 8779,
+      "frozenSha256": "2e0b51dd372246db234b9519e711ab2a10792657caa47bf656826646b533f164",
+      "currentSha256": "2e0b51dd372246db234b9519e711ab2a10792657caa47bf656826646b533f164",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "frozenSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/index.skills.ts",
+      "bytes": 165,
+      "frozenSha256": "86b71c28f313f4ca03bd6885f3e8037f35eaa05be5f131d73aff170d54386d1b",
+      "currentSha256": "86b71c28f313f4ca03bd6885f3e8037f35eaa05be5f131d73aff170d54386d1b",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27572,
+      "frozenSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "currentSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/links/index.ts",
+      "bytes": 1952,
+      "frozenSha256": "9f84856ae5029e8df0510f016690c010c11e2d20f6a7fbbb2454ae0f25ada540",
+      "currentSha256": "9f84856ae5029e8df0510f016690c010c11e2d20f6a7fbbb2454ae0f25ada540",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/llm/capabilities/index.ts",
+      "bytes": 2507,
+      "frozenSha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "currentSha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "bytes": 4933,
+      "frozenSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "currentSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/model-traces/index.ts",
+      "bytes": 795,
+      "frozenSha256": "3b3fba1f37c8fa85bd24d1665a58eb7a99e9206d100f6c93fbbe41a940b6ae46",
+      "currentSha256": "3b3fba1f37c8fa85bd24d1665a58eb7a99e9206d100f6c93fbbe41a940b6ae46",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/panel-apps/index.ts",
+      "bytes": 1851,
+      "frozenSha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "currentSha256": "5d4c9b95bf0d5788fc46efc91fa5dd0ba42ed853a8272b9a7338a402e6c63977",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "bytes": 10423,
+      "frozenSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "currentSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/product/index.ts",
+      "bytes": 301,
+      "frozenSha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "currentSha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/profile/index.ts",
+      "bytes": 1599,
+      "frozenSha256": "ba8c03a1eb82601cb9e563d14409375cc87fe9a2f81d916904d327d524344710",
+      "currentSha256": "ba8c03a1eb82601cb9e563d14409375cc87fe9a2f81d916904d327d524344710",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/protocol/index.ts",
+      "bytes": 468,
+      "frozenSha256": "bd9d427a665e274b9871feb29582b94b5d59a4873c5b64f1ea4310c3d0572099",
+      "currentSha256": "bd9d427a665e274b9871feb29582b94b5d59a4873c5b64f1ea4310c3d0572099",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/run/index.ts",
+      "bytes": 1769,
+      "frozenSha256": "a2ac2c0f00acca8130aeae535bdd83ba9c95acf231b46a77fe338f9a8c48aff6",
+      "currentSha256": "a2ac2c0f00acca8130aeae535bdd83ba9c95acf231b46a77fe338f9a8c48aff6",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/services/index.ts",
+      "bytes": 1401,
+      "frozenSha256": "372c9cd204846a4b9ac4db2a6dff53f6dcfca134f24a77774537d2809debaabe",
+      "currentSha256": "372c9cd204846a4b9ac4db2a6dff53f6dcfca134f24a77774537d2809debaabe",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/skills/index.ts",
+      "bytes": 335,
+      "frozenSha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "currentSha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.test.ts",
+      "bytes": 15737,
+      "frozenSha256": "294106952a42efb0133825887f25966b14f8876b216bcea31b46cb7bbd75d97d",
+      "currentSha256": "294106952a42efb0133825887f25966b14f8876b216bcea31b46cb7bbd75d97d",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.ts",
+      "bytes": 8710,
+      "frozenSha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "currentSha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/sources/index.ts",
+      "bytes": 421,
+      "frozenSha256": "729f5287a35449949b63b3397618f4ac1b25e46aaa7c68e0a335b31846055f39",
+      "currentSha256": "729f5287a35449949b63b3397618f4ac1b25e46aaa7c68e0a335b31846055f39",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/themes/index.ts",
+      "bytes": 775,
+      "frozenSha256": "c3e6de86281da9835211a98fcb6c5e92c58efece34676821c98c60aa4d426fd4",
+      "currentSha256": "c3e6de86281da9835211a98fcb6c5e92c58efece34676821c98c60aa4d426fd4",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "bytes": 39835,
+      "frozenSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "currentSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/src/tool-system/sandbox/index.ts",
+      "bytes": 10539,
+      "frozenSha256": "88bd55d0c4090a2945aec2c8cace2f0d9dee39c0ae4301de444f95a9239b17dc",
+      "currentSha256": "88bd55d0c4090a2945aec2c8cace2f0d9dee39c0ae4301de444f95a9239b17dc",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "bytes": 554,
+      "frozenSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "currentSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/package.json",
+      "bytes": 13293,
+      "frozenSha256": "db027a9255c1a37179421d3a4118d5e4798ec70f61852a6f0a9078aff04b5f60",
+      "currentSha256": "db027a9255c1a37179421d3a4118d5e4798ec70f61852a6f0a9078aff04b5f60",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/index.ts",
+      "bytes": 1203,
+      "frozenSha256": "daf28c3103be2b832e5a6090338db69f26c6e10d519e9c11788d9d8545a0a94f",
+      "currentSha256": "daf28c3103be2b832e5a6090338db69f26c6e10d519e9c11788d9d8545a0a94f",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-host/index.test.ts",
+      "bytes": 5376,
+      "frozenSha256": "7f9e333641c5a9b729729cc73b94fe6a1bd189455489f33629f78637b1fec921",
+      "currentSha256": "7f9e333641c5a9b729729cc73b94fe6a1bd189455489f33629f78637b1fec921",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-host/index.ts",
+      "bytes": 6959,
+      "frozenSha256": "233c3b19beab502384a4a0230fe0a282f40b847a925ab90be3ba54c0a6c4f344",
+      "currentSha256": "233c3b19beab502384a4a0230fe0a282f40b847a925ab90be3ba54c0a6c4f344",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-runtime/index.ts",
+      "bytes": 2082,
+      "frozenSha256": "bedf0d4bb18a1951fde12b4baf3fbec721783a9ef79d186f43861184c1becdb1",
+      "currentSha256": "bedf0d4bb18a1951fde12b4baf3fbec721783a9ef79d186f43861184c1becdb1",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/main/credentials-login/index.test.ts",
+      "bytes": 15017,
+      "frozenSha256": "1aa8eebe3e5fe971ddc1ca9e438c0afa226e884a5224a641d355656cba4fc25b",
+      "currentSha256": "1aa8eebe3e5fe971ddc1ca9e438c0afa226e884a5224a641d355656cba4fc25b",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/main/credentials-login/index.ts",
+      "bytes": 14636,
+      "frozenSha256": "8b20e99b354f58f7a3a797b7e2972d4574433e73300eb127bbd31519e088db25",
+      "currentSha256": "8b20e99b354f58f7a3a797b7e2972d4574433e73300eb127bbd31519e088db25",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299077,
+      "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "currentSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "frozenSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/index.ts",
+      "bytes": 203,
+      "frozenSha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "currentSha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/tsconfig.json",
+      "bytes": 911,
+      "frozenSha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "currentSha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/desktop/tsconfig.mobile.json",
+      "bytes": 952,
+      "frozenSha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "currentSha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/host/package.json",
+      "bytes": 923,
+      "frozenSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "currentSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "bytes": 388,
+      "frozenSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "currentSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/host/tsconfig.json",
+      "bytes": 367,
+      "frozenSha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "currentSha256": "163a27addf1f83c0c8847f12f33a75d438369fbad88d7df8644c993db3e150b9",
+      "matchesFrozen": true,
+      "coverage": "full static"
+    },
+    {
+      "path": "packages/link/package.json",
+      "bytes": 951,
+      "frozenSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "currentSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "bytes": 1878,
+      "frozenSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "currentSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/link/tsconfig.json",
+      "bytes": 404,
+      "frozenSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "currentSha256": "488d8efdad84f31ff3cc72b9021cbe89f0aef78e80c1e401aec3bb6ed7f84fd7",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/optimization-lab/package.json",
+      "bytes": 927,
+      "frozenSha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "currentSha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.capability.ts",
+      "bytes": 59,
+      "frozenSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "currentSha256": "f25cfa06a32b7be61428749f8b9f3d785dcd70268814b09978238b1b252d3edf",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.exports.test.ts",
+      "bytes": 997,
+      "frozenSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "currentSha256": "9311126963befa15520e7daa33d485c2e0b68842354f3e295e7c966d5447e0ec",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "bytes": 587,
+      "frozenSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "currentSha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/optimization-lab/tsconfig.json",
+      "bytes": 523,
+      "frozenSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/package.json",
+      "bytes": 1572,
+      "frozenSha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "currentSha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/pet/src/index.capability.ts",
+      "bytes": 246,
+      "frozenSha256": "9fb11f72d20b8c86e9ac474c1c3c539c7454c92246ff5cf233941eb4dba5194e",
+      "currentSha256": "9fb11f72d20b8c86e9ac474c1c3c539c7454c92246ff5cf233941eb4dba5194e",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/src/index.disclosure.ts",
+      "bytes": 605,
+      "frozenSha256": "3e80494e2029ad08d7329dde4214ae6fbfab09f40d871218c1a5bbca6bd03e3b",
+      "currentSha256": "3e80494e2029ad08d7329dde4214ae6fbfab09f40d871218c1a5bbca6bd03e3b",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/src/index.exports.test.ts",
+      "bytes": 4143,
+      "frozenSha256": "83fa58ad5ed6d7098a30ca7bb1bc03465a73bcaccae646a8f3c5d5ce67b19768",
+      "currentSha256": "83fa58ad5ed6d7098a30ca7bb1bc03465a73bcaccae646a8f3c5d5ce67b19768",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/src/index.protocol.ts",
+      "bytes": 825,
+      "frozenSha256": "77e6a38bc5bfd4f47410a71c6ea8a211e6b7efa2ef150ebcf88f75ec64748b53",
+      "currentSha256": "77e6a38bc5bfd4f47410a71c6ea8a211e6b7efa2ef150ebcf88f75ec64748b53",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/src/index.team.ts",
+      "bytes": 224,
+      "frozenSha256": "e1003d2e99d757b96be24894f0257934e8ae4a2a5e9358f74aafd681ebcccb91",
+      "currentSha256": "e1003d2e99d757b96be24894f0257934e8ae4a2a5e9358f74aafd681ebcccb91",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/src/index.ts",
+      "bytes": 4002,
+      "frozenSha256": "1d923a0c0c477b1a16b10212f4aa0733529387945aaef2f9d2aad415d91bddf2",
+      "currentSha256": "1d923a0c0c477b1a16b10212f4aa0733529387945aaef2f9d2aad415d91bddf2",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/pet/tsconfig.json",
+      "bytes": 523,
+      "frozenSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "currentSha256": "91e3f98b11fbdc60c9c0b1fb2a6bb2dffed4d51c6231575285a41543f45c2ecd",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/package.json",
+      "bytes": 2789,
+      "frozenSha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "currentSha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/server/src/index.auth.ts",
+      "bytes": 267,
+      "frozenSha256": "1997519305c08ecc5b6c71e7a7bca5bd3950374cb3c640bd04c298bc0802ed8d",
+      "currentSha256": "1997519305c08ecc5b6c71e7a7bca5bd3950374cb3c640bd04c298bc0802ed8d",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.desktop-web.ts",
+      "bytes": 164,
+      "frozenSha256": "b0a12777eab150cb4fd4e2d0c71a5265a919fb7c5dbb0d4bb23b3fc9542f71ad",
+      "currentSha256": "b0a12777eab150cb4fd4e2d0c71a5265a919fb7c5dbb0d4bb23b3fc9542f71ad",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.exports.test.ts",
+      "bytes": 7991,
+      "frozenSha256": "dd26f20f00ca6af56c084bce7db79ea512e845f465ab862cedea6dcc2df62c94",
+      "currentSha256": "dd26f20f00ca6af56c084bce7db79ea512e845f465ab862cedea6dcc2df62c94",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.links.ts",
+      "bytes": 831,
+      "frozenSha256": "94a83fa1328271f897bd5292dd345bf97555e1f93719dee2167234710d6f3008",
+      "currentSha256": "94a83fa1328271f897bd5292dd345bf97555e1f93719dee2167234710d6f3008",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.mobile-remote.ts",
+      "bytes": 1111,
+      "frozenSha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a",
+      "currentSha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.panels.ts",
+      "bytes": 1539,
+      "frozenSha256": "31d64fe337a66ad0beb2386c77fc9ed93f6e4dfd4a904092020f762af7efb6d9",
+      "currentSha256": "31d64fe337a66ad0beb2386c77fc9ed93f6e4dfd4a904092020f762af7efb6d9",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.remote-relay.ts",
+      "bytes": 368,
+      "frozenSha256": "e97cdf7b12bc2c37caa28f062e78abcc0c808111adb861fa0b69cdc6e3c1965a",
+      "currentSha256": "e97cdf7b12bc2c37caa28f062e78abcc0c808111adb861fa0b69cdc6e3c1965a",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.serve.ts",
+      "bytes": 1165,
+      "frozenSha256": "afea5afb15eb4f6ab67c6b415d0265b64f6c7cbb8e6c7115511a3debbbb5b5aa",
+      "currentSha256": "afea5afb15eb4f6ab67c6b415d0265b64f6c7cbb8e6c7115511a3debbbb5b5aa",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.storage.ts",
+      "bytes": 499,
+      "frozenSha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "currentSha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "bytes": 577,
+      "frozenSha256": "d6d81c1e88b18487620ccb13bfe8dd28eb10e1e55438394cdbddee4544e076b0",
+      "currentSha256": "d6d81c1e88b18487620ccb13bfe8dd28eb10e1e55438394cdbddee4544e076b0",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/index.worker.ts",
+      "bytes": 103,
+      "frozenSha256": "7a96c121acdc7615b4b90ac0b02780156e88e328bb97709e7625a3018c8a3904",
+      "currentSha256": "7a96c121acdc7615b4b90ac0b02780156e88e328bb97709e7625a3018c8a3904",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/src/links/providers/index.ts",
+      "bytes": 1305,
+      "frozenSha256": "3ae70af7cfb6d469371e5a2a0f9659e3f734d4f1a7ae473f55483ae43743db02",
+      "currentSha256": "3ae70af7cfb6d469371e5a2a0f9659e3f734d4f1a7ae473f55483ae43743db02",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/server/tsconfig.json",
+      "bytes": 549,
+      "frozenSha256": "c242366eff5a23fda999ab206caec20ba2735f7a9ca6b05a35b84580ed6f5160",
+      "currentSha256": "c242366eff5a23fda999ab206caec20ba2735f7a9ca6b05a35b84580ed6f5160",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "frozenSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+      "bytes": 6498,
+      "frozenSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "currentSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/src/index.d.ts",
+      "bytes": 296,
+      "frozenSha256": "2e6e77dae4845c43a1df64dd5244dc7f92fe86fbd199052cde09d28075f79f73",
+      "currentSha256": "2e6e77dae4845c43a1df64dd5244dc7f92fe86fbd199052cde09d28075f79f73",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "frozenSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "currentSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/src/native-ts/yoga-layout/index.ts",
+      "bytes": 83394,
+      "frozenSha256": "bd52998e94a293d23a9e3be30b902ec32e231cb0f2c273c53f99ecc42f21177a",
+      "currentSha256": "bd52998e94a293d23a9e3be30b902ec32e231cb0f2c273c53f99ecc42f21177a",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "bytes": 2454,
+      "frozenSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "currentSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/src/voice/index.ts",
+      "bytes": 3496,
+      "frozenSha256": "cf1265b5590a30477c1694fd4fa70675cb919f669f114d10fae96693e3ee16b7",
+      "currentSha256": "cf1265b5590a30477c1694fd4fa70675cb919f669f114d10fae96693e3ee16b7",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "bytes": 917,
+      "frozenSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "currentSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/web/package.json",
+      "bytes": 3638,
+      "frozenSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "currentSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "matchesFrozen": true,
+      "coverage": "selected parsed metadata fields only; inventory/hash does not mean full semantic review"
+    },
+    {
+      "path": "packages/web/src/index.ts",
+      "bytes": 2491,
+      "frozenSha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "currentSha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/web/tsconfig.app.json",
+      "bytes": 544,
+      "frozenSha256": "e33bc880d6ffc1a0f147f89d94b23f5513b930b5af317461e83390d8ff7e07b7",
+      "currentSha256": "e33bc880d6ffc1a0f147f89d94b23f5513b930b5af317461e83390d8ff7e07b7",
+      "matchesFrozen": true,
+      "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+    },
+    {
+      "path": "packages/web/tsconfig.json",
+      "bytes": 703,
+      "frozenSha256": "715f5eb05cb7b95e49696314df3407b66335bcb70f6acd08314124b038b2d72e",
+      "currentSha256": "715f5eb05cb7b95e49696314df3407b66335bcb70f6acd08314124b038b2d72e",
+      "matchesFrozen": true,
+      "coverage": "full static"
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "frozenSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "currentSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "matchesFrozen": true,
+      "coverage": "full static, never executed"
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "frozenSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "currentSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "matchesFrozen": true,
+      "coverage": "selected45-105 release roster; source only, no validators/build/publish execution"
+    },
+    {
+      "path": "tests/package-boundaries.test.ts",
+      "bytes": 14692,
+      "frozenSha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "currentSha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "matchesFrozen": true,
+      "coverage": "selected78-213 static contracts; existing suite unexecuted"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "frozenSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "matchesFrozen": true,
+      "coverage": "full static"
+    }
+  ],
+  "note": "Full byte hashes are inventory metadata, not semantics. No dist existence/read, build, install, typecheck, runtime import, CLI/native/model/network/publish or auth/custody/permission/identity experiment."
+}

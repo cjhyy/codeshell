@@ -1,0 +1,40 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "totals": {
+    "firstBunShards": 0,
+    "completedCleanShards": 0,
+    "failedBunShards": 0,
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "runtimeImports": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 0,
+    "focusedTests": 0,
+    "productReruns": 0,
+    "primaryFullStaticFiles": 19,
+    "primaryFullStaticLines": 7776,
+    "rootPrimaryFullStaticFiles": 4,
+    "rootPrimaryFullStaticLines": 1143,
+    "windowsPrimaryFullStaticFiles": 5,
+    "windowsPrimaryFullStaticLines": 2041,
+    "browserHelpersPrimaryFullStaticFiles": 5,
+    "browserHelpersPrimaryFullStaticLines": 1511,
+    "browserScenesPrimaryFullStaticFiles": 5,
+    "browserScenesPrimaryFullStaticLines": 3081
+  },
+  "runs": [],
+  "notes": [
+    "All product/import/test/browser/installer/native/auth/custody/security/identity/realHOME/authority attempts0. No product raw/exit or fabricated passing test exists.",
+    "19primarychangedscript/workflow targets full static7776lines;one release-history path selected. Extra full/selected dependencies stay in author manifests; fullstatic is not full contract/transitive/OS/runtime coverage.",
+    "Previous64Node/31browser/83native/13UI and expected2pass6fail are historical contract/context only, never added to this batch0executions.",
+    "Expectednegative exact case/status/source/HOME retention does not independently prove every failure cause; no new ordinary false-pass chain established.",
+    "Generic settle cleanup delegated to caller and existing thirdtest permits attempt after primary error; no universal allassertion-retention contract inferred. Signal ledger meansrequests,notOSdelivery.",
+    "135prior packageprep pins hash-only/provenance;no new package/dist/build/install/type/import/CLI failure invented or failed direction recovered.",
+    "Root metadataEOF1156vsactual1155 assertion corrected with firstresponse note, not product failure/retry. Reportanchors and Gitwrite wording clarified before authorhash refresh.",
+    "Concurrent main changed7commits/7paths incl2selectedfiles;frozen/source/current SHA separated. No nativefix/remoteacceptance/runtime replay or new5scripts comprehensive audit claim.",
+    "No shareddependency/dist rebuild,fullsuite/build/typecheck/lint/E2E or external platform/action-version/OS behavior verification."
+  ]
+}

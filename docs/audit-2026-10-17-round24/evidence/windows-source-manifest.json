@@ -1,0 +1,197 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "sources": [
+    {
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          787
+        ]
+      ],
+      "lineCount": 787,
+      "bytes": 29370,
+      "frozenSha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "currentSha256": "fc042b5968c99eb6b73bd3c2d5fc5767dfb2113ccf98847c18a25e4e6452467f",
+      "currentMatchesFrozen": true,
+      "note": "Primary driver, static full source; no import/constructor/process or product execution."
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          256
+        ]
+      ],
+      "lineCount": 256,
+      "bytes": 8567,
+      "frozenSha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "currentSha256": "8cb84d113c46a2753a6c343613130e1f283de40fcb4ca103980cee182061bad4",
+      "currentMatchesFrozen": true,
+      "note": "Existing fakeprocess/CLI contracts read only,0test execution."
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          383
+        ]
+      ],
+      "lineCount": 383,
+      "bytes": 17247,
+      "frozenSha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "currentSha256": "74155b330f808cd7da78c51fcff92b20359bb6be279876874367327ecf75d5af",
+      "currentMatchesFrozen": true,
+      "note": "Finite acceptance contracts read only; no synthetic mutation or helper invocation."
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          506
+        ]
+      ],
+      "lineCount": 506,
+      "bytes": 15088,
+      "frozenSha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "currentSha256": "d56b61c0a7ca3d7ae6ad5a72a4f44ab49ad59d1ad818e920b05283001b39732c",
+      "currentMatchesFrozen": true,
+      "note": "Existing positive/refusal assertions read only; no test import/run."
+    },
+    {
+      "path": "packages/desktop/scripts/windows-nsis-observe.ps1",
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          109
+        ]
+      ],
+      "lineCount": 109,
+      "bytes": 5479,
+      "frozenSha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "currentSha256": "2e4a21fb068211830995bfef413d28e508b9c8a09ed0bb269009c88307f776c5",
+      "currentMatchesFrozen": true,
+      "note": "Full read-only observer source static; no PowerShell parse/import/process/COM/registry call."
+    },
+    {
+      "path": "packages/desktop/scripts/packaged-app-integrity.mjs",
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "lineCount": 101,
+      "bytes": 3966,
+      "frozenSha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "currentSha256": "77c351438c047b8f72adb233effd088b2bab6158b4faffef597044bfa156feda",
+      "currentMatchesFrozen": true,
+      "note": "Static inventory tuple and integrity digest producer, no call."
+    },
+    {
+      "path": "packages/desktop/scripts/e2e-ui-packaged.mjs",
+      "coverage": "selected",
+      "ranges": [
+        [
+          80,
+          111
+        ],
+        [
+          425,
+          477
+        ]
+      ],
+      "lineCount": 477,
+      "bytes": 18779,
+      "frozenSha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "currentSha256": "86d042cd0e71e2505b882756367f343bfc908483986ae1e25bd446bd4a1bcb67",
+      "currentMatchesFrozen": true,
+      "note": "Static operation step and final receipt/error producer only; no whole-runtime claim."
+    },
+    {
+      "path": "packages/desktop/scripts/run-packaged-ui-acceptance.mjs",
+      "coverage": "selected",
+      "ranges": [
+        [
+          1,
+          140
+        ]
+      ],
+      "lineCount": 260,
+      "bytes": 10930,
+      "frozenSha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "currentSha256": "39a0a53f32335a8a1299ddeaa8b1ebaf23d00dd38dd160a188e9d253e88d2448",
+      "currentMatchesFrozen": true,
+      "note": "Static source of readPackagedUiBuildReceipt; no launcher/import/run."
+    },
+    {
+      "path": "packages/desktop/scripts/smoke-local-package.mjs",
+      "coverage": "selected",
+      "ranges": [
+        [
+          20,
+          95
+        ]
+      ],
+      "lineCount": 254,
+      "bytes": 10661,
+      "frozenSha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "currentSha256": "5dcb451f3cf789dc9783db8b170103fc7cb66eaaa33f904b8393c89c7556c600",
+      "currentMatchesFrozen": true,
+      "note": "Static localPackageConfiguration preserves production NSIS build options; no builder/import."
+    },
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "coverage": "selected",
+      "ranges": [
+        [
+          228,
+          249
+        ],
+        [
+          420,
+          436
+        ]
+      ],
+      "lineCount": 580,
+      "bytes": 32518,
+      "frozenSha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "currentSha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "currentMatchesFrozen": true,
+      "note": "Static bounded contract/native command consumers and pipefail; no CI dispatch or log execution."
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "coverage": "selected",
+      "ranges": [
+        [
+          300,
+          398
+        ]
+      ],
+      "lineCount": 1155,
+      "bytes": 134232,
+      "frozenSha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "currentSha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "currentMatchesFrozen": true,
+      "note": "Prior acceptance contract/scope only; historical tests/runs are not this audit execution."
+    }
+  ],
+  "primaryFullReadFiles": 5,
+  "primaryFullReadLines": 2041,
+  "sourcePinCount": 11,
+  "limits": [
+    "Only5assignedprimaryfiles and inventorydependency fullread; other dependencies/callers selected.",
+    "Hashes attest bytes notfullsemanticcoverage.",
+    "No target module/test/PowerShell importor execution."
+  ]
+}
