@@ -227,6 +227,15 @@ export function createNsisReplacementRoleObserver({
         sampleQuerySequence: last?.querySequence ?? null,
         samplePhase: last?.samplePhase ?? "unknown",
         sampleAgeMs: last ? Math.max(0, now() - started - last.sampledElapsedMs) : null,
+        sample: last
+          ? {
+              querySequence: last.querySequence,
+              samplePhase: last.samplePhase,
+              sampledElapsedMs: last.sampledElapsedMs,
+              rows: last.rows.map(({ pid, ppid, birth, role }) => ({ pid, ppid, birth, role })),
+              rolesTruncated: last.rolesTruncated,
+            }
+          : null,
         boundary:
           "After original watchdog failure recording; age of last existing-query sample, not an atomic deadline snapshot. Later cleaning samples may be after the deadline.",
       };
