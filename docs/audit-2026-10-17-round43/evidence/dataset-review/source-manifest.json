@@ -1,0 +1,392 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+      "bytes": 9198,
+      "sha256": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7",
+      "lineCount": 251,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "semanticLineCount": 251,
+      "displayedLineRanges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "displayedLineCount": 251,
+      "navigationOnlyDisplayLines": [],
+      "dedicatedPinBeforeCurrentBody": true,
+      "firstEverReadClaim": false,
+      "finishSha256": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "bytes": 27688,
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "lineCount": 672,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          210,
+          230
+        ],
+        [
+          286,
+          330
+        ],
+        [
+          394,
+          407
+        ],
+        [
+          647,
+          660
+        ]
+      ],
+      "semanticLineCount": 94,
+      "displayedLineRanges": [
+        [
+          12,
+          12
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          49,
+          50
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          113,
+          113
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          138,
+          139
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          175,
+          175
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          203,
+          203
+        ],
+        [
+          208,
+          208
+        ],
+        [
+          210,
+          230
+        ],
+        [
+          249,
+          249
+        ],
+        [
+          276,
+          276
+        ],
+        [
+          286,
+          330
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          348,
+          348
+        ],
+        [
+          394,
+          407
+        ],
+        [
+          447,
+          447
+        ],
+        [
+          485,
+          485
+        ],
+        [
+          505,
+          505
+        ],
+        [
+          512,
+          512
+        ],
+        [
+          528,
+          528
+        ],
+        [
+          543,
+          543
+        ],
+        [
+          557,
+          557
+        ],
+        [
+          605,
+          605
+        ],
+        [
+          647,
+          660
+        ]
+      ],
+      "displayedLineCount": 128,
+      "navigationOnlyDisplayLines": [
+        12,
+        15,
+        16,
+        27,
+        33,
+        49,
+        50,
+        58,
+        69,
+        79,
+        84,
+        103,
+        113,
+        129,
+        138,
+        139,
+        161,
+        173,
+        175,
+        187,
+        203,
+        208,
+        249,
+        276,
+        338,
+        348,
+        447,
+        485,
+        505,
+        512,
+        528,
+        543,
+        557,
+        605
+      ],
+      "dedicatedPinBeforeCurrentBody": true,
+      "firstEverReadClaim": false,
+      "finishSha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "bytes": 41600,
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "lineCount": 995,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          77,
+          79
+        ],
+        [
+          121,
+          125
+        ],
+        [
+          584,
+          591
+        ]
+      ],
+      "semanticLineCount": 16,
+      "displayedLineRanges": [
+        [
+          77,
+          79
+        ],
+        [
+          121,
+          125
+        ],
+        [
+          277,
+          277
+        ],
+        [
+          330,
+          330
+        ],
+        [
+          398,
+          398
+        ],
+        [
+          434,
+          434
+        ],
+        [
+          462,
+          462
+        ],
+        [
+          489,
+          489
+        ],
+        [
+          584,
+          591
+        ],
+        [
+          631,
+          631
+        ],
+        [
+          645,
+          645
+        ],
+        [
+          701,
+          701
+        ],
+        [
+          713,
+          713
+        ],
+        [
+          784,
+          784
+        ],
+        [
+          796,
+          796
+        ],
+        [
+          809,
+          809
+        ],
+        [
+          822,
+          822
+        ],
+        [
+          832,
+          832
+        ]
+      ],
+      "displayedLineCount": 31,
+      "navigationOnlyDisplayLines": [
+        277,
+        330,
+        398,
+        434,
+        462,
+        489,
+        631,
+        645,
+        701,
+        713,
+        784,
+        796,
+        809,
+        822,
+        832
+      ],
+      "dedicatedPinBeforeCurrentBody": true,
+      "firstEverReadClaim": false,
+      "finishSha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "unchanged": true
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "lineCount": 227,
+      "coverage": "hash-only excluded old-full before product body",
+      "semanticRead": false,
+      "selectedLineRanges": [],
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/notification-progress.ts",
+      "bytes": 13655,
+      "sha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "lineCount": 367,
+      "coverage": "hash-only excluded old-full before product body",
+      "semanticRead": false,
+      "selectedLineRanges": [],
+      "unchanged": true
+    }
+  ],
+  "counts": {
+    "semanticProductFiles": 3,
+    "fullFiles": 1,
+    "selectedFiles": 2,
+    "productSemanticLines": 361,
+    "productDisplayedLines": 410,
+    "excludedHashOnlyProductFiles": 2,
+    "testSemanticLines": 0,
+    "testRuns": 0
+  },
+  "scope": "Independent Root source counterevidence after author46 stage summaries; ordinary dataset DTO parse/edit/serialize/duplicate IDs and actual local form data, no worker execution/validity or model/native/permission/identity certification.",
+  "role": "Not a blind review; author phase opinions known before Root body, dedicated pins remain before Root body and original timing unaltered.",
+  "gitBindingInThisPrep": false
+}

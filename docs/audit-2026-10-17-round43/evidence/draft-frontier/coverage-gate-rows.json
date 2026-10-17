@@ -1,0 +1,719 @@
+{
+  "rows": [
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/archive/review-2026-05-30/backlog.json",
+      "pointer": "/79/file",
+      "row": {}
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "pointer": "/79/file",
+      "row": {}
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/266/file",
+      "row": {}
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/267/file",
+      "row": {}
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/285/file",
+      "row": {}
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/evidence/aggregator-author-checks.json",
+      "pointer": "/sourceFinishChecks/19/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/evidence/aggregator-findings.json",
+      "pointer": "/0/staticValueFlow/4/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "ranges": [
+          [
+            1818,
+            1820
+          ]
+        ]
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+      "pointer": "/files/19/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1777
+          ],
+          [
+            1809,
+            1824
+          ]
+        ],
+        "lineCount": 2622,
+        "role": "product-or-test-contract"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "pointer": "/files/8/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1765,
+            1823
+          ]
+        ],
+        "lineCount": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "pointer": "/authorSourceByteChecks/19/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/findings.json",
+      "pointer": "/findings/0/staticValueFlow/4/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "ranges": [
+          [
+            1818,
+            1820
+          ]
+        ]
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "pointer": "/files/28/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "pointer": "/workerSourceChecks/56/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "pointer": "/workerSourceChecks/86/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/606/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lines": 2622
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/608/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "lines": 1629
+      }
+    },
+    {
+      "candidate": "commentbox",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/647/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+        "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4",
+        "lines": 73
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2370/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lines": 2622
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2384/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "lines": 1629
+      }
+    },
+    {
+      "candidate": "commentbox",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2530/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+        "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4",
+        "lines": 73
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round34/evidence/aggregate-review/finish-checks.json",
+      "pointer": "/sources/25/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round34/evidence/aggregate-review/source-checks.json",
+      "pointer": "/sources/25/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            450,
+            505
+          ]
+        ],
+        "lineCount": 1629,
+        "kind": "semantic"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/source-manifest.json",
+      "pointer": "/files/4/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            450,
+            505
+          ]
+        ],
+        "lineCount": 1629
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round34/source-manifest.json",
+      "pointer": "/files/23/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round34/source-manifest.json",
+      "pointer": "/workerSourceChecks/15/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/parent-caller-initial-pins.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "pointer": "/files/9/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1568,
+            1591
+          ],
+          [
+            1753,
+            1779
+          ],
+          [
+            1792,
+            1825
+          ]
+        ],
+        "totalLines": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "pointer": "/files/9/initialFilesystemPin/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "pointer": "/checks/9/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "pointer": "/files/8/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "pointer": "/workerSourceChecks/9/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/consumer-initial-pins.json",
+      "pointer": "/files/1/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "lineCount": 1629
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "pointer": "/files/2/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1523,
+            1532
+          ]
+        ],
+        "lineCount": 1629
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "pointer": "/files/2/prepRow/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "lineCount": 1629
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round40/evidence/supplement-review/checks.json",
+      "pointer": "/rangeSchemaChecks/0/rows/2/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1523,
+            1532
+          ]
+        ],
+        "kind": "current product/test"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "pointer": "/files/13/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "pointer": "/workerSourceChecks/25/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "pointer": "/sources/17/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "coverage": "selected lines 1-280, 980-1055, and search hits; ordinary projection callers only; auth/trust/native excluded",
+        "lines": 1629
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "pointer": "/sources/22/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected modelOptions/ModelPill current caller search hits only; not executed",
+        "lines": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "pointer": "/paths/28/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "frozenSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lineCount": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "pointer": "/files/49/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "pointer": "/files/50/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+      "pointer": "/sources/20/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "readRanges": [
+          [
+            250,
+            410
+          ],
+          [
+            1115,
+            1235
+          ]
+        ],
+        "lines": 2622
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "pointer": "/files/67/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "candidate": "commentbox",
+      "historyPath": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+      "pointer": "/productionSources/1/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+        "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/file-root-quality-preflight-round27.sources.json",
+      "pointer": "/items/5/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+      "pointer": "/sources/15/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/reproductions/file-root-round27/observed.json",
+      "pointer": "/sourceManifest/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "pointer": "/sourceManifest/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+      "pointer": "/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/observed.json",
+      "pointer": "/sourceManifest/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/root-preflight.json",
+      "pointer": "/paths/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+      "pointer": "/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/static-prepared-receipt.json",
+      "pointer": "/paths/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/prepared-initial/static-prepared-receipt.json",
+      "pointer": "/paths/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/root-preflight.json",
+      "pointer": "/paths/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/static-prepared-receipt.json",
+      "pointer": "/paths/29/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+      "pointer": "/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+      "pointer": "/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+      "pointer": "/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+      "pointer": "/runs/0/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+      "pointer": "/runs/1/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+      "pointer": "/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+      "pointer": "/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+      "pointer": "/sourceManifest/34/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-session-continuation-round26/source-manifest-preflight.json",
+      "pointer": "/paths/14/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx"
+      }
+    },
+    {
+      "candidate": "chatview",
+      "historyPath": "docs/review-2026-10-12/validation/original-session-continuation-round26/source-manifest-static-final.json",
+      "pointer": "/paths/14/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx"
+      }
+    },
+    {
+      "candidate": "sidebar",
+      "historyPath": "docs/review-2026-10-12/validation/original-sidebar-title-round27/source-manifest.json",
+      "pointer": "/paths/0/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx"
+      }
+    }
+  ],
+  "count": 69,
+  "requiresManualFullOrSelectedInterpretation": true
+}

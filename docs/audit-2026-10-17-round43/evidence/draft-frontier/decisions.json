@@ -1,0 +1,139 @@
+{
+  "classification": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "oldExactCauseExclusions": [
+    {
+      "canonicalOldId": "R04",
+      "originalLabel": "D5",
+      "title": "Delayed plugin command overwrites next conversation unsent draft",
+      "oldSource": "docs/review-2026-10-12/desktop-round1.md58–68 +desktop-quality-round10.md24–32",
+      "currentSourceShape": "ChatView await expansion→mountedRef-only→setDraft; App setter uses current bucket ref; exact old producer/callback condition, not a new sibling",
+      "notRetested": true,
+      "notReclassifiedOrArchivedByThisReview": true,
+      "newId": null
+    }
+  ],
+  "ordinaryNegatives": [
+    "Textarea draft onChange feeds parent controlled setter; functional text update keeps other draft fields",
+    "IME composition guard stops key handling; onComposition start/end state and native composing flag both checked",
+    "Normal typing exits historyCursor mode; Up clamps nonempty history and Down restores stashed draft at cursor underflow; selection state resets on project/variant/localRuntime change",
+    "Busy embedded variant without queue returns without clearing draft; valid text submit follows existing onSend/onQueueInput then clears composer",
+    "Expansion-disabled input refutes same-draft simultaneous typing overwrite hypothesis; cross-conversation late expansion is the already-recorded R04/D5, not new",
+    "Composer seed uses functional append with paragraph boundary when current text nonempty; not dropped by fresh starter prompt"
+  ],
+  "noGlobalCorrectnessClaim": true,
+  "scopeBoundaries": [
+    "Does not establish delivery acceptance/retry or sender/backend lifecycle correctness",
+    "Does not audit attachment staging, authorization candidates, bucket identity/authority mechanisms or native/recording behavior",
+    "No promise of exhaustive whole ChatView/App prior reading or complete all-window/async UI correctness"
+  ],
+  "history": {
+    "snapshotFiles": 3773,
+    "md": 1385,
+    "json": 2388,
+    "jsonStrings": 1180902,
+    "jsonScalars": 1782213,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "queries": {
+      "chatview": {
+        "hits": 224,
+        "cap": 100,
+        "retained": 100
+      },
+      "sidebar": {
+        "hits": 192,
+        "cap": 100,
+        "retained": 100
+      },
+      "commentbox": {
+        "hits": 5,
+        "cap": 100,
+        "retained": 5
+      },
+      "chatview-sha": {
+        "hits": 34,
+        "cap": 100,
+        "retained": 34
+      },
+      "sidebar-sha": {
+        "hits": 26,
+        "cap": 100,
+        "retained": 26
+      },
+      "commentbox-sha": {
+        "hits": 4,
+        "cap": 100,
+        "retained": 4
+      }
+    },
+    "coverageRowsRetained": 69,
+    "coverageRowsOnlyExplicitSelectedMetadataInterpreted": true,
+    "causeQueries": {
+      "plugin-expand": {
+        "hits": 0,
+        "cap": 100,
+        "retained": 0
+      },
+      "draft-plugin-race": {
+        "hits": 105,
+        "cap": 100,
+        "retained": 100
+      },
+      "active-ref-draft": {
+        "hits": 2,
+        "cap": 100,
+        "retained": 2
+      }
+    },
+    "actualCauseWindowsRead": {
+      "active-ref-draft": [
+        0,
+        1
+      ],
+      "draft-plugin-race": [
+        4,
+        87,
+        88,
+        90,
+        91,
+        93,
+        94,
+        97,
+        98,
+        99
+      ]
+    },
+    "actualBoundedCauseWindowsCount": 12,
+    "oldR36ReportFullLines": 19,
+    "oldD5SourceSelected": [
+      58,
+      68
+    ],
+    "oldR04SourceSelected": [
+      24,
+      32
+    ],
+    "wide100RetainedNotFullReadingClaim": true,
+    "noSemanticExhaustion": true,
+    "actualUniqueCauseValueOrParagraphUnits": 11,
+    "duplicateQueryWindowCount": 1
+  },
+  "validation": {
+    "productImports": 0,
+    "productFunctionsOrHelpers": 0,
+    "languageBufferTimerPromiseOrEventFixtures": 0,
+    "testsReadSemantically": 0,
+    "testsRun": 0,
+    "actualReactBrowserDOM": 0,
+    "businessOrOutputFiles": 0,
+    "nativeNetworkModelProcessPermissionIdentityExperiments": 0,
+    "gitCommands": 0,
+    "oldRuntimePassesBorrowed": false,
+    "runtimePassesClaimed": 0,
+    "oldFailedDirectionsReopened": false
+  }
+}

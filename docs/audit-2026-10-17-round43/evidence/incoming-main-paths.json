@@ -1,0 +1,29 @@
+{
+  "baseline": "c2db5d9259afcc4c7264d190ab6bb673d49d5fe0",
+  "main": "07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb",
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/core/src/plugins/pluginCatalog.ts",
+    "packages/desktop/scripts/electron-test-watchdog.test.mjs",
+    "packages/desktop/scripts/process-custody.mjs",
+    "packages/desktop/scripts/process-custody.test.mjs",
+    "packages/desktop/scripts/process-lineage-custody.test.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+    "packages/desktop/scripts/windows-nsis-crash-evidence.mjs",
+    "packages/desktop/scripts/windows-nsis-crash-evidence.ps1",
+    "packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs",
+    "packages/desktop/src/main/plugins-service.installation-origin.test.ts",
+    "packages/desktop/src/main/plugins-service.test.ts",
+    "packages/desktop/src/main/plugins-service.ts",
+    "packages/desktop/src/preload/types.d.ts",
+    "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+    "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+    "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+    "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+    "packages/desktop/src/renderer/settings/McpSection.tsx",
+    "scripts/run-isolated-node-smoke.mjs",
+    "scripts/run-isolated-node-smoke.test.mjs"
+  ],
+  "productRuns": 0
+}

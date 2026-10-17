@@ -1,0 +1,2366 @@
+{
+  "capturedAtUTC": "2026-10-17T14:36:16.383558+00:00",
+  "inventorySha": "47ef0e5ccf80391d9c3203990262ad79c4dafa1dba05e383572c1674ae916cb1",
+  "matchCounts": {
+    "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts": 4,
+    "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts": 4,
+    "packages/pet/src/migration-summary.ts": 15,
+    "packages/desktop/src/shared/source-collections.ts": 7,
+    "packages/web/src/lib/format.ts": 1070
+  },
+  "contextCap": 80,
+  "hits": {
+    "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1577]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2815][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2815][\"sha256\"]",
+        "excerpt": "c9d12ae29631cd5eb86c95b5910713a520efa8ddb431f0656b452667e1cfb246"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/history.json",
+        "location": "$[\"matches\"][\"lab\"][14][\"excerpt\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts"
+      }
+    ],
+    "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1578]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2817][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2817][\"sha256\"]",
+        "excerpt": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/history.json",
+        "location": "$[\"matches\"][\"lab\"][15][\"excerpt\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      }
+    ],
+    "packages/pet/src/migration-summary.ts": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1937]",
+        "excerpt": "packages/pet/src/migration-summary.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+        "location": "$[\"files\"][2][\"path\"]",
+        "excerpt": "packages/pet/src/migration-summary.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+        "location": "$[\"files\"][2][\"frozenSha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+        "location": "$[\"files\"][2][\"currentSha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+        "location": "$[\"files\"][69][\"path\"]",
+        "excerpt": "packages/pet/src/migration-summary.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+        "location": "$[\"files\"][69][\"sha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][841][\"path\"]",
+        "excerpt": "packages/pet/src/migration-summary.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][841][\"sha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][841][\"claims\"][0][\"sourceSha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "$[\"rankedCandidates\"][152][\"path\"]",
+        "excerpt": "packages/pet/src/migration-summary.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "$[\"rankedCandidates\"][152][\"sha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][3385][\"path\"]",
+        "excerpt": "packages/pet/src/migration-summary.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][3385][\"sha256\"]",
+        "excerpt": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+        "location": "39",
+        "excerpt": "- Create: `packages/pet/src/migration-summary.ts`（纯函数：journal 小结 → 迁移摘要文本）+ `migration-summary.test.ts`。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+        "location": "692",
+        "excerpt": "- Create: `packages/pet/src/migration-summary.ts`"
+      }
+    ],
+    "packages/desktop/src/shared/source-collections.ts": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1530]",
+        "excerpt": "packages/desktop/src/renderer/i18n/ns/source-collections.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1861]",
+        "excerpt": "packages/desktop/src/shared/source-collections.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "$[\"rankedCandidates\"][69][\"path\"]",
+        "excerpt": "packages/desktop/src/shared/source-collections.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "$[\"rankedCandidates\"][69][\"sha256\"]",
+        "excerpt": "28f52047e3e2229cb203ab2c51e5895c13be4e33c5e32befbd156740ef57109f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2741][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/i18n/ns/source-collections.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][3257][\"path\"]",
+        "excerpt": "packages/desktop/src/shared/source-collections.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][3257][\"sha256\"]",
+        "excerpt": "28f52047e3e2229cb203ab2c51e5895c13be4e33c5e32befbd156740ef57109f"
+      }
+    ],
+    "packages/web/src/lib/format.ts": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "location": "1621",
+        "excerpt": "- `format.ts`"
+      },
+      {
+        "path": "docs/archive/core-modules/utils.md",
+        "location": "19",
+        "excerpt": "| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/utils.md",
+        "location": "63",
+        "excerpt": "// format.ts (re-exported from core index)"
+      },
+      {
+        "path": "docs/archive/core-modules/utils.md",
+        "location": "112",
+        "excerpt": "- **`format.ts` is leaf-safe (no Ink).** Width-aware truncation lives elsewhere (`./truncate.ts`); keep Ink/terminal-rendering concerns out of this module so formatters stay usable in any host."
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "location": "211",
+        "excerpt": "| `utils/format.ts` | `join(`×1 |"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[67][\"file\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[15][\"file\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[67][\"file\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$[138][\"file\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/round2_section.md",
+        "location": "22",
+        "excerpt": "| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][548]",
+        "excerpt": "packages/core/src/session/output-journal-backup-format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][732]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][2399]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "32",
+        "excerpt": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "36",
+        "excerpt": "- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/ui-findings.json",
+        "location": "$[\"issues\"][1][\"file\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+        "location": "$[\"productionSources\"][4][\"path\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/findings.json",
+        "location": "$[\"findings\"][19][\"source\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/source-manifest.json",
+        "location": "$[\"files\"][45][\"path\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"utils\"][0][\"snippet\"]",
+        "excerpt": "heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"utils\"][1][\"snippet\"]",
+        "excerpt": "e: boolean; reason: string; cleaned: string };\n\n// format.ts (re-exported from core index)\nfunction formatDuration(ms: number, opts?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean }): string;\nfunction formatTokens(n: number): string;\n```\n\n## 怎么用 / How to use\n\nAcquiring a run lock (from `run/RunLock.ts`):\n\n```ts\nimport { lock, check, unlock } from \"../utils/"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"utils\"][8][\"snippet\"]",
+        "excerpt": "turn `\"${path.replace(/\\\\/g, '\\\\\\\\').replace(/\"… |\n| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak wa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"utils\"][14][\"snippet\"]",
+        "excerpt": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"utils\"][19][\"snippet\"]",
+        "excerpt": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][10][\"text\"]",
+        "excerpt": "- `format.ts`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][25][\"text\"]",
+        "excerpt": "| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][32][\"text\"]",
+        "excerpt": "// format.ts (re-exported from core index)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][41][\"text\"]",
+        "excerpt": "- **`format.ts` is leaf-safe (no Ink).** Width-aware truncation lives elsewhere (`./truncate.ts`); keep Ink/terminal-rendering concerns out of this module so formatters stay usable in any host."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][43][\"text\"]",
+        "excerpt": "| `utils/format.ts` | `join(`×1 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][51][\"text\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][56][\"text\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][62][\"text\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][77][\"text\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][87][\"text\"]",
+        "excerpt": "| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][95][\"text\"]",
+        "excerpt": "packages/core/src/session/output-journal-backup-format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][96][\"text\"]",
+        "excerpt": "packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][102][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][105][\"text\"]",
+        "excerpt": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][106][\"text\"]",
+        "excerpt": "- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][110][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][111][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][112][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][113][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][143][\"text\"]",
+        "excerpt": "heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][144][\"text\"]",
+        "excerpt": "e: boolean; reason: string; cleaned: string };\n\n// format.ts (re-exported from core index)\nfunction formatDuration(ms: number, opts?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean }): string;\nfunction formatTokens(n: number): string;\n```\n\n## 怎么用 / How to use\n\nAcquiring a run lock (from `run/RunLock.ts`):\n\n```ts\nimport { lock, check, unlock } from \"../utils/"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][151][\"text\"]",
+        "excerpt": "turn `\"${path.replace(/\\\\/g, '\\\\\\\\').replace(/\"… |\n| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak wa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][156][\"text\"]",
+        "excerpt": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][161][\"text\"]",
+        "excerpt": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][201][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][202][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][251][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][252][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][253][\"text\"]",
+        "excerpt": "../../../packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][254][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][255][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][256][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][257][\"text\"]",
+        "excerpt": "`658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d` 的 format.ts 改为在 base 已以 `/` 结尾时直接使用 base，静态消除了 WEB-R8-01 的双分隔符。保留原冻结复现并单列“并行 main 源级已修复，runtimeRetested=false”。另外五项直接 finding 源码未变；没有将此源码一致性写成在新 main 重新验证其运行行为。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][261][\"text\"]",
+        "excerpt": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][262][\"text\"]",
+        "excerpt": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][293][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][299][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][305][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][311][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][317][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][323][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][329][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][335][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][341][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][347][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][353][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][359][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][365][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][371][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][378][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][384][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][390][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][396][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][402][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][408][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$[\"matches\"][414][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts"
+      }
+    ]
+  },
+  "directSourceObjects": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-findings.json",
+      "location": "$[\"issues\"][1]",
+      "object": {
+        "id": "UI-02",
+        "priority": "P2",
+        "title": "Web/Mobile 无条件 lowercase cwd，在大小写敏感 Host 将不同项目合并并构建错误项目目标",
+        "file": "packages/web/src/lib/format.ts",
+        "line": 18,
+        "conditional": true,
+        "condition": "Host 文件系统大小写敏感，存在相同字母但大小写不同的独立项目根",
+        "evidenceLevel": "source-pure-function-dynamic-creation-target-static-wiring",
+        "tests": "evidence/ui-web-project-case.test.ts",
+        "receipt": "evidence/ui-web-project-case.log",
+        "history": "no-matching-item-found-in-limited-deduplication",
+        "report": "desktop-data.md",
+        "reportLine": 34,
+        "fixed": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+      "location": "$[\"productionSources\"][4]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "location": "$[\"findings\"][19]",
+      "object": {
+        "id": "UI-02",
+        "priority": "P2",
+        "title": "Web/Mobile 对 cwd 转小写合并不同项目",
+        "report": "desktop-data.md",
+        "reportLine": 34,
+        "source": "packages/web/src/lib/format.ts",
+        "line": 18,
+        "logs": [
+          "evidence/ui-web-project-case.log"
+        ],
+        "evidenceLevel": "生产归属/分组纯函数",
+        "conditions": "条件：大小写敏感 Host 的两个合法仅大小写不同根",
+        "history": "limited-deduplication-no-same-root-cause-found",
+        "status": "confirmed-at-frozen-source-baseline"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17/source-manifest.json",
+      "location": "$[\"files\"][45]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "bytes": 4480,
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "location": "$[\"files\"][2]",
+      "object": {
+        "path": "packages/pet/src/migration-summary.ts",
+        "frozenSha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92",
+        "currentSha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92",
+        "matchesFrozen": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "location": "$[\"files\"][69]",
+      "object": {
+        "path": "packages/pet/src/migration-summary.ts",
+        "bytes": 553,
+        "sha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+      "location": "$[\"files\"][1]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "location": "$[\"files\"][52]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][1]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "location": "$[\"files\"][10]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "$[\"files\"][40]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][14]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][841]",
+      "object": {
+        "path": "packages/pet/src/migration-summary.ts",
+        "bytes": 553,
+        "lines": 12,
+        "sha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+                "jsonLocation": "$[\"files\"][2]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+                "jsonLocation": "$[\"files\"][69]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][1031]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][69]",
+      "object": {
+        "path": "packages/desktop/src/shared/source-collections.ts",
+        "bytes": 1211,
+        "lines": 35,
+        "sha256": "28f52047e3e2229cb203ab2c51e5895c13be4e33c5e32befbd156740ef57109f",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 1,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][152]",
+      "object": {
+        "path": "packages/pet/src/migration-summary.ts",
+        "bytes": 553,
+        "lines": 12,
+        "sha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92",
+        "coverageStatus": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 1,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2815]",
+      "object": {
+        "path": "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts",
+        "bytes": 307,
+        "lines": 5,
+        "sha256": "c9d12ae29631cd5eb86c95b5910713a520efa8ddb431f0656b452667e1cfb246"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2817]",
+      "object": {
+        "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+        "bytes": 9198,
+        "lines": 251,
+        "sha256": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3257]",
+      "object": {
+        "path": "packages/desktop/src/shared/source-collections.ts",
+        "bytes": 1211,
+        "lines": 35,
+        "sha256": "28f52047e3e2229cb203ab2c51e5895c13be4e33c5e32befbd156740ef57109f"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3385]",
+      "object": {
+        "path": "packages/pet/src/migration-summary.ts",
+        "bytes": 553,
+        "lines": 12,
+        "sha256": "9d385b2d9d9dd5a51ebb286925ccaefb265eefa9354e0613981210d737b62e92"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][4054]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][39][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][40][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][41][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][43][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][44][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][45][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][47][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][48][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][49][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][50][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 4480,
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][55][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][56][\"immediateParentForExactValue\"]",
+      "object": {
+        "id": "WEB-R8-01",
+        "priority": "P3",
+        "title": "根项目不能匹配后代cwd",
+        "report": "web.md",
+        "reportLine": 5,
+        "source": "packages/web/src/lib/format.ts",
+        "line": 20,
+        "log": "evidence/web-display-contracts.first.log",
+        "evidenceLevel": "真实projectForCwd/groupByProject纯数据",
+        "limitations": "冻结基线确认；并行main已源级修复，未在新main重跑",
+        "status": "confirmed-at-frozen-source-baseline",
+        "currentMainSourceDisposition": {
+          "status": "addressed-by-concurrent-main-source-change",
+          "commit": "658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d",
+          "runtimeRetested": false
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][57][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 4480,
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][61][\"immediateParentForExactValue\"]",
+      "object": {
+        "id": "UI-02",
+        "priority": "P2",
+        "title": "Web/Mobile 无条件 lowercase cwd，在大小写敏感 Host 将不同项目合并并构建错误项目目标",
+        "file": "packages/web/src/lib/format.ts",
+        "line": 18,
+        "conditional": true,
+        "condition": "Host 文件系统大小写敏感，存在相同字母但大小写不同的独立项目根",
+        "evidenceLevel": "source-pure-function-dynamic-creation-target-static-wiring",
+        "tests": "evidence/ui-web-project-case.test.ts",
+        "receipt": "evidence/ui-web-project-case.log",
+        "history": "no-matching-item-found-in-limited-deduplication",
+        "report": "desktop-data.md",
+        "reportLine": 34,
+        "fixed": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][62][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][63][\"immediateParentForExactValue\"]",
+      "object": {
+        "id": "UI-02",
+        "priority": "P2",
+        "title": "Web/Mobile 对 cwd 转小写合并不同项目",
+        "report": "desktop-data.md",
+        "reportLine": 34,
+        "source": "packages/web/src/lib/format.ts",
+        "line": 18,
+        "logs": [
+          "evidence/ui-web-project-case.log"
+        ],
+        "evidenceLevel": "生产归属/分组纯函数",
+        "conditions": "条件：大小写敏感 Host 的两个合法仅大小写不同根",
+        "history": "limited-deduplication-no-same-root-cause-found",
+        "status": "confirmed-at-frozen-source-baseline"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_path\"][64][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "bytes": 4480,
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][43][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][44][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][45][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][47][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][48][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][49][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][51][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][52][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][53][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][54][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 4480,
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][59][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][60][\"immediateParentForExactValue\"]",
+      "object": {
+        "id": "WEB-R8-01",
+        "priority": "P3",
+        "title": "根项目不能匹配后代cwd",
+        "report": "web.md",
+        "reportLine": 5,
+        "source": "packages/web/src/lib/format.ts",
+        "line": 20,
+        "log": "evidence/web-display-contracts.first.log",
+        "evidenceLevel": "真实projectForCwd/groupByProject纯数据",
+        "limitations": "冻结基线确认；并行main已源级修复，未在新main重跑",
+        "status": "confirmed-at-frozen-source-baseline",
+        "currentMainSourceDisposition": {
+          "status": "addressed-by-concurrent-main-source-change",
+          "commit": "658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d",
+          "runtimeRetested": false
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][61][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 4480,
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][65][\"immediateParentForExactValue\"]",
+      "object": {
+        "id": "UI-02",
+        "priority": "P2",
+        "title": "Web/Mobile 无条件 lowercase cwd，在大小写敏感 Host 将不同项目合并并构建错误项目目标",
+        "file": "packages/web/src/lib/format.ts",
+        "line": 18,
+        "conditional": true,
+        "condition": "Host 文件系统大小写敏感，存在相同字母但大小写不同的独立项目根",
+        "evidenceLevel": "source-pure-function-dynamic-creation-target-static-wiring",
+        "tests": "evidence/ui-web-project-case.test.ts",
+        "receipt": "evidence/ui-web-project-case.log",
+        "history": "no-matching-item-found-in-limited-deduplication",
+        "report": "desktop-data.md",
+        "reportLine": 34,
+        "fixed": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][66][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][67][\"immediateParentForExactValue\"]",
+      "object": {
+        "id": "UI-02",
+        "priority": "P2",
+        "title": "Web/Mobile 对 cwd 转小写合并不同项目",
+        "report": "desktop-data.md",
+        "reportLine": 34,
+        "source": "packages/web/src/lib/format.ts",
+        "line": 18,
+        "logs": [
+          "evidence/ui-web-project-case.log"
+        ],
+        "evidenceLevel": "生产归属/分组纯函数",
+        "conditions": "条件：大小写敏感 Host 的两个合法仅大小写不同根",
+        "history": "limited-deduplication-no-same-root-cause-found",
+        "status": "confirmed-at-frozen-source-baseline"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_filename\"][68][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "bytes": 4480,
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][0][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][1][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][2][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][3][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][4][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][5][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][6][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][7][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][8][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][10][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"source_sha\"][11][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"format_contract\"][139][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"format_contract\"][143][\"immediateParentForExactValue\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"hits\"][\"format_contract\"][144][\"immediateParentForExactValue\"]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][0][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][1][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][2][\"row\"]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][3][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][4][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][5][\"row\"]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][6][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][7][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "$[\"samePathShaRows\"][8][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-decisions.json",
+      "location": "$[\"firstCandidateExclusion\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "reason": "Same current-SHA prior manifest scope explicitly states Full static module, despite R28 structural classifier pin-only status. Also old project ownership causes remain excluded.",
+        "sourceEvidence": {
+          "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+          "jsonPointer": "/files/10",
+          "row": {
+            "path": "packages/web/src/lib/format.ts",
+            "bytes": 5447,
+            "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+            "frozenBlobVerified": true,
+            "currentMatchesFrozen": true,
+            "lineCount": 140
+          }
+        },
+        "newBodyReadLines": 0,
+        "notClaimed": "No semantic review of current project identity/registry; prior old117line full source is a different version."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-decisions.json",
+      "location": "$[\"firstCandidateExclusion\"][\"sourceEvidence\"][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][0][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][1][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][2][\"row\"]",
+      "object": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][3][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][4][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][5][\"row\"]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][6][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][7][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "$[\"samePathShaRows\"][8][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/initial-pins.json",
+      "location": "$[\"files\"][0]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lineCount": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only before active leaf body",
+        "pinBeforeBodyRead": true,
+        "priorCoverage": "Dated R28 current-sha pin-only/unknown scope with older version pins; fresh full history gate required. Not never-read."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/selection-metadata.json",
+      "location": "$[\"selectionCandidatesCurrentPins\"][1]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lineCount": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "metadata-selection-only-no-body-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/selection-metadata.json",
+      "location": "$[\"datedRound28SelectionInputs\"][\"package-inventory.json\"][\"matchedRows\"][1][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/selection-metadata.json",
+      "location": "$[\"datedRound28SelectionInputs\"][\"coverage-index.json\"][\"matchedRows\"][1][\"row\"]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "location": "$[\"hashOnlyFiles\"][1]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "lineCount": 140,
+        "coverage": "hash-only selection/exclusion metadata; zero body read",
+        "selectedLineRanges": [],
+        "coveredLineCount": 0,
+        "initialPinArtifact": "selection-metadata.json",
+        "initialPinUTC": "2026-10-17T13:51:44.538026+00:00",
+        "finishBytes": 5447,
+        "finishSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "matchesInitialPin": true,
+        "selectionRole": "Original candidate excluded before body on same-SHA full scope"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "location": "$[\"files\"][23]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentBytes": 5447,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainBytes": 5447,
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "location": "$[\"hashOnlyChecks\"][11]",
+      "object": {
+        "manifest": "shortcut-hints-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only selection/exclusion metadata; zero body read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "location": "$[\"sources\"][5]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "location": "$[\"files\"][88]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 4480,
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "location": "$[\"sources\"][1]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/findings.json",
+      "location": "$[\"findings\"][4]",
+      "object": {
+        "id": "WEB-R8-01",
+        "priority": "P3",
+        "title": "根项目不能匹配后代cwd",
+        "report": "web.md",
+        "reportLine": 5,
+        "source": "packages/web/src/lib/format.ts",
+        "line": 20,
+        "log": "evidence/web-display-contracts.first.log",
+        "evidenceLevel": "真实projectForCwd/groupByProject纯数据",
+        "limitations": "冻结基线确认；并行main已源级修复，未在新main重跑",
+        "status": "confirmed-at-frozen-source-baseline",
+        "currentMainSourceDisposition": {
+          "status": "addressed-by-concurrent-main-source-change",
+          "commit": "658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d",
+          "runtimeRetested": false
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "location": "$[\"files\"][97]",
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 4480,
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": false
+      }
+    }
+  ],
+  "drift": []
+}

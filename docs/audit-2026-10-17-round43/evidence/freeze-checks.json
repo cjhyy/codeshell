@@ -1,0 +1,114 @@
+{
+  "expectedCount": 18,
+  "checks": [
+    {
+      "path": "evidence/dataset-frontier/report.md",
+      "bytes": 5257,
+      "sha256": "42453ea4d4e69bd87461a22b4ad90a5c5596607755cdb9618d7a5165d8cd6e49",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/dataset-frontier/source-manifest.json",
+      "bytes": 20671,
+      "sha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/dataset-frontier/artifact-receipt.json",
+      "bytes": 4706,
+      "sha256": "86cdbdc6fb577c7732f48b78831fa19b74e473adaf1c5149707b7621b9bfae27",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/dataset-review/review.md",
+      "bytes": 2691,
+      "sha256": "ba3b3b6e7fccf76706b400b969b68fdfa1ce719c481cf48785e9b9ed017dbc85",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/dataset-review/source-manifest.json",
+      "bytes": 7039,
+      "sha256": "89121f8407ec4f1dee0366ff798e39fb78c4fbdd5e8a8674fa31beabf57767d0",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/dataset-review/artifact-receipt.json",
+      "bytes": 3422,
+      "sha256": "ad7eee40cccc35f6a00a54956f98a3e6b0574750e1dfb679183d5147747ad676",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/draft-frontier/report.md",
+      "bytes": 5552,
+      "sha256": "5951b2996c998f95e8c8b8566f138ec0b0097b7ee8dc77e1b39f93bfa643116d",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/draft-frontier/source-manifest.json",
+      "bytes": 10554,
+      "sha256": "f710b18a9a76a4ecc526d0b6f94c91d206b5e87c43446e15d591196b347cf2c4",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/draft-frontier/artifact-receipt.json",
+      "bytes": 5379,
+      "sha256": "395bad53928ea4426fe507cd3e2c740c3bd2e84e6c57e0e28aa2d64575aa33e7",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/draft-review/review.md",
+      "bytes": 4360,
+      "sha256": "15e6c7ac964cb2771f05a0c6536920d609b5977cb517bf1015b17c1916a5a28f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/draft-review/source-manifest.json",
+      "bytes": 8318,
+      "sha256": "392f2c8518079a981b5fa8afcc5fa2331c8c73dd52ca83f390c3c1c1b18f7de9",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/draft-review/artifact-receipt.json",
+      "bytes": 2827,
+      "sha256": "cc75d3c669377e900dcc0d98cbd537d3579fd96a1a2441e1c401d0540765b40c",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/review.md",
+      "bytes": 3779,
+      "sha256": "afb800a6061e40d3803ff076573c0fb1db1e38c87cd130c920e7a831e9978b7f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/checks.json",
+      "bytes": 59260,
+      "sha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/artifact-receipt.json",
+      "bytes": 690,
+      "sha256": "b7db08879fad964ebce29b465478fa092dbcaf6a8018154481374c76c52f4a8e",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/catalog-review/review.md",
+      "bytes": 1845,
+      "sha256": "3d2a917f17a1e1debf0658a71548748e10453da0ef6c7785daede283bbda1c21",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/catalog-review/checks.json",
+      "bytes": 42789,
+      "sha256": "f1b2c6d5f696ca5affb719c71e72e2c95488c1ab3a0cda128318ca106108a0bf",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/catalog-review/artifact-receipt.json",
+      "bytes": 625,
+      "sha256": "7e448ea2eff7722b5957c6806b8b504eabe9c71708960b0968e5706e24a0c33d",
+      "matchesWorkerFreezeMessage": true
+    }
+  ],
+  "productRuns": 0
+}

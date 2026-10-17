@@ -1,0 +1,14 @@
+{
+  "toolChunk": "77ac7f",
+  "observedExitCode": 1,
+  "kind": "Metadata scanner compile-time SyntaxError before any focused scan ran",
+  "message": "SyntaxError: expected 'else' after 'if' expression",
+  "line": 14,
+  "cause": "Own metadata conditional expression had missing space in else0; not product code or fixture",
+  "originalMethodBytes": 3056,
+  "originalMethodSha256": "12e0ae8e1b313ac7aa7b16365a033d38c42e2fe375c1d812a8e45b19c2b97290",
+  "firstSourcePreserved": "cause-history-method.first.raw.py",
+  "focusedHistoryHadRun": false,
+  "productAttempts": 0,
+  "correction": "Only whitespace in own metadata method else0→else 0; then first actual focused scan"
+}

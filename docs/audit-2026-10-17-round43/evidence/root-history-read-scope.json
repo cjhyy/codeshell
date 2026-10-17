@@ -1,0 +1,18 @@
+{
+  "formalHistoryFiles": 3869,
+  "freshQueryCounts": {
+    "dataset-editor": 13,
+    "plugin-draft": 18,
+    "active-ref-draft": 8
+  },
+  "allFreshContextsReadByRoot": false,
+  "new96DeltaQueryCounts": {
+    "dataset-editor": 0,
+    "plugin-draft": 0,
+    "active-ref-draft": 0
+  },
+  "newDeltaContextsRead": 0,
+  "meaning": "Fresh identity/counts and96 frozen42 delta queried; original prep selected/read contexts remain actual source of old-cause adjudication. No full historical scalar/MD exhaustion.",
+  "newRootProductSemanticReadsDuringFormalAssembly": 0,
+  "productRuns": 0
+}

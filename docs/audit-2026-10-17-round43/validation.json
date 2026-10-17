@@ -1,0 +1,11 @@
+{
+  "baseline": "c2db5d9259afcc4c7264d190ab6bb673d49d5fe0",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static ordinary dataset DTO and draft handlers; exact old D5 exclusion and canonical historical catalog metadata. Worker0 Git; Root Git metadata operations separately recorded. No product/helper/Buffer/fixture/test/React/UI/model/native/business-network execution."
+}

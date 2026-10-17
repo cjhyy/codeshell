@@ -1,0 +1,20 @@
+{
+  "capturedAtUTC": "2026-10-17T14:40:33.172969+00:00",
+  "prepOnly": true,
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "conclusion": "Finite static negative for the actual ordinary dataset-editor DTO transformation and selected consumers; no entire package/UI/runtime assurance.",
+  "oldExcluded": [
+    "UTIL-R14-R1 / DESKTOP-R12-01 toolDisplay family",
+    "TIME1 cron delimiter parser family",
+    "BUDGET-R21-R1 budget separator floor family",
+    "LAB-R3-01 reflection selects first superseded grading record"
+  ],
+  "runtimeEvidenceUsed": false
+}

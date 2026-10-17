@@ -1,0 +1,29 @@
+{
+  "scope": "before ordinary controlled-draft callback and declared tests content/navigation; no React or product tests",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "pinUTC": "2026-10-17T14:33:15.318459+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/AppDraftOverrides.test.tsx",
+      "bytes": 10680,
+      "sha256": "63f39fcb49763af140b83b952225ea3d6c76b02cf52084d30fc99af5425c316a",
+      "lineCount": 325,
+      "pinUTC": "2026-10-17T14:33:15.320397+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.composer-variant.test.tsx",
+      "bytes": 6398,
+      "sha256": "afc5a7f4bd731991d30638871950f35011c3688223d7df0b5eed174728159325",
+      "lineCount": 172,
+      "pinUTC": "2026-10-17T14:33:15.321058+00:00",
+      "semanticRead": false
+    }
+  ]
+}

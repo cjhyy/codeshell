@@ -1,0 +1,30 @@
+{
+  "rootContext": "Root reports formal40 frozen; formal41 pending, no Git command",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lineCount": 209,
+      "pinTimeUTC": "2026-10-17T14:27:15.109256+00:00",
+      "coverage": "hash-only metadata selection before any current body read"
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "bytes": 523,
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "lineCount": 13,
+      "pinTimeUTC": "2026-10-17T14:27:15.109256+00:00",
+      "coverage": "hash-only metadata selection before any current body read"
+    },
+    {
+      "path": "packages/core/src/automation/cron-expr.ts",
+      "bytes": 7034,
+      "sha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "lineCount": 207,
+      "pinTimeUTC": "2026-10-17T14:27:15.109256+00:00",
+      "coverage": "hash-only metadata selection before any current body read"
+    }
+  ]
+}

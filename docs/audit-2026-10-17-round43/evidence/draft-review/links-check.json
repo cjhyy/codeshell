@@ -1,0 +1,74 @@
+{
+  "capturedUTC": "2026-10-17T14:39:30.472140+00:00",
+  "method": "Markdown report local links, both paths resolved; planned receipt exists by final verification",
+  "count": 11,
+  "links": [
+    {
+      "link": "history-old-cause-selected.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/history-old-cause-selected.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-decisions.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/history-decisions.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "initial-pins.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/initial-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "source-manifest.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/source-manifest.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/history.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-selected-contexts.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/history-selected-contexts.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-focused.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/history-focused.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "history-finish-check.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/history-finish-check.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "metadata-diagnostics.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/metadata-diagnostics.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "validation.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/validation.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "artifact-receipt.json",
+      "resolved": "/private/tmp/codeshell-audit-round47-chatview-review/artifact-receipt.json",
+      "inside": true,
+      "exists": true
+    }
+  ],
+  "outsideRelativeAliasesNeeded": false
+}
