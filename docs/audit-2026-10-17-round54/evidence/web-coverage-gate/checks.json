@@ -1,0 +1,53 @@
+{
+  "createdAt": "2026-10-17T18:08:18.810563+00:00",
+  "files": [],
+  "sourcePins": 4,
+  "sourcePinsAllUnchanged": true,
+  "historyFilesChecked": 5311,
+  "historyAllUnchanged": true,
+  "localLinks": [
+    {
+      "target": "canonical-evidence.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "selected-history-metadata.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "history-inventory.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "insidePacket": true
+    }
+  ],
+  "allLinksValid": true,
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "oldFullExclusions": 2,
+  "currentProductBodyLines": 0,
+  "testDeclarationLines": 0,
+  "productExecutions": 0,
+  "gitExecutions": 0,
+  "metadataCommandErrors": 0,
+  "metadataOutputTruncations": 0
+}

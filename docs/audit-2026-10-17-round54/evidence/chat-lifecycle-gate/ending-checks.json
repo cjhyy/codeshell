@@ -1,0 +1,41 @@
+{
+  "createdAt": "2026-10-17T18:11:28.292559+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "bytes": 824,
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/attachments.ts",
+      "bytes": 3512,
+      "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+      "matchesInitial": true
+    }
+  ],
+  "historyOriginalCount": 5311,
+  "historyCurrentIncludedCount": 5311,
+  "historyChanged": [],
+  "historyMissing": [],
+  "historyAdded": [],
+  "historyRemoved": [],
+  "excludedCurrentPaths": [
+    "docs/audit-2026-10-17-round54/evidence/integration-before.json",
+    "docs/audit-2026-10-17-round54/evidence/integration-plan.json",
+    "docs/audit-2026-10-17-round54/evidence/worktrees-before.json"
+  ],
+  "gitExecuted": false
+}

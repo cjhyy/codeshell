@@ -1,0 +1,1963 @@
+{
+  "createdAt": "2026-10-17T18:09:43.311148+00:00",
+  "capPerQuery": 100,
+  "contextCapCharacters": 2000,
+  "queryTotals": {
+    "exact-path": 48,
+    "sha256": 24,
+    "basename": 119
+  },
+  "hits": {
+    "exact-path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/76",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/candidates.json",
+        "pointer": "/candidates/1/source",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/chat.md",
+        "line": 21,
+        "text": "| CHAT-R11-C1，普通 Markdown button URL/标签转义 | [lifecycle.ts:14](../../packages/chat/src/lifecycle.ts#L14) 仅转义标签 `]`，URL 原样放入括号；合法 URL 含不配对括号、标签含反斜杠时的确切平台渲染仍未证明。官方 Mattermost 文档 open 无可读正文，官方源码树首次 fetch 被拒，立即 SKIP，未写产品 fixture、下载或换 parser 验证。只列静态候选。 |",
+        "originalCharacters": 248,
+        "originalValueSha256": "30220b04ec3b2a16ad63bfb3506201b88dc293109214de7650db1017d73f56b2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/1/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/2/hits/0/text",
+        "text": "| N01 | P1 | **Slack/钉钉确认了未被持久接受的消息**。队列已满或落盘失败仍 success ACK；应用没有该消息的重试副本，原平台消息仍可手动重发。 | [lifecycle.ts:17](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17) | [C2](coding-tui-chat.md) |",
+        "originalCharacters": 244,
+        "originalValueSha256": "461541aebef938593179aef7f104ea276fbffffe140a902c5d051735cb095db7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/3/hits/0/text",
+        "text": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts",
+        "originalCharacters": 104,
+        "originalValueSha256": "ec193fc573bb3ce52935f9852a48462221c110782b451b9e032b7d90b0fde8f5",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/4/hits/9/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/21/hits/17/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/32/hits/2/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/34/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-candidates.json",
+        "pointer": "/candidates/0/source",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/2/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/4/hits/0/text",
+        "text": "| N01 | P1 | **Slack/钉钉确认了未被持久接受的消息**。队列已满或落盘失败仍 success ACK；应用没有该消息的重试副本，原平台消息仍可手动重发。 | [lifecycle.ts:17](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17) | [C2](coding-tui-chat.md) |",
+        "originalCharacters": 244,
+        "originalValueSha256": "461541aebef938593179aef7f104ea276fbffffe140a902c5d051735cb095db7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/5/hits/0/text",
+        "text": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts",
+        "originalCharacters": 104,
+        "originalValueSha256": "ec193fc573bb3ce52935f9852a48462221c110782b451b9e032b7d90b0fde8f5",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/7/hits/9/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/48/hits/17/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/81/hits/2/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/83/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/9/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "pointer": "/files/14/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/9/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/11/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/workerSourceChecks/13/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/59/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/164/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/99/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/661/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/661/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/662/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/662/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/663/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/663/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/665/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/665/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/666/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/666/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/407/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/407/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/398",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/407/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+        "pointer": "/sources/3/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "pointer": "/files/13/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-remaining-2026-10-12/README.md",
+        "line": 13,
+        "text": "| N01 | P1 | **Slack/钉钉确认了未被持久接受的消息**。队列已满或落盘失败仍 success ACK；应用没有该消息的重试副本，原平台消息仍可手动重发。 | [lifecycle.ts:17](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17) | [C2](coding-tui-chat.md) |",
+        "originalCharacters": 244,
+        "originalValueSha256": "461541aebef938593179aef7f104ea276fbffffe140a902c5d051735cb095db7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+        "line": 58,
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-remaining-2026-10-12/findings.json",
+        "pointer": "/issues/0/file",
+        "text": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts",
+        "originalCharacters": 104,
+        "originalValueSha256": "ec193fc573bb3ce52935f9852a48462221c110782b451b9e032b7d90b0fde8f5",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+        "line": 58,
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      }
+    ],
+    "sha256": [
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/9/frozenSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/9/currentSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "pointer": "/files/14/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/9/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/11/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/11/currentSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/11/mainSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/workerSourceChecks/13/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/59/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/59/claims/0/sourceSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/164/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/99/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/663/sourceHashFields/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/sourceHashFields/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/sourceHashFields/currentSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/sourceHashFields/mainSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/665/sourceHashFields/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/666/sourceHashFields/frozenSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/666/sourceHashFields/currentSha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/407/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/407/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/407/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+        "pointer": "/sources/3/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "pointer": "/files/13/sha256",
+        "text": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "originalCharacters": 64,
+        "originalValueSha256": "d83e0c7f2c534af5468bae243379b5e946534b58440b3f90ba1b8eb301a79c93",
+        "contextCapCharacters": 2000
+      }
+    ],
+    "basename": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/76",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/281",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1867",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/candidates.json",
+        "pointer": "/candidates/1/source",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/chat.md",
+        "line": 21,
+        "text": "| CHAT-R11-C1，普通 Markdown button URL/标签转义 | [lifecycle.ts:14](../../packages/chat/src/lifecycle.ts#L14) 仅转义标签 `]`，URL 原样放入括号；合法 URL 含不配对括号、标签含反斜杠时的确切平台渲染仍未证明。官方 Mattermost 文档 open 无可读正文，官方源码树首次 fetch 被拒，立即 SKIP，未写产品 fixture、下载或换 parser 验证。只列静态候选。 |",
+        "originalCharacters": 248,
+        "originalValueSha256": "30220b04ec3b2a16ad63bfb3506201b88dc293109214de7650db1017d73f56b2",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/1/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/2/hits/0/text",
+        "text": "| N01 | P1 | **Slack/钉钉确认了未被持久接受的消息**。队列已满或落盘失败仍 success ACK；应用没有该消息的重试副本，原平台消息仍可手动重发。 | [lifecycle.ts:17](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17) | [C2](coding-tui-chat.md) |",
+        "originalCharacters": 244,
+        "originalValueSha256": "461541aebef938593179aef7f104ea276fbffffe140a902c5d051735cb095db7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/3/hits/0/text",
+        "text": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts",
+        "originalCharacters": 104,
+        "originalValueSha256": "ec193fc573bb3ce52935f9852a48462221c110782b451b9e032b7d90b0fde8f5",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/4/hits/9/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/21/hits/17/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/32/hits/2/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "pointer": "/matches/34/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-candidates.json",
+        "pointer": "/candidates/0/source",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/2/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/4/hits/0/text",
+        "text": "| N01 | P1 | **Slack/钉钉确认了未被持久接受的消息**。队列已满或落盘失败仍 success ACK；应用没有该消息的重试副本，原平台消息仍可手动重发。 | [lifecycle.ts:17](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17) | [C2](coding-tui-chat.md) |",
+        "originalCharacters": 244,
+        "originalValueSha256": "461541aebef938593179aef7f104ea276fbffffe140a902c5d051735cb095db7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/5/hits/0/text",
+        "text": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts",
+        "originalCharacters": 104,
+        "originalValueSha256": "ec193fc573bb3ce52935f9852a48462221c110782b451b9e032b7d90b0fde8f5",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/7/hits/9/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/48/hits/17/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/81/hits/2/text",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/83/hits/3/text",
+        "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+        "originalCharacters": 111,
+        "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "pointer": "/files/9/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "pointer": "/files/14/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "pointer": "/files/9/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/files/11/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+        "pointer": "/workerSourceChecks/13/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/803",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/59/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/79/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "pointer": "/rankedCandidates/164/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/99/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/581/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/3267/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/661/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/661/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/662/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/662/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/663/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/663/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/664/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/665/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/665/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/666/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/666/directSourcePathsInObject/0",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2243/directSourcePathsInObject/1",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2421/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2421/directSourcePathsInObject/0",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2422/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2422/directSourcePathsInObject/0",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2423/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2423/directSourcePathsInObject/0",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2424/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/2424/directSourcePathsInObject/1",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5192/directSourcePathsInObject/0",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13123/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13123/directSourcePathsInObject/0",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13124/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/13124/directSourcePathsInObject/0",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/407/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/893/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/3589/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/407/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/893/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/3589/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/398",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/823",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/3277",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/407/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/893/path",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/3590/path",
+        "text": "packages/desktop/src/shared/top-level-run-lifecycle.ts",
+        "originalCharacters": 54,
+        "originalValueSha256": "103765614e1a00c3ed907845f9be73c9b51add6e668c5d7689cf91b7f6531966",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+        "pointer": "/sources/3/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "pointer": "/files/13/path",
+        "text": "packages/chat/src/lifecycle.ts",
+        "originalCharacters": 30,
+        "originalValueSha256": "4699726dc18f0dfc9086869651bd75d3a08b5981b145e1e7088a2c0b6e06e9df",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "pointer": "/relativeImports/162/resolved",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "pointer": "/relativeImports/143/resolved",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "pointer": "/relativeImports/150/resolved",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "pointer": "/relativeImports/218/resolved",
+        "text": "packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 35,
+        "originalValueSha256": "5a2fc7a6000e8e72ba8b8aaa2a9a1b04615475f53d01806e7d5d6359eed25ca7",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "pointer": "/final/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 106,
+        "originalValueSha256": "2d31b1ea14da633eb58bf8322734a070fb6250358249bb26b3d5b2670c325d0d",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "pointer": "/final/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "pointer": "/snapshot/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "pointer": "/final/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "pointer": "/snapshot/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/2",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/goal/lifecycle.ts",
+        "originalCharacters": 98,
+        "originalValueSha256": "b32d74741977c25ae0e65119055019193458706d7f33945203724916b7be0c92",
+        "contextCapCharacters": 2000
+      }
+    ]
+  },
+  "directSourceRows": [
+    {
+      "document": "docs/audit-2026-10-17-round11/candidates.json",
+      "pointer": "/candidates/1",
+      "row": {
+        "id": "CHAT-R11-C1",
+        "status": "static-unconfirmed-skipped",
+        "title": "通用 Markdown button URL/标签仅转义右方括号，普通括号或反斜杠是否破坏 labelled link",
+        "source": "packages/chat/src/lifecycle.ts",
+        "line": 14,
+        "evidenceLevel": "static source only; no product fixture",
+        "observation": "formatter 把 HTTP(S) URL 原样放入括号，并仅替换 label 的 ]；gateway.ts:291-312 接受合法 HTTP(S) URL 和普通标签。Mattermost send:97 消费此 formatter。",
+        "missingProof": "尚未取得确切当前 Mattermost renderer grammar/实际解析结果，不能把别的 Markdown parser 当成该平台。",
+        "disposition": "官方文档正文不可读，官方源码树首次 fetch 被拒后 SKIP；未重试、下载、换 parser/方式验证。",
+        "evidence": [
+          "evidence/chat-primary-contracts.json"
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "pointer": "/matches/4/hits/9",
+      "row": {
+        "location": "$.files[13].path",
+        "text": "packages/chat/src/lifecycle.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "pointer": "/matches/21/hits/17",
+      "row": {
+        "location": "$.source_inventory[76]",
+        "text": "packages/chat/src/lifecycle.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "pointer": "/matches/32/hits/2",
+      "row": {
+        "location": "$.sources[3].path",
+        "text": "packages/chat/src/lifecycle.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-candidates.json",
+      "pointer": "/candidates/0",
+      "row": {
+        "id": "CHAT-R11-C1",
+        "status": "static-unconfirmed-skipped",
+        "title": "通用 Markdown button URL/标签仅转义右方括号，普通括号或反斜杠是否破坏 labelled link",
+        "source": "packages/chat/src/lifecycle.ts",
+        "line": 14,
+        "evidenceLevel": "static source only; no product fixture",
+        "observation": "formatter 把 HTTP(S) URL 原样放入括号，并仅替换 label 的 ]；gateway.ts:291-312 接受合法 HTTP(S) URL 和普通标签。Mattermost send:97 消费此 formatter。",
+        "missingProof": "尚未取得确切当前 Mattermost renderer grammar/实际解析结果，不能把别的 Markdown parser 当成该平台。",
+        "disposition": "官方文档正文不可读，官方源码树首次 fetch 被拒后 SKIP；未重试、下载、换 parser/方式验证。",
+        "evidence": [
+          "evidence/chat-primary-contracts.json"
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "pointer": "/matches/7/hits/9",
+      "row": {
+        "location": "$.files[13].path",
+        "text": "packages/chat/src/lifecycle.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "pointer": "/matches/48/hits/17",
+      "row": {
+        "location": "$.source_inventory[76]",
+        "text": "packages/chat/src/lifecycle.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "pointer": "/matches/81/hits/2",
+      "row": {
+        "location": "$.sources[3].path",
+        "text": "packages/chat/src/lifecycle.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "pointer": "/files/9",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "frozenSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "currentSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "currentMatchesFrozen": true,
+        "scope": "full helper read; format candidate not tested"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/14",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "pointer": "/files/9",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "scope": "Full static leaf; old Mattermost Markdown candidate remains skipped, no runtime.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 28
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "pointer": "/files/11",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "mainSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "pointer": "/workerSourceChecks/13",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/chat/src/lifecycle.ts",
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/59",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "lines": 28,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+                "jsonLocation": "$[\"files\"][9]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+                "jsonLocation": "$[\"files\"][14]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][9]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][11]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][13]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][13]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "pointer": "/rankedCandidates/164",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "lines": 28,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "coverageStatus": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 1,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 1,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/99",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "lines": 28,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/661",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/lifecycle.ts"
+        ],
+        "origin": "list-scalar",
+        "provenance": [
+          {
+            "historyRow": 198,
+            "jsonPointer": "/source_inventory/76"
+          }
+        ],
+        "claimId": "C000662"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/662",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/lifecycle.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 262,
+            "jsonPointer": "/candidates/1"
+          },
+          {
+            "historyRow": 266,
+            "jsonPointer": "/matches/3/hits/0"
+          },
+          {
+            "historyRow": 266,
+            "jsonPointer": "/matches/4/hits/9"
+          },
+          {
+            "historyRow": 266,
+            "jsonPointer": "/matches/21/hits/17"
+          },
+          {
+            "historyRow": 266,
+            "jsonPointer": "/matches/32/hits/2"
+          },
+          {
+            "historyRow": 268,
+            "jsonPointer": "/candidates/0"
+          },
+          {
+            "historyRow": 270,
+            "jsonPointer": "/matches/5/hits/0"
+          },
+          {
+            "historyRow": 270,
+            "jsonPointer": "/matches/7/hits/9"
+          },
+          {
+            "historyRow": 270,
+            "jsonPointer": "/matches/48/hits/17"
+          },
+          {
+            "historyRow": 270,
+            "jsonPointer": "/matches/81/hits/2"
+          },
+          {
+            "historyRow": 3454,
+            "jsonPointer": "/issues/0"
+          }
+        ],
+        "claimId": "C000663"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/663",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "sourceHashFields": {
+          "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/lifecycle.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 316,
+            "jsonPointer": "/files/14"
+          },
+          {
+            "historyRow": 824,
+            "jsonPointer": "/workerSourceChecks/13"
+          },
+          {
+            "historyRow": 1348,
+            "jsonPointer": "/files/59"
+          },
+          {
+            "historyRow": 1349,
+            "jsonPointer": "/rankedCandidates/164"
+          },
+          {
+            "historyRow": 1350,
+            "jsonPointer": "/files/99"
+          },
+          {
+            "historyRow": 2587,
+            "jsonPointer": "/sources/3"
+          },
+          {
+            "historyRow": 2612,
+            "jsonPointer": "/files/13"
+          }
+        ],
+        "claimId": "C000664"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/664",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "sourceHashFields": {
+          "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+          "currentSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+          "mainSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/lifecycle.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 824,
+            "jsonPointer": "/files/11"
+          }
+        ],
+        "claimId": "C000665"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/665",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "sourceHashFields": {
+          "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "scope": "Full static leaf; old Mattermost Markdown candidate remains skipped, no runtime."
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/lifecycle.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 797,
+            "jsonPointer": "/files/9"
+          }
+        ],
+        "claimId": "C000666"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/666",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "sourceHashFields": {
+          "frozenSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+          "currentSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "scope": "full helper read; format candidate not tested"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/chat/src/lifecycle.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 276,
+            "jsonPointer": "/files/9"
+          }
+        ],
+        "claimId": "C000667"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/407",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "lines": 28,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C000662",
+          "C000663",
+          "C000664",
+          "C000665",
+          "C000666",
+          "C000667"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 4,
+          "scope-unknown": 2
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/407",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "lines": 28
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/407",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "lines": 28,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+      "pointer": "/sources/3",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "matchesFrozenGitBlob": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "pointer": "/files/13",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "allMarkdownExactPathHits": [
+    {
+      "document": "docs/audit-2026-10-17-round11/chat.md",
+      "line": 21,
+      "text": "| CHAT-R11-C1，普通 Markdown button URL/标签转义 | [lifecycle.ts:14](../../packages/chat/src/lifecycle.ts#L14) 仅转义标签 `]`，URL 原样放入括号；合法 URL 含不配对括号、标签含反斜杠时的确切平台渲染仍未证明。官方 Mattermost 文档 open 无可读正文，官方源码树首次 fetch 被拒，立即 SKIP，未写产品 fixture、下载或换 parser 验证。只列静态候选。 |",
+      "originalCharacters": 248,
+      "originalValueSha256": "30220b04ec3b2a16ad63bfb3506201b88dc293109214de7650db1017d73f56b2",
+      "contextCapCharacters": 2000
+    },
+    {
+      "document": "docs/review-remaining-2026-10-12/README.md",
+      "line": 13,
+      "text": "| N01 | P1 | **Slack/钉钉确认了未被持久接受的消息**。队列已满或落盘失败仍 success ACK；应用没有该消息的重试副本，原平台消息仍可手动重发。 | [lifecycle.ts:17](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17) | [C2](coding-tui-chat.md) |",
+      "originalCharacters": 244,
+      "originalValueSha256": "461541aebef938593179aef7f104ea276fbffffe140a902c5d051735cb095db7",
+      "contextCapCharacters": 2000
+    },
+    {
+      "document": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "line": 58,
+      "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+      "originalCharacters": 111,
+      "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+      "contextCapCharacters": 2000
+    },
+    {
+      "document": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+      "line": 58,
+      "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/lifecycle.ts:17`",
+      "originalCharacters": 111,
+      "originalValueSha256": "407aacc014d9ef52a180c4962c06b2feefca933d8d92b3ffc2b4b9163c05c92c",
+      "contextCapCharacters": 2000
+    }
+  ]
+}

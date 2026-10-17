@@ -1,0 +1,14 @@
+{
+  "capturedUTC": "2026-10-17T18:07:25.737498+00:00",
+  "files": [
+    {
+      "path": "packages/host/src/runtime.ts",
+      "bytes": 4014,
+      "lines": 117,
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "targetBodyStillUnread": true,
+  "fallbackBodyUnread": true
+}

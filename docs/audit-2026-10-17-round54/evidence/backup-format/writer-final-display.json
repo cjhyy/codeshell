@@ -1,0 +1,17 @@
+{
+  "path": "packages/core/src/session/output-journal.ts",
+  "bytes": 49679,
+  "sha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+  "beforeReadAt": "2026-10-17T18:08:06.229240+00:00",
+  "displayRanges": [
+    [
+      1211,
+      1246
+    ],
+    [
+      1247,
+      1260
+    ]
+  ],
+  "secondBeforeReadAt": "2026-10-17T18:08:10.867674+00:00"
+}

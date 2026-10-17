@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-10-17T18:09:31.906563+00:00",
+  "baseline": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "files": [
+    {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "lines": 278,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null
+    }
+  ]
+}

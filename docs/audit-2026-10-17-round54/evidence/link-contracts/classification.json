@@ -1,0 +1,38 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "Finite ordinary catalog/consumer negative, not whole recipes/operations/provider/Host assurance.",
+  "counterevidence": [
+    {
+      "hypothesis": "Default/content/normalization dropped in catalog construction",
+      "source": "operations109–132,150–180",
+      "decision": "Object construction explicitly keeps options fields, own per-operation schemas and reviewed pagination metadata; normalization comment in operation-types66 says actual adapters canonicalize after validation. No claim every provider implements its external specification."
+    },
+    {
+      "hypothesis": "Normal get_starred ordinary fields or false result lost",
+      "source": "operations145/180; remote-adapters243–244/265/271–272/294 and457–459",
+      "decision": "On this normal branch owner/repo flow to output; boolean result is returned directly as starred. Helper internals and external status protocol not certified."
+    },
+    {
+      "hypothesis": "list_repositories prepare empty object necessarily loses requested limit",
+      "source": "remote-adapters238–240/443–448; remote1008–1013",
+      "decision": "Rejected: post-filter output slice uses original input.params with intParam default30/max100, and actual remote normalizer call passes original params. Not a new candidate."
+    }
+  ],
+  "excluded": [
+    "recipes body before-gate old-full target",
+    "operation-validation implementation owned by Root118",
+    "file-selection HL01 old cause",
+    "resource authority/grants/permissions/identity/credentials",
+    "provider network/account/native execution",
+    "actual configuration/user/connection data",
+    "full UI/Host/transport lifecycle",
+    "permanent old failed dynamic directions"
+  ]
+}

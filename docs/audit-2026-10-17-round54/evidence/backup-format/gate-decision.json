@@ -1,0 +1,44 @@
+{
+  "primarySelected": true,
+  "path": "packages/core/src/session/output-journal-backup-format.ts",
+  "canonicalRefs": [
+    "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json#/sources/9",
+    "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-decisions.json#/decisions/0"
+  ],
+  "oldFullGate": false,
+  "reason": "explicit incidental full static source during inventory; no semantic review defeats full semantic gate. Existing mechanism exclusion retained.",
+  "fallbackSelected": false,
+  "history": {
+    "members": 5311,
+    "counts": {
+      "md": 1500,
+      "json": 3811,
+      "strings": 2575070,
+      "scalars": 3824469,
+      "objects": 1106467,
+      "arrays": 89689,
+      "parseErrors": 0
+    },
+    "hits": {
+      "backup": {
+        "path": 53,
+        "sha256": 52,
+        "filename": 54,
+        "oldcause": 415
+      },
+      "fallback": {
+        "path": 11,
+        "sha256": 5,
+        "filename": 11,
+        "oldcause": 415
+      }
+    },
+    "capPerQuery": 80,
+    "actualCanonicalObjectsRead": 2,
+    "compactPathScopeRowsDisplayed": 48,
+    "actualBoundedOldcauseWindowsRead": 5,
+    "firstCompactPresenterTruncated": true,
+    "semanticHistoryExhaustion": false
+  },
+  "scope": "normal writer/reader/codec record shapes only"
+}

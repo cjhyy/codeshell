@@ -1,0 +1,21 @@
+{
+  "nonzeroCommands": [],
+  "truncations": [],
+  "latePin": {
+    "toolChunk": "51441e",
+    "file": "packages/server/src/links/providers/defaults.ts",
+    "stage": "rg-n navigation before dedicated pin",
+    "firstNavigationSha256": null,
+    "dedicatedPinChunk": "31293f",
+    "preservedIn": "route-initial-pins.json and source-manifest initialSemanticReadSha256=null",
+    "limitation": "Dedicated selected-read pin/ending equality does not establish unknown initial nav hash; no product rerun/fix."
+  },
+  "missingPaths": [],
+  "originalToolTranscriptAuthoritative": true,
+  "productRuns": 0,
+  "metadataTerminologyCorrection": {
+    "inactiveFirstArtifact": "validation.first.json",
+    "activeArtifact": "validation.json",
+    "change": "Renamed productFilesNeverOpened to productBodiesNeverRead. recipes bytes were opened for hashing, while product body semantics were not read. No source/range/run change, no script/product rerun."
+  }
+}

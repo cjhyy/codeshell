@@ -1,0 +1,17 @@
+{
+  "firstNonzeroCommand": null,
+  "truncations": [
+    {
+      "toolChunk": "e25db8",
+      "exitCode": 0,
+      "originalTokenCount": 5166,
+      "maxOutputTokens": 4500,
+      "stage": "Combined45 compact exact objects and matching MD context metadata output",
+      "preservation": "Original tool transcript retains first truncation; complete machine rows/contexts are stored separately. Omitted middle is not claimed as read. Later canonical R11 row+MD full output0ce7cf and fallback rowcbb961 were bounded, successful and not product retries."
+    }
+  ],
+  "productErrors": [],
+  "missingSourcePaths": [],
+  "productRetries": 0,
+  "rawOutputStatus": "No reconstructed full raw stdout file claimed; original tool transcript is authoritative for truncation."
+}

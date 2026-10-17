@@ -1,0 +1,32 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [
+    {
+      "manifest": "web-coverage-gate/source-manifest.json",
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "note": "Duplicate old-full decision bound to explicit hash-only row and empty current semantic files; original qualifiers and missing newProductSemanticLines field preserved, not additional source reading."
+    },
+    {
+      "manifest": "web-coverage-gate/source-manifest.json",
+      "path": "packages/web/src/lib/uiLanguage.ts",
+      "sha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+      "note": "Duplicate old-full decision bound to explicit hash-only row and empty current semantic files; original qualifiers and missing newProductSemanticLines field preserved, not additional source reading."
+    },
+    {
+      "manifest": "chat-lifecycle-gate/source-manifest.json",
+      "path": "packages/chat/src/lifecycle.ts",
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "note": "Duplicate old-full decision bound to explicit hash-only row and empty current semantic files; original qualifiers and missing newProductSemanticLines field preserved, not additional source reading."
+    },
+    {
+      "manifest": "chat-lifecycle-gate/source-manifest.json",
+      "path": "packages/chat/src/attachments.ts",
+      "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+      "note": "Duplicate old-full decision bound to explicit hash-only row and empty current semantic files; original qualifiers and missing newProductSemanticLines field preserved, not additional source reading."
+    }
+  ],
+  "unboundNavigationReferences": [],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows.",
+  "productRuns": 0
+}

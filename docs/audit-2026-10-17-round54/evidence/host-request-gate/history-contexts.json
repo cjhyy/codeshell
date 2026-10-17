@@ -1,0 +1,2170 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1872",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/38/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/44/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/48/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/2/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/57/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/1/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/4/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/9/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/11/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/18/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/21/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/27/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/29/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/4",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/4/value/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/26/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/56/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/62/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/64/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/75/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/84/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/89/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/91/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/96/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/97/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/4/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/778/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3274/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/54/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13140/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13140/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13141/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13141/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3596/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3596/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3284",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3597/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/2/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/57/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/1/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/1/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/4/value/1/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/4/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/4/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/778/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/778/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/778/claims/1/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3274/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/1/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/54/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3596/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3596/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3597/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 18928,
+      "context": "                         | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                                                                                    |\n\n1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。\n\n### 3.3 可选的后续：Desktop 连本机守护进程\n\n迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。\n\n### 3.4 风险\n\n- `panel-app-bridge.ts` 和 `agent-bridge.ts` 很大，迁移时要保持行为不变。先补协议层的录制回放测试，再搬代码。\n- 迁移期间两套实现会并存，用 feature flag 按服务切换，每个服务只维持一个版本周期的双轨。\n- 会话目录相关代码搬动时，测试写真实 `~/.code-shell` 的守卫必须放在 sessionsRoot 层而不是 home 层，否则子目录会绕过。\n\n---\n\n## 4. W2 · Protocol v2\n\n范围以第 15 章 §6.3 的十条为准。本节只定宿主侧细节和与第 15 章的差异补充。\n\n### 4.1 握手\n\n```jsonc\n// → initialize\n{ \"protocolVersions\": [\"2.0\"], \"client\": {",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 36110,
+      "context": "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |\n| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |\n| **S1 地基**       | 4–6 周 | `packages/host` 和步骤 1.2–1.4；W2 v2.0（Session/Turn/Item 模型、两类续传、`client/*`、Schema 生成、TUI 先切）；W3 的 PolicyEngine 和 ApprovalStore（先接工具、浏览器、进程三类）；ExecutionService 沙箱 report-only（需先做技术验证）；∥ W5 兼容矩阵、契约测试、验收进 CI                                                                                                                           | Desktop 和 serve 共用会话、凭据、automation；TUI 跑在 v2 上                                  |\n| **S2 多端**       | 4–6 周 | 1.5、1.6（拆分 `index.ts`）；Desktop 渲染进程和 Web 切到 v2；ExecutionService 沙箱 enforce；8.1 薄云端：中继改用票据、配对与设备表、推送网关、保持在线、Capacitor App 内测                                                                                 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1872",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2099",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/38/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/44/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/47/text",
+      "kind": "json-value-scalar",
+      "offset": 25,
+      "context": "普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/48/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/112/text",
+      "kind": "json-value-scalar",
+      "offset": 113,
+      "context": "| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/2/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 146,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1831,
+      "context": "af 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime.ts:50` 保存 caller-owned service 引用的想法已经在 [round3 HL-C1](../audit-2026-10-17-round3/host-link.md) 记录。当前三个生产创建点仍构造私有对象，没有后续 service/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/57/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/truncate_unicode/18/snippet",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/truncate_unicode/25/snippet",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+      "pointer": "/hits/10/text",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "pointer": "/hits/migration/1/text",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/1/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/4/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/9/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/11/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/18/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/21/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/27/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/29/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/patterns/host",
+      "kind": "json-value-scalar",
+      "offset": 29,
+      "context": "packages/host/src/(?:runtime|host-requests)",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/old_families/23/context",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/old_families/29/context",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/4",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/507",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/516",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/1/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/4/value/1/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/0/text",
+      "kind": "json-value-scalar",
+      "offset": 3454,
+      "context": "：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。\n- **重复核对**：两批 audit findings、2026-10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。\n\nLink 阅读 manifest/文件选择、operation contracts、`snapshotJson`/结构匹配、公开入口、普通 metadata 投影；类型文件仅核对数据形状。authorization/filter 和凭据/认证实现未作为审查目标，未运行相关操作单测。operation 基线验证 immutable catalog 快照、Figma summary/content 的输入输出区分，以及深层普通结果数据保留。29 个被读取或静态接线核对的源/测试文件和 SHA-256 见 [source manifest](evidence/host-source-manifest.json)，其中消费者大文件仅阅读相关调用段，不能当成整个文件全覆盖。\n\n所有动态均从首次执行就把 stdout/stderr 写入自有 `.raw.log`，通过 `node scripts/run-bun-test-shard.mjs --timeout 30000 ...` 执行；没有动态失败、重试或补修 fixture。Bun 版本 `1.3.11 (af24e281)`。\n\n| 收据 | 执行结果 | wrapper 完成信息 | 范围 |\n| --- | --- | --- | --- |\n| [host-link-selection.raw.log](evidence/host-link-selection.raw.log) | exit 0；4 pass，0 fail；26 assertions | 4 tests，0 skipped | 自有 resolver 纯函数；包括 1 项能力边",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/1/text",
+      "kind": "json-value-scalar",
+      "offset": 146,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/1/text",
+      "kind": "json-value-scalar",
+      "offset": 1831,
+      "context": "af 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime.ts:50` 保存 caller-owned service 引用的想法已经在 [round3 HL-C1](../audit-2026-10-17-round3/host-link.md) 记录。当前三个生产创建点仍构造私有对象，没有后续 service/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/patterns/host-registry",
+      "kind": "json-value-scalar",
+      "offset": 29,
+      "context": "packages/host/src/(?:runtime|host-requests|index)\\.ts|HostRuntime|Duplicate host capability|host startup.{0,30}rollback",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/26/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/56/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/62/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/64/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/72/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 113,
+      "context": "| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/75/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/82/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/84/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/87/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/89/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/91/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/96/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/97/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/4/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/778/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3274/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3674/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3675/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/1/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3454,
+      "context": "：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。\n- **重复核对**：两批 audit findings、2026-10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。\n\nLink 阅读 manifest/文件选择、operation contracts、`snapshotJson`/结构匹配、公开入口、普通 metadata 投影；类型文件仅核对数据形状。authorization/filter 和凭据/认证实现未作为审查目标，未运行相关操作单测。operation 基线验证 immutable catalog 快照、Figma summary/content 的输入输出区分，以及深层普通结果数据保留。29 个被读取或静态接线核对的源/测试文件和 SHA-256 见 [source manifest](evidence/host-source-manifest.json)，其中消费者大文件仅阅读相关调用段，不能当成整个文件全覆盖。\n\n所有动态均从首次执行就把 stdout/stderr 写入自有 `.raw.log`，通过 `node scripts/run-bun-test-shard.mjs --timeout 30000 ...` 执行；没有动态失败、重试或补修 fixture。Bun 版本 `1.3.11 (af24e281)`。\n\n| 收据 | 执行结果 | wrapper 完成信息 | 范围 |\n| --- | --- | --- | --- |\n| [host-link-selection.raw.log](evidence/host-link-selection.raw.log) | exit 0；4 pass，0 fail；26 assertions | 4 tests，0 skipped | 自有 resolver 纯函数；包括 1 项能力边",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/54/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "pointer": "/hits/promise-guard/64/context",
+      "kind": "json-value-scalar",
+      "offset": 676,
+      "context": "审批/已安装 Panel callback 保留；Panel AskUser 立即 typed unavailable（无文字 UI），同步给明确原因、异步清 pending 不注入答案或唤醒；内部 resolved ID 不向客户端发出，客户端不能响应私有 ID。最终 env sanitize 包括自定义 builder。 |\n| 6 | serve 两处 env、Desktop Web agent-task env 及 Panel 最终 worker env 清宿主开关/secret；REPL 写入协议/Bun executable/no-env-file；Windows env 归一；ToolRegistry catalog/late registration 与 composition 扩展入口禁止 __ 工具名；CHANGELOG 说明白名单边界。 |\n| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |\n\n验证环境：Bun 1.3.11、Node 25.8.1。所有命令在本工作树执行；所有单测通过 guarded runner 使用隔离 HOME/应用状态并清凭据，不调用真实模型或付费服务。\n\n- `bun run typecheck`：exit 0；包含完整根构建、14 个工作区及 D",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1browser-devtools~1src~1contracts.ts/1/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1browser-devtools~1src~1contracts.ts/14/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1browser-devtools~1src~1contracts.ts/68/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 121,
+      "context": "**Architecture:** 新增 `packages/core/src/contracts.ts` 作为契约版本的唯一定义，server、desktop 引用它；渲染进程共享的字面量用漂移测试守住。serve 侧新增一个纯函数模块 `host-requests.ts`，识别浏览器 / 凭据 / 工作区 / panel 四种回环和 `desktop/*` 授权请求，并生成类型化的 `unsupported` 应答，`headless-server.ts` 在转发 worker 消息前调用它。AgentServer 新增最小版 `initialize`，只返回协议版本和契约表。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13140/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13140/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13141/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13141/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14660/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14660/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14661/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14661/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14662/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14662/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14663/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14663/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3596/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3996/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3997/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3596/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3996/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3997/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3284",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3644",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3645",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3597/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3997/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3998/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+      "pointer": "/hits/tokenizer/5/snippet",
+      "kind": "json-value-scalar",
+      "offset": 274,
+      "context": "10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-dedup.json",
+      "pointer": "/hits/12/text",
+      "kind": "json-value-scalar",
+      "offset": 271,
+      "context": "1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4095,
+      "context": "审批/已安装 Panel callback 保留；Panel AskUser 立即 typed unavailable（无文字 UI），同步给明确原因、异步清 pending 不注入答案或唤醒；内部 resolved ID 不向客户端发出，客户端不能响应私有 ID。最终 env sanitize 包括自定义 builder。 |\n| 6 | serve 两处 env、Desktop Web agent-task env 及 Panel 最终 worker env 清宿主开关/secret；REPL 写入协议/Bun executable/no-env-file；Windows env 归一；ToolRegistry catalog/late registration 与 composition 扩展入口禁止 __ 工具名；CHANGELOG 说明白名单边界。 |\n| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |\n\n验证环境：Bun 1.3.11、Node 25.8.1。所有命令在本工作树执行；所有单测通过 guarded runner 使用隔离 HOME/应用状态并清凭据，不调用真实模型或付费服务。\n\n- `bun run typecheck`：exit 0；包含完整根构建、14 个工作区及 Desktop main/preload/renderer/mobile 与 Web SPA。\n- `bun run --cwd packages/desktop build:main`：exit 0；实际 Electron main bundle 成功。另用 esbuild 内存 fixture 确认 Host bundle 没有 server/web/coding input。\n- `bun run lint`：exit 0，0 errors / 104 warnings；最后新增 Panel/Host/adapter 文件 targeted ESLint 亦 0 errors。\n- `bun run lint:engine-bypass`：exit 0。\n- `bun run lint:workflow-test-paths`：exit 0，20 个 workflow 字面量测试路径存在；Host 测试已进入 rest shard。\n- 架构预算与包边界：包含在下方最终 guarded shard；`git diff --check` 通过。\n- 最终单测：326 pass / 0 fail / 0 skipped，1193 assertions，34 文件。此前各组独立 shard 亦通过。Panel 新断言曾把随机 task-1… 误匹配成 ask-1，已改为匹配完整 JSON 字符串值并在最终 shard 通过。\n\n历史受限项（主控已复验解决）及真实环境边界：\n\n主控正常宿主 `bg_125xe7` 的严格 `&&` 链 `bun ins",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 8783,
+      "context": "\n  packages/core/src/composition/compiler.test.ts \\\n  packages/desktop/scripts/build-workspace-dependencies.test.ts \\\n  packages/desktop/src/main/worker-host-runtime.test.ts \\\n  packages/desktop/src/main/browser-driver/intercept.test.ts \\\n  tests/package-boundaries.test.ts \\\n  tests/publish-release-packages.test.ts \\\n  packages/host/src/runtime.test.ts \\\n  packages/server/src/panels/agent-task-host.test.ts \\\n  packages/server/src/panels/agent-task-execution.test.ts \\\n  packages/server/src/serve/host-requests.test.ts\n```\n\n\n## CC 首轮 review 修复（起点 65dbd365b，已复审通过）\n\nCC 已只读复审 `65dbd365b..dfe75f6ef`，确认原 2 个 P1、1 个 P2 均关闭，未发现新增 P0/P1/P2。该结论仅覆盖代码审查；随后主控 `bg_24buse` 已严格串行完成冻结安装、完整 package-release、unsigned predist、Host 内联验证和 unsigned pack，全部 exit 0。CI 仍是独立验收门槛，宿主结果见[验收记录](evidence/platform-foundation-host-pack-20261015.json)。unsigned smoke 的 bundle 阶段会覆盖 predist main，因此其产物只用于依赖包装边界验证，不能视为与正式发布构建等价。\n\n- P1-1：Host 改为 Desktop devDependency；`DESKTOP_MATERIALIZED_WORKSPACES` 真实驱动 predist 复制、生产依赖安装和导入校验，同一列表守卫 Desktop 及被实体化包的生产 workspace 闭包。静态测试阻止 Host 再进入生产依赖，unsigned pack 结果随后记录。\n- P1-2：纠正初版“Panel AskUser 保留”的错误描述。Panel runtime 没有文字问答 UI，立即回 typed unavailable + unsupported 原因，不经 confirm、不泄露内部 ID/toolName。真实 runtime.taskScope→confirm→approvalRespond 验证普通审批批准/拒绝仍有效，已安装 Panel callback 仍经 tools.invoke/tool-results。真实 Core 验证 sync 不得到空答案/用户拒绝、async pending 退役且不注入答案/唤醒；正常 Desktop/Web 文字回答及用户明确拒绝保持原逻辑。\n- P2-1：Des",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 10860,
+      "context": "入口、Desktop 回复回送 Core 和包装依赖守卫（含 semver、optional 错误生产依赖）。未重跑初版 326 项无关套件。\n- Core→Host 先构建；必要 package smoke clean build 及 predist 又重建全部 Desktop workspace 依赖，均成功。之后 `bun run typecheck:workspaces` 14 个工作区全部 exit 0，包括 Desktop 与 Web SPA。没有与 package smoke/predist 并发读被重建的 dist。\n- 修改文件 targeted ESLint exit 0；`bun run lint:engine-bypass` 与 `git diff --check` 通过；架构预算包含在最终 shard 中，未增长。\n- `node --check packages/desktop/scripts/smoke-unsigned-pack.mjs` 与该脚本 `bundle` 模式成功。实际 build:main metafile 包含 Host runtime/host-requests/index，产物没有任何 Host external import。\n- 上轮主控 `bg_125xe7` 的冻结安装、完整包 smoke、serve unsupported 测试成功状态保持 **resolved**。本轮依赖分组与 Host 新导出改动后的冻结安装/包 smoke 又在当前沙箱尝试：冻结安装在 registry manifests 报 ConnectionRefused/FailedToOpenSocket；包 smoke 的 10 包 clean build/pack/extract、48 个 strict NodeNext 声明入口、46 个 runtime imports 与 owner-auth consumer 编译均成功，随后 HTTP listen 报 EPERM，后续 uploaded-document consumer 未执行。记录在 `/private/tmp/codeshell-review-install.log`、`/private/tmp/codeshell-review-package-release.log`；这是本轮新状态的受限复验，不把上轮主控成功说成未成功。\n- 实际 unsigned predist/pack 已尝试，未签名、notarize 或发布：predist 完成全部 workspace 构建，进入 Desktop build 后下载 `https://github.com/trycua/cua/releases/download/cua-driver-rs-v0.34.1/cua-driver-rs-0.34.1-darwin-universal-binary.tar.gz` 报 ConnectionRefused，未进入 workspace 实体化。随后独立 pack 已复制本地 Electron，但因上述前置失败而遇到 `packages/coding/THIRD_PARTY_NOTICES.md must be under packages/desktop/`。不能据此声称完整 unsigne",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/platform-s0-quick-fixes-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 536,
+      "context": "> 状态：已执行（2026-10-14），实际做法与偏差见第 16 章 v1.1 与 §9.2。\n\n> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.\n\n**Goal:** 让 headless serve 对它不支持的宿主请求立即返回 `unsupported`，不再挂起；所有宿主都能报告统一的契约版本；收紧 REPL 环境变量；删除没人用的进程审批存储。\n\n**Architecture:** 新增 `packages/core/src/contracts.ts` 作为契约版本的唯一定义，server、desktop 引用它；渲染进程共享的字面量用漂移测试守住。serve 侧新增一个纯函数模块 `host-requests.ts`，识别浏览器 / 凭据 / 工作区 / panel 四种回环和 `desktop/*` 授权请求，并生成类型化的 `unsupported` 应答，`headless-server.ts` 在转发 worker 消息前调用它。AgentServer 新增最小版 `initialize`，只返回协议版本和契约表。\n\n**Tech Stack:** TypeScript、Bun test（经 `scripts/run-bun-test-shard.mjs` 守卫运行）、JSON-RPC 2.0 over stdio / WebSocket。\n\n**上游设计：** [第 16 章](../architecture/16-platform-consolidation.md) §3.2 步骤 1.0 / 1.1、§4.1、§5.1、§5.2、§7.1、§9 的 S0 行。\n\n---\n\n## 范围决定\n\n| 第 16 章 S0 条目                    | 本计划处理       | 说明                                                                                                                                                                    |\n| ----------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 1.0 清点                            | Task 1      ",
+      "completeScalar": false
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 14325,
+      "context": "）作为附录维护，同时是 `initialize` 响应和第 7.2 节兼容矩阵的事实来源。\n\n---\n\n## 3. W1 · HostRuntime 统一\n\n### 3.1 新包与接口\n\n新增 `packages/host`（`@cjhyy/code-shell-host`），纯 Node，只依赖 core。serve 和 desktop 都依赖它。单独成包的原因：`server` 包依赖 `web`、`capability-coding`、`link`，把 Host 放进 server 会让 Desktop 被这些包拖进来。\n\n```ts\ninterface HostService {\n  id: string; // \"credentials\", \"sessions\", \"panels\", ...\n  version: number;\n  capabilities(): HostCapability[]; // 写进 initialize 响应\n  methods?: Record<string, HostMethod>; // Protocol v2 的 host/* 方法\n  hostRequests?: Record<string, HostRequestHandler>; // worker → host 请求（取代回环）\n  start(ctx: HostContext): Promise<void>;\n  stop(): Promise<void>;\n}\n\ninterface HostAdapter {\n  // 平台相关能力，由部署形态注入\n  kind: \"electron\" | \"headless\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求\n  browserBackends?: BrowserBackendHost; // Electron 提供 iab；headless 提供 chromium\n  openExternal?(url: string): Promise<void>;\n  paths: HostPaths;\n  sharedLock: CrossProcessLock; // 复用现有 CronStore 目录锁，所有共享文件写入经过它\n}\n\nclass HostRuntime {\n  constructor(opts: {\n    adapter: HostAdapter;\n    services: HostService[];\n    workerFactory: WorkerFactory;\n  });\n  connect(transport: ClientTransport, client: ClientInfo): Cl",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 18928,
+      "context": "                         | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                                                                                    |\n\n1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。\n\n### 3.3 可选的后续：Desktop 连本机守护进程\n\n迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。\n\n### 3.4 风险\n\n- `panel-app-bridge.ts` 和 `agent-bridge.ts` 很大，迁移时要保持行为不变。先补协议层的录制回放测试，再搬代码。\n- 迁移期间两套实现会并存，用 feature flag 按服务切换，每个服务只维持一个版本周期的双轨。\n- 会话目录相关代码搬动时，测试写真实 `~/.code-shell` 的守卫必须放在 sessionsRoot 层而不是 home 层，否则子目录会绕过。\n\n---\n\n## 4. W2 · Protocol v2\n\n范围以第 15 章 §6.3 的十条为准。本节只定宿主侧细节和与第 15 章的差异补充。\n\n### 4.1 握手\n\n```jsonc\n// → initialize\n{ \"protocolVersions\": [\"2.0\"], \"client\"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 36110,
+      "context": "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |\n| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |\n| **S1 地基**       | 4–6 周 | `packages/host` 和步骤 1.2–1.4；W2 v2.0（Session/Turn/Item 模型、两类续传、`client/*`、Schema 生成、TUI 先切）；W3 的 PolicyEngine 和 ApprovalStore（先接工具、浏览器、进程三类）；ExecutionService 沙箱 report-only（需先做技术验证）；∥ W5 兼容矩阵、契约测试、验收进 CI                                                                                                                           | Desktop 和 serve 共用会话、凭据、automation；TUI 跑在 v2 上                                  |\n| **S2 多端**       | 4–6 周 | 1.5、1.6（拆分 `index.ts`）；Desktop 渲染进程和 Web 切到 v2；ExecutionService 沙箱 enforce；8.1 薄云端：中继改用票据、配对与设备表、推送网关、保持在线、Capacitor App 内测                                                                              ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1872",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2099",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/38/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/44/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/47/text",
+      "kind": "json-value-scalar",
+      "offset": 25,
+      "context": "普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/48/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/112/text",
+      "kind": "json-value-scalar",
+      "offset": 113,
+      "context": "| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/2/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 146,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1831,
+      "context": "af 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime.ts:50` 保存 caller-owned service 引用的想法已经在 [round3 HL-C1](../audit-2026-10-17-round3/host-link.md) 记录。当前三个生产创建点仍构造私有对象，没有后续 service/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/57/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/truncate_unicode/18/snippet",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/truncate_unicode/25/snippet",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+      "pointer": "/hits/10/text",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "pointer": "/hits/migration/1/text",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/1/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/4/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/9/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/11/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/18/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/21/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/27/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/29/context",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/patterns/host",
+      "kind": "json-value-scalar",
+      "offset": 29,
+      "context": "packages/host/src/(?:runtime|host-requests)",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/old_families/23/context",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/old_families/29/context",
+      "kind": "json-value-scalar",
+      "offset": 253,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/4",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/507",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/516",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/1/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/4/value/1/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/0/text",
+      "kind": "json-value-scalar",
+      "offset": 3454,
+      "context": "：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。\n- **重复核对**：两批 audit findings、2026-10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。\n\nLink 阅读 manifest/文件选择、operation contracts、`snapshotJson`/结构匹配、公开入口、普通 metadata 投影；类型文件仅核对数据形状。authorization/filter 和凭据/认证实现未作为审查目标，未运行相关操作单测。operation 基线验证 immutable catalog 快照、Figma summary/content 的输入输出区分，以及深层普通结果数据保留。29 个被读取或静态接线核对的源/测试文件和 SHA-256 见 [source manifest](evidence/host-source-manifest.json)，其中消费者大文件仅阅读相关调用段，不能当成整个文件全覆盖。\n\n所有动态均从首次执行就把 stdout/stderr 写入自有 `.raw.log`，通过 `node scripts/run-bun-test-shard.mjs --timeout 30000 ...` 执行；没有动态失败、重试或补修 fixture。Bun 版本 `1.3.11 (af24e281)`。\n\n| 收据 | 执行结果 | wrapper 完成信息 | 范围 |\n| --- | --- | --- | --- |\n| [host-link-selection.raw.log](evidence/host-link-selection.raw.log) | exit 0；4 pass，0 fail；26 assertions | 4 tests，0 skipped | 自有 resolver 纯函数；包括 1 项",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/1/text",
+      "kind": "json-value-scalar",
+      "offset": 146,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/1/text",
+      "kind": "json-value-scalar",
+      "offset": 1831,
+      "context": "af 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime.ts:50` 保存 caller-owned service 引用的想法已经在 [round3 HL-C1](../audit-2026-10-17-round3/host-link.md) 记录。当前三个生产创建点仍构造私有对象，没有后续 service/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/patterns/host-registry",
+      "kind": "json-value-scalar",
+      "offset": 29,
+      "context": "packages/host/src/(?:runtime|host-requests|index)\\.ts|HostRuntime|Duplicate host capability|host startup.{0,30}rollback",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/26/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/56/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/62/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/64/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/72/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 113,
+      "context": "| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/75/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/82/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/84/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/87/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/89/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/91/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/96/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/97/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/4/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/778/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3274/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3674/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3675/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 202,
+      "context": "# 第三批覆盖边界\n\n冻结基线 `0f83bbfdfb8f2c6f31148250bd6544f5325c16e7`，相对上一源码基线仅新增审查文档。新旧报告各自冻结，不能将各批发现直接相加为当前全仓剩余bug数量。\n\n| 模块 | 本批实际审阅/执行 | 仍未覆盖 |\n| --- | --- | --- |\n| Host | runtime/register/start/stop/rollback与host request dispatch；纯fake adapter正常基线和生产创建点静态 | 真实native adapter、异步副作用adapter、跨进程启动/退出 |\n| Link | manifest/catalog/file-selection/operation contracts、普通schema/result快照；纯resolver观察与基线 | 真实GitHub/Figma/API、UI/IPC/持久source端到端、授权方向 |\n| CDP | legacy driver几何/keymap/scroll/read/索引全部主要源文件；fake sender数据、几何独立判定 | 真实浏览器/CSS transforms、遮挡命中、OS键盘布局、iframe滚动；默认Desktop不使用该兼容driver |\n| browser-devtools | inspector DOM/Console/Performance实际callback与fake page/VM普通数据；生产适配器接线静态 | 真实CSS排版/真实浏览器库事件、Desktop/Electron完整E2E |\n| Arena | claim parser/状态/ledger/adjudication、summary/iterate/planner/provider普通数据选择性阅读；实际model-free早退 | 私有源码非默认Host；真实评审/共识模型、完整会话，失败reviewer-cap方向不重试 |\n| optimization-lab | correction/grading/reflection、plan/dataset/report/candidate/ledger/store普通数据选择性阅读；纯grading/reflection | feature未开启、完整实验/真实付费provider/采纳/崩溃/锁与真实并发 |\n| Server | room metadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/1/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3454,
+      "context": "：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。\n- **重复核对**：两批 audit findings、2026-10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。\n\nLink 阅读 manifest/文件选择、operation contracts、`snapshotJson`/结构匹配、公开入口、普通 metadata 投影；类型文件仅核对数据形状。authorization/filter 和凭据/认证实现未作为审查目标，未运行相关操作单测。operation 基线验证 immutable catalog 快照、Figma summary/content 的输入输出区分，以及深层普通结果数据保留。29 个被读取或静态接线核对的源/测试文件和 SHA-256 见 [source manifest](evidence/host-source-manifest.json)，其中消费者大文件仅阅读相关调用段，不能当成整个文件全覆盖。\n\n所有动态均从首次执行就把 stdout/stderr 写入自有 `.raw.log`，通过 `node scripts/run-bun-test-shard.mjs --timeout 30000 ...` 执行；没有动态失败、重试或补修 fixture。Bun 版本 `1.3.11 (af24e281)`。\n\n| 收据 | 执行结果 | wrapper 完成信息 | 范围 |\n| --- | --- | --- | --- |\n| [host-link-selection.raw.log](evidence/host-link-selection.raw.log) | exit 0；4 pass，0 fail；26 assertions | 4 tests，0 skipped | 自有 resolver 纯函数；包括 1 项",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/54/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "pointer": "/hits/promise-guard/64/context",
+      "kind": "json-value-scalar",
+      "offset": 676,
+      "context": "审批/已安装 Panel callback 保留；Panel AskUser 立即 typed unavailable（无文字 UI），同步给明确原因、异步清 pending 不注入答案或唤醒；内部 resolved ID 不向客户端发出，客户端不能响应私有 ID。最终 env sanitize 包括自定义 builder。 |\n| 6 | serve 两处 env、Desktop Web agent-task env 及 Panel 最终 worker env 清宿主开关/secret；REPL 写入协议/Bun executable/no-env-file；Windows env 归一；ToolRegistry catalog/late registration 与 composition 扩展入口禁止 __ 工具名；CHANGELOG 说明白名单边界。 |\n| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |\n\n验证环境：Bun 1.3.11、Node 25.8.1。所有命令在本工作树执行；所有单测通过 guarded runner 使用隔离 HOME/应用状态并清凭据，不调用真实模型或付费服务。\n\n- `bun run typecheck`：exit 0；包含完整根构建、14 个工作区及 D",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1browser-devtools~1src~1contracts.ts/1/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1browser-devtools~1src~1contracts.ts/14/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 147,
+      "context": "| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "pointer": "/hits/packages~1browser-devtools~1src~1contracts.ts/68/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 121,
+      "context": "**Architecture:** 新增 `packages/core/src/contracts.ts` 作为契约版本的唯一定义，server、desktop 引用它；渲染进程共享的字面量用漂移测试守住。serve 侧新增一个纯函数模块 `host-requests.ts`，识别浏览器 / 凭据 / 工作区 / panel 四种回环和 `desktop/*` 授权请求，并生成类型化的 `unsupported` 应答，`headless-server.ts` 在转发 worker 消息前调用它。AgentServer 新增最小版 `initialize`，只返回协议版本和契约表。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13138/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13139/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13140/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13140/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13141/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13141/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13142/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13143/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14660/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14660/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14661/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14661/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14662/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14662/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14663/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14663/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3596/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3996/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3997/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3596/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3996/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3997/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3284",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3644",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3645",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3597/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/host/src/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3997/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3998/path",
+      "kind": "json-value-scalar",
+      "offset": 26,
+      "context": "packages/server/src/serve/host-requests.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+      "pointer": "/hits/tokenizer/5/snippet",
+      "kind": "json-value-scalar",
+      "offset": 274,
+      "context": "10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-dedup.json",
+      "pointer": "/hits/12/text",
+      "kind": "json-value-scalar",
+      "offset": 271,
+      "context": "1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/panel-apps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 20957,
+      "context": "t catch-up execution.\n\nThe Hub composition verifies the enabled, bound Panel's exact package revision\nand permissions before dispatch, and borrows the project's live Core Worker.\nIt reserves the durable Session against concurrent interactive turns, uses the\nconfigured default text model, routes unattended approvals through the job's\nresolved policy, denies page-owned internal callbacks and disables background\nshells for that turn. Logging out does not cancel an accepted automation.\nStopping the Host requests cancellation and waits for actual execution cleanup.\n\nBefore sending a run, the Host persists `lastExecution` with a unique id and\n`running` status. List responses expose its timestamps, terminal status and\noptional diagnostic detail. Cancellation remains distinct from successful\ncompletion. Lost Worker outcomes become `interrupted` and disable the schedule;\nstartup does the same for a leftover running receipt. Inspect results before\nexplicitly resuming or retrying. Admission timeout terminates and awaits the\nWorker before releasing ownership; an uncooperative child can delay shutdown.\nThese checkpoints prevent blind replay, not duplicate external side effects.\nThey retain the latest execution, while the bound Session holds its transcript.\nAll processes writing the same records must preserve the new receipt fields.\nBrowser notifications currently require an active connection; phone push",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7039,
+      "context": "186](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:173) 成功后回调 onOpen。该 UI 恢复没有在候选测试里动态点击；不冒充完整恢复 E2E，也不称会话永久消失。\n\n## fixture、隔离和计数边界\n\n候选运行的是实际 Headless Hub auth/setup、Cookie、Origin、HTTP、WebSocket、session routes、HubSessions、AgentServer/ChatSessionManager/ChatSession 和 Core 自动 enqueue helper。WorkerBridgeCore 被替换成 memory transport；其 emit 转发候选里的全部 Core 通知与 WS-dispatched responses，未过滤 run/status/stream。内部 correlated `request` 自有 pending 返回分支属于该 seam 的 Host request 模式，不是删除本候选的 follow-up通知；候选 WS inject 走 receive → AgentServer → emit → routeWorkerLine 的实际链。真实 stream 中的 session_started/turn_complete 内容由 fakeEngine.run 经 onStream 发出，但 envelope、follow-up admission/pump、busy 与回答 ACK 是实际 Core。\n\nfakeEngine 边界是模型/工具执行、run 等待和 stream payload；测试自行调用已安装的 async question callback 来构造正常提问场景。它没有实际 Engine、LLMClientBase/provider、native worker/子进程、完整 Workbench 或真实浏览器。fixture 另建了真实磁盘 source，仅用来给 HTTP SessionManager 读写；不把 fakeEngine 的运行状态当成真实 Engine 已保存磁盘 run state。\n\nCore/Host import 前已有 exact owned loopback guard，direct net/tls deny，WS wrapper 只允许同一个 reserved origin；guarded HOME 要求在 fixture 入口。finally 释放两等待 gate、unmount/移 DOM、关 WS、await Host.close/Core server.close、删 owned temp。这个小 shard 的 global fetch/WebSocket/module mock 在当前测试进程保留；不宣称恢复全局为原值，也不将它与其它不隔离测试共进程并跑。**本审计没有自行启动任何上述运行或清理命令。**\n\n已另只读审作者追加的 title 正常控制：actual HubSessions editor → HTTP createHubSessions → actual SessionTitlesStore，认证仅 owned Cookie predicate，**不是另一次真实 HubAuth 运行**。其它设备",
+      "completeScalar": false
+    }
+  ]
+}

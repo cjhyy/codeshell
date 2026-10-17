@@ -1,0 +1,57 @@
+[
+  {
+    "path": "packages/core/src/session/output-journal-manual-repair.ts",
+    "bytes": 37876,
+    "sha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+    "beforeReadAt": "2026-10-17T18:07:53.369431+00:00",
+    "displayRanges": [
+      [
+        393,
+        418
+      ],
+      [
+        458,
+        472
+      ],
+      [
+        512,
+        570
+      ],
+      [
+        968,
+        992
+      ]
+    ]
+  },
+  {
+    "path": "packages/core/src/session/output-publisher.ts",
+    "bytes": 6300,
+    "sha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+    "beforeReadAt": "2026-10-17T18:07:53.371523+00:00",
+    "displayRanges": [
+      [
+        1,
+        50
+      ]
+    ]
+  },
+  {
+    "path": "tests/output-journal-manual-repair.test.ts",
+    "bytes": 31627,
+    "sha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+    "beforeReadAt": "2026-10-17T18:07:53.372320+00:00",
+    "displayRanges": []
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "(?:test|it)\\(|describe\\(",
+      "tests/output-journal-manual-repair.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "180:test(\"backup path containment rejects parent/child directories with POSIX and Windows semantics\", () => {\n200:test(\"explicit full backup repairs damaged bytes on the same anchor inode and the actual Web consumer preserves old cursors\", () => {\n230:test(\"stale head, wrong root, lost head, replaced anchor and unsafe bundle fail before source mutation\", () => {\n275:test(\"repair never clears sticky output failures or unpaired coverage evidence\", () => {\n290:test(\"segmented corruption and a truly missing retained segment recover with durable physical-pin receipts and unchanged cursors\", () => {\n319:test(\"segment replacement and an unproved manifest floor are refused without overwriting the live source\", () => {\n338:test(\"a restored retained range never resurrects expired cursors or moves the retention floor backwards\", () => {\n375:test(\"every real repair fsync cut remains proved or incomplete and retries from durable evidence\", () => {\n415:test(\"real header write and pending-marker unlink failures fence new and historical algorithms until retry\", () => {\n459:test(\"every real write, truncate and exclusive publication cut is resumable without clearing a gap\", () => {\n498:test(\"torn pending metadata and manifest writes recover only through complete durable receipts\", () => {\n535:test(\"a concurrent missing-segment path is refused and preserved, including on retry\", () => {\n562:test(\"source changes after complete evidence capture stay refused on retries before the mutation checkpoint\", () => {\n590:test(\"a segment damaged in place and multiple missing segments restore from one complete bundle\", () => {\n614:test(\"a stale bundle cannot reverse a retention floor even when the published head is unchanged\", () => {\n636:test(\"a replaced pending marker and a competing state lease both refuse before publication\", () => {\n697:test(\"real historical v1 with an admitted durable head restores its published tail and fences old parsers after poison\", () => {\n749:test(\"real CLI backup, diagnose and restore use only the explicit isolated root\", () => {\n",
+    "stderr": "",
+    "purpose": "declaration names only; no test executed"
+  }
+]

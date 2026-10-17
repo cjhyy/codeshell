@@ -1,0 +1,1762 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1883",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/9/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/files/60/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/workerSourceChecks/9/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/19",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:47:export function getLinkConnectionRecipe(id: string): LinkConnectionRecipe | undefined {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/20",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:54:export function resolveLinkRecipeId(metadata: {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/21",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:62:  if (metadata.linkRecipeId) return getLinkConnectionRecipe(metadata.linkRecipeId)?.id;",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/22",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:83:export function linkConnectionMetadata<T extends LinkRoutingMetadata>(",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/23",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:93:  const recipeId = resolveLinkRecipeId(value);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/24",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:94:  const recipe = recipeId && getLinkConnectionRecipe(recipeId);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/10/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/5/value/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/4/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/7/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/8/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/9/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/19/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/25/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/link-manifest-config/85/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/25/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/proposal.json",
+      "pointer": "/ordinaryContractsAndCounterevidence/2/source",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts:47-122",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/proposal.json",
+      "pointer": "/safeFutureStaticLeaves/1/paths/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/7/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "pointer": "/sourceChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/55/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/priorPrepHashOnlyChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/794/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3290/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/10/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/69/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13245/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13245/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13246/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13246/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13248/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13248/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13249/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13249/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13250/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13250/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13251/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13251/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13252/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13252/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13253/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13253/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3612/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3612/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/206",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3613/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/210",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/206",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/206",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/216",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/219",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/222",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/9/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/files/60/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/files/60/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/files/60/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/workerSourceChecks/9/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/10/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/10/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/5/value/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/25/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/25/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/7/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/7/frozenReferenceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/7/readHeadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "pointer": "/sourceChecks/30/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/55/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/55/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/55/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/priorPrepHashOnlyChecks/30/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/794/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/794/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3290/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/10/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/69/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/sourceHashFields/frozenReferenceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/sourceHashFields/readHeadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13245/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13245/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/sourceHashFields/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13248/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13249/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13249/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13252/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13253/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3612/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3612/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3613/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1883",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/9/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/files/60/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/workerSourceChecks/9/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/pattern",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "linkConnectionMetadata|resolveLinkRecipeId|getLinkConnectionRecipe",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/0",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "packages/link/src/operations.test.ts:10:import { LINK_CONNECTION_RECIPES, resolveLinkRecipeId } from \"./recipes.js\";",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/1",
+      "kind": "json-value-scalar",
+      "offset": 59,
+      "context": "packages/link/src/operations.test.ts:207:    expect(resolveLinkRecipeId({ linkExecutionBackend: \"remote\" })).toBe(\"broker-oauth\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/2",
+      "kind": "json-value-scalar",
+      "offset": 54,
+      "context": "packages/link/src/operations.test.ts:209:      resolveLinkRecipeId({ linkRecipeId: \"unknown\", linkExecutionBackend: \"remote\" }),",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/2",
+      "kind": "json-value-scalar",
+      "offset": 69,
+      "context": "packages/link/src/operations.test.ts:209:      resolveLinkRecipeId({ linkRecipeId: \"unknown\", linkExecutionBackend: \"remote\" }),",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/4",
+      "kind": "json-value-scalar",
+      "offset": 38,
+      "context": "packages/link/src/index.ts:7:  resolveLinkRecipeId,",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/6",
+      "kind": "json-value-scalar",
+      "offset": 76,
+      "context": "packages/link/src/recipes.test.ts:2:import { linkConnectionMetadata, resolveLinkRecipeId } from \"./recipes.js\";",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/9",
+      "kind": "json-value-scalar",
+      "offset": 55,
+      "context": "packages/link/src/recipes.test.ts:44:    expect(resolveLinkRecipeId(input)).toBeUndefined();",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/12",
+      "kind": "json-value-scalar",
+      "offset": 53,
+      "context": "packages/link/src/recipes.test.ts:51:  expect(resolveLinkRecipeId({ linkAuthSource: \"github-cli\" })).toBe(\"cli-session\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/15",
+      "kind": "json-value-scalar",
+      "offset": 53,
+      "context": "packages/link/src/recipes.test.ts:66:  expect(resolveLinkRecipeId(input)).toBeUndefined();",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/19",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:47:export function getLinkConnectionRecipe(id: string): LinkConnectionRecipe | undefined {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/20",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:54:export function resolveLinkRecipeId(metadata: {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/20",
+      "kind": "json-value-scalar",
+      "offset": 55,
+      "context": "packages/link/src/recipes.ts:54:export function resolveLinkRecipeId(metadata: {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/21",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:62:  if (metadata.linkRecipeId) return getLinkConnectionRecipe(metadata.linkRecipeId)?.id;",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/21",
+      "kind": "json-value-scalar",
+      "offset": 47,
+      "context": "packages/link/src/recipes.ts:62:  if (metadata.linkRecipeId) return getLinkConnectionRecipe(metadata.linkRecipeId)?.id;",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/21",
+      "kind": "json-value-scalar",
+      "offset": 101,
+      "context": "packages/link/src/recipes.ts:62:  if (metadata.linkRecipeId) return getLinkConnectionRecipe(metadata.linkRecipeId)?.id;",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/22",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:83:export function linkConnectionMetadata<T extends LinkRoutingMetadata>(",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/23",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:93:  const recipeId = resolveLinkRecipeId(value);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/23",
+      "kind": "json-value-scalar",
+      "offset": 58,
+      "context": "packages/link/src/recipes.ts:93:  const recipeId = resolveLinkRecipeId(value);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/24",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:94:  const recipe = recipeId && getLinkConnectionRecipe(recipeId);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/78",
+      "kind": "json-value-scalar",
+      "offset": 56,
+      "context": "packages/core/src/links/link-action-tool.ts:28:  resolveLinkRecipeId,",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/85",
+      "kind": "json-value-scalar",
+      "offset": 76,
+      "context": "packages/core/src/links/link-action-tool.ts:417:    const recipeId = resolveLinkRecipeId(connection.credential.meta ?? {});",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/caller-navigation.json",
+      "pointer": "/queries/1/lines/92",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "packages/core/src/links/link-action-tool.ts:689:      recipeId: resolveLinkRecipeId(connection.credential.meta ?? {}),",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/10/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/5/value/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/patterns/exact-pure-leaves",
+      "kind": "json-value-scalar",
+      "offset": 108,
+      "context": "packages/link/src/(?:catalog|types|recipes|figma|index)\\.ts|localizeLinkText|getLinkProviderManifest|resolveLinkRecipeId|linkConnectionMetadata|LINK_CONNECTION_RECIPES",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/4/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/7/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/8/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/9/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/19/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/exact-pure-leaves/25/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/link-manifest-config/85/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/25/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/proposal.json",
+      "pointer": "/ordinaryContractsAndCounterevidence/2/source",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts:47-122",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/proposal.json",
+      "pointer": "/safeFutureStaticLeaves/1/paths/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/7/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "pointer": "/sourceChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/55/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/priorPrepHashOnlyChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/794/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3290/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/10/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/69/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13244/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13245/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13245/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13246/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13246/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13247/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13248/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13248/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13249/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13249/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13250/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13250/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13251/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13251/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13252/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13252/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13253/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13253/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3612/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3612/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/206",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3613/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/210",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/206",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/206",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/216",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/219",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/222",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/recipes.ts",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/header_only/17/snippet",
+      "kind": "json-value-scalar",
+      "offset": 259,
+      "context": "ell\ncp deploy/settings.example.json \\\n  /absolute/path/to/workspace/.code-shell/settings.local.json\nchmod 600 /absolute/path/to/workspace/.code-shell/settings.local.json\n```\n\n编辑该文件，替换 `REPLACE_WITH_YOUR_API_KEY`、`REPLACE_WITH_YOUR_MODEL_ID`，以及需要使用的 `baseUrl`。模板使用内置 `openai` 目录项，适用于相应的 OpenAI 兼容文本接口；使用 Anthropic 等其他协议时，应把凭证和连接的 `catalogId` 一并改为对应内置目录项。\n\n配置由三部分关联：`credentials[].id` 保",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-assembly-note.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 328,
+      "context": "# 元数据构建提示（首次工具响应转录）\n\n首次报告 JSON/manifest 构建命令 exit 0，完成材料写入，同时 Python 对报告中的 Markdown 模板字符串发出 warning：\n\n```text\n<stdin>:10: SyntaxWarning: \"\\`\" is an invalid escape sequence. Such sequences will not work in the future. Did you mean \"\\\\`\"? A raw string is also an option.\n```\n\n这里是工具响应的明确转录，不是预先保存的 raw 测试输出。随后只改报告措辞，将带转义 backtick 的模板示例改为 `new URL` 加 `http://` 前缀描述；产品源码、fixture、FIRST raw/exit 未改，也未重跑产品验证。不是 Bun/assert/import 或导航失败。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "pointer": "/matches/old-cli/19/location",
+      "kind": "json-value-scalar",
+      "offset": 21,
+      "context": "$[0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "pointer": "/matches/old-cli/25/location",
+      "kind": "json-value-scalar",
+      "offset": 37,
+      "context": "$[\"observations\"][0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-root-frontier.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 918,
+      "context": "-frontier-source-manifest.json) 的 **11 pins / 513 declared read lines** 均与当前文件byte/SHA、总行数及合法range相同；6个源码/test全文304行、4个消费者selected161行、旧报告全文48行，合计513。此次完整重读了这些声明范围，不把Engine5072行、skills scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽；这些是occurrence数量，不能换成文件数或已确认问题数。\n\n归档口径差异亦已独立核实：路径component严格等于`archive`或`_archive`有 **169** 条；lowercase整路径包含substring `archive`有 **174** 条。Root dedup的169与本方向早先snapshot recheck的174使用不同定义，不应直接拼成一个统一总数。全部实际库存都保留这些路径，差异不意味着漏扫归档。该事实交Root在聚合QC说明，本review不改冻结作者文件。\n\n报告 **11个本地Markdown链接及所带行号** 全部存在/合法；validation runs为空，0执行计数与独立Runtime失败方向分账；locator错误的metadata摘录明确标注人工转录，",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-dedup.json",
+      "pointer": "/contexts/leadingTrim/7/at",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "$[0].distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-dedup.json",
+      "pointer": "/contexts/leadingTrim/8/at",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "$.observations[0].distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1067,
+      "context": "ce/root-frontier-source-manifest.json)，全文字节固定不意味着周围调用链也全文审完。\n\n`memoize` 同时检查 `get` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Link69 /trim13，contexts 各最多25；保存完整2596文件 SHA 库存，关键词搜索不等于语义穷尽。查询中显示的旧HL-01/HL-02与直接旧报告阅读足以排除本次重复。\n\n[validation](evidence/root-frontier-validation.json) 的 runs 为空；[metadata notes](evidence/root-frontier-metadata-notes.json) 记录一次猜测旧报告路径失败，已按库存定位，不是产品失败或重跑。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/history.json",
+      "pointer": "/hits/updater-contract/0/context",
+      "kind": "json-value-scalar",
+      "offset": 319,
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/history.json",
+      "pointer": "/hits/updater-contract/1/context",
+      "kind": "json-value-scalar",
+      "offset": 419,
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/matches/75/context",
+      "kind": "json-value-scalar",
+      "offset": 319,
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/matches/76/context",
+      "kind": "json-value-scalar",
+      "offset": 419,
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/additionalTargetedInspected/3/context",
+      "kind": "json-value-scalar",
+      "offset": 319,
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/additionalTargetedInspected/4/context",
+      "kind": "json-value-scalar",
+      "offset": 419,
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "pointer": "/hits/rect_clip_terms/137/context",
+      "kind": "json-value-scalar",
+      "offset": 670,
+      "context": "键帧。\n\n## 人和 AI 共用的数据与操作\n\n权威工程建议为版本化的 video-project.json。记录素材 ID/指纹、源入点出点、轨道位置、速度、音量、字幕、合成片段和导出参数；时间采用整数帧或明确的有理时间基准。转写、缩略图、波形和代理视频为派生缓存。\n\n人工拖动和 AI 工具都调用同一个操作层。建议领域操作包括读取当前状态、搜索片段、拆分、裁剪、移动、删除范围、修改字幕、加入合成片段和提交导出任务。\n\n每次修改带 baseRevision；批量变更原子应用，记录逆操作。用户在 AI 规划期间拖动片段导致版本变化时，重新检查和调整变更，不能覆盖人工操作。轨道锁定、音画联动、撤销/重做、自动保存和崩溃恢复属于基础能力。\n\nAI 主要提交结构化剪辑操作，少量自然语言建议本身不算完成剪辑。导出完成要能定位结果文件，并核对音轨、时长和预期画面。\n\n## HyperFrames 与常规剪辑的分工\n\n普通录屏、摄像素材和音频使用常规剪辑能力。HyperFrames 承担可参数化的程序化场景，并作为复合片段加入主时间轴；保留源工程、参数、渲染版本及缓存。\n\n第一版支持明确的场景类型和模板参数。任意 HTML/GSAP 反向转换成可任意拖动的图层，不能视为现成能力。当前教程可先按章节或场景导入，再逐步开放标题、颜色、时长和内容参数。\n\n预览与最终导出必须覆盖同一套操作语义。需明确支持矩阵，检查变速、裁切、字体、转场、音量与字幕的一致性。长视频要支持低清代理预览、分段渲染、缓存与失败章节重试，避免每改一句字幕重做全片。\n\n## 已有 CodeShell 能力与缺口\n\n已核实可复用：Panel App API v11、项目绑定、安装权限审查、manifest Agent tools、registerTool、agent.task、workspace 带版本写入、本地 process.find/spawn/cancel。Design Studio 的操作日志和 revision 检查可作为共享编辑逻辑的参考，Mimi Download 的依",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/history.json",
+      "pointer": "/hits/ordinary-appearance/13/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 670,
+      "context": "键帧。\n\n## 人和 AI 共用的数据与操作\n\n权威工程建议为版本化的 video-project.json。记录素材 ID/指纹、源入点出点、轨道位置、速度、音量、字幕、合成片段和导出参数；时间采用整数帧或明确的有理时间基准。转写、缩略图、波形和代理视频为派生缓存。\n\n人工拖动和 AI 工具都调用同一个操作层。建议领域操作包括读取当前状态、搜索片段、拆分、裁剪、移动、删除范围、修改字幕、加入合成片段和提交导出任务。\n\n每次修改带 baseRevision；批量变更原子应用，记录逆操作。用户在 AI 规划期间拖动片段导致版本变化时，重新检查和调整变更，不能覆盖人工操作。轨道锁定、音画联动、撤销/重做、自动保存和崩溃恢复属于基础能力。\n\nAI 主要提交结构化剪辑操作，少量自然语言建议本身不算完成剪辑。导出完成要能定位结果文件，并核对音轨、时长和预期画面。\n\n## HyperFrames 与常规剪辑的分工\n\n普通录屏、摄像素材和音频使用常规剪辑能力。HyperFrames 承担可参数化的程序化场景，并作为复合片段加入主时间轴；保留源工程、参数、渲染版本及缓存。\n\n第一版支持明确的场景类型和模板参数。任意 HTML/GSAP 反向转换成可任意拖动的图层，不能视为现成能力。当前教程可先按章节或场景导入，再逐步开放标题、颜色、时长和内容参数。\n\n预览与最终导出必须覆盖同一套操作语义。需明确支持矩阵，检查变速、裁切、字体、转场、音量与字幕的一致性。长视频要支持低清代理预览、分段渲染、缓存与失败章节重试，避免每改一句字幕重做全片。\n\n## 已有 CodeShell 能力与缺口\n\n已核实可复用：Panel App API v11、项目绑定、安装权限审查、manifest Agent tools、registerTool、agent.task、workspace 带版本写入、本地 process.find/spawn/cancel。Design Studio 的操作日志和 revision 检查可作为共享编辑逻辑的参考，Mimi Download 的依",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "pointer": "/causeContexts/glob-wrong-count/23/pointer",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "/0/distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "pointer": "/causeContexts/glob-wrong-count/24/pointer",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "/observations/0/distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/focused-history.json",
+      "pointer": "/hits/glob-count-cause/17/at",
+      "kind": "json-value-scalar",
+      "offset": 21,
+      "context": "$[0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/focused-history.json",
+      "pointer": "/hits/glob-count-cause/18/at",
+      "kind": "json-value-scalar",
+      "offset": 37,
+      "context": "$[\"observations\"][0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/104/text",
+      "kind": "json-value-scalar",
+      "offset": 172,
+      "context": "根因位于 `packages/desktop/src/main/menu.ts:11` 的win参数闭包：`:88` Find、`:100` Palette、`:107` Sidebar、`:65` Recent以及`:53` Add Project都直接 `win.webContents.send(...)`。`:143`–`:144` 将模板安装为全局Menu；callback不读第二参数focusedWindow、不查当前focused/live窗口。每次createWindow末尾才安装（latest `main/index.ts:2711`，initial`:2705`）。全仓 `refreshAppMenu`只有定义，无调用；focus/closed事件不重装。Main closed`:1541`–`:1549`只做资源/集合清理。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/315/text",
+      "kind": "json-value-scalar",
+      "offset": 172,
+      "context": "根因位于 `packages/desktop/src/main/menu.ts:11` 的win参数闭包：`:88` Find、`:100` Palette、`:107` Sidebar、`:65` Recent以及`:53` Add Project都直接 `win.webContents.send(...)`。`:143`–`:144` 将模板安装为全局Menu；callback不读第二参数focusedWindow、不查当前focused/live窗口。每次createWindow末尾才安装（latest `main/index.ts:2711`，initial`:2705`）。全仓 `refreshAppMenu`只有定义，无调用；focus/closed事件不重装。Main closed`:1541`–`:1549`只做资源/集合清理。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/core-deep-dive/04-llm-model-layer.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3275,
+      "context": "动,无 budget 参数);**claude-4.0–4.5**:`anthropic-budget`(显式 `budget_tokens`,夹在 `< max_tokens`)。\n- **deepseek-v4 / Z.AI GLM**:`deepseek-thinking`(顶层 `thinking.type`)。\n\n**客户端里没有任何 per-model 的 `switch`**——它们读 `Capability` 来塑形请求。`reasoningControlFor(kind, model)` 把同一个 `reasoning` 形态投射成 UI 控件描述符(开关 / effort 枚举 / budget 数字 / 自动),让连接 UI 和 wire 请求从一个源保持同步。\n\n> 关于 `rejectedParams` 有个坑:它必须是新建的 `Set`,不能直接引用 `DEFAULT`,否则某次客户端 mutate 会污染默认值。\n\n## 5. catalog 与 `ParamSpec`:一处声明,两处生效\n\n一个 `CatalogEntry` 描述一个 provider 模板:`id`、`tag`(text/image/video/audio)、`adapterKind`、`defaultBaseUrl`、`modelPresets[]`、`paramsDoc`。每个 `ModelPreset` 可带 `params: ParamSpec[]`。\n\n`ParamSpec` 是这一层的拱心石——**一条声明同时驱动 UI 控件和 wire 映射**:\n\n```ts\n{ name: \"reasoning\", control: \"enum\", options: [\"low\",\"medium\",\"high\"],\n  doc: \"Reasoning effort…\", wire: { field: \"reasoning_effort\" } }\n```\n\n- `applyParams(values, params)` 按 `wire.field` 把值映射进嵌套请求体(`\"thinking.budget_tokens\"` → `{thinking:{budget_tokens:N}}`),并把 catalog 声明的 temperature/top_p/max_tokens/thinking 喂进 `extraBody`(实测真下发到 wire)。\n- `buildParamsDoc(params)` 把同样的声明渲染进**工具描述**,让模型知道自己有哪些旋钮。\n- `reasoningFromParamValues` 把存的参数值翻译成 `ReasoningSetting`(字符串→effort,数字→budget,布尔→开关)。\n\n这就是\"差异即数据\"的另一面:加一个带新旋钮的模型,多半只改 catalog 数据,UI 和请求体自动跟上。\n\n## 6. 流式、重试、用量\n\n- **重试 + 截止**(`client-base.ts`):`withRetry` 把调用方的 `AbortSignal` 和一个每请求硬截止(约 2× SDK 超时,最少 120s)组合起来拆掉半死的 socket。重试 5xx + 限流,**不重试**确定性的 4xx(省掉对坏请求的等待)。\n- **流空闲看门狗**(`stream-watchdog.ts`):默认开启;空闲超过 `idleTim",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/deployment.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2051,
+      "context": "；删除被默认值引用的连接时，按提示先选择替代连接。测试会使用服务器上的真实凭证发送一次小型模型请求，可能产生费用，可主动取消；测试成功后再用一次实际对话验证工具和流式输出。\n\n如需在启动前准备配置，也可以在**将交给 Agent 的 Workspace** 中创建 `.code-shell/settings.local.json`。这是模型配置，不是 Hub 登录密码：\n\n```bash\nmkdir -p /absolute/path/to/workspace/.code-shell\ncp deploy/settings.example.json \\\n  /absolute/path/to/workspace/.code-shell/settings.local.json\nchmod 600 /absolute/path/to/workspace/.code-shell/settings.local.json\n```\n\n编辑该文件，替换 `REPLACE_WITH_YOUR_API_KEY`、`REPLACE_WITH_YOUR_MODEL_ID`，以及需要使用的 `baseUrl`。模板使用内置 `openai` 目录项，适用于相应的 OpenAI 兼容文本接口；使用 Anthropic 等其他协议时，应把凭证和连接的 `catalogId` 一并改为对应内置目录项。\n\n配置由三部分关联：`credentials[].id` 保存密钥，`modelConnections[].credentialId` 引用它，`defaults.text` 选择连接的 `id`。现有桌面配置中的这三个字段也可以迁移过来。不能仅设置 `OPENAI_API_KEY` 就期望 Worker 自动创建模型连接；JSON 中的 `${ENV_NAME}` 也不会自动展开。\n\n`settings.local.json` 覆盖 Workspace 的 `.code-shell/settings.json`。让运行服务的系统用户能读写该 Workspace，并在该项目的 Git 忽略规则中排除本地配置，避免提交密钥。模型密钥保存在服务器配置文件中，界面只返回是否已配置；编辑时未替换的密钥保留。\n\nWeb 保存的模型、Skills 开关和 MCP 配置写入 Workspace 的本地层。任务运行期间会拒绝配置修改，空闲时调用与桌面端相同的配置热更新接口，保留登录、历史和后台命令；其他已登录页面会收到配置变更。默认对话模型用于随后发送的任务，包括现有会话的下一轮。手动编辑配置文件后仍建议重启服务。\n\n没有可用文本连接时 HTTP 服务仍可健康，设置界面也可使用，但 Worker 无法开始对话。默认服务日志只保留运行元数据；排查配置问题可临时加 `--debug-logs` 查看 Worker 诊断，该模式可能含任务正文或工具答案，应只写入私有日志。\n\n### 与桌面端共用什么\n\n| 能力              | 共用部分                                                                            | 部署后的区别                                                              |\n| ----------------- ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-routing-round23.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 722,
+      "context": "3**；主审两冻结基线已独立复跑并核完收据。作者最终guarded Bun **1文件3测试39断言、Completed、0fail/0skip、exit0**。产品代码未改，未build/clean、未启动真实Electron/浏览器/CLI/worker/model或业务网络。\n\n## 问题与触发\n\n在macOS正常打开主窗A→创建主窗B并完成菜单安装→回焦A→明确点击应用原生菜单“查找”“命令面板”“切换侧栏”或“最近项目”，callback仍使用B的webContents，实际preload和App consumer因此更新B的本地状态，前台A未执行该命令。目标严格是**最后完成菜单安装的窗口**，不假定并发创建时安装顺序等于创建顺序。\n\n根因位于 `packages/desktop/src/main/menu.ts:11` 的win参数闭包：`:88` Find、`:100` Palette、`:107` Sidebar、`:65` Recent以及`:53` Add Project都直接 `win.webContents.send(...)`。`:143`–`:144` 将模板安装为全局Menu；callback不读第二参数focusedWindow、不查当前focused/live窗口。每次createWindow末尾才安装（latest `main/index.ts:2711`，initial`:2705`）。全仓 `refreshAppMenu`只有定义，无调用；focus/closed事件不重装。Main closed`:1541`–`:1549`只做资源/集合清理。\n\n实际preload `preload/index.ts:1423`–`:1439`只订阅接收renderer的menu频道；App `App.tsx:1424`的actual callback在Find`:1450`/Palette`:1453`/Sidebar`:1457`改变其本地状态，Recent`:1433`/`:1442`设本renderer的activeProjectId。因此不用同项目Session广播就能触发，与R61的持久selected Session广播是两个根因。\n\n评级为P3：已证明前台菜单操作落到后台窗口，造成流程混乱；没有任务运行、授权绕过、持久历史/草稿丢失证据。Add Project真正picker及registry广播未挂，不声称A完全不会看到项目列表变化。B仍活着时“新窗口”从B转发仍可创建正常C，所以不把它单列为失败。\n\n## 正常与恢复控制\n\n- 单窗A，以及最后安装B当前前台时，实际menu/preload/App callback正确更新接收窗。\n- actual `useResponsiveSidebar.ts:38`–`:44`在宽窗或drawer关闭时直接调用action；fixture选择这个正式可达状态。\n- A自己的renderer控件仍有可用操作入口；侧栏Search打开SessionSearch，与菜单Find全文SearchView不同。CmdF/K/B另有App renderer keydown路径，本项只验证显式菜单callback，不推断所有快捷键结果。\n- 内部重新 `installAppMenu(A)`后A的Find/Recent正常，仅作为",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-menu-routing-round23/menu-routing-round23.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 576,
+      "context": "3-1，建议P3；root拟收录R82**。作者最终guarded Bun **1文件3测试39断言、Completed、0fail/0skip、exit0**。产品代码未改，未build/clean、未启动真实Electron/浏览器/CLI/worker/model或业务网络。\n\n## 问题与触发\n\n在macOS正常打开主窗A→创建主窗B并完成菜单安装→回焦A→明确点击应用原生菜单“查找”“命令面板”“切换侧栏”或“最近项目”，callback仍使用B的webContents，实际preload和App consumer因此更新B的本地状态，前台A未执行该命令。目标严格是**最后完成菜单安装的窗口**，不假定并发创建时安装顺序等于创建顺序。\n\n根因位于 `packages/desktop/src/main/menu.ts:11` 的win参数闭包：`:88` Find、`:100` Palette、`:107` Sidebar、`:65` Recent以及`:53` Add Project都直接 `win.webContents.send(...)`。`:143`–`:144` 将模板安装为全局Menu；callback不读第二参数focusedWindow、不查当前focused/live窗口。每次createWindow末尾才安装（latest `main/index.ts:2711`，initial`:2705`）。全仓 `refreshAppMenu`只有定义，无调用；focus/closed事件不重装。Main closed`:1541`–`:1549`只做资源/集合清理。\n\n实际preload `preload/index.ts:1423`–`:1439`只订阅接收renderer的menu频道；App `App.tsx:1424`的actual callback在Find`:1450`/Palette`:1453`/Sidebar`:1457`改变其本地状态，Recent`:1433`/`:1442`设本renderer的activeProjectId。因此不用同项目Session广播就能触发，与R61的持久selected Session广播是两个根因。\n\n评级为P3：已证明前台菜单操作落到后台窗口，造成流程混乱；没有任务运行、授权绕过、持久历史/草稿丢失证据。Add Project真正picker及registry广播未挂，不声称A完全不会看到项目列表变化。B仍活着时“新窗口”从B转发仍可创建正常C，所以不把它单列为失败。\n\n## 正常与恢复控制\n\n- 单窗A，以及最后安装B当前前台时，实际menu/preload/App callback正确更新接收窗。\n- actual `useResponsiveSidebar.ts:38`–`:44`在宽窗或drawer关闭时直接调用action；fixture选择这个正式可达状态。\n- A自己的renderer控件仍有可用操作入口；侧栏Search打开SessionSearch，与菜单Find全文SearchView不同。CmdF/K/B另有App renderer keydown路径，本项只验证显式菜单callback，不推断所有快捷键结果。\n- 内部重新 `installAppMenu(A)`后A的Find/Recent正常，仅作为",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23477,
+      "context": "\"utf-8\"); rmSync(tmp, { force: true }); }\n}\n```\n\n> `userHome()` 已在文件内 import;确认 `mkdirSync/existsSync/readFileSync/writeFileSync/renameSync/rmSync/join` 都已 import(原函数都用了)。\n\n- [ ] **Step 4: 适配调用方 `onboarding-runner.ts`**\n\nRun: `grep -rn \"appendOnboardingResult\" packages/`\n对每个调用点,把旧参数(`activeKey`/`activeMirror`/`addedProvider`/`addedModels`)改成新参数(`instanceId`/`catalogId`/`tag`/`model`/`apiKey`/`baseUrl`)。onboarding wizard 收集到的 provider+model+key 映射成:`instanceId` = 用户起的名或 catalogId,`catalogId` = 选的模板,`model` = 选的 modelId,`apiKey`/`baseUrl` = 填的凭证。\n\n> 若 wizard 当前产出的是 legacy 形状(provider/model/apiKey/baseUrl 散字段),在 runner 里就近映射:`catalogId` 按 wizard 选的模板取;没有模板概念的旧 wizard 则用 `\"custom\"` + 让 baseUrl/model 直接落连接。\n\n- [ ] **Step 5: rebuild + 跑测试**\n\nRun: `cd packages/core && bun run build && bunx vitest run src/onboarding.test.ts`\nExpected: PASS\n\n- [ ] **Step 6: 提交**\n\n```bash\ngit add packages/core/src/onboarding.ts packages/core/src/onboarding.test.ts packages/tui/src/ui/onboarding-runner.ts\ngit commit -m \"refactor(core): onboarding 重写成写统一 catalog(credentials/modelConnections/defaults)\"\n```\n\n---\n\n## Task 7: TUI 命令切换(repl/run/runs/main)\n\n**Files:**\n- Modify: `packages/tui/src/cli/commands/repl.ts`\n- Modify: `packages/tui/src/cli/commands/run.ts`\n- Modify: `packages/tui/src/cli/commands/runs.ts`\n- Modify: `packages/tui/src/cli/main.ts`\n\n- [ ] **Step 1: repl.ts —— 删 legacy 门控,种子改调解析器**\n\n把 `hasSavedAuth` 计算改为基于统一 catalog:\n```typescript",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23630,
+      "context": "都已 import(原函数都用了)。\n\n- [ ] **Step 4: 适配调用方 `onboarding-runner.ts`**\n\nRun: `grep -rn \"appendOnboardingResult\" packages/`\n对每个调用点,把旧参数(`activeKey`/`activeMirror`/`addedProvider`/`addedModels`)改成新参数(`instanceId`/`catalogId`/`tag`/`model`/`apiKey`/`baseUrl`)。onboarding wizard 收集到的 provider+model+key 映射成:`instanceId` = 用户起的名或 catalogId,`catalogId` = 选的模板,`model` = 选的 modelId,`apiKey`/`baseUrl` = 填的凭证。\n\n> 若 wizard 当前产出的是 legacy 形状(provider/model/apiKey/baseUrl 散字段),在 runner 里就近映射:`catalogId` 按 wizard 选的模板取;没有模板概念的旧 wizard 则用 `\"custom\"` + 让 baseUrl/model 直接落连接。\n\n- [ ] **Step 5: rebuild + 跑测试**\n\nRun: `cd packages/core && bun run build && bunx vitest run src/onboarding.test.ts`\nExpected: PASS\n\n- [ ] **Step 6: 提交**\n\n```bash\ngit add packages/core/src/onboarding.ts packages/core/src/onboarding.test.ts packages/tui/src/ui/onboarding-runner.ts\ngit commit -m \"refactor(core): onboarding 重写成写统一 catalog(credentials/modelConnections/defaults)\"\n```\n\n---\n\n## Task 7: TUI 命令切换(repl/run/runs/main)\n\n**Files:**\n- Modify: `packages/tui/src/cli/commands/repl.ts`\n- Modify: `packages/tui/src/cli/commands/run.ts`\n- Modify: `packages/tui/src/cli/commands/runs.ts`\n- Modify: `packages/tui/src/cli/main.ts`\n\n- [ ] **Step 1: repl.ts —— 删 legacy 门控,种子改调解析器**\n\n把 `hasSavedAuth` 计算改为基于统一 catalog:\n```typescript\nconst hasSavedAuth =\n  !!options.apiKey ||\n  (Array.isArray((settings as any).credentials) && (settings as any).credentials.some((c: any) => c?.apiKey)) ||\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-24-manual-catalog-editor.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 186,
+      "context": "# 手动 Catalog 编辑器实现计划\n\n> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development 或 executing-plans。步骤用 `- [ ]` 勾选。\n\n**Goal:** 在设置页加一个「模型目录」子页,让用户手动对 provider 模板(CatalogEntry)+ 其下 model(modelPresets)+ 参数做全 CRUD;内置模板可改(写 user.json 覆盖)/重置;AI 用 editModelCatalog 加的也能在此改。\n\n**Architecture:** 三层 —— core 持久层补 `deleteUserCatalogEntry` + `catalogEntryOrigins`;desktop IPC 暴露 catalog save/delete/origins;renderer 新建可展开卡片面板 `ModelCatalogPanel`。catalog 写盘后下条消息经 getMergedCatalog 重读自然生效,无需热重载。凭证不在此管(仍在连接页)。\n\n**Tech Stack:** TypeScript,bun test,zod(catalogEntrySchema 已存在),Electron IPC,React + shadcn(desktop renderer),i18n(zh+en)。\n\n**设计稿:** `docs/superpowers/specs/2026-06-24-manual-catalog-editor-design.md`\n\n---\n\n## 关键事实(实现前必读)\n\n1. **`saveCatalogEntry(entry, {path, stamp})`**(`model-catalog/save-entry.ts`)已存在:zod 校验 + 备份 + upsert 原子写,返回 `{ok, action:\"added\"|\"updated\", error?, backup?}`。**无 delete**。\n2. **catalog 来源**:`getMergedCatalog()` = `BUILTIN_CATALOG` ∪ `loadUserCatalog()`(user 覆盖 builtin,by id)。`userCatalogPath()` = `~/.code-shell/model-catalog.user.json`。`userCatalogFileSchema` = `z.array(catalogE",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-11-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 267,
+      "context": "# 模型接入 Catalog — 实现设计 (v1)\n\n> 日期：2026-06-11 ｜ 状态：**已拍板,实现中**\n> 上游讨论稿：`docs/archive/model-catalog-讨论稿.md` (v0.1)\n> 本文档把讨论稿的「待拍板」全部定下,并并入用户在 `/goal` 里追加的三条需求,作为实现锚点。\n\n---\n\n## 0. 一句话\n\n把散在两个 renderer 文件里写死的 `ProviderMeta[]` 收敛成 **core 里一份集中的 catalog**;用户在连接页**从 catalog 挑模板 → [+ 添加] → 填(或复用)key → 设默认**,可以加任意多个图片/视频实例;catalog 每条带 `paramsDoc`,**已配实例的参数说明自动注入 GenerateImage/GenerateVideo 工具描述**,Agent 选了默认模型就知道它支持哪些参数。\n\n---\n\n## 1. 拍板结论(讨论稿 §8 待拍板的最终答案)\n\n| # | 问题 | 结论 |\n|---|---|---|\n| ① | catalog 与 `providers[]` 关系 | **清单/实例分离**：catalog=只读模板清单(能配哪些),`imageGen/videoGen.providers[]`=已配实例(配了哪些,带 key)。 |\n| ② | 用户自定义条目(B)存哪 | **独立** `~/.code-shell/model-catalog.user.json`。 |\n| ③ | 语音(audio) | **本版不做**：不加 tag、不加分组、不加适配器。架构上 `tag` 字段保留枚举扩展余地,但不塑形。 |\n| ④ | 通用适配器粒度 | 仅 `generic-sync`(同步) + `fal-queue`(异步)两形状,**且不重命名现有 adapter**：`adapterKind` 直接复用现有 `\"openai\"/\"google\"/\"fal\"` 字符串,运行时 switch 与 adapter 类全部不动。catalog 只声明哪条指向哪个已有 adapter。 |\n| ⑤ | 文本(LLM)是否纳入连接页 | **不纳入**：文本配置留在模型设置页;连接页只管 image/video。 |\n\n## 1b. /goal 追加的三条需求(本版必须满足)\n\n1. **复用 apiKey**：添加实例时,既能填新 key,也能「复用」另一个已配实例的 key(典型：OpenAI 图片复用 OpenAI 文本的 key,或多个 fal 实例共用一把 fal key)。\n2. **可加很多个**：同一 provider 可建多个实例(不同 key / 不同默认模型),各自有唯一 `id`;能设其中一个为默认。**这是相对现状的真实新能力**——现状是「一 kind 一实例」(id≡kind)。\n3.",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-11-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2635,
+      "context": "; label?: string }>;\n  signupUrl?: string;\n  test?: boolean;          // 连接页是否给「测试」按钮(image=true, video=false)\n  paramsDoc?: string;      // 该条目调用时支持/需要的参数说明(注入工具描述)\n}\n```\n\n- catalog 落 **core**(不是 renderer):probe service(main 进程)、工具描述注入、未来宿主都要读它。\n- renderer 通过 IPC `getModelCatalog()` 拿合并后的 `CatalogEntry[]`,不再硬编码 `ProviderMeta[]`。\n\n### 实例(providers[])schema 变化\n\n现有每条 `{ id, kind, baseUrl, apiKey?, defaultModel? }` 保留。**新增两个可选字段**(向后兼容,旧配置不受影响):\n\n```ts\ncatalogId?: string;        // 这个实例由哪条 catalog 模板创建(用于回显 displayName/paramsDoc/signupUrl)\napiKeyRef?: string;        // 复用:指向另一个实例的 id,运行时取那个实例的 apiKey(此时本实例 apiKey 留空)\n```\n\n- 解析 key 时:`apiKey ?? (apiKeyRef 指向实例的 apiKey)`。在 `resolveImageProvider`/`resolveVideoProvider` 里解引用。\n- `id` 不再强制等于 `kind`:多实例下 id 形如 `openai`, `openai-2`, `fal-seedance`(由 UI 生成唯一值)。\n\n---\n\n## 3. 运行时(core)改动\n\n### 3.1 catalog 模块 `packages/core/src/model-catalog/`\n- `types.ts`：`CatalogEntry`。\n- `builtin.ts`：`BUILTIN_CATALOG`(从现 renderer 的两个数组迁来,补 `paramsDoc`/`shape`/`tag`)。\n- `index.ts`：`loadUserCatalog()`(读 `~/.code-shell/model-catalog.user.json`,用 `userHome()`,zod 校验,坏文件忽略)+ `getMergedCatalog()`(A∪B,同 id B 覆盖)。\n\n### 3.2 key 解引用(复用)\n`resolveImageProvider`/`resolveVideoProvider`:取实例时,若 `apiKey` 空且有 `apiKeyRef`,在同 `providers[]` 里找 `apiKeyRef` 实例的 `apiKey`。`usable()` 判定改成「有效 key(直填或引用)且有 adapter」。\n\n### 3.3 paramsDoc 注入工具描述(需求 3 闭环)\n`generateImageToolDefFor`/`generateVideoToolDefFor` 已存在(把已配 provider 名追加进描述)",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-11-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4278,
+      "context": "/images)。paramsDoc 是给模型的**自然语言提示**,告诉它某模型还认哪些可塞进 prompt 或哪个 model 该配什么——不引入每模型独立 JSON schema(YAGNI,且工具入参是固定的)。\n\n---\n\n## 4. UI(renderer)改动\n\n目标:`GenConnectionsPanel` 从「按固定 ProviderMeta[] 渲染」变成「**渲染已配实例 + 一个 [+ 添加] 入口(从 catalog 挑模板)**」。\n\n### 4.1 数据流\n- 进面板:`getModelCatalog()` 拿合并 catalog,按 `tag` 过滤本面板那类;`getSettings()` 拿 `providers[]`(已配实例)。\n- 渲染:**每个已配实例一张卡**(沿用现 `GenCard` 标记/样式)+ 末尾一张「[+ 添加]」卡。\n- [+ 添加] → 弹 catalog 模板选择(用 desktop 统一 `usePrompt`/`DropdownMenu`,见记忆 [[project_dialog_unification]])→ 选模板 → 生成唯一 `id`(`kind`,冲突则 `kind-2`…)→ 追加一张未配置卡(带 catalogId、默认 baseUrl/model 来自模板)。\n\n### 4.2 复用 key(需求 1)\n卡片 API Key 区加一个小切换:「填新 key」/「复用已有」。选「复用」→ 出现一个 SimpleSelect 列出同类**已填 key 的其它实例**(显示 displayName);选中即写 `apiKeyRef`、清空本实例 `apiKey`。保存/解析按 §3.2。\n\n### 4.3 多实例 + 默认(需求 2)\n- 同模板可多次 [+ 添加] → 多张卡,各唯一 id。\n- 「设为默认」写 `defaultProvider = 实例 id`(已有机制)。\n- 「清除」改为「删除此实例」(从 providers[] 移除该 id;若它是默认,默认顺延到下一个可用实例)。\n\n### 4.4 兼容旧 UI 约定\n现 `GenConnectionsPanel` 用的是 legacy `conn-card` CSS(非 shadcn)。本版**沿用现有卡片标记**(它已工作、改它属于 scope 外的样式迁移),只改数据层与新增「添加/复用/删除」控件——新增控件用 `@/components/ui`(Button/SimpleSelect)与 DialogProvider hooks,符合 desktop CLAUDE.md。\n\n### 4.5 IPC\n- 新增 `window.codeshell.getModelCatalog(): Promise<CatalogEntry[]>`(preload + main handler,main 调 core `getMergedCatalog()`)。\n- 写回仍走现有 `writeSettings(scope, { imageGen|videoGen: { defaultProvider, providers } })`。\n\n---\n\n## 5. 不做 / YAGNI\n\n- ❌ 远程 catalog 更新(讨论稿 §7)。\n- ❌ audio(③)。\n- ❌ 文本进连接页(⑤)。\n- ❌ 重命名/重写现有 adapter 为 generic-",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2843,
+      "context": "` 数值,二选一互斥,跨 provider 归一化)。→ **对应我们 `ParamSpec`。**\n3. **无完整先例**:没有任何一家做到「一份声明式 catalog 同时驱动 UI 控件渲染 + 注入工具描述」——OpenRouter 把「支持哪些参数」(机器可读)与「参数 type/range/enum」(人读文档)分两处。→ **我们要做的是有价值的新设计;参数声明这块得自己合并,但有 `capabilities` 范式打底。**\n4. **关键洞察(推翻裸 modelId 全局匹配)**:OpenRouter 自己做了归一化,**同一 modelId 经不同接入(OpenRouter vs 官方),参数 schema 不同**。→ **参数能力必须绑在「接入模板」上(per-entry-per-model),不能按裸 modelId 全局匹配。**\n5. **caveat**:这些枚举随模型漂移(Claude 4.7+ 改 `output_config.effort`)。→ **参数数据应可编辑,而非用测试锁死。**\n\n---\n\n## 3. 数据模型(核心)\n\n三层,**模板/实例分离**(沿用 Catalog v1 分法,推广到文本):\n\n```\n┌─ 模板层(catalog)= \"能配哪些\" ───── 独立文件,不在 settings ─┐\n│  内置:  core BUILTIN_CATALOG          (随 app)                    │\n│  用户/AI: ~/.code-shell/model-catalog.user.json                  │\n│          扩 tag 含 text;每条 = 一家公司的一种接入模板            │\n└──────────────────────────────────────────────────────────────┘\n            ↓ 用户在连接页\"挑模板 → 添加 → 填/复用 key\"\n┌─ 实例层 = \"配了哪些\" ───────────────── 留 settings.json ────┐\n│  settings.modelConnections[]  (统一替代 providers/models/imageGen)│\n└──────────────────────────────────────────────────────────────┘\n```\n\n### 3.1 公司接入层 — `CatalogEntry`(扩展现有)\n\n```ts\ninterface CatalogEntry {\n  id: string;                          // \"openai\" / \"openrouter\" / \"anthropic\" / \"fal-video\"\n  tag: \"text\" | \"image\" | \"video\";    // ← 扩了 text;UI 据此分区\n  adapterKind: string;                 // 运行时适配器:\"openai\"|\"anthropic\"|\"google\"|\"fal\"\n  protocol?: \"openai-compat\" | \"anthropic-style\"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 8141,
+      "context": " 生成;研究 caveat 印证这些枚举一直漂移,锁死是错的方向。`rules.ts` 的运行时投影逻辑(`reasoningControlFor` → control 形状)仍可保留作为「实例运行时把 paramValues 落请求体」的执行器,但**数据源头变成 catalog**。\n\n> 待实现计划细化:导入脚本的形态(一次性生成 builtin.ts vs 运行时读)、rules.ts 投影逻辑保留多少。\n\n---\n\n## 5. UI(renderer):底层一套,文本可单独渲染\n\n**底层一套**(同一份 catalog + 同一实例模型 + 同一 `resolveInstance`);**UI 层文本可有自己的渲染分支**(用户明确:文本特殊可单独渲染)。\n\n- **图/视频**:沿用 `GenConnectionsPanel` + `connUi.tsx` 单层实例卡片(已迁 shadcn,42ff471),数据源换成统一 catalog/实例。\n- **文本**:`ModelSection` 重做——不再 provider→models 两级折叠,改为「catalog 模板挑选 → 实例卡片」,参数控件由 `params[]` 数据驱动(`switch(control)`)。复用 `connUi` 共享底座。\n- **添加流程**:`[+ 添加]` → 按 tag 列 catalog 模板(`getMergedCatalog()` 过滤)→ 选模板 + 选 model(modelPresets)→ 一卡建好(baseUrl/默认参数来自模板)→ 填/复用 key → 保存。\n- **移除**:fetch /models、连接页手填任意 modelId、「列表外模型参数回退链」——连接页**只渲染 catalog 里有的模型**。没的模型 → 让 AI 查文档生成 catalog / 用户改 user.json(见 §7)。\n\n---\n\n## 6. 运行时消费:统一解析器\n\n```\nresolveInstance(id):\n  inst = settings.modelConnections.find(id)\n  entry = findCatalogEntry(catalog, inst.catalogId, fallback=adapterKind)\n  adapter = pickAdapter(entry.adapterKind)          // 复用现有 switch,不动\n  apiKey  = inst.apiKey ?? resolve(inst.apiKeyRef)  // effectiveApiKey 推广\n  preset  = entry.modelPresets.find(inst.model)\n  request = applyParams(inst.paramValues, preset.params)  // 按 wire 落请求体\n  toolDoc = preset.params.map(p => p.doc)           // 注入工具描述\n```\n\n文本/图/视频**同一个 `resolveInstance`**,只是 `adapterKind` 不同 → 真正「底层一套」。各能力入口(聊天、Generate",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 8251,
+      "context": "ues 落请求体」的执行器,但**数据源头变成 catalog**。\n\n> 待实现计划细化:导入脚本的形态(一次性生成 builtin.ts vs 运行时读)、rules.ts 投影逻辑保留多少。\n\n---\n\n## 5. UI(renderer):底层一套,文本可单独渲染\n\n**底层一套**(同一份 catalog + 同一实例模型 + 同一 `resolveInstance`);**UI 层文本可有自己的渲染分支**(用户明确:文本特殊可单独渲染)。\n\n- **图/视频**:沿用 `GenConnectionsPanel` + `connUi.tsx` 单层实例卡片(已迁 shadcn,42ff471),数据源换成统一 catalog/实例。\n- **文本**:`ModelSection` 重做——不再 provider→models 两级折叠,改为「catalog 模板挑选 → 实例卡片」,参数控件由 `params[]` 数据驱动(`switch(control)`)。复用 `connUi` 共享底座。\n- **添加流程**:`[+ 添加]` → 按 tag 列 catalog 模板(`getMergedCatalog()` 过滤)→ 选模板 + 选 model(modelPresets)→ 一卡建好(baseUrl/默认参数来自模板)→ 填/复用 key → 保存。\n- **移除**:fetch /models、连接页手填任意 modelId、「列表外模型参数回退链」——连接页**只渲染 catalog 里有的模型**。没的模型 → 让 AI 查文档生成 catalog / 用户改 user.json(见 §7)。\n\n---\n\n## 6. 运行时消费:统一解析器\n\n```\nresolveInstance(id):\n  inst = settings.modelConnections.find(id)\n  entry = findCatalogEntry(catalog, inst.catalogId, fallback=adapterKind)\n  adapter = pickAdapter(entry.adapterKind)          // 复用现有 switch,不动\n  apiKey  = inst.apiKey ?? resolve(inst.apiKeyRef)  // effectiveApiKey 推广\n  preset  = entry.modelPresets.find(inst.model)\n  request = applyParams(inst.paramValues, preset.params)  // 按 wire 落请求体\n  toolDoc = preset.params.map(p => p.doc)           // 注入工具描述\n```\n\n文本/图/视频**同一个 `resolveInstance`**,只是 `adapterKind` 不同 → 真正「底层一套」。各能力入口(聊天、GenerateImage、GenerateVideo)都走它。\n\n---\n\n## 7. AI 辅助加 catalog — 本轮留口,不实现(下一期专项)\n\n用户构想:chat 里说「我要用 XX 家的模型」→ AI 搜文档 → 抽取地址/modelId/参数/paramsDoc → 写一条 catalog → 用户即可在连接页添加使用。\n\n**两层协作",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 10747,
+      "context": "退链)。\n- ❌ reasoning 特殊 variant(统一进通用 `ParamSpec`)。\n- ❌ 用测试锁死参数数据(catalog 是活数据)。\n- ❌ AI 自动搜索/写 catalog 的实现(本轮只留口)。\n- ❌ 远程 catalog 更新、audio tag、重命名现有 adapter(沿用 v1 的 YAGNI)。\n\n---\n\n## 9. 验收\n\n1. 连接页文本/图/视频三类都能「挑模板 → 添加 → 填/复用 key → 设默认」,UI 同一套底层。\n2. 选 `gpt-5.5` 实例,连接页自动渲染 reasoning 4 档下拉;选 `gpt-4o` 不渲染——纯由 catalog `params` 数据驱动,无 UI 硬编码。\n3. 某实例 `apiKeyRef` 指向另一实例,保存后落盘,运行时解析到被引用的 key。\n4. 已配实例的 `params[].doc` 出现在 `GenerateImage/GenerateVideo`(及文本工具)描述里。\n5. 用户在 `model-catalog.user.json` 加一条 `tag=text` 模板(带 params)→ 连接页文本组出现它,零 UI 代码改动,加完即可配、控件按 params 自动渲染。\n6. core `tsc` + 相关 test 过;desktop `tsc --noEmit` + `build:renderer` 过。\n\n---\n\n## 10. 开放问题(写实现计划时定)\n\n1. **rules.ts 导入形态**:一次性生成内置 catalog vs 运行时把 rules 投影合进 catalog。\n2. **wire 映射的复杂度边界**:最小版只需 `field`;Anthropic 嵌套字段(`thinking.budget_tokens`)、二选一互斥(effort vs budget)等复杂映射做到哪。\n3. **`paramValues` 的校验**:实例存的值是否对照 `params` 校验(枚举越界/范围),还是宽松透传。\n4. **文本 UI 分支与 connUi 的复用边界**:文本卡片多大程度共用 `connUi`。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-24-manual-catalog-editor-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 294,
+      "context": "# 手动 Catalog 编辑器(设置页「模型目录」)设计\n\n**日期**: 2026-06-24\n**状态**: 设计 / 待 review\n**触发**: 用户要在设置页加一个手动配置 catalog 的地方 —— 先配 provider 再配其下 model,且 AI 用 editModelCatalog 加的条目用户也能在 UI 改。参考业界 AI 编辑器(Cline/Roo/Continue/Aider)做法。\n\n---\n\n## 1. 背景与现状\n\n**现状**(已审计):\n- `TextConnectionsPanel`(连接页)能让用户**选**现成 catalog 模板 + 填凭证 + 选 model + 调参数 + 设默认 —— 但**不能改模板本身**(provider 的 baseUrl/adapterKind、加新 model、改 params)。\n- 改模板今天只能靠 **AI 的 editModelCatalog 工具**或**手改 `model-catalog.user.json`**。\n- 数据三层:`CatalogEntry`(provider 模板)→ `modelPresets[]`(其下 models)→ 每 model 的 `params[]`(ParamSpec)。凭证(`credentials[]`)独立,连接(`modelConnections[]`)引用模板 + 凭证。\n- 持久层 `saveCatalogEntry`(save-entry.ts)只支持 add/update,**无 delete**。IPC 只有 `catalog:list`,**无 save/delete**。\n\n**业界调研结论**(deep-research,见附):没有一家用严格\"先注册 provider 再挂 model\"两层结构 —— UI 派(Cline/Roo)同屏分区表单,文件派(Continue/Aider)model-centric 扁平数组。**我们的三层分离(provider 模板 / models / 独立凭证)比业界任何一家都更结构化**,是差异化优势,设计应保留而非退化成 inline。借鉴:Cline/Roo 的同屏分区表单;Aider 的 `accepts_settings`(我们用 ParamSpec 驱动参数控件已对上)。\n\n---\n\n## 2. 范围(用户已拍板)\n\n| 决策 | 结论 |\n|---|---|\n| 范围 | **全 CRUD** —— provider 模板 + 其下 model + 每 model 参数 |\n| 内置模板 | **可改** —— 用户改内置时写 user.json 同 id 覆盖条(getMergedCatalog 已 user 覆盖 builtin) |\n| 布局 | **可展开卡片(accordion)** —— 单栏纵向,和现有连接页卡片风格一致 |\n| 生效 | **写盘即",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-24-manual-catalog-editor-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1083,
+      "context": "立,连接(`modelConnections[]`)引用模板 + 凭证。\n- 持久层 `saveCatalogEntry`(save-entry.ts)只支持 add/update,**无 delete**。IPC 只有 `catalog:list`,**无 save/delete**。\n\n**业界调研结论**(deep-research,见附):没有一家用严格\"先注册 provider 再挂 model\"两层结构 —— UI 派(Cline/Roo)同屏分区表单,文件派(Continue/Aider)model-centric 扁平数组。**我们的三层分离(provider 模板 / models / 独立凭证)比业界任何一家都更结构化**,是差异化优势,设计应保留而非退化成 inline。借鉴:Cline/Roo 的同屏分区表单;Aider 的 `accepts_settings`(我们用 ParamSpec 驱动参数控件已对上)。\n\n---\n\n## 2. 范围(用户已拍板)\n\n| 决策 | 结论 |\n|---|---|\n| 范围 | **全 CRUD** —— provider 模板 + 其下 model + 每 model 参数 |\n| 内置模板 | **可改** —— 用户改内置时写 user.json 同 id 覆盖条(getMergedCatalog 已 user 覆盖 builtin) |\n| 布局 | **可展开卡片(accordion)** —— 单栏纵向,和现有连接页卡片风格一致 |\n| 生效 | **写盘即生效** —— 下条消息 getMergedCatalog/resolveLLMConfigForTag 重读自然拿新值,无需热重载 |\n| 删除语义 | **自定义真删 / 内置重置** —— 用户自建条从 user.json 删除;被改过的内置条\"重置\"= 从 user.json 删覆盖条,退回代码内置版 |\n| 位置 | **独立设置子页「模型目录」** —— 与连接页平级的新 tab |\n\n**不在范围**:凭证管理(仍在连接页);连接实例管理(仍在连接页);AI editModelCatalog 工具(已存在,与本 UI 共用同一持久层)。\n\n---\n\n## 3. 架构\n\n三层改动:**core 持久层补 delete → IPC 暴露 save/delete → renderer 新设置子页**。\n\n### 3.1 Core 持久层(新增 deleteUserCatalogEntry)\n\n`packages/core/src/model-catalog/save-entry.ts` 已有 `saveCatalogEntry(entry, {path, stamp})`(add/update,返回 `{ok, action, error, backup}`)。新增:\n\n```typescript\n/**\n * 从 user catalog 文件删除指定 id 的条目。\n * - 自定义条目:删除后该 id 在 merged catalog 消失。\n * - 内置条目的覆盖条:删除后退回代码内置版(getMergedCatalog 重新只取 builtin)。\n *   = UI 的\"重置\"语义。\n * 返回 { ok, removed: boolean, backu",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/cloud-native-chooser-2026-10-13.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3053,
+      "context": "nt-request.ts)\n  在启动 URLLoader 后完成 Writable；其 close 可能早于网络错误，所以 close 不充当探针结果。\n- Playwright 在 `app.close()` 后销毁内部对象，再取 `app.process()` 会抛出 `_object`\n  错误。两次实际 launch 返回后立即保存真实 ChildProcess 和 PID，关闭及退出核验只用\n  已保存句柄；关闭失败后的重试也不再重新查 Playwright 进程。退出未确认仍保留 HOME。\n\n本轮本地验证不启动 Electron：旧基线实际 `closeApp`/退出方法受控执行可复现 `_object`；\n修复后的实际函数用独占 Node 子进程完成盘点拒绝、盘点超时、关闭拒绝、正常关闭与首次\n退出核验失败后重试五条路径，所有 child 均 exit 0，关闭后没有 `process()` 查询。\n回执为 `/tmp/codeshell-cloud-chooser-close-{baseline,final}-20261013.json`。\n第二次修复另以实际生成模板代码、真实 Node Writable/Readable 和受控 URLLoader 结果\n验证九条路径：6346 基线动态查找拒绝、close 后才到拦截错误通过、错误种类不符、收到\n响应、仅 close、无结果、拦截计数为 0/2、工厂同步抛错。拒绝路径均不通过，已创建请求\n均执行 abort，产品外部/相邻端口请求仍被 wrapper 拒绝；测试将 5 秒 timer 加速到 30ms，\n同时核验模板传入的期限仍为 5000ms。回执为\n`/tmp/codeshell-cloud-chooser-probe-receipt-20261013.json`。这不是 Chromium/native 成功回执。\n真实 Server-only 业务链、生成 Main/worker 的 Node 语法检查及受影响脚本 ESLint/Prettier\n均通过；没有重构建产品 dist，没有调用 macOS Keychain。这些结果不能代替新 head 的\nLinux 原生 CI 成功回执。\n\n## Linux 原生 gate（CI 待执行）\n\n命令：`xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench`。\n入口先清除继承的 Host/凭据/DBus 环境，再创建私有 SecretService；验证实际 daemon\nPID、可执行文件、foreground/control directory 与私有目录后才交给 Electron。\n真实 safeStorage 必须报告 `gnome_libsecret`，拒绝 mock-keychain/basic_text。\n入口移除 Playwright 追加的 `no-sandbox` 并在 ready 前启用 sandbox，实际 Main 断言\n该禁用开关不存在；远端窗口仍须核对其生产隔离属性。\n该 gate 仅支持 Linux；不以重试 macOS 系统钥匙串代替当前独立的 Pet 原生验收。\n\n脚本要求完成：\n\n1. 本地 picker 双击去重/取消、原生菜单与 composer 共用选择器。\n2. 界面账号登",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/link-connector-refactor-delivery-2026-10-16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 278,
+      "context": "# Link 重构实施记录\n\n2026-10-16。源码基线：CodeShell main `8c872e4bd`，已合并并行界面与账号访问改动至 `d58685788`；Services 基线 `acb55b1`，实现已合入本地 main `47c6081`。CodeShell 实现分支：`codex/link/connector-refactor-20261016`。用户允许直接清理旧 Link 记录；未授权生产部署或发版。\n\n## 本批范围\n\n- 公共 `packages/link` 提供统一 Operation 类型、50 个审阅契约与五种 recipe。契约记录资源授权、内容覆盖、默认参数、预算与重放规则；CI 比较完整快照和目标基线，既有动作无法通过修改快照静默改变契约。\n- LinkAction 接入输入快照、契约校验、必选资源策略与结果过滤；返回 operationId、recipe 和来源信息。可选 content 不决定是否鉴权，创建 Issue 仍检查父仓库。\n- Server 的小型运行时负责单次 adapter 调用、输入/输出限制、取消和最终授权复查。HTTP provider 实现通过 Core 空 registry 显式注册；各 Host 和 worker 负责组合。Core SDK 需要消费者显式安装 provider。\n- Figma 新动作 `read_design_content` 默认 depth 2，完整文件必须显式 full:true；旧 `get_file` 严格保持 key-only、depth 1、最多 100 页的摘要。独立 Services 同步实现，新名没有自动加入旧 grant。\n- token_refresh 区分配置拒绝、invalid_grant 和未知消费结果。只恢复已证实在 token 消费前失败的凭据，禁止重放可能已消耗的 refresh token。本地 OAuth、MCP 与 remote IPC 回执均携带有序状态快照，取消后晚到快照仍按 revision 处理。\n- 新连接记录标记 recordSchemaVersion 2，只保存 recipe；旧执行轴由兼容 projection 读取，不能写回新记录。管理 DTO 分开身份授权、契约兼容和近期观测，授权验证时间不冒充动作健康检查。\n- 默认新连接生成独立随机 ID，删除后重新连接不会恢复旧引用；同一 provider/method 可分别保存不同账号。显式替换已有连接仍要求准确 ID 与 revision。未知未来记录格式不能执行，但仍保护匹配 grant，避免旧 Host 错误撤销新版的活跃授权。\n- operation ledger 新增跨会话、连接和 incarnation 的原子资源冲突保护；缺账号是 wildcard，缺",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/link-connector-refactor-plan-2026-10-16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 15687,
+      "context": "--------------------------------- |\n| `packages/link`（已发布为 `@cjhyy/code-shell-link`）         | 保持依赖轻量、浏览器安全；承载公共 DTO、错误码、连接步骤，以及各 provider 的 OperationContract 数据（输入/输出 Schema、effect、预算），按 provider 子路径导出。这是 Host 与 Services 之间唯一共享的发布物。 |\n| `packages/server/src/links/runtime`，拟新增目录              | 通用连接协调、授权驱动接口、操作规划、契约校验、状态与结果收口；通过注入接口使用凭据库、policy、HTTP、进程与任务能力，不反向依赖 Core。                                                                     |\n| `packages/server/src/links/providers/<provider>`，拟新增目录 | recipes、精确资源规范化、参数/结果规则及已审阅执行实现。Desktop 主进程与 TUI 通过 server 的组合入口取用，不另建发布包。                                                                                     |\n| `packages/core`                                              | 保留通用 CredentialStore/CAS/cipher 与权限原语；`LinkAction` 消费 provider-neutral LinkAccess。逐步移出 `links/figma*`、`github*`、`providers.ts`、`remote-adapters.ts` 等领域分支。                        |\n| `packages/host`                                              | 通过既有通用 adapter/service 机制承载注册、能力发现、审批、取消、进程/任务生命周期；保持 Core-only 依赖，不导入 runtime/provider 实现。                                                                     |\n| `packages/server/src/links`（现有）                          | Host 的连接管理 API、授权 job coordinator 和会话归属；继续复用已有 OAuth adapter seam，逐步组合 runtime 目录。                                                                                              |\n| `packages/desktop`                          ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/video-studio-panel.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2212,
+      "context": "键帧。\n\n## 人和 AI 共用的数据与操作\n\n权威工程建议为版本化的 video-project.json。记录素材 ID/指纹、源入点出点、轨道位置、速度、音量、字幕、合成片段和导出参数；时间采用整数帧或明确的有理时间基准。转写、缩略图、波形和代理视频为派生缓存。\n\n人工拖动和 AI 工具都调用同一个操作层。建议领域操作包括读取当前状态、搜索片段、拆分、裁剪、移动、删除范围、修改字幕、加入合成片段和提交导出任务。\n\n每次修改带 baseRevision；批量变更原子应用，记录逆操作。用户在 AI 规划期间拖动片段导致版本变化时，重新检查和调整变更，不能覆盖人工操作。轨道锁定、音画联动、撤销/重做、自动保存和崩溃恢复属于基础能力。\n\nAI 主要提交结构化剪辑操作，少量自然语言建议本身不算完成剪辑。导出完成要能定位结果文件，并核对音轨、时长和预期画面。\n\n## HyperFrames 与常规剪辑的分工\n\n普通录屏、摄像素材和音频使用常规剪辑能力。HyperFrames 承担可参数化的程序化场景，并作为复合片段加入主时间轴；保留源工程、参数、渲染版本及缓存。\n\n第一版支持明确的场景类型和模板参数。任意 HTML/GSAP 反向转换成可任意拖动的图层，不能视为现成能力。当前教程可先按章节或场景导入，再逐步开放标题、颜色、时长和内容参数。\n\n预览与最终导出必须覆盖同一套操作语义。需明确支持矩阵，检查变速、裁切、字体、转场、音量与字幕的一致性。长视频要支持低清代理预览、分段渲染、缓存与失败章节重试，避免每改一句字幕重做全片。\n\n## 已有 CodeShell 能力与缺口\n\n已核实可复用：Panel App API v11、项目绑定、安装权限审查、manifest Agent tools、registerTool、agent.task、workspace 带版本写入、本地 process.find/spawn/cancel。Design Studio 的操作日志和 revision 检查可作为共享编辑逻辑的参考，Mimi Download 的依赖检测与素材流程可作为导入参考。\n\n需要新增的 Host 能力：\n\n1. 媒体服务：授权文件句柄、复制/引用导入、元信息、支持 Range 的媒体播放、缩略图、波形和代理缓存。现有 cspanel 协议服务安装包资产，MIME 未含音视频；不能用 JSON IPC/Base64 搬运 GB 级视频，也不应笼统放开面板网络权限。\n2. 长媒体转写与对齐：当前 audio.transcribe 最大 25 MiB，返回文本，没有剪辑所需的时间戳。需异步文件转写、词/句时间、分块和恢复。\n3. 持久任务：现有面板 process 最多 3 个并发，输出累计超过 4 MiB 会终止，guest 撤销时会结束进程。生产导出需由 Host 或媒体 worker 持有，关闭面板后继续运行；返回 job ID，提供查询、进度、取消、重试和结果路径。\n\n领域 UI 与声明式工具放入 codeshell-panel-apps/apps/video-studio。媒体 worker 通过 Host 服务或独立 capability/plugin 接入。保持 Core 与视频领域解耦，遵守面板仓库禁止任意 backend/hooks 等进入 Panel App 包的约定。\n\n## 实施顺序与验收\n\n第一阶段：基础剪辑。导入真实录屏与音频，连续拖动预览，切分/裁剪/排序，自动保存，撤销，字幕",
+      "completeScalar": false
+    }
+  ]
+}

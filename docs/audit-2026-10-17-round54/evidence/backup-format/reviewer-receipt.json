@@ -1,0 +1,204 @@
+{
+  "frozenAt": "2026-10-17T18:10:59.904723+00:00",
+  "exactDirectory": "/tmp/codeshell-audit-round116-backup-format",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "adjacent-source-navigation.json",
+      "bytes": 3358,
+      "sha256": "010189d284a982cc7e08139668682c21125de137258bd362ad664dc0cb57f64f"
+    },
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 1573,
+      "sha256": "e3638937b8447293bc3b9c4bcd02ce571f37d9e1d76f4a7bc86aac3080b960cf"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1307,
+      "sha256": "7f14bde6a051b5ef30eb7ca01686ae16aff294e46ccb9842830733a396bfb1c7"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 23500,
+      "sha256": "216e5790e42560db4dba02f5e0b8934e2646504dc7c8a0e737a5986fef95138c"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2743,
+      "sha256": "c845ee4ee806573fe3384fefc272223647a7e94f023d09d57f11750184478f36"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 9163,
+      "sha256": "3a52c0b42fb694a894ea331aca33d6751a1153723441b634b7c00ff2eb5f0e68"
+    },
+    {
+      "path": "first-diagnostic.json",
+      "bytes": 357,
+      "sha256": "78337eb25f39b5853f7b41a1c50ebbbcfa0c476635a4801af4f247db729a838d"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1296,
+      "sha256": "1e758d72e134ecfa3465a66f440985b8fa61b1288f5d529336034e0ab5f30bf4"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 165287,
+      "sha256": "ef8c795c6adc8efa74d6318950184e265b573b2df2c6661bc626b2d537c2f44d"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4027,
+      "sha256": "7f91577ffe213b5601e2a1eadcedee8775307729bca1f053290c2ddd690c1839"
+    },
+    {
+      "path": "history-selected-contexts.json",
+      "bytes": 4490,
+      "sha256": "4f01d4530022c823c0527cef566a2db9c8daa194c17b283ca08e5661f9a73cb9"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1069775,
+      "sha256": "499dc654b4212ca95fb6e2cd1a545d6349b8469b4ab73fbc14931c38fc9913b3"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1512,
+      "sha256": "b3a8659b637f7decfce95349095c0c937f8cc6e170eac695e63a19ab9b0d65da"
+    },
+    {
+      "path": "navigation-provenance.json",
+      "bytes": 1080,
+      "sha256": "e615158257025e845c632a94599e33b5333fff29fe0e2a0410d6de2c31d51e3c"
+    },
+    {
+      "path": "public-entry-navigation.json",
+      "bytes": 482,
+      "sha256": "bc67f6d2578378ce5b5779e2ae24f60c4fdd621f2a35e39a0967e363ab3015db"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5164,
+      "sha256": "8da6aa314d00785b6435c2fc90798e6a6acfbadff166bdcadb2c8eabb4908ba1"
+    },
+    {
+      "path": "source-display-pins.json",
+      "bytes": 1953,
+      "sha256": "02e79147968699951d57dd9877526ce95aa6f43d4a15a237beb39ad4968f9938"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 24505,
+      "sha256": "de4fdfa0351248b7a53ab1bc291372ab0cd422f50883c176d98c5248277e8d67"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 12864,
+      "sha256": "2faad6d2d3a458e6dc6006ec5321d05b7d98726839e3dd6a042ebf1aaf584f0d"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1130,
+      "sha256": "0acbf3308d946895d56200c3a88782c4c3b5c8ebc8f1dd78d227a9cf6b2601f1"
+    },
+    {
+      "path": "writer-final-display.json",
+      "bytes": 369,
+      "sha256": "be4a5d25e475d4f44a06d92557b0e2699d04d28f51ebb0f24521d7e33e393793"
+    },
+    {
+      "path": "writer-navigation.json",
+      "bytes": 1785,
+      "sha256": "0ade5b1409b487af8f56a0df7e9545a2a11dba28154d943981dcc97bc1db2495"
+    },
+    {
+      "path": "writer-test-display.json",
+      "bytes": 720,
+      "sha256": "b2b85e4789a12f60f1b973a713266fc5ec2af6e417656208952438ded7e183c3"
+    }
+  ],
+  "artifactCountExcludingReceipt": 23,
+  "totalFileCountIncludingReceipt": 24,
+  "reportLinks": [
+    {
+      "label": "初始 pins",
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "label": "历史库存",
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "label": "canonical 原对象",
+      "target": "canonical-gate-read.json",
+      "exists": true
+    },
+    {
+      "label": "本次 gate 决策",
+      "target": "gate-decision.json",
+      "exists": true
+    },
+    {
+      "label": "范围清单",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "label": "源码文本",
+      "target": "source-excerpts.json",
+      "exists": true
+    },
+    {
+      "label": "5个有界历史窗口",
+      "target": "history-selected-contexts.json",
+      "exists": true
+    },
+    {
+      "label": "首次诊断",
+      "target": "first-diagnostic.json",
+      "exists": true
+    },
+    {
+      "label": "来源说明",
+      "target": "navigation-provenance.json",
+      "exists": true
+    },
+    {
+      "label": "结束复核",
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "label": "验证口径",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "label": "方法",
+      "target": "history-method.py",
+      "exists": true
+    },
+    {
+      "label": "元数据整理脚本",
+      "target": "finalize-metadata.py",
+      "exists": true
+    },
+    {
+      "label": "分类原件",
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "label": "冻结收据",
+      "target": "reviewer-receipt.json",
+      "exists": true
+    }
+  ],
+  "filesSemanticReadMode": "current packet checks only, no new product semantic read",
+  "productExecutions": 0,
+  "GitCalls": 0
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "path": "packages/core/src/session/output-journal.ts",
+    "bytes": 49679,
+    "sha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+    "beforeReadAt": "2026-10-17T18:07:59.998764+00:00",
+    "displayRanges": [
+      [
+        41,
+        49
+      ],
+      [
+        101,
+        128
+      ],
+      [
+        1090,
+        1210
+      ]
+    ]
+  },
+  {
+    "path": "tests/output-journal-manual-repair.test.ts",
+    "bytes": 31627,
+    "sha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+    "beforeReadAt": "2026-10-17T18:08:00.001447+00:00",
+    "displayRanges": [
+      [
+        200,
+        229
+      ],
+      [
+        290,
+        318
+      ]
+    ]
+  }
+]

@@ -1,0 +1,98 @@
+{
+  "createdUTC": "2026-10-17T18:08:31.107872+00:00",
+  "role": "Independent canonical old-full metadata gate; no current product-body source reading",
+  "canonicalMetadataDocuments": [
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "bytes": 3462,
+      "sha256": "66fe3d8510535f753bfebfcc7b84b602a11aaccfd6b1d836bbde3a64301a0eaf",
+      "hashCaptureTiming": "After actual metadata reading in 0ce7cf/cbb961; not product pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "bytes": 3985,
+      "sha256": "f9d2b070debafc22f69006e2db7f0cb2e4261de045c802379bad3efb02eaf005",
+      "hashCaptureTiming": "After actual metadata reading in 0ce7cf/cbb961; not product pre-read pin."
+    }
+  ],
+  "canonicalRowsActuallyRead": [
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "jsonPointer": "/files/2",
+      "row": {
+        "path": "packages/host/src/host-requests.ts",
+        "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+        "bytes": 4880,
+        "currentEqualsFrozen": true,
+        "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "jsonPointer": "/files/1",
+      "row": {
+        "path": "packages/host/src/runtime.ts",
+        "frozenSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+        "bytes": 4014,
+        "currentEqualsFrozen": true,
+        "readScope": "full; ordinary capability declarations and synchronous lifecycle; no request dispatch experiments"
+      }
+    }
+  ],
+  "canonicalMarkdownRead": "R11 host.md read in full in tool0ce7cf. Its initial statement reads all non-test source and runtime.test.ts, large consumers only creation fragments. Its final boundary limits host-requests to ordinary data shape/mapping, excluding authority/approval/security/auth/credential/custody/watchdog semantics. Runtime full ordinary declaration/synchronous-lifecycle scope matches original files[1].",
+  "targetDecision": "Exclude before product body: same current SHA plus original readScope full static data shape/mapping and original MD actual full non-test-source scope. Not a whole-authority certification.",
+  "fallbackDecision": "Only authorized fallback runtime.ts also exclude before product body: same current SHA, original readScope full ordinary capability declarations/synchronous lifecycle. No request dispatch experiments claimed or repeated.",
+  "aliasesConsidered": [
+    "readScope",
+    "coverage",
+    "reviewMode",
+    "inspectionScope",
+    "review",
+    "scope",
+    "purpose",
+    "frozenSha256",
+    "sha256"
+  ],
+  "notEvidence": [
+    "unknown/no-row/hash/inventory as unread guarantee",
+    "derived claims as new source reading",
+    "old pass as current runtime validation",
+    "copied or first drafts as distinct reading"
+  ],
+  "actualMetadataReadScope": "45 target exact objects compact/listed with qualifiers, followed by original R11 target row and old R3 pin row; first combined compact+MD output was truncated. Then R11 MD read fully, and original fallback row read separately. Other retained scalar contexts and all60 fallback raw objects were machine searched/stored, not all semantically read.",
+  "oldCauseBoundary": "R11 explicitly recognizes R3 HL-C1 caller-owned service reference idea and found no ordinary mutation producer; no manual mutation or old failed runtime direction is reopened. This package makes no new cause determination beyond historical exclusion.",
+  "freshSnapshots": {
+    "target": {
+      "count": 5311,
+      "matches": {
+        "targetFilename": 116,
+        "oldCause": 124,
+        "targetPath": 48,
+        "targetSHA": 22
+      },
+      "retained": {
+        "targetPath": 48,
+        "targetSHA": 22,
+        "targetFilename": 100,
+        "oldCause": 100
+      }
+    },
+    "fallback": {
+      "count": 5311,
+      "matches": {
+        "targetFilename": 277,
+        "oldCause": 232,
+        "targetPath": 72,
+        "targetSHA": 38
+      },
+      "retained": {
+        "targetPath": 72,
+        "targetSHA": 38,
+        "targetFilename": 100,
+        "oldCause": 100
+      }
+    },
+    "identicalInventoryRows": true,
+    "notSummedAsUniqueHistoryOrSourceReading": true
+  }
+}

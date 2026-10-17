@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "fragment:|previousHash|version: 2|JSON.stringify\\(|split.*fragment|65536|256 \\* 1024",
+    "packages/core/src/session/output-journal.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "45:const MAX_RECORD_BYTES = 256 * 1024;\n112:  previousHash: string;\n166:  return Buffer.from(JSON.stringify({ identity, ...position })).toString(\"base64url\");\n430:    value.previousHash !== previous.hash ||\n442:    hash !== digest(JSON.stringify(value))\n473:  let fragment: { id: string; index: number; total: number } | undefined;\n589:  const floor = cursor(Buffer.from(JSON.stringify(pin)).toString(\"base64url\"), loaded.identity);\n600:  const position = cursor(Buffer.from(JSON.stringify(head)).toString(\"base64url\"), loaded.identity);\n710:          : { fragment: parsed.value.fragment }),\n712:      const frameBytes = Buffer.byteLength(JSON.stringify(frame));\n775:      JSON.stringify(finalLocation.state.outputJournalStorage) !==\n776:      JSON.stringify(location.state.outputJournalStorage)\n793:        JSON.stringify(currentPin) !== JSON.stringify(location.state.outputJournalHead)\n798:        Buffer.from(JSON.stringify(currentHead)).toString(\"base64url\"),\n920:        this.write(fd, JSON.stringify(header) + \"\\n\", 0);\n1037:        Buffer.from(JSON.stringify(head)).toString(\"base64url\"),\n1069:      this.write(fd, JSON.stringify({ ...current.state, ...patch }) + \"\\n\", 0);\n1110:      const serialized = JSON.stringify({\n1119:      if (events.length > 1 && bytes > 256 * 1024)\n1128:            fragment: {\n1191:          version: 2,\n1197:          previousHash: next.hash,\n1199:        const hash = digest(JSON.stringify(value));\n1200:        const line = JSON.stringify({ ...value, hash }) + \"\\n\";\n",
+  "stderr": ""
+}

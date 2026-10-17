@@ -1,0 +1,229 @@
+{
+  "checkedUTC": "2026-10-17T18:15:46.830082+00:00",
+  "role": "Own-author metadata finalization, not another source reviewer",
+  "files": [],
+  "sourceRangeChecks": [
+    {
+      "path": "packages/link/src/operations.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/server/src/links/runtime/operation.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/core/src/links/link-action-tool.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/core/src/links/remote-adapters.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/core/src/links/remote.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/server/src/links/providers/defaults.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": false,
+      "initialShaNullWhenLate": true
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "validLineBounds": true,
+      "initialPinBeforeAnyNav": true,
+      "initialShaNullWhenLate": true
+    }
+  ],
+  "links": [
+    {
+      "label": "分类",
+      "target": "classification.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "初始pin",
+      "target": "initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "历史快照",
+      "target": "history.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "扫描方法",
+      "target": "history-method.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "窗口",
+      "target": "history-contexts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "42个精确元数据对象",
+      "target": "coverage-gate-objects.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "gate决策",
+      "target": "gate-decision.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "pin",
+      "target": "fallback-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "fallback gate",
+      "target": "fallback-history.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "独立查询",
+      "target": "fallback-history-method.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "窗口",
+      "target": "fallback-history-contexts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "17个精确对象",
+      "target": "fallback-coverage-gate-objects.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "support pins",
+      "target": "support-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "adapter pin",
+      "target": "adapter-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "source manifest",
+      "target": "source-manifest.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "摘录",
+      "target": "source-excerpts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "route专pin",
+      "target": "route-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation.first",
+      "target": "validation.first.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "diagnostics",
+      "target": "diagnostics.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "整理脚本",
+      "target": "finalize-metadata.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最后检查",
+      "target": "freeze-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "冻结回执",
+      "target": "reviewer-receipt.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    }
+  ],
+  "linkCount": 24,
+  "allLinksValid": true,
+  "productRuns": 0,
+  "GitOperations": 0
+}

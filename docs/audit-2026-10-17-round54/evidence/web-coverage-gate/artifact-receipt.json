@@ -1,0 +1,82 @@
+{
+  "createdAt": "2026-10-17T18:08:18.835823+00:00",
+  "frozen": true,
+  "scope": "Exact packet files excluding this self-receipt; historical full gate metadata only, no current product body or Git",
+  "files": [
+    {
+      "path": "canonical-evidence.json",
+      "bytes": 2055,
+      "sha256": "d28009e7204bb0ed723c1d048d5918c8c036147ffc7b50a4f7114c293a83e5b5"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 1135,
+      "sha256": "74bf909118c8325d9270603db69376d657f9e56debb72ea746448c3008dd2dde"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1139,
+      "sha256": "904777d4aca11fef5e29bd378620e0b0176444074fb170de4a93cc329dfa9667"
+    },
+    {
+      "path": "fallback-before-pin.json",
+      "bytes": 224,
+      "sha256": "bfbb4d123caf4bef729025d0e32c71f4c1ff20691bb39aa5404916d7529db23d"
+    },
+    {
+      "path": "fallback-gate.py",
+      "bytes": 2689,
+      "sha256": "cc9865c3619779ccdd3b225098d45a53092b451b2fb6b4e0639494b61ccbcd1b"
+    },
+    {
+      "path": "fallback-history-gate.json",
+      "bytes": 68055,
+      "sha256": "2e39b928662b82f350a2ebde86d982d69ef6a2bd40c91aa636c6ee7e0524706b"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 10075,
+      "sha256": "dd474ca948986fe5de0ba005458e944943ff57ceb27677351dc7107f5ad07bb1"
+    },
+    {
+      "path": "history-gate.json",
+      "bytes": 150333,
+      "sha256": "9c171597bbf4ba955e8350e176520d9496cc4da17191bddedd4c220b05f6fbd0"
+    },
+    {
+      "path": "history-inventory.json",
+      "bytes": 1069433,
+      "sha256": "7fabc98bd40ea13906b49ef8afff16a83e47e7a1962e60bfed37c7cf6520ea30"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 907,
+      "sha256": "0ff6da741fee19b031a6846962b42f393affd06eb067b3096c2f833c7d5505d1"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2931,
+      "sha256": "e32d926f5bdcc3abe74a4e9128f56dbec3f01a5ce6e449d94806d3d8831a0735"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 3754,
+      "sha256": "6468dcce43671f54422873724d5e07d65a5489bdf1010fd9e0240bff2903d85f"
+    },
+    {
+      "path": "selected-history-metadata.json",
+      "bytes": 2565,
+      "sha256": "569fc12fcb77b723fe9f0c72e9c8319377d0a217fbdea035bcab8d3b7fd18aa0"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8457,
+      "sha256": "2554153a74d272d4adbeccf8fbd8e8c407d302d6b02cdab03184647313fab6c1"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 679,
+      "sha256": "5ca463084741f4562f9f552e9046badebf2d0aa98cd0149fbf17c7d10fc13621"
+    }
+  ]
+}

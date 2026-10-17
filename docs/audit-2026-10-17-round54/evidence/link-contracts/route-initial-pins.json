@@ -1,0 +1,23 @@
+{
+  "capturedUTC": "2026-10-17T18:12:57.492248+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/links/remote.ts",
+      "bytes": 36309,
+      "lines": 1022,
+      "sha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "beforeBodyOrLineNavigation": true,
+      "initialSemanticReadSha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "note": "Before any body or line navigation."
+    },
+    {
+      "path": "packages/server/src/links/providers/defaults.ts",
+      "bytes": 44168,
+      "lines": 1199,
+      "sha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "beforeBodyOrLineNavigation": false,
+      "initialSemanticReadSha256": null,
+      "note": "Late pin: tool51441e had already rg-n displayed matching lines before this dedicated pin; first SHA at that navigation is unknown. This pin precedes subsequent selected display only."
+    }
+  ]
+}

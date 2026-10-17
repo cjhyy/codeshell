@@ -1,0 +1,11 @@
+{
+  "kind": "metadata-output-truncation",
+  "toolChunkId": "b88820",
+  "reportedOriginalTokenCount": 8113,
+  "requestedMaxOutputTokens": 4200,
+  "exitCode": 0,
+  "rawOutputStored": false,
+  "representation": "tool-result metadata and bounded selected windows retained; no fabricated complete stdout",
+  "productFailure": false,
+  "fatalMetadataErrors": 0
+}

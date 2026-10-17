@@ -1,0 +1,48 @@
+{
+  "checkedUTC": "2026-10-17T18:08:32.974934+00:00",
+  "sourceAndInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/host/src/host-requests.ts",
+      "bytes": 4880,
+      "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "initialSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "bytes": 4014,
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "initialSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "matchesInitial": true
+    }
+  ],
+  "allFourPinsMatch": true,
+  "history": {
+    "sameOriginalFilter": true,
+    "initialCount": 5311,
+    "endingCount": 5311,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "rgExitCode": 0,
+    "stderr": "",
+    "targetFallbackOriginalInventoriesEqual": true,
+    "semanticRescan": false
+  },
+  "endingHashesAreNewSemanticReads": false,
+  "ownGitOperations": 0
+}

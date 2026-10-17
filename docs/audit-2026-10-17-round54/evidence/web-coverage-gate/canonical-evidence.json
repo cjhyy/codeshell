@@ -1,0 +1,49 @@
+{
+  "createdAt": "2026-10-17T18:07:20.111425+00:00",
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "bytes": 7245,
+      "sha256": "4a7da67b11c3d9f9ef57e363b2189e3745de8b3e3a3eafff70f1e68a7a6c48fb",
+      "pointer": "/files/0",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "lineCount": 168,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            168
+          ]
+        ],
+        "coveredLineCount": 168,
+        "role": "product",
+        "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "pinTiming": "Before semantic source reading; earlier wc/rg navigation only.",
+        "finishFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "matchesFirstDurablePin": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "bytes": 11910,
+      "sha256": "c1de0091382dc45f82f9c5424a495bb71374f34423012827a019f98e13e074a9",
+      "pointer": "/sources/10",
+      "row": {
+        "path": "packages/web/src/lib/uiLanguage.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 1366,
+        "lines": 36,
+        "frozenSourceSha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "06b7ae6b538c77ee19c616b6521c0a7d73eb68ece7ac561a76873c37f790dcd2",
+        "inspectedMainMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "decision": "Both allowed current leaves excluded before body by explicit original canonical same-SHA full declarations; original qualifications retained, no correctness or current runtime pass inference"
+}

@@ -1,0 +1,658 @@
+{
+  "round": "prep116",
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedBaseline": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "independentlyGitVerified": false,
+  "files": [
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "bytes": 16266,
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "lines": 439,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6,
+          11
+        ],
+        [
+          32,
+          56
+        ],
+        [
+          57,
+          69
+        ],
+        [
+          79,
+          96
+        ],
+        [
+          120,
+          126
+        ],
+        [
+          130,
+          150
+        ],
+        [
+          160,
+          172
+        ],
+        [
+          212,
+          214
+        ],
+        [
+          248,
+          251
+        ],
+        [
+          281,
+          285
+        ],
+        [
+          308,
+          318
+        ],
+        [
+          322,
+          354
+        ],
+        [
+          355,
+          432
+        ],
+        [
+          438,
+          439
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          439
+        ]
+      ],
+      "semanticLineCount": 239,
+      "displayedBodyLineCount": 439,
+      "kind": "product",
+      "scope": "ordinary manifest/record shapes, JSON/UTF8/padded encoding, file names/counts, sequence/fragment framing. Header/authority admission, inode correctness, leases and security deliberately excluded; full display is not full semantic review.",
+      "initialPinAt": "2026-10-17T18:06:29.873762+00:00",
+      "initialSemanticReadSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "endingSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "endingMatchesInitial": true,
+      "navigationLineRanges": [],
+      "navigationOnlyBeyondBodyCount": 0
+    },
+    {
+      "path": "packages/core/src/session/output-journal-manual-repair.ts",
+      "bytes": 37876,
+      "sha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+      "lines": 1128,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          401,
+          410
+        ],
+        [
+          412,
+          417
+        ],
+        [
+          462,
+          465
+        ],
+        [
+          524,
+          539
+        ],
+        [
+          548,
+          558
+        ],
+        [
+          561,
+          562
+        ],
+        [
+          979,
+          979
+        ],
+        [
+          986,
+          989
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          393,
+          418
+        ],
+        [
+          458,
+          472
+        ],
+        [
+          512,
+          570
+        ],
+        [
+          968,
+          992
+        ]
+      ],
+      "semanticLineCount": 54,
+      "displayedBodyLineCount": 125,
+      "kind": "product",
+      "scope": "actual backup manifest writer→openBundle→codec verification and restored storage encoder call; neighboring FS/authority/lock operations displayed but excluded from semantics.",
+      "initialPinAt": "2026-10-17T18:07:40.976059+00:00",
+      "initialSemanticReadSha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+      "endingSha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+      "endingMatchesInitial": true,
+      "navigationLineRanges": [
+        [
+          11,
+          11
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          28,
+          28
+        ],
+        [
+          141,
+          141
+        ],
+        [
+          147,
+          147
+        ],
+        [
+          176,
+          176
+        ],
+        [
+          196,
+          196
+        ],
+        [
+          285,
+          285
+        ],
+        [
+          340,
+          340
+        ],
+        [
+          393,
+          393
+        ],
+        [
+          401,
+          401
+        ],
+        [
+          402,
+          402
+        ],
+        [
+          414,
+          414
+        ],
+        [
+          462,
+          462
+        ],
+        [
+          474,
+          474
+        ],
+        [
+          495,
+          495
+        ],
+        [
+          548,
+          548
+        ],
+        [
+          556,
+          556
+        ],
+        [
+          557,
+          557
+        ],
+        [
+          700,
+          700
+        ],
+        [
+          716,
+          716
+        ],
+        [
+          806,
+          806
+        ],
+        [
+          820,
+          820
+        ],
+        [
+          837,
+          837
+        ],
+        [
+          842,
+          842
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          986,
+          986
+        ],
+        [
+          1008,
+          1008
+        ],
+        [
+          1071,
+          1071
+        ]
+      ],
+      "navigationOnlyBeyondBodyCount": 22
+    },
+    {
+      "path": "packages/core/src/session/output-journal.ts",
+      "bytes": 49679,
+      "sha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+      "lines": 1288,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          44,
+          47
+        ],
+        [
+          104,
+          113
+        ],
+        [
+          1101,
+          1139
+        ],
+        [
+          1186,
+          1205
+        ],
+        [
+          1225,
+          1233
+        ],
+        [
+          1247,
+          1254
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          41,
+          49
+        ],
+        [
+          101,
+          128
+        ],
+        [
+          1090,
+          1260
+        ]
+      ],
+      "semanticLineCount": 90,
+      "displayedBodyLineCount": 208,
+      "kind": "product",
+      "scope": "normal appendBatch event and fragment shape, sequence serialization, whole-batch rotation decision before joined write; owner/lease/fsync/physical custody mechanisms excluded.",
+      "initialPinAt": "2026-10-17T18:07:53.384447+00:00",
+      "initialSemanticReadSha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+      "endingSha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+      "endingMatchesInitial": true,
+      "navigationLineRanges": [
+        [
+          45,
+          45
+        ],
+        [
+          112,
+          112
+        ],
+        [
+          166,
+          166
+        ],
+        [
+          430,
+          430
+        ],
+        [
+          442,
+          442
+        ],
+        [
+          473,
+          473
+        ],
+        [
+          589,
+          589
+        ],
+        [
+          600,
+          600
+        ],
+        [
+          710,
+          710
+        ],
+        [
+          712,
+          712
+        ],
+        [
+          775,
+          775
+        ],
+        [
+          776,
+          776
+        ],
+        [
+          793,
+          793
+        ],
+        [
+          798,
+          798
+        ],
+        [
+          920,
+          920
+        ],
+        [
+          1037,
+          1037
+        ],
+        [
+          1069,
+          1069
+        ],
+        [
+          1110,
+          1110
+        ],
+        [
+          1119,
+          1119
+        ],
+        [
+          1128,
+          1128
+        ],
+        [
+          1191,
+          1191
+        ],
+        [
+          1197,
+          1197
+        ],
+        [
+          1199,
+          1199
+        ],
+        [
+          1200,
+          1200
+        ]
+      ],
+      "navigationOnlyBeyondBodyCount": 15
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "bytes": 6300,
+      "sha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "lines": 176,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          11,
+          15
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "semanticLineCount": 5,
+      "displayedBodyLineCount": 50,
+      "kind": "product",
+      "scope": "in-repository exported backup/restore/inspect seam only; remaining visible publisher body not reviewed.",
+      "initialPinAt": "2026-10-17T18:07:40.974839+00:00",
+      "initialSemanticReadSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "endingSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "endingMatchesInitial": true,
+      "navigationLineRanges": [],
+      "navigationOnlyBeyondBodyCount": 0
+    },
+    {
+      "path": "tests/output-journal-manual-repair.test.ts",
+      "bytes": 31627,
+      "sha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+      "lines": 772,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          200,
+          229
+        ],
+        [
+          290,
+          318
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          200,
+          229
+        ],
+        [
+          290,
+          318
+        ]
+      ],
+      "semanticLineCount": 59,
+      "displayedBodyLineCount": 59,
+      "kind": "test-declarations",
+      "scope": "two existing assertions for whole/segmented backup/restore bytes and recovered output/cursors; declarations/source only, none run; no mechanism certification.",
+      "initialPinAt": "2026-10-17T18:07:40.977525+00:00",
+      "initialSemanticReadSha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+      "endingSha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+      "endingMatchesInitial": true,
+      "navigationLineRanges": [
+        [
+          58,
+          58
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          139,
+          139
+        ],
+        [
+          180,
+          180
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          230,
+          230
+        ],
+        [
+          275,
+          275
+        ],
+        [
+          281,
+          281
+        ],
+        [
+          290,
+          290
+        ],
+        [
+          319,
+          319
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          347,
+          347
+        ],
+        [
+          375,
+          375
+        ],
+        [
+          415,
+          415
+        ],
+        [
+          459,
+          459
+        ],
+        [
+          498,
+          498
+        ],
+        [
+          535,
+          535
+        ],
+        [
+          562,
+          562
+        ],
+        [
+          590,
+          590
+        ],
+        [
+          614,
+          614
+        ],
+        [
+          636,
+          636
+        ],
+        [
+          678,
+          678
+        ],
+        [
+          697,
+          697
+        ],
+        [
+          749,
+          749
+        ],
+        [
+          771,
+          771
+        ]
+      ],
+      "navigationOnlyBeyondBodyCount": 23
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/session/output-storage-prototype/id-index.ts",
+      "bytes": 14929,
+      "sha256": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+      "lines": 424,
+      "coverage": "hash-only unused fallback",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "purpose": "not selected; private/prototype production use not established or asserted"
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full instruction reread",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "notProductSemanticCoverage": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full instruction reread",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "notProductSemanticCoverage": true
+    }
+  ],
+  "totals": {
+    "fullProductFiles": 0,
+    "selectedProductFiles": 4,
+    "selectedTestDeclarationFiles": 1,
+    "productSemanticLines": 388,
+    "testDeclarationLines": 59,
+    "allSemanticDeclarationLines": 447,
+    "displayedSourceBodyLines": 881,
+    "instructionLines": 222,
+    "testRuns": 0,
+    "navigationLinesBeyondBody": 60,
+    "displayedSourceLinesIncludingNavigation": 941
+  },
+  "priorOverlap": "R23 same-SHA incidental entire source display expressly no semantic review; R42 body-before exclusion. This task adds only bounded selected ordinary-contract review, never first-ever/global unique coverage."
+}

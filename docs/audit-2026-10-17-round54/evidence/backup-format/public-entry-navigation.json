@@ -1,0 +1,13 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "^export (?:function|interface)",
+    "packages/core/src/session/output-journal-manual-repair.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "196:export function outputRepairPathsOverlap(\n495:export function backupOutputJournal(\n806:export function restoreOutputJournalBackup(\n1071:export function inspectOutputJournalRepair(\n",
+  "stderr": "",
+  "sourcePinReference": "source-display-pins.json",
+  "readAt": "2026-10-17T18:08:45.556886+00:00"
+}

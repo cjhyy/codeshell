@@ -1,0 +1,2790 @@
+{
+  "backup": {
+    "path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/548",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/95/text",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep-current.json",
+        "pointer": "/checks/9/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+        "pointer": "/sources/9/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/priorPrepHashOnlyChecks/9/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/55",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/407/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1140/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/6/row/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/7/row/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/8/row/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/9/row/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/14/row/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/19/row/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/0/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/1/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/2/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/3/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/4/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/5/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/6/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/7/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/8/context",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-decisions.json",
+        "pointer": "/decisions/0/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-initial-pins.json",
+        "pointer": "/files/0/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/0/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/files/15/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/hashOnlyChecks/11/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+        "pointer": "/hits/packages~1web~1src~1lib~1format.ts/10/excerpt",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+        "pointer": "/hits/packages~1web~1src~1lib~1format.ts/34/excerpt",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5083/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5083/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5084/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5084/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5085/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5085/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5086/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5086/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5087/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5087/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5088/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5088/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5089/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5089/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/1453/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/1453/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/1324",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/1453/path",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/history-contexts.json",
+        "pointer": "/format/8/text",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/history-contexts.json",
+        "pointer": "/format/26/text",
+        "scalarLength": 57,
+        "offset": 0,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      }
+    ],
+    "sha256": [
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep-current.json",
+        "pointer": "/checks/9/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+        "pointer": "/sources/9/frozenSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+        "pointer": "/sources/9/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/mainSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/priorPrepHashOnlyChecks/9/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/407/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/407/claims/0/sourceSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1140/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/6/row/frozenSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/6/row/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/7/row/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/8/row/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/8/row/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/8/row/mainSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/9/row/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/14/row/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/14/row/claims/0/sourceSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/19/row/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/patterns/0-sha",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/0/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/1/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/2/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/3/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/4/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/5/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/6/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/7/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/8/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-sha/9/context",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-decisions.json",
+        "pointer": "/decisions/0/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-initial-pins.json",
+        "pointer": "/files/0/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/0/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/0/finishSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/files/15/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/files/15/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/files/15/mainSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/hashOnlyChecks/11/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5083/sourceHashFields/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5084/sourceHashFields/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5084/sourceHashFields/finishSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5085/sourceHashFields/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5086/sourceHashFields/frozenSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5086/sourceHashFields/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5089/sourceHashFields/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/sourceHashFields/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/sourceHashFields/currentSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/sourceHashFields/mainSha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/1453/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/1453/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/1453/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+        "bounded": true
+      }
+    ],
+    "filename": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/548",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/95/text",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep-current.json",
+        "pointer": "/checks/9/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+        "pointer": "/sources/9/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/priorPrepHashOnlyChecks/9/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/55",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/407/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1140/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/6/row/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/7/row/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/8/row/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/9/row/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/14/row/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/coverage-rows.json",
+        "pointer": "/19/row/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/0/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/1/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/2/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/3/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/4/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/5/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/6/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/7/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+        "pointer": "/hits/0-path/8/context",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-decisions.json",
+        "pointer": "/decisions/0/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/selection-initial-pins.json",
+        "pointer": "/files/0/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/source-manifest.json",
+        "pointer": "/hashOnlyFiles/0/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/files/15/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/source-manifest.json",
+        "pointer": "/hashOnlyChecks/11/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+        "pointer": "/hits/packages~1web~1src~1lib~1format.ts/10/excerpt",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/final-selection-history.json",
+        "pointer": "/hits/packages~1web~1src~1lib~1format.ts/34/excerpt",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5083/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5083/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5084/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5084/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5085/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5085/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5086/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5086/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5087/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5087/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5088/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5088/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5089/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5089/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5090/directSourcePathsInObject/0",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/1453/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/1453/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/1324",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/1453/path",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/history-contexts.json",
+        "pointer": "/format/8/text",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/history-contexts.json",
+        "pointer": "/format/26/text",
+        "scalarLength": 57,
+        "offset": 26,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/todo/manual-output-journal-repair-receipt.json",
+        "pointer": "/package/files/2",
+        "scalarLength": 44,
+        "offset": 13,
+        "text": "dist/session/output-journal-backup-format.js",
+        "bounded": true
+      }
+    ],
+    "oldcause": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "pointer": "",
+        "scalarLength": 96025,
+        "offset": 72128,
+        "text": "y.ts`：\n\n- `saveSnapshot(filePath)` 使用 `resolve(filePath)` 得绝对路径。\n- 不存在文件返回 null。\n- hash 相同则跳过重复 snapshot。\n- backup 文件名：`Date.now()` + safeName。\n- `restore(snapshot)` 检查 `snapshot.backupPath` 存在，然后先保存当前状态，再 copy backup 到 `snapshot.filePath`。\n- `index.json` 保存 snapshots。\n\n风险：\n\n1. `backupPath/filePath` 来自 index 或传入 snapshot，restore 信任它们。\n2. 没有校验 backupPath 是否位于 historyDir 下。\n3. 没有校验 filePath 是否位于 workspace/cwd 下。\n4. backup 文件名在同毫秒、同 safeName 下理论可碰撞。\n5. Engine 只在 `on_tool_start` 对 `Write`/`Edit` 调 `saveSnapshot()`；`ApplyPatch`、Bash、Config、Memory 等副作用不会被 FileHistory 记录。\n\n### 29.4 RunStore 风险细化\n\n从 `RunManager.ts` 可确认：\n\n- 正常 `submit()` 使用 `nanoid(16)` 生成 runId。\n- `RunManager` 自己的 runId 来源安全。\n- 风险主要在 `FileRunStore` public API：如果外部绕过 RunManager 传入恶意 id，路径 join 需要校验。\n\nRunManager 状态机还有这些点：\n\n- `resume()` 在 active handle 存在时会把 waiting 状态转 running，然后 resolve approval/input。\n- 无 active handle 时转 queued 并重新 enqueue。\n- `recover()` 对 ",
+        "bounded": true
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "pointer": "/258/detail",
+        "scalarLength": 214,
+        "offset": 174,
+        "text": "`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.",
+        "bounded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+        "pointer": "",
+        "scalarLength": 12683,
+        "offset": 9973,
+        "text": "sweepIdle closes only idle non-busy sessions`，断言 busy session 保留。 | 低 |\n| `packages/desktop/src/renderer/types.ts:701` | `agent_start` 直接追加 AgentMessage 并覆盖 `agentMessageIndex`；没有像 `tool_use_start` 那样对重复事件做幂等保护。需人工确认上游是否保证 `agent_start` exactly-once。 | subagent 卡片创建和 agentId 到消息 index 的路由表。 | `rg \"duplicate.*agent_start|agent_start.*duplicate|agentMessageIndex|tombstone\" packages/desktop/src/renderer -g '*test.*'` 无命中；相反，移动端 `lib/streamReducer.test.ts:164` 明确覆盖了重复 `agent_start` 幂等。 | 若 live/replay overlap 或 provider 重放产生重复 `agent_start`，desktop 可能出现重复 subagent 卡、React key 冲突，后续 `text_delta/tool_result` 只挂到最后一张卡，前一张卡停留。 | `applyStreamEvent duplicate agent_start is idempotent`（若协议要求 exactly-once，则先补协议注释测试而不是改行为）：重复同一 `agentId` 后断言只有一张 agent 卡、index 稳定。 | 低（需人工确认） |\n\n## 已有良好覆盖的区域\n\n- `packages/desktop/src/main/parseStreamLine.ts:15` 覆盖充分：`parseStreamLine.test.ts` 覆盖有效 stream event、response/其它 method、缺失/空 `sessionId`、缺 ev",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/548",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1306",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2404",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/cross-review-pet.md",
+        "pointer": "",
+        "scalarLength": 2041,
+        "offset": 1812,
+        "text": "s。两者都有 guarded Completed、0 fail/skip 和 exitCode=0，与 validation 的 **91 pass / 225 expect / 2 clean shards** 一致。没有补跑。\n- 32 个 source-manifest 条目的 frozen SHA-256 均与冻结 Git blob 相符；12 个 artifact receipts 的字节数及 SHA-256 均匹配当前材料。pet.md 的本地链接没有缺失。\n- 所引用关键行号与当前冻结源码一致。候选数组为空，不将未验证的任意 SessionIndex 调用序列或 tail 设计充作缺陷。\n- 旧 500 候选缺陷与 JSON 预筛缺陷有明确相关但不同根因说明。元数据查重的第一次过宽正则已在独立 note 披露，不是产品测试失败或重试。\n\n复核期间的历史命中过滤曾因 IGNORECASE 与 İ 的 Unicode 等价产生过宽工具输出；随后仅在内存中过滤既有 metadata 的明确 R56/W22/500/PET-01 字面量以核对历史记录，没有改动其查重材料，也没有运行新的产品验证。\n",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/pet.md",
+        "pointer": "",
+        "scalarLength": 4506,
+        "offset": 3402,
+        "text": " 做完整只读接线检查；Desktop 搜索入口、片段展示、提示文案以及 Core message producer 只查相关段，不能当成完整文件审查。\n\n既有 12 文件基线覆盖 topic 阈值、closure range/parser、迁移顺序、memory 预算与排序、visit receipt、IM 状态/编号、投影运行归属及 generation/version fence、catalog/reader 的正常过滤和文本截断等，共 89 pass / 212 expect。未发现第二组强契约的新投影缺陷；没有把未被生产使用的任意 SessionIndex 调用序列，或有界 tail 的既定读取设计，当成正式发现。没有执行真实 DelegateWork、Host action、IM/outbound、服务器、模型、原生应用或实际用户状态读取。\n\n## 原始证据与方法\n\n- 新增首跑：[fixture](evidence/pet-search-display.test.ts)、[raw combined stdout/stderr](evidence/pet-search-display.first.log)、[exit 收据](evidence/pet-search-display.first-exit.json)：2 pass / 13 expect / 0 fail/skip。\n- 既有基线首跑：[raw combined stdout/stderr](evidence/pet-pure-baseline.first.log)、[命令与 exit](evidence/pet-pure-baseline.first-exit.json)：89 pass / 212 expect / 0 fail/skip。\n- 所有首跑仅使用 `node scripts/run-bun-test-shard.mjs --timeout 30000 FILES`。先保存原始合并输出及 exit 再阅读，没有修支架重跑或另路恢复失败方向。新增 fixture 的临时目录在 finally 删除；既有测试自身使用隔离临时目录，没有改写其 c",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/16/hits/1/text",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/51/hits/2/text",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "pointer": "/hits/44/matches/0/text",
+        "scalarLength": 635,
+        "offset": 438,
+        "text": "urnal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "pointer": "/hits/46/matches/0/text",
+        "scalarLength": 635,
+        "offset": 438,
+        "text": "urnal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "pointer": "/hits/47/matches/0/text",
+        "scalarLength": 635,
+        "offset": 438,
+        "text": "urnal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/95/text",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/3/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/11/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/31/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/50/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/5/matches/0/match",
+        "scalarLength": 146567,
+        "offset": 119850,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/5/matches/0/context",
+        "scalarLength": 146947,
+        "offset": 120090,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/9/matches/0/match",
+        "scalarLength": 146567,
+        "offset": 119850,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/9/matches/0/context",
+        "scalarLength": 146947,
+        "offset": 120090,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/13/matches/0/match",
+        "scalarLength": 146567,
+        "offset": 119850,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/13/matches/0/context",
+        "scalarLength": 146947,
+        "offset": 120090,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/146/context",
+        "scalarLength": 406,
+        "offset": 173,
+        "text": "08:57第二十五轮确认R85/D25-1/P3：现代paired-native图文/纯图Session冷恢复后正确metadata被普通MessageStream忽略，图文无附件提示、纯图整条userbubble不显示。真实producer/staging/helper/SessionManager/Transcript/Core dist journal/IPC registrar+preload reader/recovery/tokenedhydrate/renderer，两端SSR与inlineencoder+append UI控制、68-byte SHA原件正常；submit/run events/IPC transport/viewport适配，sendhook/fullApp/authority/Engine/provider/worker/Electron不动态外推。root双冻结4",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "pointer": "/hits/all_429/92/context",
+        "scalarLength": 563,
+        "offset": 74,
+        "text": "ions                                                         |\n| Existing journal/storage/Web recovery shard                  | 42 passed, 0 failed, 0 skipped; 429 assertions                                                           |\n| Core no-emit TypeScript and owned-file ESLint/Prettier       | Passed                                                                                                   |\n| `bun install --frozen-lockfile` in an empty private HOME     | Passed, no lock changes                                                                    ",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep-current.json",
+        "pointer": "/checks/9/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+        "pointer": "/sources/9/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/priorPrepHashOnlyChecks/9/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/55",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+        "pointer": "/patterns/host-registry",
+        "scalarLength": 119,
+        "offset": 43,
+        "text": "packages/host/src/(?:runtime|host-requests|index)\\.ts|HostRuntime|Duplicate host capability|host startup.{0,30}rollback",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/patterns/output-projection",
+        "scalarLength": 88,
+        "offset": 21,
+        "text": "outputCoverage|outputJournalRecovery|mobileOutputRecovery|transcriptReplay|streamReducer",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/12/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/18/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/28/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/45/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/77/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/78/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/79/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/80/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/81/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/82/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/149/excerpt",
+        "scalarLength": 220729,
+        "offset": 195119,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/153/excerpt",
+        "scalarLength": 220729,
+        "offset": 195119,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/157/excerpt",
+        "scalarLength": 220729,
+        "offset": 195119,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/163/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/169/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/171/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/39/excerpt",
+        "scalarLength": 499,
+        "offset": 6,
+        "text": "d 到消息 index 的路由表。 | `rg \"duplicate.*agent_start|agent_start.*duplicate|agentMessageIndex|tombstone\" packages/desktop/src/renderer -g '*test.*'` 无命中；相反，移动端 `lib/streamReducer.test.ts:164` 明确覆盖了重复 `agent_start` 幂等。 | 若 live/replay overlap 或 provider 重放产生重复 `agent_start`，desktop 可能出现重复 subagent 卡、React key 冲突，后续 `text_delta/tool_result` 只挂到最后一张卡，前一张卡停留。 | `applyStreamEvent duplicate agent_start is idempotent`（若协议要求 exactly-once，则先补协议注释测试而不是改行为）：重复同一 `agentId` 后断言只有一张 agent 卡、index 稳定。 | 低（需人工确认） |",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/47/excerpt",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/50/excerpt",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/53/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/54/excerpt",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/55/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/57/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/82/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/87/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/96/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/100/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "pointer": "/paths/43",
+        "scalarLength": 50,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.test.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "pointer": "/paths/69",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+        "pointer": "/hits/replay-proof/53/excerpt",
+        "scalarLength": 279,
+        "offset": 50,
+        "text": "s:1220-1247` 原生会话 resync 可送 session.sync；协商 outputJournal 后 `mobileOutputClient.ts:67-82` 改送带 recoveryId 的 session.select，经过授权后仍走同一 pending 重放入口。本轮新对照未协商 outputJournal，实际派发 focus，确认自动发出匹配 session.sync，随后回放可恢复；协商分支本轮只读源码核对。因此“只有重连 / 手动重新选择才能恢复”过宽；合适表述是“错误本身不恢复卡，下一次有效 resync 可恢复”。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/19/excerpt",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/23/excerpt",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/24/excerpt",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/115/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/116/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/117/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/407/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/620/path",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1038/path",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1140/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1968/path",
+        "scalarLength": 57,
+        "offset": 33,
+        "text": "packages/desktop/src/main/output-journal-recovery.test.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/2414/path",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4062/path",
+        "scalarLength": 50,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.test.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4063/path",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-validation.json",
+        "pointer": "/limitations/1",
+        "scalarLength": 115,
+        "offset": 10,
+        "text": "No server/journal/follower/transcript/parser/authentication/permission/identity experiment or operator data access.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/patterns/recovery-contract",
+        "scalarLength": 165,
+        "offset": 10,
+        "text": "(?:output|journal|恢复|recovery).{0,100}(?:coverage|unpaired|half|partial|pending.input|锚点|半份)|(?:coverage|private.candidate|私有候选).{0,100}(?:recover|journal|cursor|恢复)",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/exact/52/excerpt",
+        "scalarLength": 88,
+        "offset": 21,
+        "text": "outputCoverage|outputJournalRecovery|mobileOutputRecovery|transcriptReplay|streamReducer",
+        "bounded": true
+      }
+    ]
+  },
+  "fallback": {
+    "path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/560",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/100",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1158/path",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5130/path",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5130/directSourcePathsInObject/0",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5131/path",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5131/directSourcePathsInObject/0",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/1471/path",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/1471/path",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/1342",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/1471/path",
+        "scalarLength": 62,
+        "offset": 0,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      }
+    ],
+    "sha256": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1158/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5131/sourceHashFields/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/1471/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/1471/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/1471/sha256",
+        "scalarLength": 64,
+        "offset": 0,
+        "text": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+        "bounded": true
+      }
+    ],
+    "filename": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/560",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/100",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1158/path",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5130/path",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5130/directSourcePathsInObject/0",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5131/path",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/5131/directSourcePathsInObject/0",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/1471/path",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/1471/path",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/unknownPaths/1342",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/1471/path",
+        "scalarLength": 62,
+        "offset": 26,
+        "text": "packages/core/src/session/output-storage-prototype/id-index.ts",
+        "bounded": true
+      }
+    ],
+    "oldcause": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "pointer": "",
+        "scalarLength": 96025,
+        "offset": 72128,
+        "text": "y.ts`：\n\n- `saveSnapshot(filePath)` 使用 `resolve(filePath)` 得绝对路径。\n- 不存在文件返回 null。\n- hash 相同则跳过重复 snapshot。\n- backup 文件名：`Date.now()` + safeName。\n- `restore(snapshot)` 检查 `snapshot.backupPath` 存在，然后先保存当前状态，再 copy backup 到 `snapshot.filePath`。\n- `index.json` 保存 snapshots。\n\n风险：\n\n1. `backupPath/filePath` 来自 index 或传入 snapshot，restore 信任它们。\n2. 没有校验 backupPath 是否位于 historyDir 下。\n3. 没有校验 filePath 是否位于 workspace/cwd 下。\n4. backup 文件名在同毫秒、同 safeName 下理论可碰撞。\n5. Engine 只在 `on_tool_start` 对 `Write`/`Edit` 调 `saveSnapshot()`；`ApplyPatch`、Bash、Config、Memory 等副作用不会被 FileHistory 记录。\n\n### 29.4 RunStore 风险细化\n\n从 `RunManager.ts` 可确认：\n\n- 正常 `submit()` 使用 `nanoid(16)` 生成 runId。\n- `RunManager` 自己的 runId 来源安全。\n- 风险主要在 `FileRunStore` public API：如果外部绕过 RunManager 传入恶意 id，路径 join 需要校验。\n\nRunManager 状态机还有这些点：\n\n- `resume()` 在 active handle 存在时会把 waiting 状态转 running，然后 resolve approval/input。\n- 无 active handle 时转 queued 并重新 enqueue。\n- `recover()` 对 ",
+        "bounded": true
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "pointer": "/258/detail",
+        "scalarLength": 214,
+        "offset": 174,
+        "text": "`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.",
+        "bounded": true
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+        "pointer": "",
+        "scalarLength": 12683,
+        "offset": 9973,
+        "text": "sweepIdle closes only idle non-busy sessions`，断言 busy session 保留。 | 低 |\n| `packages/desktop/src/renderer/types.ts:701` | `agent_start` 直接追加 AgentMessage 并覆盖 `agentMessageIndex`；没有像 `tool_use_start` 那样对重复事件做幂等保护。需人工确认上游是否保证 `agent_start` exactly-once。 | subagent 卡片创建和 agentId 到消息 index 的路由表。 | `rg \"duplicate.*agent_start|agent_start.*duplicate|agentMessageIndex|tombstone\" packages/desktop/src/renderer -g '*test.*'` 无命中；相反，移动端 `lib/streamReducer.test.ts:164` 明确覆盖了重复 `agent_start` 幂等。 | 若 live/replay overlap 或 provider 重放产生重复 `agent_start`，desktop 可能出现重复 subagent 卡、React key 冲突，后续 `text_delta/tool_result` 只挂到最后一张卡，前一张卡停留。 | `applyStreamEvent duplicate agent_start is idempotent`（若协议要求 exactly-once，则先补协议注释测试而不是改行为）：重复同一 `agentId` 后断言只有一张 agent 卡、index 稳定。 | 低（需人工确认） |\n\n## 已有良好覆盖的区域\n\n- `packages/desktop/src/main/parseStreamLine.ts:15` 覆盖充分：`parseStreamLine.test.ts` 覆盖有效 stream event、response/其它 method、缺失/空 `sessionId`、缺 ev",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/548",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/1306",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2404",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/cross-review-pet.md",
+        "pointer": "",
+        "scalarLength": 2041,
+        "offset": 1812,
+        "text": "s。两者都有 guarded Completed、0 fail/skip 和 exitCode=0，与 validation 的 **91 pass / 225 expect / 2 clean shards** 一致。没有补跑。\n- 32 个 source-manifest 条目的 frozen SHA-256 均与冻结 Git blob 相符；12 个 artifact receipts 的字节数及 SHA-256 均匹配当前材料。pet.md 的本地链接没有缺失。\n- 所引用关键行号与当前冻结源码一致。候选数组为空，不将未验证的任意 SessionIndex 调用序列或 tail 设计充作缺陷。\n- 旧 500 候选缺陷与 JSON 预筛缺陷有明确相关但不同根因说明。元数据查重的第一次过宽正则已在独立 note 披露，不是产品测试失败或重试。\n\n复核期间的历史命中过滤曾因 IGNORECASE 与 İ 的 Unicode 等价产生过宽工具输出；随后仅在内存中过滤既有 metadata 的明确 R56/W22/500/PET-01 字面量以核对历史记录，没有改动其查重材料，也没有运行新的产品验证。\n",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/pet.md",
+        "pointer": "",
+        "scalarLength": 4506,
+        "offset": 3402,
+        "text": " 做完整只读接线检查；Desktop 搜索入口、片段展示、提示文案以及 Core message producer 只查相关段，不能当成完整文件审查。\n\n既有 12 文件基线覆盖 topic 阈值、closure range/parser、迁移顺序、memory 预算与排序、visit receipt、IM 状态/编号、投影运行归属及 generation/version fence、catalog/reader 的正常过滤和文本截断等，共 89 pass / 212 expect。未发现第二组强契约的新投影缺陷；没有把未被生产使用的任意 SessionIndex 调用序列，或有界 tail 的既定读取设计，当成正式发现。没有执行真实 DelegateWork、Host action、IM/outbound、服务器、模型、原生应用或实际用户状态读取。\n\n## 原始证据与方法\n\n- 新增首跑：[fixture](evidence/pet-search-display.test.ts)、[raw combined stdout/stderr](evidence/pet-search-display.first.log)、[exit 收据](evidence/pet-search-display.first-exit.json)：2 pass / 13 expect / 0 fail/skip。\n- 既有基线首跑：[raw combined stdout/stderr](evidence/pet-pure-baseline.first.log)、[命令与 exit](evidence/pet-pure-baseline.first-exit.json)：89 pass / 212 expect / 0 fail/skip。\n- 所有首跑仅使用 `node scripts/run-bun-test-shard.mjs --timeout 30000 FILES`。先保存原始合并输出及 exit 再阅读，没有修支架重跑或另路恢复失败方向。新增 fixture 的临时目录在 finally 删除；既有测试自身使用隔离临时目录，没有改写其 c",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/16/hits/1/text",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "pointer": "/matches/51/hits/2/text",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "pointer": "/hits/44/matches/0/text",
+        "scalarLength": 635,
+        "offset": 438,
+        "text": "urnal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "pointer": "/hits/46/matches/0/text",
+        "scalarLength": 635,
+        "offset": 438,
+        "text": "urnal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+        "pointer": "/hits/47/matches/0/text",
+        "scalarLength": 635,
+        "offset": 438,
+        "text": "urnal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "pointer": "/matches/95/text",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/3/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/11/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/31/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/50/text",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/5/matches/0/match",
+        "scalarLength": 146567,
+        "offset": 119850,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/5/matches/0/context",
+        "scalarLength": 146947,
+        "offset": 120090,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/9/matches/0/match",
+        "scalarLength": 146567,
+        "offset": 119850,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/9/matches/0/context",
+        "scalarLength": 146947,
+        "offset": 120090,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/13/matches/0/match",
+        "scalarLength": 146567,
+        "offset": 119850,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "pointer": "/records/13/matches/0/context",
+        "scalarLength": 146947,
+        "offset": 120090,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "pointer": "/hits/inline_image_grammar/146/context",
+        "scalarLength": 406,
+        "offset": 173,
+        "text": "08:57第二十五轮确认R85/D25-1/P3：现代paired-native图文/纯图Session冷恢复后正确metadata被普通MessageStream忽略，图文无附件提示、纯图整条userbubble不显示。真实producer/staging/helper/SessionManager/Transcript/Core dist journal/IPC registrar+preload reader/recovery/tokenedhydrate/renderer，两端SSR与inlineencoder+append UI控制、68-byte SHA原件正常；submit/run events/IPC transport/viewport适配，sendhook/fullApp/authority/Engine/provider/worker/Electron不动态外推。root双冻结4",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "pointer": "/hits/all_429/92/context",
+        "scalarLength": 563,
+        "offset": 74,
+        "text": "ions                                                         |\n| Existing journal/storage/Web recovery shard                  | 42 passed, 0 failed, 0 skipped; 429 assertions                                                           |\n| Core no-emit TypeScript and owned-file ESLint/Prettier       | Passed                                                                                                   |\n| `bun install --frozen-lockfile` in an empty private HOME     | Passed, no lock changes                                                                    ",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep-current.json",
+        "pointer": "/checks/9/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+        "pointer": "/sources/9/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/49/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/priorPrepHashOnlyChecks/9/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "pointer": "/files/55",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+        "pointer": "/patterns/host-registry",
+        "scalarLength": 119,
+        "offset": 43,
+        "text": "packages/host/src/(?:runtime|host-requests|index)\\.ts|HostRuntime|Duplicate host capability|host startup.{0,30}rollback",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/patterns/output-projection",
+        "scalarLength": 88,
+        "offset": 21,
+        "text": "outputCoverage|outputJournalRecovery|mobileOutputRecovery|transcriptReplay|streamReducer",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/12/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/18/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/28/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/45/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/77/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/78/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/79/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/80/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/81/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/82/excerpt",
+        "scalarLength": 145360,
+        "offset": 119750,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/149/excerpt",
+        "scalarLength": 220729,
+        "offset": 195119,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/153/excerpt",
+        "scalarLength": 220729,
+        "offset": 195119,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/157/excerpt",
+        "scalarLength": 220729,
+        "offset": 195119,
+        "text": "e\": \"high\", \"title\": \"Four listener registration functions have identical add/remove pattern\", \"detail\": \"`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.\", \"fix\": \"Extract a helper function: `function makeListener(array) { return (cb) => { array.push(cb); return () => { const i = array.indexOf(cb); if (i >= 0) array.splice(i, 1); }; }; }` and use it for all four.\"}, {\"file\": \"packages/desktop/src/preload/index.ts\", \"line\": \"138-139, 145-146, 152-153, 159-160\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"O(n) array indexOf used for listener removal instead of Set\", \"detail\": \"Listener unsubscribe callbacks use `indexOf()` and `splice()`, which is O(n) per removal. If a renderer has many active stream event listeners an",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/163/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/169/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/171/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/39/excerpt",
+        "scalarLength": 499,
+        "offset": 6,
+        "text": "d 到消息 index 的路由表。 | `rg \"duplicate.*agent_start|agent_start.*duplicate|agentMessageIndex|tombstone\" packages/desktop/src/renderer -g '*test.*'` 无命中；相反，移动端 `lib/streamReducer.test.ts:164` 明确覆盖了重复 `agent_start` 幂等。 | 若 live/replay overlap 或 provider 重放产生重复 `agent_start`，desktop 可能出现重复 subagent 卡、React key 冲突，后续 `text_delta/tool_result` 只挂到最后一张卡，前一张卡停留。 | `applyStreamEvent duplicate agent_start is idempotent`（若协议要求 exactly-once，则先补协议注释测试而不是改行为）：重复同一 `agentId` 后断言只有一张 agent 卡、index 稳定。 | 低（需人工确认） |",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/47/excerpt",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/50/excerpt",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/53/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/54/excerpt",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/55/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/57/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/82/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/87/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/96/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/100/excerpt",
+        "scalarLength": 189,
+        "offset": 4,
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "pointer": "/paths/43",
+        "scalarLength": 50,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.test.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "pointer": "/paths/69",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+        "pointer": "/hits/replay-proof/53/excerpt",
+        "scalarLength": 279,
+        "offset": 50,
+        "text": "s:1220-1247` 原生会话 resync 可送 session.sync；协商 outputJournal 后 `mobileOutputClient.ts:67-82` 改送带 recoveryId 的 session.select，经过授权后仍走同一 pending 重放入口。本轮新对照未协商 outputJournal，实际派发 focus，确认自动发出匹配 session.sync，随后回放可恢复；协商分支本轮只读源码核对。因此“只有重连 / 手动重新选择才能恢复”过宽；合适表述是“错误本身不恢复卡，下一次有效 resync 可恢复”。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/19/excerpt",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/23/excerpt",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/24/excerpt",
+        "scalarLength": 284,
+        "offset": 168,
+        "text": "- 触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/115/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/116/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/snapshot-dedup.json",
+        "pointer": "/contexts/snapshot-contract/117/excerpt",
+        "scalarLength": 282,
+        "offset": 166,
+        "text": "触发条件：打开保留合法 legacy transcript、没有 output journal 的较长会话，聊天初始 512 KiB tail 未包括开头，未点击“更早历史”即进入上下文选择。生产 `app/useTranscriptBuckets.ts:221–242` 为两个持久投影读取 512 KiB，`app/outputJournalRecovery.ts:30–45` 对合法无 journal/cursor/snapshot identity 的 legacy 返回 null，沿现有 tail 路径继续；不是强行让现代完整 journal 失效。",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/407/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/620/path",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1038/path",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1140/path",
+        "scalarLength": 57,
+        "offset": 41,
+        "text": "packages/core/src/session/output-journal-backup-format.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/1968/path",
+        "scalarLength": 57,
+        "offset": 33,
+        "text": "packages/desktop/src/main/output-journal-recovery.test.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/2414/path",
+        "scalarLength": 58,
+        "offset": 40,
+        "text": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4062/path",
+        "scalarLength": 50,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.test.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4063/path",
+        "scalarLength": 45,
+        "offset": 27,
+        "text": "packages/web/src/lib/outputJournalRecovery.ts",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-validation.json",
+        "pointer": "/limitations/1",
+        "scalarLength": 115,
+        "offset": 10,
+        "text": "No server/journal/follower/transcript/parser/authentication/permission/identity experiment or operator data access.",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/patterns/recovery-contract",
+        "scalarLength": 165,
+        "offset": 10,
+        "text": "(?:output|journal|恢复|recovery).{0,100}(?:coverage|unpaired|half|partial|pending.input|锚点|半份)|(?:coverage|private.candidate|私有候选).{0,100}(?:recover|journal|cursor|恢复)",
+        "bounded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/exact/52/excerpt",
+        "scalarLength": 88,
+        "offset": 21,
+        "text": "outputCoverage|outputJournalRecovery|mobileOutputRecovery|transcriptReplay|streamReducer",
+        "bounded": true
+      }
+    ]
+  }
+}
