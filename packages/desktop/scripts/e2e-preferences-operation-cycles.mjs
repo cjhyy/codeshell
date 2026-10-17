@@ -7,7 +7,7 @@ import children from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { createRequire, syncBuiltinESMExports } from "node:module";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   captureRendererErrors,
@@ -25,11 +25,23 @@ assert.equal(process.env.NODE_ENV, "test", "Use the isolated native smoke runner
 assert.equal(process.env.CODE_SHELL_TEST_HOME, join(process.env.HOME, ".code-shell"));
 assert.equal(process.argv.length, 4, "Expected --evidence-dir <new-directory>");
 assert.equal(process.argv[2], "--evidence-dir");
-const evidence = resolve(process.argv[3]);
-const outside = relative(await realpath(process.env.HOME), evidence);
-assert.ok(isAbsolute(outside) || outside === ".." || outside.startsWith(`..${sep}`));
-await mkdir(evidence, { mode: 0o700 });
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repository = await realpath(resolve(appDir, "../.."));
+const requested = resolve(process.argv[3]);
+const evidence = join(await realpath(dirname(requested)), basename(requested));
+const checkoutRelative = relative(repository, evidence);
+assert.ok(
+  isAbsolute(checkoutRelative) ||
+    checkoutRelative === ".." ||
+    checkoutRelative.startsWith(`..${sep}`),
+  "Evidence must be outside the checkout",
+);
+const outside = relative(await realpath(process.env.HOME), evidence);
+assert.ok(
+  isAbsolute(outside) || outside === ".." || outside.startsWith(`..${sep}`),
+  "Evidence must be outside the outer HOME",
+);
+await mkdir(evidence, { mode: 0o700 });
 const isolated = await makeIsolatedElectronHome("codeshell-preferences-native-");
 const privateRelative = relative(await realpath(process.env.HOME), isolated.home);
 assert.ok(
