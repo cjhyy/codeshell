@@ -21,6 +21,20 @@ import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.m
 import { watchElectronTestProcess } from "../../desktop/scripts/electron-test-watchdog.mjs";
 
 const MAX_LOG = 1024 * 1024;
+function diagnosticText(value, limit, fallback) {
+  try {
+    return String(value).slice(0, limit);
+  } catch {
+    return fallback;
+  }
+}
+function diagnosticError(error) {
+  try {
+    return diagnosticText(error?.message ?? error, 4096, "[unprintable failure]");
+  } catch {
+    return diagnosticText(error, 4096, "[unprintable failure]");
+  }
+}
 function executableIdentity(file) {
   const before = lstatSync(file, { bigint: true });
   assert.ok(before.isFile() && !before.isSymbolicLink(), "Canonical browser must remain regular");
@@ -165,15 +179,23 @@ export async function prepareBrowserOperationCustody({
   const tails = { stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
   const fail = (stage, error) => {
     const entry = {
-      stage: String(stage).slice(0, 120),
-      message: String(error?.message ?? error).slice(0, 4096),
+      stage: diagnosticText(stage, 120, "[unprintable stage]"),
+      message: diagnosticError(error),
     };
     receipt.status = "failed";
     receipt.firstFailure ??= entry;
     if (receipt.failures.length < 64) receipt.failures.push(entry);
     else receipt.truncated = true;
     try {
-      reportFailure(`${stage}: ${entry.message}`);
+      const result = reportFailure(`${entry.stage}: ${entry.message}`);
+      if (result?.then) {
+        receipt.recordingFailed = true;
+        // Diagnostic callbacks must be synchronous. Suppress a rejected
+        // callback promise without recursively calling the same failed sink.
+        Promise.resolve(result).catch(() => {
+          receipt.recordingFailed = true;
+        });
+      }
     } catch {
       receipt.recordingFailed = true;
     }
@@ -181,7 +203,10 @@ export async function prepareBrowserOperationCustody({
   };
   const checkpoint = (phase) => {
     if (receipt.timeline.length < 128)
-      receipt.timeline.push({ phase: String(phase).slice(0, 80), at: Date.now() });
+      receipt.timeline.push({
+        phase: diagnosticText(phase, 80, "[unprintable phase]"),
+        at: Date.now(),
+      });
     else receipt.truncated = true;
     try {
       const temporary = path.join(evidence, "browser-custody.json.tmp");

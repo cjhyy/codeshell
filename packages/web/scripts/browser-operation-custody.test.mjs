@@ -88,7 +88,7 @@ async function fixture(t, options = {}) {
     closeTimeoutMs: 20,
     settlementTimeoutMs: 20,
     exitTimeoutMs: 20,
-    reportFailure: (message) => failures.push(message),
+    reportFailure: options.reportFailure ?? ((message) => failures.push(message)),
     onCheckpoint: options.onCheckpoint,
     dependencies: {
       children,
@@ -402,3 +402,74 @@ test("browser bytes changed after resolver/factory pin are refused before spawn"
   assert.equal(f.spawns.length, 0);
   assert.equal((await f.custody.cleanupPrivateHome({ acceptancePassed: true })).removed, false);
 });
+
+const hostileDiagnostic = () => ({
+  get message() {
+    throw Error("message getter must not escape");
+  },
+  toString() {
+    throw Error("toString must not escape");
+  },
+});
+
+test("hostile stage/error and phase diagnostics never interrupt settlement or revive cleanup", async (t) => {
+  const f = await fixture(t);
+  await f.custody.launchPersistentContext(f.chromium);
+  assert.doesNotThrow(() => f.custody.noteFailure(hostileDiagnostic(), hostileDiagnostic()));
+  assert.doesNotThrow(() => f.custody.checkpoint(hostileDiagnostic()));
+  assert.deepEqual(f.custody.receipt.firstFailure, {
+    stage: "[unprintable stage]",
+    message: "[unprintable failure]",
+  });
+  await f.custody.settle();
+  assert.deepEqual(f.counts(), { watchCount: 1, terminateCount: 1 });
+  assert.equal((await f.custody.cleanupPrivateHome({ acceptancePassed: true })).removed, false);
+  assert.equal(await f.exists(), true);
+});
+
+test("hostile checkpoint throw retains the original failure and still settles the acquired child", async (t) => {
+  let armed = false;
+  const f = await fixture(t, {
+    onCheckpoint() {
+      if (armed) throw hostileDiagnostic();
+    },
+  });
+  await f.custody.launchPersistentContext(f.chromium);
+  armed = true;
+  assert.doesNotThrow(() => f.custody.noteFailure("original UI", Error("first failure")));
+  await f.custody.settle();
+  assert.deepEqual(f.custody.receipt.firstFailure, {
+    stage: "original UI",
+    message: "first failure",
+  });
+  assert.equal(f.custody.receipt.recordingFailed, true);
+  assert.deepEqual(f.counts(), { watchCount: 1, terminateCount: 1 });
+  assert.equal((await f.custody.cleanupPrivateHome({ acceptancePassed: true })).removed, false);
+});
+
+for (const callback of ["onCheckpoint", "reportFailure"])
+  test(`${callback} thenable getter cannot escape or overwrite the first failure`, async (t) => {
+    let armed = false;
+    const f = await fixture(t, {
+      [callback]() {
+        if (armed)
+          return {
+            get then() {
+              throw hostileDiagnostic();
+            },
+          };
+      },
+    });
+    await f.custody.launchPersistentContext(f.chromium);
+    armed = true;
+    assert.doesNotThrow(() => f.custody.noteFailure("original UI", Error("first failure")));
+    await f.custody.settle();
+    assert.deepEqual(f.custody.receipt.firstFailure, {
+      stage: "original UI",
+      message: "first failure",
+    });
+    assert.equal(f.custody.receipt.recordingFailed, true);
+    assert.deepEqual(f.counts(), { watchCount: 1, terminateCount: 1 });
+    assert.equal((await f.custody.cleanupPrivateHome({ acceptancePassed: true })).removed, false);
+    assert.equal(await f.exists(), true);
+  });
