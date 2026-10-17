@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
-import { ChatView } from "./ChatView";
+import { ChatView, type AttachmentSelection } from "./ChatView";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
@@ -73,6 +73,7 @@ import type {
 } from "../preload/types";
 import {
   loadActiveProjectId,
+  loadProjects,
   saveActiveProjectId,
   unmarkProjectPathRemoved,
   reconcileProjectsFromDiskWithRemap,
@@ -424,34 +425,65 @@ function App() {
       return { ...prev, [targetBucket]: { ...current, text } };
     });
   };
-  const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
-    next,
-  ) => {
+  function isAttachmentTargetCurrent(targetBucket: string, engineSessionId?: string): boolean {
+    if (activeBucketRef.current !== targetBucket) return false;
+    const target = parsePanelBucket(targetBucket);
+    if (
+      target.projectId !== null &&
+      !loadProjects().some((project) => project.id === target.projectId)
+    ) {
+      return false;
+    }
+    if (!target.sessionId) return true;
+    const owner = loadSessionIndex(target.projectId).sessions.find(
+      (session) => session.id === target.sessionId,
+    );
+    return Boolean(
+      owner &&
+      !owner.archived &&
+      (engineSessionId === undefined || (owner.engineSessionId ?? owner.id) === engineSessionId),
+    );
+  }
+  function updateComposerAttachmentsForTarget(
+    targetBucket: string,
+    next: React.SetStateAction<ImageAttachment[]>,
+    isCurrent = () => isAttachmentTargetCurrent(targetBucket),
+  ): void {
+    if (!isCurrent()) return;
     setComposerDrafts((prev) => {
-      const targetBucket = activeBucketRef.current;
+      if (!isCurrent()) return prev;
       const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
       const attachments = typeof next === "function" ? next(current.attachments) : next;
       if (attachments === current.attachments) return prev;
       return { ...prev, [targetBucket]: { ...current, attachments } };
     });
+  }
+  const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
+    next,
+  ) => {
+    const targetBucket = activeBucketRef.current;
+    updateComposerAttachmentsForTarget(targetBucket, next);
   };
   // Attach an on-disk image to the composer by absolute path (file-panel add —
   // TODO 2.1). The staged attachment keeps the real path as its name so the
   // chip shows it and the wire payload carries it. Reads bytes via IPC.
   const attachImageByPath = async (absPath: string): Promise<void> => {
-    const context = prepareAttachmentSession();
-    if (!context) return;
+    const selection = beginAttachmentSelection();
+    const context = selection?.prepare();
+    if (!selection || !context) return;
     const dataUrl = await window.codeshell.readImageDataUrl(absPath, {
       cwd: context.cwd,
       sessionId: context.sessionId,
     });
+    if (!selection.isCurrent()) return;
     if (!dataUrl) {
       window.codeshell.log("attach.path.not_image", { path: absPath });
       return;
     }
     const sha256 = await sha256FromDataUrl(dataUrl).catch(() => undefined);
+    if (!selection.isCurrent()) return;
     const modelPath = pathForModel(absPath, context.cwd);
-    setComposerDraftAttachments((cur) => {
+    selection.updateAttachments((cur) => {
       const { attachment } = buildPathAttachment(absPath, dataUrl, cur, {
         path: modelPath,
         relPath: modelPath === absPath ? undefined : modelPath,
@@ -632,6 +664,46 @@ function App() {
     setGoalOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
     setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
     return { cwd, sessionId };
+  }
+
+  function beginAttachmentSelection(): AttachmentSelection | null {
+    let targetBucket = activeBucket;
+    const origin = parsePanelBucket(targetBucket);
+    let engineSessionId = resolveAttachmentSessionId(
+      origin.sessionId,
+      loadSessionIndex(origin.projectId).sessions,
+    );
+    let invalidated = false;
+    const isCurrent = (): boolean => {
+      if (!isAttachmentTargetCurrent(targetBucket, engineSessionId)) invalidated = true;
+      return !invalidated;
+    };
+    if (!isCurrent()) return null;
+    return {
+      isCurrent,
+      prepare: () => {
+        if (!isCurrent()) return null;
+        const context = prepareAttachmentSession();
+        if (!context) return null;
+        if (!origin.sessionId) {
+          // Only this synchronous prepare may move its own draft to a Session.
+          const materialized = parsePanelBucket(activeBucketRef.current);
+          if (
+            materialized.projectId !== origin.projectId ||
+            materialized.sessionId !== context.sessionId
+          ) {
+            invalidated = true;
+            return null;
+          }
+          targetBucket = activeBucketRef.current;
+        }
+        engineSessionId = context.sessionId;
+        return isCurrent() ? context : null;
+      },
+      updateAttachments: (next) => {
+        if (isCurrent()) updateComposerAttachmentsForTarget(targetBucket, next, isCurrent);
+      },
+    };
   }
 
   const materializeActiveSessionForPanel = (): string | null => {
@@ -2657,6 +2729,7 @@ function App() {
                     onExtendGoal={extendGoal}
                     onAttachImagePath={(p) => void attachImageByPath(p)}
                     onPrepareAttachmentSession={prepareAttachmentSession}
+                    onBeginAttachmentSelection={beginAttachmentSelection}
                     imageDetail={imageDetail}
                     pendingApproval={visibleApproval}
                     onApprovalDecide={

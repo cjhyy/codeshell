@@ -97,6 +97,12 @@ import {
 } from "./chat/linkResourceIntents";
 import { isDraftBucket } from "./transcripts";
 
+export interface AttachmentSelection {
+  isCurrent: () => boolean;
+  prepare: () => { cwd: string; sessionId: string; quickChatClaimId?: string } | null;
+  updateAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+}
+
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
   variant?: "main" | "quickChat" | "pet";
@@ -195,6 +201,8 @@ interface Props {
     /** Ephemeral side-chat generation; main validates it before/after disk IO. */
     quickChatClaimId?: string;
   } | null;
+  /** Captures the main composer's live owner before any file read or compression. */
+  onBeginAttachmentSelection?: () => AttachmentSelection | null;
   /** Provider-agnostic image clarity; drives renderer-side downscale before send. */
   imageDetail?: ImageDetail;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -419,6 +427,7 @@ export function ChatView({
   onExtendGoal,
   onAttachImagePath,
   onPrepareAttachmentSession,
+  onBeginAttachmentSelection,
   imageDetail,
   pendingApproval,
   approvalEpoch = 0,
@@ -1222,16 +1231,25 @@ export function ChatView({
     onClearAnchors?.();
   };
 
-  const acceptFiles = async (files: File[], origin: "paste" | "os-drop" | "picker") => {
+  const attachmentSelectionIsCurrent = (selection: AttachmentSelection | null | undefined) =>
+    mountedRef.current && (!onBeginAttachmentSelection || Boolean(selection?.isCurrent()));
+
+  const acceptFiles = async (
+    files: File[],
+    origin: "paste" | "os-drop" | "picker",
+    selection?: AttachmentSelection | null,
+  ) => {
     if (composerDisabled || compacting) return;
     if (files.length === 0) return;
     if (!localRuntime) {
       await onSelectRemoteFiles?.(files);
       return;
     }
+    if (selection === undefined) selection = onBeginAttachmentSelection?.();
+    if (!attachmentSelectionIsCurrent(selection)) return;
     setAttachmentError(null);
     const { accepted, errors } = await buildAttachments(files, attachments);
-    if (!mountedRef.current) return;
+    if (!attachmentSelectionIsCurrent(selection)) return;
     if (accepted.length > 0) {
       // Compress before staging so the chip thumbnail and the wire
       // payload share the same bytes — keeps the UI honest about what
@@ -1239,8 +1257,9 @@ export function ChatView({
       // back to the original if encoding fails (engine policy still
       // gates oversize bytes downstream).
       const compressed = await compressBatch(accepted, imageDetail);
-      if (!mountedRef.current) return;
-      const context = onPrepareAttachmentSession?.();
+      if (!attachmentSelectionIsCurrent(selection)) return;
+      const context = selection ? selection.prepare() : onPrepareAttachmentSession?.();
+      if (!attachmentSelectionIsCurrent(selection)) return;
       if (!context) {
         errors.push({
           kind: "staging-failed",
@@ -1274,10 +1293,11 @@ export function ChatView({
               };
             }),
           );
-          if (!mountedRef.current) return;
-          setAttachments((cur) => [...cur, ...staged]);
+          if (!attachmentSelectionIsCurrent(selection)) return;
+          if (selection) selection.updateAttachments((cur) => [...cur, ...staged]);
+          else setAttachments((cur) => [...cur, ...staged]);
         } catch (e) {
-          if (!mountedRef.current) return;
+          if (!attachmentSelectionIsCurrent(selection)) return;
           errors.push({
             kind: "staging-failed",
             message: t("chat.attachment.stagingFailed", {
@@ -1287,7 +1307,7 @@ export function ChatView({
         }
       }
     }
-    if (mountedRef.current && errors.length > 0) {
+    if (attachmentSelectionIsCurrent(selection) && errors.length > 0) {
       setAttachmentError(errors.map((e) => e.message).join("；"));
     }
   };
@@ -1314,6 +1334,8 @@ export function ChatView({
       await onSelectRemoteFiles?.(files);
       return;
     }
+    const selection = onBeginAttachmentSelection?.();
+    if (!attachmentSelectionIsCurrent(selection)) return;
     setAttachmentError(null);
     const images: File[] = [];
     const paths: string[] = [];
@@ -1330,8 +1352,8 @@ export function ChatView({
       }
     }
 
-    if (images.length > 0) await acceptFiles(images, origin);
-    if (!mountedRef.current) return;
+    if (images.length > 0) await acceptFiles(images, origin, selection);
+    if (!attachmentSelectionIsCurrent(selection)) return;
     if (paths.length > 0) addLocalFilePaths(paths, origin);
     if (unavailable.length > 0) {
       setAttachmentError(t("chat.composer.filePathUnavailable", { names: unavailable.join("、") }));
