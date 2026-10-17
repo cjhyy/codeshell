@@ -1,0 +1,1322 @@
+{
+  "checkedUTC": "2026-10-17T12:34:53.877160+00:00",
+  "owners": {
+    "root": {
+      "directory": "/tmp/codeshell-audit-round34-utf8-frontier",
+      "receipt": "author-receipt.json",
+      "report": "proposal.md",
+      "artifactChecks": 12,
+      "reportLinks": 6,
+      "semanticSourceRows": 5,
+      "hashOnlyRows": 0,
+      "metadataOnlyRows": 0,
+      "declaredSemanticLines": 482,
+      "receiptSha256": "6230e23524f7ae6e4cb8944afffc882b0ab4c5946cc966e44ea3a9798734af17",
+      "reportSha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "sourceManifestSha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464"
+    },
+    "memoize": {
+      "directory": "/tmp/codeshell-audit-round34-memoize-frontier",
+      "receipt": "reviewer-receipt.json",
+      "report": "review.md",
+      "artifactChecks": 8,
+      "reportLinks": 4,
+      "semanticSourceRows": 5,
+      "hashOnlyRows": 4,
+      "metadataOnlyRows": 0,
+      "declaredSemanticLines": 213,
+      "receiptSha256": "b57ecfa1fb6323196f63948ca4ef276ecc04be4ce13dc830f8ca02c81ed1612a",
+      "reportSha256": "cd5f1723e6f62a3b5b790df6a321898a6db88e8c5f14b7af1aab661ec16e00f8",
+      "sourceManifestSha256": "73cff751cd0d04d3224becc54358f0e8c631b46b0880708606c50d7b7be95b71"
+    },
+    "semver": {
+      "directory": "/tmp/codeshell-audit-round34-semver-frontier",
+      "receipt": "author-receipt.json",
+      "report": "proposal.md",
+      "artifactChecks": 11,
+      "reportLinks": 9,
+      "semanticSourceRows": 6,
+      "hashOnlyRows": 0,
+      "metadataOnlyRows": 1,
+      "declaredSemanticLines": 218,
+      "receiptSha256": "84b66a5946c48cf6e7308f2fb258186e235c7c018049e4cbc8dc0ddc59c7d605",
+      "reportSha256": "fe6ca7bb317c36f42a395f390288ab04172ee78590d20af67b9fd51b24632a24",
+      "sourceManifestSha256": "a7945beb1a55e096959aa42bd7f002a0af06fbe4661a0c89b5c1bcb32c8ef064"
+    },
+    "renderer": {
+      "directory": "/tmp/codeshell-audit-round34-renderer-status-frontier",
+      "receipt": "artifact-receipt.json",
+      "report": "report.md",
+      "artifactChecks": 8,
+      "reportLinks": 6,
+      "semanticSourceRows": 7,
+      "hashOnlyRows": 0,
+      "metadataOnlyRows": 0,
+      "declaredSemanticLines": 423,
+      "receiptSha256": "f970cf318d328d9ca3af002028bc7928be825c0735fc61872d022df803a74ce9",
+      "reportSha256": "0e99f39b4374788d8287254d6ce5897b19838a3e00c2bd789b5a2c7ab0c15a35",
+      "sourceManifestSha256": "5a213c92fc99c6604cf01ac9aba943b7cef358438e5b1f92a9da8a4aa1d31c8b"
+    },
+    "utf8_independent": {
+      "directory": "/tmp/codeshell-audit-round34-utf8-review",
+      "receipt": "author-receipt.json",
+      "report": "review.md",
+      "artifactChecks": 13,
+      "reportLinks": 10,
+      "semanticSourceRows": 6,
+      "hashOnlyRows": 0,
+      "metadataOnlyRows": 0,
+      "declaredSemanticLines": 542,
+      "receiptSha256": "0b0b7cf6e890243e8a120c79794a6c000a91a573906982e2154b90534af9e765",
+      "reportSha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "sourceManifestSha256": "35d8d166d773a54310791965273d996c7b4989d19aa69e086f8ebc7fa60bad8b"
+    }
+  },
+  "artifactChecks": 52,
+  "mainReceiptFilesSeparatelyPinned": 5,
+  "sourceChecks": 34,
+  "uniqueSourcePaths": 30,
+  "semanticSourceChecks": 29,
+  "mainFourDeclaredLines": 1336,
+  "mainFourUniquePaths": 23,
+  "mainFourUnionLines": 1336,
+  "allFiveDeclaredLines": 1878,
+  "allFiveSemanticUniquePaths": 25,
+  "allFiveUnionLines": 1463,
+  "rootIndependentUtf8SharedLines": 415,
+  "rootIndependentUtf8UnionLines": 609,
+  "allReportLinks": 35,
+  "localLinks": 33,
+  "externalLinksNotFetched": 2,
+  "RootScopeChecks": {
+    "semanticLines": 482,
+    "productLines": 431,
+    "testLines": 51,
+    "backgroundInitialSemanticShaNull": true,
+    "BashOutputRange": [
+      [
+        1,
+        62
+      ]
+    ]
+  },
+  "RootDraftPreservation": {
+    "firstProposalSha256": "6c7a4d8c46065ca5d8175766aeaa420d9c8e89e3eeff25130534a1a4ce66f4e7",
+    "firstReceiptSha256": "812e52618898a3e8b59ce6cc34f2337a5723efd0d4081800036d0f9eb4e66bc3",
+    "bothMatchSavedFirstBytes": true,
+    "finalTextDistinguishesProductNetworkAndWebAccess": true
+  },
+  "classification": {
+    "formal": 0,
+    "candidate": 1,
+    "related": 0,
+    "candidateId": "UTF8-R34-C1",
+    "severity": "P3"
+  },
+  "artifacts": [
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/author-receipt.first.json",
+      "bytes": 1492,
+      "sha256": "812e52618898a3e8b59ce6cc34f2337a5723efd0d4081800036d0f9eb4e66bc3",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/consumer-initial-pin.json",
+      "bytes": 446,
+      "sha256": "f3b25c23a71c7d88ea83a645972ccbb67888c4455383acf6ef5c0fe90775ede0",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/decisions.json",
+      "bytes": 2298,
+      "sha256": "71172901e852b404cab9fd2ba9154016674491b39d386ee0bef831666fea87c4",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/external-sources.json",
+      "bytes": 1030,
+      "sha256": "b21055d33579d1ae016646bc9d447a1733077e57185577f2dba62329c390a334",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/initial-pins.json",
+      "bytes": 646,
+      "sha256": "dd1f157a6d260148d89ed606dc38c2d90e29949b9f284c560e211ffe0b00ea17",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/metadata-notes.json",
+      "bytes": 579,
+      "sha256": "a3d7ddbe31a4af97ed1307de6dd59d31680b70ca237ec1429eb0454171b8a4c4",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/proposal.first.md",
+      "bytes": 2444,
+      "sha256": "6c7a4d8c46065ca5d8175766aeaa420d9c8e89e3eeff25130534a1a4ce66f4e7",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/ring-initial-pin.json",
+      "bytes": 252,
+      "sha256": "0af819de1d107c886f8407ef30ba33183b199e0558aa8ee2d942a5b589a4e54d",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/source-manifest.json",
+      "bytes": 3551,
+      "sha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/tool-entry-initial-pin.json",
+      "bytes": 277,
+      "sha256": "7f4d8fb4af21576794fd38fbac03122d92fd27ea418d6cfc86d385e6dc561b62",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "root",
+      "path": "/tmp/codeshell-audit-round34-utf8-frontier/validation.json",
+      "bytes": 136,
+      "sha256": "3265c767f2fa18917b74ecc540bdf092aab88c09c5a6bea44e1605d5c1f75f1c",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/consumer-initial-pins.json",
+      "bytes": 1654,
+      "sha256": "c56060dc5f2639ca1d902814dc0a0295e40a8d047760c08c0fc2e71dda1097e5",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/history-finish-checks.json",
+      "bytes": 529,
+      "sha256": "961e107f6682c90133e898ff6f5741daeaac19932fe5fe64bbabc13fa51dea5b",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/history-method.py",
+      "bytes": 3748,
+      "sha256": "9f7fe10586d44043bb5715adb493a425d6c061601576f6ebeda731378c0ab607",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/history.json",
+      "bytes": 687019,
+      "sha256": "a90cbbfabddce9b1218f4dfe6f0d728c0383771227a8776f492223af3d2389cc",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/initial-pins.json",
+      "bytes": 1727,
+      "sha256": "04995531dc70665fa515483e2a68680b3473a7d70959a64e8eb2840ae596a6b4",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/review.md",
+      "bytes": 3359,
+      "sha256": "cd5f1723e6f62a3b5b790df6a321898a6db88e8c5f14b7af1aab661ec16e00f8",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/source-manifest.json",
+      "bytes": 15810,
+      "sha256": "73cff751cd0d04d3224becc54358f0e8c631b46b0880708606c50d7b7be95b71",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "memoize",
+      "path": "/tmp/codeshell-audit-round34-memoize-frontier/test-initial-pin.json",
+      "bytes": 348,
+      "sha256": "12974e2ff41e4ee92d1184e397cd1c02184bd0557f4ee1db6a490e77daf40b49",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/consumer-initial-pins.json",
+      "bytes": 2334,
+      "sha256": "b9865ad4e327516370073453b3cafe337234edf9bcc227b24bff9b06138b1353",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/decisions.json",
+      "bytes": 2621,
+      "sha256": "4ec1efeb4e21c547567f16c92802bf0d44cc92cbfb3e680123dd7f5a3c4d783b",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/finish-hash-checks.json",
+      "bytes": 2132,
+      "sha256": "9aff94a1b970fc025287a2da043d17996dc8aabc8939d8cd660293512bb7394f",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/history-drift-checks.json",
+      "bytes": 723,
+      "sha256": "984a15df2ce418908ca36597481149b95b672e93c00e55f14ec3cc8dc94def73",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/history.json",
+      "bytes": 883380,
+      "sha256": "af75491e2009531ab870625a345987f30e6dd4d92eed03a9437aed26a2b57f2b",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/history.py",
+      "bytes": 3591,
+      "sha256": "a38b30743a464345a9ad16541612112a462ba571737a4a5f5fea2d492123c4c9",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/initial-pins.json",
+      "bytes": 636,
+      "sha256": "f289a83e0b3dc103b8a3bbb86948937aed226e1bf14bd95ef91afb15e77e0217",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/proposal.md",
+      "bytes": 3402,
+      "sha256": "fe6ca7bb317c36f42a395f390288ab04172ee78590d20af67b9fd51b24632a24",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/selected-history-contexts.json",
+      "bytes": 40295,
+      "sha256": "b56cfa30f6c2a1023bb8eac59d7c4a9f6bfc8bcc0086924b45afd213d0c5c0b4",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/source-manifest.json",
+      "bytes": 8112,
+      "sha256": "a7945beb1a55e096959aa42bd7f002a0af06fbe4661a0c89b5c1bcb32c8ef064",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "semver",
+      "path": "/tmp/codeshell-audit-round34-semver-frontier/validation.json",
+      "bytes": 883,
+      "sha256": "9f34015e6e800db247cd9f6c25eaf5dea232bac89e71d58e6d528352a2f3e1b5",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/gate.json",
+      "bytes": 2048,
+      "sha256": "96024ce881a0d10a37c4f3b92c61492b83bb58980661a6ba930535667eea2cbd",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/history-method.py",
+      "bytes": 3323,
+      "sha256": "df5d1246a6a440ee3235e4338db7df75dbb01a5ff1aa4d9f7cc0edf18c52e743",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/history.json",
+      "bytes": 676981,
+      "sha256": "07734928474836a66ef5761c706f716f3ca2c8ade0baaddd3f83a149aa7adae2",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/prior-coverage.json",
+      "bytes": 2186,
+      "sha256": "030c39ffd6643d270aca175ff958adefe03af61f20725516200231a19bfc046a",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/prior-status-pins.json",
+      "bytes": 1519,
+      "sha256": "8ed91e27bae88b2cef856a45652c612dd6b730411003377edf6ff42d790b8fd8",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/report.md",
+      "bytes": 3211,
+      "sha256": "0e99f39b4374788d8287254d6ce5897b19838a3e00c2bd789b5a2c7ab0c15a35",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/source-manifest.json",
+      "bytes": 6090,
+      "sha256": "5a213c92fc99c6604cf01ac9aba943b7cef358438e5b1f92a9da8a4aa1d31c8b",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "renderer",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/validation.json",
+      "bytes": 579,
+      "sha256": "2381e3624e8036d1a55f467941005ae79ab3c27cb4fd118e7d2353ff467e5497",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/consumer-initial-pins.json",
+      "bytes": 1290,
+      "sha256": "7ab4c7ced9bcbe7316e0191900a294c0daae87ae53015259b73bbe6e5f806d30",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/decisions.json",
+      "bytes": 3744,
+      "sha256": "6e34f40861585500624336798e130c06704ec47941d7321a1b140996b2a58ed5",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/finish-hash-checks.json",
+      "bytes": 2103,
+      "sha256": "2cdc309d63775d0f9605244d17f1f3abf2a2b948a5083ff69be27f60536d4f48",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/history-specific.json",
+      "bytes": 2152,
+      "sha256": "fba7b5e2baaaf125d49af3d1a3d0697e449fc9fa313bc48076c6253db4d28128",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/history-specific.py",
+      "bytes": 3147,
+      "sha256": "e424f9aab71f86639e3dcaa31429248254173774723e3b791ae4d72d9277b255",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/history.json",
+      "bytes": 934299,
+      "sha256": "d974ed9ae0e8e1c39623f0f8b67c1703699b1f7f196cf34f7918ad895aaf9a7e",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/history.py",
+      "bytes": 3686,
+      "sha256": "89bb3930f01269e5ccf72164b9e93b16c6c3f45c8c533054a3967724e6bafa3f",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/initial-pins.json",
+      "bytes": 713,
+      "sha256": "8141d625c12ca82fad71367e4c924e66a22d0e64fd9119824e1f67b189680146",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/ring-initial-pins.json",
+      "bytes": 871,
+      "sha256": "b84a8e9299f3d094f90e03479da894449d8d88529b67256a0fa672a267585932",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/selected-history-contexts.json",
+      "bytes": 90586,
+      "sha256": "4ed12196758338493a190c654b8b0fa4afcd9b19665d747a1d99aeda28a7700b",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/source-manifest.json",
+      "bytes": 7548,
+      "sha256": "35d8d166d773a54310791965273d996c7b4989d19aa69e086f8ebc7fa60bad8b",
+      "matchesReceipt": true
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "/tmp/codeshell-audit-round34-utf8-review/validation.json",
+      "bytes": 901,
+      "sha256": "32de2db3875c618831fc3afd47a66e1bd872018cc798735bec6cf62db58e9fcb",
+      "matchesReceipt": true
+    }
+  ],
+  "sources": [
+    {
+      "owner": "root",
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "bytes": 927,
+      "lineCount": 21,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "declaredSemanticLines": 21,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10"
+    },
+    {
+      "owner": "root",
+      "path": "packages/core/src/runtime/utf8-cut.test.ts",
+      "sha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "bytes": 2163,
+      "lineCount": 51,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          51
+        ]
+      ],
+      "declaredSemanticLines": 51,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10"
+    },
+    {
+      "owner": "root",
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "bytes": 25112,
+      "lineCount": 702,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          35,
+          55
+        ],
+        [
+          310,
+          348
+        ],
+        [
+          408,
+          507
+        ]
+      ],
+      "declaredSemanticLines": 160,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "root",
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "bytes": 5956,
+      "lineCount": 188,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          188
+        ]
+      ],
+      "declaredSemanticLines": 188,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd"
+    },
+    {
+      "owner": "root",
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "bytes": 5335,
+      "lineCount": 130,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "declaredSemanticLines": 62,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6"
+    },
+    {
+      "owner": "memoize",
+      "path": "packages/core/src/utils/memoize.ts",
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "bytes": 1329,
+      "lineCount": 35,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "declaredSemanticLines": 35,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075"
+    },
+    {
+      "owner": "memoize",
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "bytes": 11605,
+      "lineCount": 361,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          170,
+          218
+        ]
+      ],
+      "declaredSemanticLines": 49,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9"
+    },
+    {
+      "owner": "memoize",
+      "path": "docs/audit-2026-10-17-round16/memoize.md",
+      "sha256": "8943edc6030ed8d0ab832601b99796b93a2bee246aacc1a3872011775c06a218",
+      "bytes": 3557,
+      "lineCount": 23,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "declaredSemanticLines": 23,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "memoize",
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "sha256": "6362141e446993b0e4b123eaf9eab06b8f874090701c93a362deeaf4cb448111",
+      "bytes": 2697,
+      "lineCount": 13,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "declaredSemanticLines": 13,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "memoize",
+      "path": "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts",
+      "sha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+      "bytes": 3556,
+      "lineCount": 93,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          93
+        ]
+      ],
+      "declaredSemanticLines": 93,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b"
+    },
+    {
+      "owner": "memoize",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "lineCount": 217,
+      "kind": "hash-only",
+      "coverage": "hash-only; no source semantic reading by this review",
+      "selectedLineRanges": [],
+      "declaredSemanticLines": 0,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "memoize",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "lineCount": 5,
+      "kind": "hash-only",
+      "coverage": "hash-only; no source semantic reading by this review",
+      "selectedLineRanges": [],
+      "declaredSemanticLines": 0,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "memoize",
+      "path": "packages/core/src/utils/task-sanitizer.ts",
+      "sha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+      "bytes": 963,
+      "lineCount": 34,
+      "kind": "hash-only",
+      "coverage": "hash-only; no source semantic reading by this review",
+      "selectedLineRanges": [],
+      "declaredSemanticLines": 0,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "memoize",
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+      "sha256": "b3c4ce27b371d1d0ef4f76337d352dd2141aaff04e5ffdaa725354e1b7e007bb",
+      "bytes": 4807,
+      "lineCount": 172,
+      "kind": "hash-only",
+      "coverage": "hash-only; no source semantic reading by this review",
+      "selectedLineRanges": [],
+      "declaredSemanticLines": 0,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "semver",
+      "path": "packages/core/src/utils/semver.ts",
+      "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "bytes": 398,
+      "lineCount": 17,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "declaredSemanticLines": 17,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e"
+    },
+    {
+      "owner": "semver",
+      "path": "packages/tui/src/render/terminal.ts",
+      "sha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "bytes": 8286,
+      "lineCount": 250,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          64
+        ]
+      ],
+      "declaredSemanticLines": 64,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c"
+    },
+    {
+      "owner": "semver",
+      "path": "packages/core/src/updater.ts",
+      "sha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "bytes": 15946,
+      "lineCount": 441,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          34,
+          49
+        ],
+        [
+          115,
+          176
+        ],
+        [
+          180,
+          204
+        ]
+      ],
+      "declaredSemanticLines": 103,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8"
+    },
+    {
+      "owner": "semver",
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "bytes": 17401,
+      "lineCount": 536,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          111,
+          117
+        ]
+      ],
+      "declaredSemanticLines": 7,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab"
+    },
+    {
+      "owner": "semver",
+      "path": "packages/core/src/version.test.ts",
+      "sha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "bytes": 406,
+      "lineCount": 11,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "declaredSemanticLines": 11,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda"
+    },
+    {
+      "owner": "semver",
+      "path": "packages/core/src/index.exports.test.ts",
+      "sha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "bytes": 18450,
+      "lineCount": 587,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          64,
+          79
+        ]
+      ],
+      "declaredSemanticLines": 16,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c"
+    },
+    {
+      "owner": "semver",
+      "path": "packages/core/package.json",
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "bytes": 3452,
+      "lineCount": 110,
+      "kind": "metadata-only",
+      "coverage": "selected-json-metadata",
+      "selectedLineRanges": [],
+      "declaredSemanticLines": 0,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "bytes": 813,
+      "lineCount": 26,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "declaredSemanticLines": 26,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/sessionStatus.test.ts",
+      "sha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "bytes": 1238,
+      "lineCount": 41,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "declaredSemanticLines": 41,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/settings/settingsCache.ts",
+      "sha256": "f80311b0eeef1ed1c4a87638fbb25df0bfe58fc10746a1c6ea1f7140b7975709",
+      "bytes": 1054,
+      "lineCount": 25,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "declaredSemanticLines": 25,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          674,
+          725
+        ]
+      ],
+      "declaredSemanticLines": 52,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "bytes": 58805,
+      "lineCount": 1629,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          450,
+          505
+        ]
+      ],
+      "declaredSemanticLines": 56,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/settings/useSettingsResource.ts",
+      "sha256": "0239c4086e472dd5914f8786cb41d9ef632f94a2bfe451fcaa909a14275690e1",
+      "bytes": 4812,
+      "lineCount": 111,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          111
+        ]
+      ],
+      "declaredSemanticLines": 111,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "renderer",
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "bytes": 14636,
+      "lineCount": 390,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          60,
+          145
+        ],
+        [
+          325,
+          350
+        ]
+      ],
+      "declaredSemanticLines": 112,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": null
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "bytes": 927,
+      "lineCount": 21,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "declaredSemanticLines": 21,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10"
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "packages/core/src/runtime/utf8-cut.test.ts",
+      "sha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "bytes": 2163,
+      "lineCount": 51,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          51
+        ]
+      ],
+      "declaredSemanticLines": 51,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10"
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "bytes": 25112,
+      "lineCount": 702,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          35,
+          55
+        ],
+        [
+          315,
+          368
+        ],
+        [
+          408,
+          507
+        ]
+      ],
+      "declaredSemanticLines": 175,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5"
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "bytes": 5956,
+      "lineCount": 188,
+      "kind": "semantic",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          188
+        ]
+      ],
+      "declaredSemanticLines": 188,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd"
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "sha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "bytes": 14593,
+      "lineCount": 379,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          189,
+          228
+        ]
+      ],
+      "declaredSemanticLines": 40,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170"
+    },
+    {
+      "owner": "utf8_independent",
+      "path": "packages/core/src/runtime/ring-file.test.ts",
+      "sha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "bytes": 5240,
+      "lineCount": 127,
+      "kind": "semantic",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          51
+        ],
+        [
+          70,
+          85
+        ]
+      ],
+      "declaredSemanticLines": 67,
+      "matchesCurrentBytes": true,
+      "initialSemanticReadSha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b"
+    }
+  ],
+  "links": [
+    {
+      "owner": "root",
+      "target": "https://nodejs.org/api/buffer.html#buftostringencoding-start-end",
+      "kind": "external",
+      "notFetched": true
+    },
+    {
+      "owner": "root",
+      "target": "https://nodejs.org/api/string_decoder.html",
+      "kind": "external",
+      "notFetched": true
+    },
+    {
+      "owner": "root",
+      "target": "source-manifest.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "root",
+      "target": "decisions.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "root",
+      "target": "validation.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "root",
+      "target": "external-sources.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "memoize",
+      "target": "history.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "memoize",
+      "target": "history-finish-checks.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "memoize",
+      "target": "source-manifest.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "memoize",
+      "target": "reviewer-receipt.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "selected-history-contexts.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "source-manifest.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "history.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "history.py",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "history-drift-checks.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "finish-hash-checks.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "decisions.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "validation.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "semver",
+      "target": "author-receipt.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "renderer",
+      "target": "prior-status-pins.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "renderer",
+      "target": "prior-coverage.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "renderer",
+      "target": "source-manifest.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "renderer",
+      "target": "history.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "renderer",
+      "target": "gate.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "renderer",
+      "target": "validation.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "source-manifest.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "history.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "history.py",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "history-specific.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "history-specific.py",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "selected-history-contexts.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "finish-hash-checks.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "decisions.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "validation.json",
+      "kind": "local",
+      "exists": true
+    },
+    {
+      "owner": "utf8_independent",
+      "target": "author-receipt.json",
+      "kind": "local",
+      "exists": true
+    }
+  ],
+  "limits": [
+    "Metadata only: source bytes hashed and line/range bounds counted, not semantically reread. Existing author material provides behavioral assertions.",
+    "Same UTF8 evidence is overlapping: do not add482+542 or count independent same-cause lead as a second candidate.",
+    "This reviewer authored prior UTF8 and semver preps; aggregate check is not a second independent product-source review.",
+    "Official web links were inspected as existing provenance only and not fetched; no runtime or installed Bun/Node conclusion.",
+    "Current repo Round34 mutable aggregation/history was not read as final."
+  ]
+}

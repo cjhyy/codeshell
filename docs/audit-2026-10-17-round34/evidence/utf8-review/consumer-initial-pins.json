@@ -1,0 +1,32 @@
+{
+  "parentReportedContext": "Frozen Round32 reported by Root as short reference646f; future34 prep only.",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/utf8-cut.test.ts",
+      "bytes": 2163,
+      "lines": 51,
+      "sha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "firstSemanticReadSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "capturedUtc": "2026-10-17T12:26:33.487558+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 25112,
+      "lines": 702,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "firstSemanticReadSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "capturedUtc": "2026-10-17T12:26:33.488540+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "bytes": 14593,
+      "lines": 379,
+      "sha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "firstSemanticReadSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "capturedUtc": "2026-10-17T12:26:33.488931+00:00",
+      "pinBeforeRead": true
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "frozenUTC": "2026-10-17T12:30:32.241238+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "subsequentParentReportedRound33Integration": "40d79ff2190a98aa31067eb07006099c2726b21a",
+  "originalHistoryExclusionsPreserved": [
+    "mutable32",
+    "mutable33",
+    "future34"
+  ],
+  "selfExcluded": true,
+  "artifactCount": 8,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1654,
+      "sha256": "c56060dc5f2639ca1d902814dc0a0295e40a8d047760c08c0fc2e71dda1097e5"
+    },
+    {
+      "path": "history-finish-checks.json",
+      "bytes": 529,
+      "sha256": "961e107f6682c90133e898ff6f5741daeaac19932fe5fe64bbabc13fa51dea5b"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3748,
+      "sha256": "9f7fe10586d44043bb5715adb493a425d6c061601576f6ebeda731378c0ab607"
+    },
+    {
+      "path": "history.json",
+      "bytes": 687019,
+      "sha256": "a90cbbfabddce9b1218f4dfe6f0d728c0383771227a8776f492223af3d2389cc"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1727,
+      "sha256": "04995531dc70665fa515483e2a68680b3473a7d70959a64e8eb2840ae596a6b4"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3359,
+      "sha256": "cd5f1723e6f62a3b5b790df6a321898a6db88e8c5f14b7af1aab661ec16e00f8"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 15810,
+      "sha256": "73cff751cd0d04d3224becc54358f0e8c631b46b0880708606c50d7b7be95b71"
+    },
+    {
+      "path": "test-initial-pin.json",
+      "bytes": 348,
+      "sha256": "12974e2ff41e4ee92d1184e397cd1c02184bd0557f4ee1db6a490e77daf40b49"
+    }
+  ],
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "sourceRows": 5,
+  "hashOnlyRows": 4,
+  "productSourceLines": 84,
+  "historicalTestDeclarationLines": 93,
+  "priorReportLines": 36,
+  "sameShaFullGateLeaves": [
+    "memoize.ts",
+    "task-sanitizer.ts"
+  ],
+  "selectedLeafReReviewed": "memoize.ts",
+  "taskSanitizerSemanticRead": false,
+  "sourceFinishChecks": 9,
+  "finalHistoryByteCheck": {
+    "files": 2988,
+    "unchanged": 2988,
+    "drift": [],
+    "dateUTC": "2026-10-17T12:30:32.241662+00:00"
+  },
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "promiseLanguageFixtures": 0,
+  "nativeRuns": 0,
+  "modelCalls": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0
+}

@@ -1,0 +1,45 @@
+{
+  "completedUTC": "2026-10-17T12:28:56.556944+00:00",
+  "sourceInventory": "history.json",
+  "sourceInventoryRows": 3063,
+  "excluded": [
+    "mutable Round33",
+    "future Round34"
+  ],
+  "patterns": {
+    "exact-helper-sha": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+    "cursor-utf8": "(?:agentReadOffset|consumedBytes|rawBuf|stdoutDec|stderrDec).{0,300}?(?:UTF.?8|split|partial|incomplete|StringDecoder|chunk|replacement)|(?:UTF.?8|StringDecoder|surrogat).{0,300}?(?:agentReadOffset|consumedBytes|rawBuf|stdoutDec|stderrDec)",
+    "background-partial": "(?:background[- ]shell|BashOutput|readOutput|ring[- ]?file|后台输出).{0,300}?(?:chunk|分块|partial|incomplete|分片).{0,160}?(?:utf.?8|多字节|StringDecoder)|(?:chunk|分块|partial|incomplete|分片).{0,160}?(?:utf.?8|多字节|StringDecoder).{0,300}?(?:background[- ]shell|BashOutput|readOutput|ring[- ]?file|后台输出)"
+  },
+  "occurrenceCounts": {
+    "exact-helper-sha": 2,
+    "cursor-utf8": 0,
+    "background-partial": 0
+  },
+  "contextCapEach": 100,
+  "hits": {
+    "exact-helper-sha": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "at": "$[\"rankedCandidates\"][38][\"sha256\"]",
+        "context": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][1103][\"sha256\"]",
+        "context": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10"
+      }
+    ],
+    "cursor-utf8": [],
+    "background-partial": []
+  },
+  "driftSinceFreshInventory": [],
+  "parseErrors": [],
+  "limits": [
+    "Targeted supplement verifies/reuses only fresh inventory paths, not old semantic results. Full per-file initial SHA/times stay in history.json.",
+    "Dotall bounded metadata patterns have unrelated prose hits; match/cap counts are not semantic completeness.",
+    "A matching SHA or loaded module record is a pin/import fact, not proof of prior full semantic reading."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

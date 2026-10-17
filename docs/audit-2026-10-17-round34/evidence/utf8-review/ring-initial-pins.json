@@ -1,0 +1,23 @@
+{
+  "parentReportedContext": "Frozen Round32 reported as short646f by Root; prep only",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "lines": 188,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "firstSemanticReadSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "capturedUtc": "2026-10-17T12:26:52.885506+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.test.ts",
+      "bytes": 5240,
+      "lines": 127,
+      "sha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "firstSemanticReadSha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "capturedUtc": "2026-10-17T12:26:52.887446+00:00",
+      "pinBeforeRead": true
+    }
+  ]
+}

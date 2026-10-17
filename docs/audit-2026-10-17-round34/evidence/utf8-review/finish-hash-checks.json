@@ -1,0 +1,51 @@
+{
+  "checkedUtc": "2026-10-17T12:31:06.576385+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "initialSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "currentSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.test.ts",
+      "initialSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "currentSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "initialSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "currentSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "initialSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "currentSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "initialSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "currentSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.test.ts",
+      "initialSha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "currentSha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "unchanged": true
+    }
+  ],
+  "sourceChecks": 6,
+  "allSourceUnchanged": true,
+  "historyInventoryRows": 3063,
+  "historyUnchangedRows": 3063,
+  "historyChangedRows": [],
+  "missingHistoryPaths": [],
+  "targetedSupplementDrift": [],
+  "meaning": "Dated metadata byte checks only, not atomic snapshot, Git binding or product validation.",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

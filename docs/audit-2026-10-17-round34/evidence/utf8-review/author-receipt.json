@@ -1,0 +1,99 @@
+{
+  "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+  "parentReportedContext": "Frozen Round32 reported by Root as short646f at prep start; no full baseline SHA independently inspected. Root later reported33 integrated40d79ff2; original prep context/exclusions are retained.",
+  "formalRound34Baseline": null,
+  "selfExcluded": true,
+  "artifactCount": 13,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1290,
+      "sha256": "7ab4c7ced9bcbe7316e0191900a294c0daae87ae53015259b73bbe6e5f806d30",
+      "sha": "7ab4c7ced9bcbe7316e0191900a294c0daae87ae53015259b73bbe6e5f806d30"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 3744,
+      "sha256": "6e34f40861585500624336798e130c06704ec47941d7321a1b140996b2a58ed5",
+      "sha": "6e34f40861585500624336798e130c06704ec47941d7321a1b140996b2a58ed5"
+    },
+    {
+      "path": "finish-hash-checks.json",
+      "bytes": 2103,
+      "sha256": "2cdc309d63775d0f9605244d17f1f3abf2a2b948a5083ff69be27f60536d4f48",
+      "sha": "2cdc309d63775d0f9605244d17f1f3abf2a2b948a5083ff69be27f60536d4f48"
+    },
+    {
+      "path": "history-specific.json",
+      "bytes": 2152,
+      "sha256": "fba7b5e2baaaf125d49af3d1a3d0697e449fc9fa313bc48076c6253db4d28128",
+      "sha": "fba7b5e2baaaf125d49af3d1a3d0697e449fc9fa313bc48076c6253db4d28128"
+    },
+    {
+      "path": "history-specific.py",
+      "bytes": 3147,
+      "sha256": "e424f9aab71f86639e3dcaa31429248254173774723e3b791ae4d72d9277b255",
+      "sha": "e424f9aab71f86639e3dcaa31429248254173774723e3b791ae4d72d9277b255"
+    },
+    {
+      "path": "history.json",
+      "bytes": 934299,
+      "sha256": "d974ed9ae0e8e1c39623f0f8b67c1703699b1f7f196cf34f7918ad895aaf9a7e",
+      "sha": "d974ed9ae0e8e1c39623f0f8b67c1703699b1f7f196cf34f7918ad895aaf9a7e"
+    },
+    {
+      "path": "history.py",
+      "bytes": 3686,
+      "sha256": "89bb3930f01269e5ccf72164b9e93b16c6c3f45c8c533054a3967724e6bafa3f",
+      "sha": "89bb3930f01269e5ccf72164b9e93b16c6c3f45c8c533054a3967724e6bafa3f"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 713,
+      "sha256": "8141d625c12ca82fad71367e4c924e66a22d0e64fd9119824e1f67b189680146",
+      "sha": "8141d625c12ca82fad71367e4c924e66a22d0e64fd9119824e1f67b189680146"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "sha": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15"
+    },
+    {
+      "path": "ring-initial-pins.json",
+      "bytes": 871,
+      "sha256": "b84a8e9299f3d094f90e03479da894449d8d88529b67256a0fa672a267585932",
+      "sha": "b84a8e9299f3d094f90e03479da894449d8d88529b67256a0fa672a267585932"
+    },
+    {
+      "path": "selected-history-contexts.json",
+      "bytes": 90586,
+      "sha256": "4ed12196758338493a190c654b8b0fa4afcd9b19665d747a1d99aeda28a7700b",
+      "sha": "4ed12196758338493a190c654b8b0fa4afcd9b19665d747a1d99aeda28a7700b"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 7548,
+      "sha256": "35d8d166d773a54310791965273d996c7b4989d19aa69e086f8ebc7fa60bad8b",
+      "sha": "35d8d166d773a54310791965273d996c7b4989d19aa69e086f8ebc7fa60bad8b"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 901,
+      "sha256": "32de2db3875c618831fc3afd47a66e1bd872018cc798735bec6cf62db58e9fcb",
+      "sha": "32de2db3875c618831fc3afd47a66e1bd872018cc798735bec6cf62db58e9fcb"
+    }
+  ],
+  "sourcePaths": 6,
+  "semanticLines": 542,
+  "reportLinks": 10,
+  "reviewerClassification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "unclassifiedAdjacentStaticLeads": 1
+  },
+  "RootReportedCandidate": "UTF8-R34-C1 proposal; not independently duplicated",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

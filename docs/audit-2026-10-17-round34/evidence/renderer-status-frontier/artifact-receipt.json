@@ -1,0 +1,69 @@
+{
+  "parentReportedPrepContext": "646f9243",
+  "formalBaseline": null,
+  "prepOnly": true,
+  "files": [
+    {
+      "name": "gate.json",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/gate.json",
+      "bytes": 2048,
+      "sha256": "96024ce881a0d10a37c4f3b92c61492b83bb58980661a6ba930535667eea2cbd"
+    },
+    {
+      "name": "history-method.py",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/history-method.py",
+      "bytes": 3323,
+      "sha256": "df5d1246a6a440ee3235e4338db7df75dbb01a5ff1aa4d9f7cc0edf18c52e743"
+    },
+    {
+      "name": "history.json",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/history.json",
+      "bytes": 676981,
+      "sha256": "07734928474836a66ef5761c706f716f3ca2c8ade0baaddd3f83a149aa7adae2"
+    },
+    {
+      "name": "prior-coverage.json",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/prior-coverage.json",
+      "bytes": 2186,
+      "sha256": "030c39ffd6643d270aca175ff958adefe03af61f20725516200231a19bfc046a"
+    },
+    {
+      "name": "prior-status-pins.json",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/prior-status-pins.json",
+      "bytes": 1519,
+      "sha256": "8ed91e27bae88b2cef856a45652c612dd6b730411003377edf6ff42d790b8fd8"
+    },
+    {
+      "name": "report.md",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/report.md",
+      "bytes": 3211,
+      "sha256": "0e99f39b4374788d8287254d6ce5897b19838a3e00c2bd789b5a2c7ab0c15a35"
+    },
+    {
+      "name": "source-manifest.json",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/source-manifest.json",
+      "bytes": 6090,
+      "sha256": "5a213c92fc99c6604cf01ac9aba943b7cef358438e5b1f92a9da8a4aa1d31c8b"
+    },
+    {
+      "name": "validation.json",
+      "path": "/tmp/codeshell-audit-round34-renderer-status-frontier/validation.json",
+      "bytes": 579,
+      "sha256": "2381e3624e8036d1a55f467941005ae79ab3c27cb4fd118e7d2353ff467e5497"
+    }
+  ],
+  "artifactCount": 8,
+  "selfExcluded": true,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "sourceCounts": {
+    "sourcePins": 7,
+    "full": 4,
+    "selected": 3,
+    "declaredReadLines": 423
+  },
+  "noveltyGateNegative": true
+}

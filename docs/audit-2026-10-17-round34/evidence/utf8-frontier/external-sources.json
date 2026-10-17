@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-10-17T12:31:03.921339+00:00",
+  "access": "Read-only official Node documentation through web tool, no product/runtime execution.",
+  "sources": [
+    {
+      "url": "https://nodejs.org/api/buffer.html#buftostringencoding-start-end",
+      "observedVersion": "v26.12.0",
+      "support": "UTF8 decoding of invalid or incomplete input uses replacement characters; independent Buffer decoding has no persistent partial-character state."
+    },
+    {
+      "url": "https://nodejs.org/api/string_decoder.html",
+      "observedVersion": "v26.12.0",
+      "support": "StringDecoder buffers unfinished multibyte tails across writes until more data or final end. The official example splits a complete euro character across separate writes."
+    }
+  ],
+  "limitations": [
+    "Documentation explains Node API semantics; it does not prove the installed Bun/Node version or observe CodeShell host chunk boundaries or read timing.",
+    "No documentation code examples, Buffer expressions or fixtures were executed."
+  ]
+}

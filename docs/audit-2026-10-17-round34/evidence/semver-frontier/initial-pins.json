@@ -1,0 +1,19 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound34Baseline": null,
+  "prepOnly": true,
+  "capturedUtc": "2026-10-17T12:21:24.807460+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/core/src/utils/semver.ts",
+      "bytes": 398,
+      "lines": 17,
+      "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "firstSemanticReadSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "pinBeforeRead": true
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

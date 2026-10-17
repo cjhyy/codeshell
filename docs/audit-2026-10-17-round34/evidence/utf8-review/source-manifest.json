@@ -1,0 +1,186 @@
+{
+  "parentReportedContext": "Frozen Round32 reported by Root as short646f at prep start; no full baseline SHA independently inspected. Root later reported33 integrated40d79ff2; original prep context/exclusions are retained.",
+  "formalRound34Baseline": null,
+  "prepOnly": true,
+  "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "lines": 21,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "semanticLines": 21,
+      "initialFilesystemSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "initialSemanticReadSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "initialCaptureUtc": "2026-10-17T12:25:57.618964+00:00",
+      "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+      "unchangedSinceDirectionPin": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; current direction source pins precede reads.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.test.ts",
+      "bytes": 2163,
+      "lines": 51,
+      "sha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          51
+        ]
+      ],
+      "semanticLines": 51,
+      "initialFilesystemSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "initialSemanticReadSha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "initialCaptureUtc": "2026-10-17T12:26:33.487558+00:00",
+      "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+      "unchangedSinceDirectionPin": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; current direction source pins precede reads.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 25112,
+      "lines": 702,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          35,
+          55
+        ],
+        [
+          315,
+          368
+        ],
+        [
+          408,
+          507
+        ]
+      ],
+      "semanticLines": 175,
+      "initialFilesystemSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "initialSemanticReadSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "initialCaptureUtc": "2026-10-17T12:26:33.488540+00:00",
+      "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+      "unchangedSinceDirectionPin": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; current direction source pins precede reads.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "lines": 188,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          188
+        ]
+      ],
+      "semanticLines": 188,
+      "initialFilesystemSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "initialSemanticReadSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "initialCaptureUtc": "2026-10-17T12:26:52.885506+00:00",
+      "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+      "unchangedSinceDirectionPin": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; current direction source pins precede reads.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "bytes": 14593,
+      "lines": 379,
+      "sha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          189,
+          228
+        ]
+      ],
+      "semanticLines": 40,
+      "initialFilesystemSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "initialSemanticReadSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "initialCaptureUtc": "2026-10-17T12:26:33.488931+00:00",
+      "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+      "unchangedSinceDirectionPin": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; current direction source pins precede reads.",
+      "gitBlobCompared": false,
+      "incidentalPrintedNotAuditedRanges": [
+        [
+          229,
+          234
+        ]
+      ],
+      "scopeLimit": "Kill/process-group test header was incidentally printed after ordinary burst case, not audited or run."
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.test.ts",
+      "bytes": 5240,
+      "lines": 127,
+      "sha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          51
+        ],
+        [
+          70,
+          85
+        ]
+      ],
+      "semanticLines": 67,
+      "initialFilesystemSha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "initialSemanticReadSha256": "f77340f7d164e57244432f10d4903e8709073501e6c94f295d207f2bfc07877b",
+      "initialCaptureUtc": "2026-10-17T12:26:52.887446+00:00",
+      "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+      "unchangedSinceDirectionPin": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded; current direction source pins precede reads.",
+      "gitBlobCompared": false,
+      "incidentalPrintedNotAuditedRanges": [
+        [
+          86,
+          111
+        ]
+      ],
+      "scopeLimit": "Readonly/orphan recovery declarations were incidentally printed but are outside semantic ordinary byte/cursor test scope and were not run."
+    }
+  ],
+  "stats": {
+    "sourcePaths": 6,
+    "fullPaths": 3,
+    "selectedPaths": 3,
+    "semanticLines": 542,
+    "productSemanticLines": 384,
+    "testDeclarationLines": 158,
+    "lateSemanticPins": 0
+  },
+  "limits": [
+    "Only source text/pins; no Buffer construction, UTF8 decoder/helper operation, shell launch, real output-file read or product import/test ran.",
+    "RingFile full source is static context; no orphan/ownership/lifecycle/native filesystem claim is made. Incidental test snippets outside ordinary buffer scope are explicitly excluded.",
+    "Valid complete UTF8 buffer and fixed16384-byte caller cap define helper negative conclusion. No NaN/fraction/invalid-byte input is promoted.",
+    "Partial-tail adjacency concerns a valid logical byte stream arriving in raw incomplete chunks, not a synthetic arbitrary invalid Buffer fixture; reachability/timing is static/unobserved.",
+    "Root-reported builtin on-demand peek entry and official docs are separate evidence; this reviewer did not read that tool source or documentation, and does not count them as independent semantic scope.",
+    "all-mode UTF16 slice/surrogate behavior not expanded."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}
