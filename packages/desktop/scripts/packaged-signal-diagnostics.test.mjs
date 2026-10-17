@@ -3,9 +3,8 @@ import { test } from "node:test";
 import { createPackagedSignalDiagnostics } from "./packaged-signal-diagnostics.mjs";
 
 test("actual authorized callback is recorded before the identical signal delegation", () => {
-  let ledger;
   const calls = [];
-  ledger = createPackagedSignalDiagnostics((pid, signal) => {
+  const ledger = createPackagedSignalDiagnostics((pid, signal) => {
     assert.deepEqual(ledger.receipt().requests.at(-1), { sequence: calls.length + 1, pid, signal });
     calls.push({ pid, signal });
     return "delegated";

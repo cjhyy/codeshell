@@ -86,7 +86,7 @@ $registry = @(
           $opened = $base.OpenSubKey($key, $false)
           $values = $null
           if ($null -ne $opened) {
-            $names = if ($key.Contains('\Uninstall\')) {
+            $names = if ($key -eq "Software\Microsoft\Windows\CurrentVersion\Uninstall\$guid") {
               @('DisplayName','DisplayVersion','UninstallString','QuietUninstallString','DisplayIcon')
             } else { @('InstallLocation','KeepShortcuts','ShortcutName') }
             $values = [ordered]@{}

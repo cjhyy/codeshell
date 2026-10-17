@@ -14,6 +14,18 @@ export const NSIS_IDENTITY = Object.freeze({
 export const NSIS_BOUNDARY =
   "Only a fresh exclusive GitHub-hosted windows-2022 VM. Production NSIS can taskkill by executable name and username; absence checks are not kernel confinement or fresh-birth authorization inside NSIS. The driver never uses the installer to close an App. Observed process custody does not prove every OS descendant was observed. Unsigned silent per-user installation and same-build manual replacement, not SmartScreen, Authenticode, GUI Finish auto-launch, cross-version migration or release Updater acceptance.";
 
+export const NSIS_UI_ACTIONS = Object.freeze([
+  "Start the supplied package with first-instruction Main guard and private HOME",
+  "Open Settings and Appearance through the account menu",
+  "Import an owned local theme through native picker, review and Install",
+  ...[1280, 768, 390].flatMap((width) => [
+    `Navigate General and Appearance in a real ${width}px content window`,
+    `Choose light, decode cstheme assets and inspect ${width}px layout`,
+    `Choose dark, decode cstheme assets and inspect ${width}px layout`,
+  ]),
+  "Reload the packaged renderer and retain selected mode and installed theme",
+]);
+
 export function assertHostedWindowsNsis({
   platform = process.platform,
   arch = process.arch,
@@ -280,12 +292,35 @@ export function assertNormalNsisProcess(operation) {
   assert.equal(operation.settlement.remainingCount, 0);
   assert.equal(operation.settlement.queryFailed, false);
   assert.equal(operation.settlement.evidenceTruncated, false);
+  const owned = operation.settlement.owned;
+  assert.ok(Array.isArray(owned) && owned.length > 0 && owned.length <= 512);
+  assert.equal(operation.settlement.ownedCount, owned.length);
+  assert.deepEqual(operation.settlement.remaining, []);
+  assert.equal(new Set(owned.map((row) => `${row.pid}:${row.birth}`)).size, owned.length);
+  for (const row of owned) {
+    assert.ok(Number.isSafeInteger(row.pid) && row.pid > 0);
+    assert.ok(Number.isSafeInteger(row.ppid) && row.ppid >= 0);
+    assert.match(row.birth, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/);
+  }
+  const root = operation.child;
+  assert.ok(Number.isSafeInteger(root?.pid) && root.pid > 0);
+  assert.ok(Number.isSafeInteger(root.ppid) && root.ppid > 0);
+  assert.match(root.birth, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/);
+  assert.equal(
+    owned.filter(
+      (row) => row.pid === root.pid && row.ppid === root.ppid && row.birth === root.birth,
+    ).length,
+    1,
+  );
 }
 
-export function assertNsisInstalledUi(receipt, installed) {
+export function assertNsisInstalledUi(receipt, installed, { controllerPid }) {
   assert.equal(receipt.status, "passed");
   assert.equal(receipt.suppliedApp, installed);
-  assert.equal(receipt.operations.length, 13);
+  assert.deepEqual(
+    receipt.operations.map((row) => row.action),
+    NSIS_UI_ACTIONS,
+  );
   assert.equal(receipt.localModelRequests, 0);
   assert.deepEqual(receipt.nativeCalls, []);
   assert.deepEqual(receipt.rendererErrors, []);
@@ -299,19 +334,37 @@ export function assertNsisInstalledUi(receipt, installed) {
   assert.equal(receipt.identity.executable, win32.join(installed, NSIS_IDENTITY.executable));
   assert.equal(receipt.identity.resources, win32.join(installed, "resources"));
   assert.equal(receipt.identity.appPath, win32.join(installed, "resources", "app.asar"));
+  assert.equal(receipt.identity.ppid, controllerPid);
+  assert.equal(receipt.identity.noSandboxSwitch, false);
+  assert.equal(receipt.identity.startupPause.firstUserInstruction, true);
   const mains = receipt.artifacts.mainExits;
   assert.equal(mains.length, 1);
   assert.ok(Number.isSafeInteger(mains[0].pid) && mains[0].pid > 0);
   assert.equal(mains[0].code, 0);
   assert.equal(mains[0].signal, null);
+  assert.equal(receipt.identity.pid, mains[0].pid);
   const settlements = receipt.artifacts.observedProcessSettlements;
   assert.equal(settlements.length, 1);
+  const signalLedger = receipt.artifacts.observedSignalRequests;
+  assert.equal(signalLedger.truncated, false);
+  assert.ok(Array.isArray(signalLedger.requests) && signalLedger.requests.length <= 512);
+  signalLedger.requests.forEach((row, index) => {
+    assert.equal(row.sequence, index + 1);
+    assert.ok(Number.isSafeInteger(row.pid) && row.pid > 0);
+    assert.ok(["SIGTERM", "SIGKILL"].includes(row.signal));
+    assert.notEqual(row.pid, mains[0].pid, "Main received an observed cleanup signal request");
+  });
+  const pinned = settlements[0].owned.find(
+    (row) => row.pid === mains[0].pid && row.ppid === controllerPid,
+  );
   assertNormalNsisProcess({
     result: mains[0],
     settlement: settlements[0],
     errors: [],
-    signalRequests: [],
+    signalRequests: signalLedger.requests.filter((row) => row.pid === mains[0].pid),
+    child: pinned,
   });
+  assert.deepEqual(receipt.artifacts.transportFailures, []);
   const guards = receipt.processEvidence.mainGuards.filter((row) => row.role === "Main");
   assert.equal(guards.length, 1);
   assert.equal(guards[0].pid, mains[0].pid);

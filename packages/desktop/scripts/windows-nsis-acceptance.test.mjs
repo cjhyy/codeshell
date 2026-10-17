@@ -4,6 +4,7 @@ import { win32 } from "node:path";
 import { test } from "node:test";
 import {
   NSIS_IDENTITY,
+  NSIS_UI_ACTIONS,
   assertHostedWindowsNsis,
   assertInstalledPayload,
   assertInstalledRegistration,
@@ -101,12 +102,26 @@ const normal = () => ({
   result: { code: 0, signal: null },
   errors: [],
   signalRequests: [],
+  child: { pid: 42, ppid: 24, birth: "2026-10-17T08:00:00.1234567Z" },
   settlement: {
     status: "cleaned",
     remainingCount: 0,
     queryFailed: false,
     evidenceTruncated: false,
+    owned: [{ pid: 42, ppid: 24, birth: "2026-10-17T08:00:00.1234567Z" }],
+    ownedCount: 1,
+    remaining: [],
   },
+});
+
+test("PowerShell uninstall field selection uses the full literal key, without C/JS slash escaping", () => {
+  const source = readFileSync(new URL("./windows-nsis-observe.ps1", import.meta.url), "utf8");
+  assert.ok(
+    source.includes('$key -eq "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$guid"'),
+  );
+  assert.ok(!source.includes("$key.Contains"));
+  assert.ok(source.includes("OpenSubKey($key, $false)"));
+  assert.ok(!/Set-Item|SetValue\(|CreateSubKey|Remove-Item|\.Save\(/.test(source));
 });
 
 test("only the actual reviewed hosted Windows CI environment qualifies", () => {
@@ -364,6 +379,21 @@ test("normal process success cannot be synthesized from cleanup or truncated/unp
     (v) => {
       v.errors.push("late failure");
     },
+    (v) => {
+      v.settlement.remaining.push(v.child);
+    },
+    (v) => {
+      v.settlement.ownedCount = 0;
+    },
+    (v) => {
+      v.settlement.owned[0].birth = "2026-10-17T08:00:00.123Z";
+    },
+    (v) => {
+      v.child.birth = "2026-10-17T08:00:00.9999999Z";
+    },
+    (v) => {
+      v.child.ppid = 99;
+    },
   ]) {
     const value = normal();
     mutate(value);
@@ -386,7 +416,7 @@ test("installed UI consumes real final Main/guard/transport evidence, never a wr
   const receipt = () => ({
     status: "passed",
     suppliedApp: installation,
-    operations: Array(13).fill({}),
+    operations: NSIS_UI_ACTIONS.map((action) => ({ action })),
     errors: [],
     localModelRequests: 0,
     nativeCalls: [],
@@ -399,6 +429,10 @@ test("installed UI consumes real final Main/guard/transport evidence, never a wr
       executable: `${installation}\\code-shell.exe`,
       resources: `${installation}\\resources`,
       appPath: `${installation}\\resources\\app.asar`,
+      pid: 42,
+      ppid: 24,
+      noSandboxSwitch: false,
+      startupPause: { firstUserInstruction: true },
     },
     processEvidence: {
       spawnedWorkers: [],
@@ -409,6 +443,8 @@ test("installed UI consumes real final Main/guard/transport evidence, never a wr
       unchangedAfterRuntime: true,
       mainExits: [{ pid: 42, code: 0, signal: null }],
       observedProcessSettlements: [normal().settlement],
+      observedSignalRequests: { requests: [], truncated: false },
+      transportFailures: [],
       windowsTransports: [
         {
           failures: [],
@@ -418,7 +454,7 @@ test("installed UI consumes real final Main/guard/transport evidence, never a wr
       ],
     },
   });
-  assertNsisInstalledUi(receipt(), installation);
+  assertNsisInstalledUi(receipt(), installation, { controllerPid: 24 });
   for (const mutate of [
     (v) => {
       v.operations.pop();
@@ -447,9 +483,24 @@ test("installed UI consumes real final Main/guard/transport evidence, never a wr
     (v) => {
       v.privateHomeRemoved = false;
     },
+    (v) => {
+      v.operations[0].action = "Other action";
+    },
+    (v) => {
+      v.identity.ppid = 99;
+    },
+    (v) => {
+      delete v.artifacts.observedSignalRequests;
+    },
+    (v) => {
+      v.artifacts.observedSignalRequests.truncated = true;
+    },
+    (v) => {
+      v.artifacts.observedSignalRequests.requests.push({ sequence: 1, pid: 42, signal: "SIGTERM" });
+    },
   ]) {
     const value = receipt();
     mutate(value);
-    assert.throws(() => assertNsisInstalledUi(value, installation));
+    assert.throws(() => assertNsisInstalledUi(value, installation, { controllerPid: 24 }));
   }
 });
