@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import vm from "node:vm";
 import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -219,6 +220,7 @@ test("launch validates merged environment first and attaches a bounded watchdog"
       async launch(options) {
         order.push("launch");
         equal(options.timeout, 30_000);
+        equal(options.chromiumSandbox, true);
         equal(options.env.HOME, input.home);
         equal(existsSync(join(input.home, "real-keyring.cjs")), true);
         match(options.args[2], /^--user-data-dir=/);
@@ -233,6 +235,54 @@ test("launch validates merged environment first and attaches a bounded watchdog"
   );
   equal(order.join(), "preflight,launch,watch");
   equal(result, application);
+});
+
+test("Linux bootstrap refuses an actual no-sandbox switch before app initialization", async (t) => {
+  const input = fixture(t);
+  await launchCodeShellElectron(input, {
+    preflight: () => {},
+    watch: () => {},
+    launch: async (options) => {
+      equal(options.chromiumSandbox, true);
+      return { process: () => ({}) };
+    },
+  });
+  const source = readFileSync(join(input.home, "real-keyring.cjs"), "utf8");
+  for (const noSandbox of [true, false]) {
+    const initialization = [],
+      records = [];
+    const script = new vm.Script(source);
+    const run = () =>
+      script.runInNewContext({
+        process: { platform: "linux", pid: 101, ppid: 100, versions: { electron: "fixture" } },
+        require: (name) => {
+          if (name === "node:fs")
+            return { appendFileSync: (_path, text) => records.push(JSON.parse(text)) };
+          equal(name, "electron");
+          return {
+            app: {
+              setName: (name) => initialization.push(name),
+              getName: () => "code-shell",
+              commandLine: {
+                hasSwitch: (name) => name === "no-sandbox" && noSandbox,
+                removeSwitch: () => {},
+                appendSwitch: () => {},
+                getSwitchValue: () => "gnome-libsecret",
+              },
+            },
+          };
+        },
+      });
+    if (noSandbox) {
+      await rejects(async () => run(), /refused no-sandbox/);
+      deepStrictEqual(initialization, []);
+      deepStrictEqual(records, []);
+    } else {
+      run();
+      deepStrictEqual(initialization, ["code-shell"]);
+      equal(records[0].noSandboxSwitch, false);
+    }
+  }
 });
 
 test(

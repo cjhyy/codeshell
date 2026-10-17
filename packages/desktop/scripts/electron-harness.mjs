@@ -78,6 +78,8 @@ export async function launchCodeShellElectron(
     keyringBootstrap,
     `const { app } = require("electron");
 const { appendFileSync } = require("node:fs");
+if (process.platform === "linux" && app.commandLine.hasSwitch("no-sandbox"))
+  throw new Error("Owned Electron acceptance refused no-sandbox");
 // Electron 33 fixes the macOS Keychain service/account from the app name
 // after the awaited application entry loads. Pin the production name in this
 // synchronous preload, before that native phase or any safeStorage call.
@@ -92,6 +94,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
   appName: app.getName(),
   mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
   passwordStore: app.commandLine.getSwitchValue("password-store"),
+  noSandboxSwitch: app.commandLine.hasSwitch("no-sandbox"),
   electron: process.versions.electron,
 }) + "\\n", { mode: 0o600 });
 `,
@@ -99,6 +102,9 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
   );
   const application = await launch({
     timeout,
+    // Playwright otherwise prepends --no-sandbox on Linux. The CI owns and
+    // configures these Electron helpers; missing sandbox support must fail.
+    chromiumSandbox: true,
     args: [
       "--require",
       keyringBootstrap,
