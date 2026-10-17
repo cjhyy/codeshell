@@ -1,0 +1,15 @@
+{
+  "frozenSource": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "reviewedMain": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "endFetchCompleted": true,
+  "mainAdvancedSinceFreeze": false,
+  "taskBranch": "codex/audit/search-groups-history-round13-20261017",
+  "incomingOwnedDirectory": "docs/audit-2026-10-17-round13",
+  "primaryDirtyStateMatchesInitial": true,
+  "untrackedRegularFiles": 4,
+  "selectedSourcePins": 69,
+  "sourceDisposition": "All selected sources unchanged; no runtime retest",
+  "worktreeRetained": "Needed for continuing repository audit",
+  "pushRequested": false
+}

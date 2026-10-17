@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round13/evidence/history-characterization.test.ts"
+  ],
+  "exitCode": 0,
+  "durationSeconds": 0.29,
+  "rawLog": "docs/audit-2026-10-17-round13/evidence/history-characterization.first.log",
+  "firstRun": true
+}

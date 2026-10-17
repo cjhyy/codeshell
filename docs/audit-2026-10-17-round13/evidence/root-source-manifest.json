@@ -1,0 +1,150 @@
+{
+  "baseline": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "instructions unchanged from prior batch"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "instructions"
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.ts",
+      "sha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "bytes": 811,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full; actual existing pure tests"
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.test.ts",
+      "sha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "bytes": 1177,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full; executed existing tests"
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "bytes": 6524,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full; source-only, never imported/executed"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/slug.ts",
+      "sha256": "83e7df4c69bf669d427fa6c1ec3d7b1e01b50d6df0f2865f1bf215fc012f701b",
+      "bytes": 2358,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full; actual existing pure tests"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/slug.test.ts",
+      "sha256": "911bb457b2c24f206c22cbb7d6968da02838bb0dba5f7738397241be694d3cd2",
+      "bytes": 1557,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full; executed existing tests"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/query.ts",
+      "sha256": "50a9f03677270ea624638bb0e5a6eb8f0331f64d2572c5520d81bf857c5d1641",
+      "bytes": 5697,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full; source-only"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/query.test.ts",
+      "sha256": "3469b241de55f3fe426ebf591eab960bbd5fbd5259c988c06a29083c09c83d18",
+      "bytes": 3618,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "source-only; not executed because real Git/worktree operations"
+    },
+    {
+      "path": "packages/coding/src/capability-runtime.ts",
+      "sha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "bytes": 3681,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected lines58–88, source-only normal consumer"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "sha256": "3b5322a8e7aa5783de55a0ed6645d8acd8a670fea627f0420e6f623a53a3ff1e",
+      "bytes": 8000,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected lines56–89, source-only normal consumer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/mergeTranscripts.ts",
+      "sha256": "ac4c6f4388b61a6210909a5871957edda614543a07baa9eb160d56af1171a27f",
+      "bytes": 12135,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "source-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/foldTranscript.ts",
+      "sha256": "0015918d057a809215177cb96688091c96ee89fddfa4a99d2fe0da3a326b34e4",
+      "bytes": 4334,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "source-only; localization runtime not entered"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/importRuns.ts",
+      "sha256": "5e0a40842b408f7afc35ca72ef8282340265bd90ecce49efd5d66e76b31dcb97",
+      "bytes": 4151,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full source-only, independent bounded reread after combined output truncation"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/mergeTranscripts.test.ts",
+      "sha256": "32454616c5b45044828e770422683491989af2cbba1db9145e2dee37a536485b",
+      "bytes": 15867,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "partial excerpts plus test-title inventory; combined output truncated, not full read or executed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/foldTranscript.test.ts",
+      "sha256": "ea99cffeb01bbf3025c03b641bc9030d54df3f686c1190a8ff5b1bbcd021c518",
+      "bytes": 13857,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "partial excerpt only; combined output truncated, not full read or executed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/importRuns.test.ts",
+      "sha256": "ac693072f879c5db2adc0f5236a41c628d4713c0840a07825a22a53094659530",
+      "bytes": 5643,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "test-title inventory only; not executed"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "guarded runner source pin"
+    }
+  ],
+  "note": "Selected pins and partial reads; no transitive/full repository coverage implied."
+}

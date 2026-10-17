@@ -1,0 +1,46 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts:
+(pass) countLines matches linesOf semantics > no trailing newline [0.06ms]
+(pass) countLines matches linesOf semantics > single trailing newline does not add a phantom line
+(pass) countLines matches linesOf semantics > single line
+(pass) countLines matches linesOf semantics > empty / non-string → 0 [0.02ms]
+
+packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts:
+(pass) aggregateFileChanges > returns null when no qualifying tools after last user [1.24ms]
+(pass) aggregateFileChanges > returns null when message list is empty [0.01ms]
+(pass) aggregateFileChanges > returns null when no user message present (defensive) [0.02ms]
+(pass) aggregateFileChanges > counts Edit by line diff of old_string vs new_string [0.68ms]
+(pass) aggregateFileChanges > injected user turns (steer/wakeup) do NOT reset the aggregation boundary (#9) [0.55ms]
+(pass) aggregateFileChanges > a REAL user send still resets the boundary (only that turn's edits) [0.07ms]
+(pass) aggregateFileChanges > counts Write with no removed lines [0.03ms]
+(pass) aggregateFileChanges > counts NotebookEdit like Edit (new_source / old_source) [0.03ms]
+(pass) aggregateFileChanges > merges multiple edits to the same path [0.05ms]
+(pass) aggregateFileChanges > includes subagent toolCalls [0.03ms]
+(pass) aggregateFileChanges > excludes failed and cancelled tool calls [0.01ms]
+(pass) aggregateFileChanges > excludes Read and Bash tools [0.01ms]
+(pass) aggregateFileChanges > scans only after the last user message [0.05ms]
+(pass) aggregateFileChanges > handles malformed args JSON without crashing [0.34ms]
+(pass) aggregateFileChanges > ignores tools missing file_path [0.05ms]
+(pass) aggregateFileChanges > supports `path` as alias for file_path [0.03ms]
+(pass) aggregateFileChanges > returns session-scoped synthetic diffs from tool payloads [0.22ms]
+(pass) aggregateFileChanges > an Edit that removes a line shows a deletion in the parsed diff [0.52ms]
+(pass) aggregateFileChanges > returns session-scoped synthetic diffs for MultiEdit edits array [0.28ms]
+(pass) aggregateFileChanges > counts ApplyPatch and carries patch content as session diff [0.32ms]
+
+packages/desktop/src/renderer/messages/agentGroup.test.ts:
+(pass) summarizeAgentGroup > counts succeeded / failed / running
+(pass) summarizeAgentGroup > wallMs = latest end − earliest start when all done (parallel-aware) [0.20ms]
+(pass) summarizeAgentGroup > wallMs is 0 while any member runs [0.02ms]
+(pass) foldAgentGroups > ≥2 adjacent agents → one agent_group [0.07ms]
+(pass) foldAgentGroups > a single agent is left as a plain agent item [0.01ms]
+(pass) foldAgentGroups > a non-agent item breaks the run into separate groups
+(pass) foldAgentGroups > passes non-agent items through untouched
+(pass) foldAgentGroups > recurses into turn_process_group.items
+(pass) foldAgentGroups > empty input → empty output [0.02ms]
+
+ 33 pass
+ 0 fail
+ 66 expect() calls
+Ran 33 tests across 3 files. [61.00ms]
+Completed Bun shard: 33 tests, 0 skipped; 0 failures.

@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round13/evidence/history-characterization.test.ts:
+(pass) ordinary input-history contracts under an owned temporary HOME > control: old-session navigation is newest first and restores the draft [8.01ms]
+HIST-R13-01 {"first":"previous session input","second":"current session input","newestTimestamped":"current session input"}
+(pass) ordinary input-history contracts under an owned temporary HOME > HIST-R13-01: a newly submitted current-session input is behind the previous session on Up [8.45ms]
+HIST-R13-02 {"timestamped":["kept input"],"staleUp":"interrupted input","freshUp":"kept input","recoveryAfterRefresh":"kept input"}
+(pass) ordinary input-history contracts under an owned temporary HOME > HIST-R13-02: a navigator refreshed at submit retains an entry after ordinary interruption removal [8.91ms]
+HIST-R13-C1 {"automaticDiskDisplays":[],"explicitFlushDiskDisplays":["later ordinary input"]}
+(pass) ordinary input-history contracts under an owned temporary HOME > HIST-R13-C1: same-tick pending undo leaves future automatic flushes unscheduled; explicit flush recovers [5.03ms]
+(pass) ordinary input-history contracts under an owned temporary HOME > control: a nonempty next-tick flush permits the following automatic flush [6.83ms]
+(pass) existing model-display pure helper contracts > documented compact token examples and common missing values [0.29ms]
+(pass) existing model-display pure helper contracts > name-based tags are heuristic labels rather than provider capability evidence [0.61ms]
+
+ 7 pass
+ 0 fail
+ 31 expect() calls
+Ran 7 tests across 1 file. [197.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

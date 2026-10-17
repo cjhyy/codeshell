@@ -1,0 +1,5 @@
+{
+  "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "findings": [],
+  "reason": "Focused fixture failed at source import. Candidates remain source-only; passing existing baseline is not substituted as proof."
+}

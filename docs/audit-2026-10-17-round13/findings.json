@@ -1,0 +1,97 @@
+{
+  "baseline": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "count": 2,
+  "priorities": {
+    "P3": 2
+  },
+  "findings": [
+    {
+      "id": "HIST-R13-01",
+      "priority": "P3",
+      "title": "当前 session 新输入在 Up 历史导航中排在旧 session 后面",
+      "source": "packages/tui/src/ui/input-history.ts",
+      "line": 162,
+      "report": "history.md",
+      "reportLine": 5,
+      "log": "evidence/history-characterization.first.log",
+      "details": {
+        "id": "HIST-R13-01",
+        "severity": "P3",
+        "title": "当前 session 新输入在 Up 历史导航中排在旧 session 后面",
+        "file": "packages/tui/src/ui/input-history.ts",
+        "line": 162,
+        "related": [
+          {
+            "file": "packages/tui/src/ui/input-history.ts",
+            "line": 305
+          },
+          {
+            "file": "packages/tui/src/ui/components/CommandInput.tsx",
+            "line": 119
+          }
+        ],
+        "trigger": "同一项目已有 previous session 输入，本次 current session 刚提交一条普通新输入，随后从底部按 Up。",
+        "expected": "最近新输入先返回；getProjectHistory 明确 most recent last/current session prioritized first，navigator up 明确 Move up (older)。",
+        "actual": "真实 helper 第一次 up 返回 previous session input，第二次才返回 current session input；同一模块 timestamped history 正确把 current input 放在首位，磁盘两项均保留。",
+        "contract": "input-history.ts:125–127、310 明确最新位置与 Up 更旧的合同；CommandInput.tsx:171–172 普通提交后刷新，119 调 up。",
+        "evidenceLevel": "actual input-history module and real fs in owned temporary HOME; static CommandInput/TUI producer trace",
+        "fixture": "history-characterization.test.ts",
+        "log": "history-characterization.first.log",
+        "controls": "单一 previous session 的输入保持 newest first；不同项目过滤正常；Down 恢复原草稿。",
+        "limits": "未运行 React、CommandInput、Ink 或真实按键。不是输入或磁盘数据丢失，只是导航顺序/当前 session 优先级错误。",
+        "dedup": "all docs/bugs 1716 MD/JSON files, recursively parsed 240534 JSON scalar leaves, no same cause found"
+      },
+      "status": "confirmed-at-frozen-source-baseline",
+      "runtimeRetested": false,
+      "isolation": "homedir-only pre-import mock to owned temporary directory; real fs/nextTick, no HOME environment assignment"
+    },
+    {
+      "id": "HIST-R13-02",
+      "priority": "P3",
+      "title": "中断撤销后现有历史 navigator 仍返回被撤销输入",
+      "source": "packages/tui/src/ui/input-history.ts",
+      "line": 305,
+      "report": "history.md",
+      "reportLine": 13,
+      "log": "evidence/history-characterization.first.log",
+      "details": {
+        "id": "HIST-R13-02",
+        "severity": "P3",
+        "title": "中断撤销后现有历史 navigator 仍返回被撤销输入",
+        "file": "packages/tui/src/ui/input-history.ts",
+        "line": 305,
+        "related": [
+          {
+            "file": "packages/tui/src/ui/input-history.ts",
+            "line": 222
+          },
+          {
+            "file": "packages/tui/src/ui/components/CommandInput.tsx",
+            "line": 58
+          },
+          {
+            "file": "packages/tui/src/ui/components/CommandInput.tsx",
+            "line": 172
+          },
+          {
+            "file": "packages/tui/src/ui/App.tsx",
+            "line": 1456
+          }
+        ],
+        "trigger": "普通 submit 执行 addToHistory 后刷新已有 navigator；输入正常落盘后，后续 Esc 分支执行 removeLastFromHistory。没有 overlay 导致 CommandInput 重挂载的普通场景。",
+        "expected": "模块明确 Undo most recent addToHistory，App 明确 Undo last history entry since interrupted；随后的历史 Up 不应继续返回这条已从历史移除的输入。",
+        "actual": "实际 remove 后 getTimestampedHistory 只剩 kept input，新建 navigator 也返回 kept input；submit 时已刷新的旧 navigator 仍先返回 interrupted input。对旧 navigator 显式 refresh 后恢复。",
+        "contract": "input-history.ts:218–220/236–240，App.tsx:1455–1456；CommandInput.tsx:58 将 navigator 保存在 useRef，remove 分支没有刷新该引用。",
+        "evidenceLevel": "actual add/flush/remove/getTimestampedHistory/createHistoryNavigator helpers; static persistent component and Esc consumer trace",
+        "fixture": "history-characterization.test.ts",
+        "log": "history-characterization.first.log",
+        "controls": "新建 navigator 与显式 refresh 都排除 interrupted input；原 kept input 仍可导航。",
+        "limits": "未执行 App/CommandInput/React/Ink。TuiControlSurface 的正常无 overlay 分支保持 CommandInput 只改变 placeholder，属于静态链；不声称所有 UI 路径都保留相同实例。磁盘 undo 的跨启动语义另列观察，不扩展本项。",
+        "dedup": "all docs/bugs 1716 MD/JSON files, recursively parsed 240534 JSON scalar leaves, no same cause found"
+      },
+      "status": "confirmed-at-frozen-source-baseline",
+      "runtimeRetested": false,
+      "isolation": "homedir-only pre-import mock to owned temporary directory; real fs/nextTick, no HOME environment assignment"
+    }
+  ]
+}

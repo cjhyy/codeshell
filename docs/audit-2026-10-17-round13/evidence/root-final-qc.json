@@ -1,0 +1,53 @@
+{
+  "baseline": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "findings": 2,
+  "priorities": {
+    "P3": 2
+  },
+  "candidates": 4,
+  "oldRelatedBoundaries": 1,
+  "totals": {
+    "firstBunShards": 5,
+    "completedCleanShards": 4,
+    "passedTests": 66,
+    "expectations": 146,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 1,
+    "existingBaselineTests": 54,
+    "newFocusedObservationsAndControls": 12,
+    "failedShardPassedTests": 0,
+    "failedShardFailures": 1,
+    "failedShardErrors": 1,
+    "failedFocusedTestBodiesExecuted": 0
+  },
+  "selectedFrozenSourcePins": 69,
+  "workerSourceChecks": 71,
+  "workerArtifactHashChecks": 40,
+  "localLinksAtPrecommitCheck": 45,
+  "unresolvedLinks": [],
+  "reportHeadingChecks": 2,
+  "rawLogs": 5,
+  "checks": [
+    {
+      "check": "fullStagedDiffCheck",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "check": "nonLogStagedDiffCheck",
+      "exitCode": 0,
+      "output": ""
+    }
+  ],
+  "productReruns": 0,
+  "semanticReview": "History order and retained navigator snapshot are distinct pure-helper causes with ordinary static submit/Esc consumers; no React/Ink run or lasting data-loss claim.",
+  "candidateLimits": "Same-tick reachability and stronger search UI contract unproven; two patch-summary branches static only after first fixture load failure.",
+  "failedDirection": "Groups focused wrong relative import: 0 pass/1 fail/1 error, planned 7 bodies unexecuted; whole direction skipped without repair, rerun or alternate validation.",
+  "isolation": "Pre-import homedir-only mock; actual owned temporary fs and real nextTick; no environment HOME/home/CODEX_HOME reassignment.",
+  "crossReviewNote": "Independent workers completed root/groups/history and aggregate read-only reviews; root reviewed search. No extra product execution.",
+  "integrationSnapshot": "integration-final-before.json",
+  "ongoingGoal": true,
+  "aggregateReview": "review-aggregate.md",
+  "metadataCorrection": "Aggregate reviewer found validation.runs omitted direct commands; assembler now copies all five commands from preserved first receipts and verifies guarded prefix. Rechecked without product execution.",
+  "firstCommandsVerified": 5
+}

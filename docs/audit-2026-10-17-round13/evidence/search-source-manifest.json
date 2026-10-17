@@ -1,0 +1,168 @@
+{
+  "frozenSource": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenGitBlob": "50671f6297598a14ad4710b61ab103747fa7676a",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBytes": 17639,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire instruction file"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+      "frozenGitBlob": "b72d55410ab0c1413e4d2e437c7246da08816d53",
+      "frozenSha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+      "sha256": "b8cf462ec3a841b8734d82e4f248ef80ebc7f4b214e49af010fb75d5abb7be76",
+      "frozenBytes": 2305,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; production pure functions executed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+      "frozenGitBlob": "9e04817babcf085a3ff299bce7df3df780d84f37",
+      "frozenSha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+      "sha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea",
+      "frozenBytes": 3772,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; 11 existing tests executed once"
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "frozenGitBlob": "54f7d6f8ecb7593764dd9a8d64e7d4bfae1cfa10",
+      "frozenSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "frozenBytes": 714,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; production callback helper executed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+      "frozenGitBlob": "7c8c65100842d196534742dc7ef43d2e41f8d882",
+      "frozenSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "frozenBytes": 1235,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; 2 existing tests executed once"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/searchFocus.ts",
+      "frozenGitBlob": "f80e820671960ac3f5b169d6972f2772fe27a4b6",
+      "frozenSha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+      "sha256": "bd96695eef144e03b7a33757cf14f3f710d6082d1694b17780d3ba86c9a2d59c",
+      "frozenBytes": 647,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; static only, no DOM/runtime test"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchDialog.tsx",
+      "frozenGitBlob": "36fa56957a2a2db7039fe738c5ef4e36018afaa8",
+      "frozenSha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+      "sha256": "769ffe972927ab5c315b6884c414cf238c21843f3feac91c827342e91926b3b7",
+      "frozenBytes": 3600,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; focus wiring static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "frozenGitBlob": "9da16feb5d6bdfe97be90dae8f8d691622f6be8c",
+      "frozenSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "frozenBytes": 2718,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; focus wiring static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "frozenGitBlob": "3627bd9db9f5c1b1210769222e5d089878ddfba3",
+      "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "frozenBytes": 11253,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; query producer/error consumer static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/useSessionContentSearch.ts",
+      "frozenGitBlob": "127c2a5cc21f7aba193808170c2ca093b992c921",
+      "frozenSha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+      "sha256": "1a2bdb675345c6f12260b3ee45ab96abe6e2d3e940a13c48352ba47b0ce93876",
+      "frozenBytes": 1709,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; request producer and invalidation static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+      "frozenGitBlob": "f8e276aa37b4b4b83cb0bbccf03646cb45ab3d75",
+      "frozenSha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+      "sha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe",
+      "frozenBytes": 526,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; static only, historical failed direction remains SKIP"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+      "frozenGitBlob": "67614eec7fef5dd1c59e4f6bc2ef7bcd040b4aef",
+      "frozenSha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+      "sha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e",
+      "frozenBytes": 8792,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; static only, no React/DOM test run"
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "frozenGitBlob": "5dd7881203032129b65d0fa62dc266f0a4bbc9f8",
+      "frozenSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "sha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "frozenBytes": 43637,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "selected import/header, makeSessionId, archived/import/binding producer sections; content-search module dependency loaded without real storage"
+    },
+    {
+      "path": "packages/desktop/src/shared/session-catalog.ts",
+      "frozenGitBlob": "87a2b62d5004fed6117e1444c9fcaf2857d1bd64",
+      "frozenSha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+      "sha256": "511a9b119749cc79bbe3832b508293b421e3ec07766561cae245305914d79568",
+      "frozenBytes": 4623,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "entire file; local/engine identity contract static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/streamRouting.ts",
+      "frozenGitBlob": "0838842d11513c37da6fae73d67aa65c2b38b176",
+      "frozenSha256": "2f3070e58bed90f35822ede8b28f3dea70c06be308d7bab9b2d9b628db6f588a",
+      "sha256": "2f3070e58bed90f35822ede8b28f3dea70c06be308d7bab9b2d9b628db6f588a",
+      "frozenBytes": 3773,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "lines 1-90; normal identity fallback contract static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "frozenGitBlob": "76f7f4d446f29b178b3bee5a418f958c58f03015",
+      "frozenSha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+      "sha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66",
+      "frozenBytes": 122444,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "lines 1678-1706 and targeted call-site search; static only"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "frozenGitBlob": "447721df39607d329ad5b46c18dfa6ebd1a27400",
+      "frozenSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "frozenBytes": 86436,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "lines 1046-1047 and target search references; static only"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "frozenGitBlob": "31a93687922a19cc9e3abc760cd6b9c8f5f04ae4",
+      "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "frozenBytes": 299077,
+      "currentEqualsFrozen": true,
+      "inspectionScope": "lines 5017-5035 and target search references; static only"
+    }
+  ],
+  "scope": "Hashing complete files does not imply full-file behavioural coverage; inspectionScope distinguishes executed pure functions from static consumers and skipped grouping."
+}

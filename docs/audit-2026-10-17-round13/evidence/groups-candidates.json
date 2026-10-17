@@ -1,0 +1,35 @@
+{
+  "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "candidates": [
+    {
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "evidenceLevel": "Source-only candidate; focused first fixture failed before tests loaded; whole focused direction skipped without repair or alternative validation",
+      "report": "docs/audit-2026-10-17-round13/groups.md",
+      "limits": "No production ApplyPatch, UI/React/native/Git product process/model/network/user-data execution. No actual summary result observed for candidate cases.",
+      "id": "GROUPS-R13-C1",
+      "title": "合法 header-only Delete 补丁可能不生成 Desktop 文件摘要",
+      "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "line": 95,
+      "relatedSources": [
+        "packages/coding/src/tools/apply-patch/parser.ts:127",
+        "packages/coding/src/tools/apply-patch/index.ts:42",
+        "packages/desktop/src/renderer/types.ts:1897"
+      ],
+      "reason": "Delete header initializes zero added/removed; flush requires nonzero content line counts, so source predicts a missing changed-file entry. Exact deleted line counts are not required by this candidate."
+    },
+    {
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "evidenceLevel": "Source-only candidate; focused first fixture failed before tests loaded; whole focused direction skipped without repair or alternative validation",
+      "report": "docs/audit-2026-10-17-round13/groups.md",
+      "limits": "No production ApplyPatch, UI/React/native/Git product process/model/network/user-data execution. No actual summary result observed for candidate cases.",
+      "id": "GROUPS-R13-C2",
+      "title": "合法 V4A ++/-- 内容可能被当作 unified diff header 排除",
+      "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "line": 137,
+      "relatedSources": [
+        "packages/coding/src/tools/apply-patch/parser.ts:14"
+      ],
+      "reason": "V4A marker plus ++counter;/--counter; yields +++counter;/---counter;, but Desktop parser excludes those prefixes, predicting missing entries or one-sided counts/synthetic diff."
+    }
+  ]
+}
