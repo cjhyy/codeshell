@@ -1655,3 +1655,84 @@ Their evidence-reader corrections do not explain the native failure. No local
 browser, Electron, native application, Keychain, PowerShell, installer, provider
 or external account operation was run for this cycle. The overall
 release-operation goal remains active.
+
+## CI19 — reviewed follow-up awaiting native repeat
+
+The frozen code checkpoint is `02cf5d65c2ae90a4917c1a332e87287f615baa45`,
+containing CI18's code, the selected local main
+`19efab9225723c76af447f8b9d9f65aace3b0780` and the follow-ups below. CI18 remains
+failed; this preparation records local checks and source review, without a new
+native or browser pass. Later main changes belong to a later source-bound cycle.
+
+- `c4f45d63b37b27d0deca020d5b4cb7a5bbce01c1` preserves the authoritative
+  absolute target of an external worktree file in the summary and Review.
+  Relative parent tools are kept separate when their caller cwd is unknown;
+  only known absolute identities are merged. Review passes absolute POSIX,
+  Windows drive and UNC targets through without prepending the parent root.
+  The same reducer and mounted Card/Viewer regression suite records twelve
+  failures and five passing controls with the old frozen modules, then passes
+  all seventeen after the fix.
+  These are owned event/openPath recorders, not actual OS file opens.
+- `ef9b2e10176ef70b2376f1839a23071ab1114576` prevents a complete streamed
+  fenced code block from being split at its internal blank lines. The shared
+  fence scanner now also chunks the stable prefix outside fences while
+  preserving indentation and raw CRLF code. Actual SSR reproduced the broken
+  code/prose structure; 54 related tests/118 assertions pass. The original 26
+  leaf test bodies and done/plain/throttle/memo declarations remain unchanged.
+  SSR does not execute the 120ms effect or prove native incremental timing.
+- `1870b31c565ea45e1a0ae7d954558ba3888d6d5f` and
+  `152c6c1a9a05c78790ed7d1db37aa51439dcb816` replace the new fixture's
+  blanket channel denial with strict admission of three owned read-only metadata
+  methods to the original production listener. Exact parameter keys, two owned
+  Session IDs, single-frame/ID limits and a finite 128-request cap are checked.
+  Turns, configuration, writes, fork/compact, shell control and foreign requests
+  remain denied. No metadata reply is mocked. Production no-worker routes may
+  initialize directories or clean owned staging inside the isolated HOME.
+  Final metadata validates every record and retains late allowed reads; the
+  earlier Main snapshot must be its exact unchanged prefix. Late forbidden
+  requests and metadata IO failures still reach the original denial/failure
+  gates. Two frozen VM failures and 22 guarded contracts support this fixture
+  correction; they do not identify CI18's unrecorded native RPC method.
+
+Root independently checks the combined final source:
+
+| Local gate                                 | Result                                                                                                                       |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Actual combined Review/path/Markdown shard | 211 tests / 617 assertions / 7 files; zero failure/skip                                                                      |
+| Broader R27 Card/Viewer/parser controls    | 215 tests / 752 assertions / 14 files; overlaps the combined shard and is not added to it                                    |
+| Node contracts                             | 66 tests / 6 files: NSIS/signal 31, original Review diagnostics 13, draft 22; zero failure/skip                              |
+| Actual Desktop package types               | Both no-emit commands pass, covering main/preload/renderer and mobile                                                        |
+| Renderer production compilation            | Passes at `771da9e6919d217c5b73d429277d5b7385183b94`; every `packages/desktop/src` byte is unchanged from that UI checkpoint |
+| Static checks                              | Twelve changed source paths lint with zero warnings; those paths and workflow pass format; three MJS files parse             |
+
+The prior CI18 root build and fourteen-workspace checks retain their original
+checkpoint. They were not all rerun for this follow-up; current changed UI source
+received the actual Desktop typecheck and renderer compilation above. Author
+source-only type diagnostics are retained separately rather than called a clean
+full workspace check.
+
+The workflow adds only four explicit test arguments to CI18's existing guarded
+aggregation step. All 44 Bash blocks still parse. Step order, budgets, logs and
+90-entry early/162-entry final public artifact allowlists are unchanged. No new
+artifact path or private HOME/profile/cache/binary is uploaded.
+
+The twelve original native/harness files retain their frozen blobs. The new
+Review fixture's three-operation body is byte-identical, SHA-256
+`ac5e7e1f291decef502e72aefe487807340b1f58f29ce49892c6d65c1e3b2202`.
+Its required five actual prepare results, three composer seeds, seven negative probes,
+early full-birth capture, normal `0/null` exit, late denial checks and HOME
+cleanup requirements remain intact. Original 83 operations/12 Main and the new
+planned 3/1 must be audited separately in the next native run. CI17's NSIS cause
+and earlier native failures remain unresolved until direct evidence supports a
+conclusion; a successful metadata VM does not repair an installer.
+
+The frozen combined local-source receipt is
+`ci19-frozen-local-source-gates-proof-20261017.json`, SHA-256
+`2875a62c373d9fbc8056117800e2ccd070e0771c0bfe1064626cb1665c8dc59a`.
+It binds all twelve changed source hashes/blobs, seven raw check logs, author
+proofs and the unchanged native/workflow boundaries. Final workflow SHA-256 is
+`32603ae10ecb9c09e4a769ea77cdece86719419c251986ac6444977400a4097e`.
+No local browser, Electron, Keychain, PowerShell, installer, provider or external
+account operation was executed. The next push remains restricted to the
+already-authorized acceptance branch; no remote main, tag, PR or release is part
+of this cycle. The operation-audit goal remains active.
