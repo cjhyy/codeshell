@@ -199,7 +199,7 @@ describe("CapabilityService.list", () => {
 });
 
 /**
- * Project-scope fake: like fakes() but also records project writes/deletes and
+ * Project-scope fake: like fakes() but also records atomic project mutations and
  * exposes getForScope returning the in-memory capabilityOverrides, so we can
  * assert the project overlay write path and the overlay-aware list().
  */
@@ -212,8 +212,7 @@ function fakesWithProject(initial: Record<string, unknown> = {}) {
     capabilityOverrides: {},
     ...initial,
   };
-  const projectWrites: Array<[string, unknown]> = [];
-  const projectDeletes: string[] = [];
+  const projectMutations: Array<["user" | "project" | "local", string]> = [];
   const settings = {
     get: () => s,
     saveUserSetting: (k: string, v: unknown) => {
@@ -222,19 +221,13 @@ function fakesWithProject(initial: Record<string, unknown> = {}) {
       for (let i = 0; i < parts.length - 1; i++) t = t[parts[i]!] ??= {};
       t[parts[parts.length - 1]!] = v;
     },
-    saveProjectSetting: (k: string, v: unknown, _cwd: string) => {
-      projectWrites.push([k, v]);
-      const parts = k.split(".");
-      let t: any = s;
-      for (let i = 0; i < parts.length - 1; i++) t = t[parts[i]!] ??= {};
-      t[parts[parts.length - 1]!] = v;
-    },
-    deleteProjectSetting: (k: string, _cwd: string) => {
-      projectDeletes.push(k);
-      const parts = k.split(".");
-      let t: any = s;
-      for (let i = 0; i < parts.length - 1; i++) t = t?.[parts[i]!];
-      if (t) delete t[parts[parts.length - 1]!];
+    mutateSettingsForScope: (
+      scope: "user" | "project" | "local",
+      cwd: string,
+      mutate: (current: Record<string, unknown>) => boolean | void,
+    ) => {
+      projectMutations.push([scope, cwd]);
+      mutate(s);
     },
     getForScope: (_scope: "user" | "project", _cwd?: string) => ({
       capabilityOverrides: s.capabilityOverrides,
@@ -242,7 +235,7 @@ function fakesWithProject(initial: Record<string, unknown> = {}) {
   };
   const registry = { listToolsDetailed: () => [] as any[] };
   const emptyPlugins = () => ({ version: 2 as const, plugins: {} });
-  return { settings, registry, get: () => s, emptyPlugins, projectWrites, projectDeletes };
+  return { settings, registry, get: () => s, emptyPlugins, projectMutations };
 }
 
 describe("CapabilityService project scope", () => {
@@ -262,26 +255,29 @@ describe("CapabilityService project scope", () => {
   test("setOverride 'off' writes capabilityOverrides.skills.<token>", () => {
     const f = fakesWithProject();
     svcFor(f).setOverride("skill:a", "off", { scope: "project", cwd: "/proj" });
-    expect(f.projectWrites).toContainEqual(["capabilityOverrides.skills.a", "off"]);
+    expect(f.projectMutations).toEqual([["project", "/proj"]]);
+    expect(f.get().capabilityOverrides.skills).toEqual({ a: "off" });
   });
 
   test("setOverride 'on' writes 'on'", () => {
     const f = fakesWithProject();
     svcFor(f).setOverride("skill:a", "on", { scope: "project", cwd: "/proj" });
-    expect(f.projectWrites).toContainEqual(["capabilityOverrides.skills.a", "on"]);
+    expect(f.projectMutations).toEqual([["project", "/proj"]]);
+    expect(f.get().capabilityOverrides.skills).toEqual({ a: "on" });
   });
 
   test("setOverride 'inherit' deletes the key (not a literal write)", () => {
     const f = fakesWithProject({ capabilityOverrides: { skills: { a: "off" } } });
     svcFor(f).setOverride("skill:a", "inherit", { scope: "project", cwd: "/proj" });
-    expect(f.projectDeletes).toContain("capabilityOverrides.skills.a");
+    expect(f.projectMutations).toEqual([["project", "/proj"]]);
+    expect(f.get().capabilityOverrides.skills).toEqual({});
   });
 
   test("setEnabled with scope:user keeps old global behavior", () => {
     const f = fakesWithProject();
     svcFor(f).setEnabled("skill:a", false, { scope: "user" });
     expect(f.get().disabledSkills).toEqual(["a"]);
-    expect(f.projectWrites).toEqual([]);
+    expect(f.projectMutations).toEqual([]);
   });
 
   test("setEnabled with no opts defaults to user scope (back-compat)", () => {
@@ -293,7 +289,8 @@ describe("CapabilityService project scope", () => {
   test("setEnabled scope:project routes to setOverride", () => {
     const f = fakesWithProject();
     svcFor(f).setEnabled("skill:a", false, { scope: "project", cwd: "/proj" });
-    expect(f.projectWrites).toContainEqual(["capabilityOverrides.skills.a", "off"]);
+    expect(f.projectMutations).toEqual([["project", "/proj"]]);
+    expect(f.get().capabilityOverrides.skills).toEqual({ a: "off" });
   });
 
   test("list(cwd) reflects project override: global off + project on => enabled", () => {
@@ -355,7 +352,8 @@ describe("CapabilityService project scope", () => {
       resolveBuiltinToolNames: () => ["REPL"],
     });
     svc.setOverride("builtin:REPL", "off", { scope: "project", cwd: "/proj" });
-    expect(f.projectWrites).toContainEqual(["capabilityOverrides.builtin.REPL", "off"]);
+    expect(f.projectMutations).toEqual([["project", "/proj"]]);
+    expect(f.get().capabilityOverrides.builtin).toEqual({ REPL: "off" });
   });
 
   test("list(cwd) applies the builtin override: global on + project off => disabled", () => {
