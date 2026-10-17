@@ -8,12 +8,13 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI18, is failed overall. Web passes its job; all three
-Desktop jobs stop at the new Review draft fixture during Session preparation.
-The original startup and Review receipts cover a completed 18-operation/four-Main
-subset per platform; the remaining original suites, new draft operations and
-installer acceptance are incomplete. See the
-[CI18 failure record](#ci18--review-draft-session-preparation-failure).
+The latest completed run, CI19, failed overall. Web passes its job. macOS and
+Linux each complete the original 18-operation/four-Main subset, then fail the
+new draft fixture before any completed draft operation. Windows completes
+startup seven/three Main, then the original Review identity RPC rejects with
+PromiseGC before any Review operation. Later native suites and installer
+acceptance remain incomplete. See the
+[CI19 failure record](#ci19--draft-callback-failure-and-windows-review-identity-failure).
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -1736,3 +1737,134 @@ No local browser, Electron, Keychain, PowerShell, installer, provider or externa
 account operation was executed. The next push remains restricted to the
 already-authorized acceptance branch; no remote main, tag, PR or release is part
 of this cycle. The operation-audit goal remains active.
+
+## CI19 — draft callback failure and Windows Review identity failure
+
+[Run 39031300464](https://github.com/cjhyy/codeshell/actions/runs/39031300464),
+push attempt 1, binds source `f77af15c6f11f4eb791ac72df77667cb892bc002`.
+The final run API records overall failure: Web succeeds and all three native
+jobs fail. The original CI18 failure and every earlier unknown remain separate;
+the CI19 preparation section above keeps its original local-only scope.
+
+| Platform | Actual accepted original subset                       | First failed native fixture                            | Unexecuted acceptance                                                 |
+| -------- | ----------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- |
+| macOS    | Startup 7/3 Main plus original Review 11/1 Main: 18/4 | New draft: 0/3 completed operations, one observed Main | Six later original suites and DMG skipped                             |
+| Linux    | Startup 7/3 Main plus original Review 11/1 Main: 18/4 | New draft: 0/3 completed operations, one observed Main | Six later original suites, AppImage build/runtime and updater skipped |
+| Windows  | Startup 7/3 Main                                      | Original Review: 0 operations, one observed Main       | New draft, six later original suites and NSIS skipped                 |
+
+The completed original subsets have normal Main exits, observed full-birth
+custody settled with zero remaining identities, and recorded successful inner
+HOME removal. They are not the original full 83/12 or the new planned 3/1.
+Directory packaging succeeds separately; no packaged UI or installer acceptance
+is inferred from the build receipt.
+
+On macOS and Linux the new fixture reaches the real staged Review UI and first
+production `preparePrompt` request. Both record the first failure as
+`Cannot read properties of null (reading 'prompt')`, at driver line 473:28 in
+`review-ui-operations`. Their final Main snapshots and durable IPC logs contain
+one complete, returned production prompt and two owned `goalGet` requests.
+The seven negative probes are blocked; denied and Worker ledgers are empty.
+This establishes the current read-only route boundary without identifying
+CI18's unrecorded denied method.
+
+Actual failure PNGs show the old unsent prefix and first production prompt in
+the composer, with readable Chinese. The full operation's assertions did not
+finish, so its count stays zero. macOS Main exits normally `0/null` with observed
+custody 13→0; Linux exits `0/null` with 15→0. Neither requests a cleanup signal.
+Both controllers fail and both owned HOMEs remain recorded as retained. The
+private HOMEs are not uploaded and cannot be physically rechecked by the
+artifact reader. No generated-image or updater PNG is claimed for these skipped
+stages, and the full AppImage mode/cache/sandbox/ten-GET runtime checks do not run.
+
+Windows fails earlier in the original Review's `harness-main-identity` phase:
+`electronApplication.evaluate: Resulting promise was garbage collected.`
+The first-error record precedes cleanup with the child still observed alive.
+Later authorized cleanup signal requests, Main exit `1/null` and observed
+birth-custody settlement 32→0 are recorded separately. The HOME removal flag is
+false; no Review failure PNG or returned Main identity is invented. Service/GPU
+stderr during cleanup does not establish the GC cause, which remains unknown.
+The new draft callback correction below does not repair or explain this RPC
+failure. NSIS does not execute in this run.
+
+Web independently passes its unchanged 31 browser behaviors: ServiceWorker 11,
+authentication four, child state/send/stop eight and annotations eight. Image
+units nine/45 assertions and lifecycle Node contracts 64 remain separate.
+The audit verifies 106 source hashes, 33 PNG CRCs, early canonical browser/HOME/
+profile capture, normal exits, observed birth custody, final ledgers and HOME
+cleanup. The old-reducer negative run keeps two passing controls and six
+expected failures, with runner-verified retained profile; these are not extra
+passing behaviors. Two current-run images are visually inspected.
+
+All native jobs pass the separate Write 11/38, output 16/32, aggregation 211/617
+across seven files and branch 15/50 guarded regressions. They also pass original
+Review Node 13 and draft Node 22. Windows additionally runs the 31 NSIS/signal
+contracts; that Windows-only step is skipped on macOS/Linux. Pure tests are not
+added to the native operation counts or relabeled as installation evidence.
+
+The frozen independent summaries are:
+
+- Web `ci-39031300464-web-independent-20261017/ci-39031300464-web-independent-audit.json`,
+  SHA-256 `dfd70c4dbdec6d820820a97414182260082daa15292f3e6559bbd1617c09575d`.
+- Linux `ci-39031300464-linux-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `52d0d456672e682e58ccaece2c5bd5ec327b48613af2885de58943da18a37522`.
+- macOS `ci-39031300464-mac-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `b82cc422e32a07c7717f5f0b762113d0cc01a60c1840e0b60fdfdd86d14778de`.
+  Its independent raw-evidence peer is
+  `ci-39031300464-windows-independent-20261017/mac-failed-summary-peer.json`,
+  SHA-256 `dcc95deb1ddf918caf6630d767dd3cfd364ee914a7c73926ac594e7271028cb1`.
+- Windows `ci-39031300464-windows-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `d1ca51ef8ae030dc90e739cb3a268f8db764107a48c97f9fc9cbae0e9f15b332`.
+  Its 22-check raw-evidence peer is
+  `ci-39031300464-windows-root-failure-peer.json`, SHA-256
+  `9a69458223a6d3a511194097dfa2ab0b39a86ffd638af7c2024a958aba07a3f4`.
+
+Two subsequent repairs have local, source-bound evidence only:
+
+- `99357a70e3da855052f7b7483de762fa10e7b507` fixes exactly three fixture
+  callbacks: Electron's first evaluation argument is its module, and the owned
+  payload is the second. The wait predicate and both response-arm callbacks now
+  bind that second argument. Actual extracted driver/harness functions under the
+  public two-argument signature reproduce the old null-prompt read and arm
+  rejection: 22 controls pass and three contracts fail; the fixed 25 all pass.
+  Removing only the three added first-parameter tokens restores the entire old
+  driver byte-for-byte. Page callbacks, operation assertions, five prepare
+  results, three seeds, seven probes, deadlines, custody and HOME gates stay
+  unchanged. Proof `codeshell-review-draft-evaluate-proof-20261017/verified-source-summary.json`
+  has SHA-256 `7aca3eb2ded5c360f24fcab38fe2791b4fb3d90c27e86aefb2533ddc9c465644`.
+- `56cee4415482ab16439250172ed793aa74897b3b` addresses the independent
+  COMPOSE enclosing-snippet preview defect. Real Core Edit leaves write two owned
+  temporary-file scenarios with identical operation payloads but different final
+  bytes, despite each old string being globally unique at its actual edit.
+  Payload containment alone therefore cannot prove a common file location.
+  The fix removes only that outer-baseline reconstruction and retains independent
+  preview hunks; inner replay, full Write and opaque barriers remain. This is a
+  conservative operation preview, not an authoritative final-file diff. The
+  producer is the actual Core leaf, not Engine/ToolExecutor/approval or a provider.
+  The guarded reproduction has two controls/two failures; the author fix shard
+  passes 219 tests/767 assertions across 15 files. Its proof
+  `codeshell-snippet-containment-fix-proof-4__a6lmw/verified-summary.json` has
+  SHA-256 `03a616c44617cc83fca55417b616e8d90d2e95348e27129c53977de912178392`.
+
+At the integrated code checkpoint `9c23bd4581b87a801fe13eb3793a34f97aba777e`,
+Root records the combined nine-file UI shard 231 tests/686 assertions and Node
+69 across six files, with zero failure/skip. Both actual Desktop no-emit
+configurations, renderer production compilation and five-source lint checks
+pass. These overlapping local checks are separate from the CI19 results and do
+not establish native recovery. No local browser, Electron, Keychain, PowerShell,
+installer, provider or external account operation is run for these two repairs.
+The operation-audit goal remains active.
+
+## CI20 — local checkpoint only
+
+The local checkpoint `686a05377be77e5513a9935eb4845d4bee9c3acc` binds six
+source/workflow paths and the two scoped repairs above. Its receipt
+`ci20-frozen-local-source-gates-proof-20261017.json`, SHA-256
+`2f9bbf2e4adb700140a97973c745b2ccecdac5040dc7d4b39bc0f75c59453ca4`,
+records 231 tests/686 assertions across nine files and Node 69 across six files
+(31 NSIS/signal, 13 original Review, 25 draft), with zero failure/skip. Both
+Desktop typecheck commands, renderer compilation, five-source lint and six-path
+format checks pass. The original twelve native fixture/harness blobs remain
+unchanged; native recovery and NSIS revalidation remain pending. Windows GC
+cause stays unknown. This is not final release-source validation: later main
+changes are outside this checkpoint. No dispatch or new runtime result is
+asserted here.
