@@ -7,6 +7,8 @@ import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.
 
 const MAX_ROLES = 32;
 const MAX_SAMPLES = 8;
+const MAX_EARLY_IDENTITIES = 32;
+const MAX_EARLY_TRANSITIONS = 32;
 const ROLES = new Set([
   "setup-path-match",
   "installed-uninstaller-path-match",
@@ -135,6 +137,59 @@ export function createNsisReplacementRoleObserver({
     samplesTruncated: false,
     observerFault: false,
     failureObservation: null,
+    earlyRoles: {
+      boundary:
+        "First bounded same-query owned observations and role changes only; absence is not an exit, and lexical roles do not identify an image load or wait point.",
+      limits: { identities: MAX_EARLY_IDENTITIES, transitions: MAX_EARLY_TRANSITIONS },
+      firstObservations: [],
+      transitions: [],
+      identitiesTruncated: false,
+      transitionsTruncated: false,
+      sourceRowsTruncated: false,
+      observerFault: false,
+    },
+  };
+  const lastRoles = new Map();
+  let transitionCount = 0;
+  const rememberEarlyRoles = (sample, phase, rows, rolesTruncated) => {
+    try {
+      const history = result.earlyRoles;
+      history.sourceRowsTruncated ||= rolesTruncated;
+      for (const { pid, ppid, birth, role } of rows) {
+        const key = `${pid}:${ppid}:${birth}`;
+        const previous = lastRoles.get(key);
+        const observation = {
+          pid,
+          ppid,
+          birth,
+          querySequence: sample.sequence,
+          samplePhase: phase,
+          sampledElapsedMs: sample.sampledElapsedMs,
+        };
+        if (previous === undefined) {
+          if (lastRoles.size === MAX_EARLY_IDENTITIES) {
+            history.identitiesTruncated = true;
+            continue;
+          }
+          lastRoles.set(key, role);
+          history.firstObservations.push({ ...observation, role });
+        } else if (previous !== role) {
+          lastRoles.set(key, role); // Private state never aliases a public receipt row.
+          if (transitionCount === MAX_EARLY_TRANSITIONS) {
+            history.transitionsTruncated = true;
+            continue;
+          }
+          history.transitions.push({ ...observation, fromRole: previous, toRole: role });
+          transitionCount += 1;
+        }
+      }
+    } catch {
+      try {
+        result.earlyRoles.observerFault = true;
+      } catch {
+        /* Advisory history must not interrupt the original samples or cleanup. */
+      }
+    }
   };
   let pending = null;
   let sequence = 0;
@@ -215,6 +270,12 @@ export function createNsisReplacementRoleObserver({
         result.samples.shift();
         result.samplesTruncated = true;
       }
+      rememberEarlyRoles(
+        sample,
+        phase,
+        rows,
+        sample.metadataTruncated || ownedCurrent.length > MAX_ROLES,
+      );
     } catch {
       fault();
     }

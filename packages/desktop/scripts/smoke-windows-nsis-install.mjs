@@ -563,8 +563,10 @@ export async function runWindowsNsisAcceptance(args) {
       "out/targets/nsis/NsisTarget.js",
       "out/targets/nsis/nsisUtil.js",
       "templates/nsis/installer.nsi",
+      "templates/nsis/installSection.nsh",
       "templates/nsis/include/allowOnlyOneInstallerInstance.nsh",
       "templates/nsis/include/installer.nsh",
+      "templates/nsis/include/installUtil.nsh",
       "templates/nsis/uninstaller.nsh",
     ];
     report.toolchain = {

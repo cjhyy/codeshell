@@ -498,3 +498,144 @@ test("failure retains its last existing sample after cleaning rolls past the eig
   assert.equal(noSample.observer.receipt.failureObservation.samplePhase, "unknown");
   assert.equal(noSample.observer.receipt.failureObservation.sampleAgeMs, null);
 });
+
+test("early roles retain a departed child and a later unknown-to-known change after rollover", () => {
+  const f = roleFixture();
+  observed(f.observer, f.observer.snapshot());
+  for (let i = 0; i < 9; i++) {
+    f.setEnvelope({
+      processes: identities([rootProcess]),
+      roles: [{ ...rootProcess, role: "setup-path-match" }],
+      truncated: false,
+    });
+    observed(f.observer, f.observer.snapshot(), "watching");
+  }
+  const history = f.observer.receipt.earlyRoles;
+  assert.ok(history, "Early owned role evidence must survive rolling-window eviction");
+  assert.equal(f.calls.length, 10);
+  assert.equal(f.observer.receipt.samples.length, 8);
+  assert.ok(f.observer.receipt.samples.every((sample) => sample.querySequence > 1));
+  assert.deepEqual(history.firstObservations[1], {
+    ...oldProcess,
+    querySequence: 1,
+    samplePhase: "initial",
+    sampledElapsedMs: 2,
+    role: "unknown",
+  });
+  assert.equal(history.transitions.filter((row) => row.pid === oldProcess.pid).length, 0);
+  f.setEnvelope({
+    processes: identities([rootProcess, oldProcess]),
+    roles: [{ ...oldProcess, role: "owned-temp-old-uninstaller-candidate" }],
+    truncated: false,
+  });
+  observed(f.observer, f.observer.snapshot(), "watching");
+  assert.deepEqual(history.transitions.find((row) => row.pid === oldProcess.pid), {
+    ...oldProcess,
+    querySequence: 11,
+    samplePhase: "watching",
+    sampledElapsedMs: 22,
+    fromRole: "unknown",
+    toRole: "owned-temp-old-uninstaller-candidate",
+  });
+  f.observer.markFailure();
+  assert.equal(f.calls.length, 11, "History and failure capture add no query");
+  assert.equal(f.observer.receipt.failureObservation.sampleQuerySequence, 11);
+  assert.equal(history.observerFault, false);
+  assert.match(history.boundary, /absence is not an exit/);
+});
+
+test("early history copies rows and keeps private role state per complete owned identity", () => {
+  const f = roleFixture([rootProcess, oldProcess], [
+    { ...rootProcess, role: "setup-path-match" },
+    { ...oldProcess, role: "owned-temp-old-uninstaller-candidate" },
+  ]);
+  const current = f.observer.snapshot();
+  observed(f.observer, current);
+  const history = f.observer.receipt.earlyRoles;
+  assert.ok(history, "Early owned role evidence must copy the complete identity");
+  current[1].pid = 999;
+  f.observer.receipt.samples[0].rows[1].role = "unknown";
+  assert.equal(history.firstObservations[1].pid, oldProcess.pid);
+  assert.equal(history.firstObservations[1].role, "owned-temp-old-uninstaller-candidate");
+  history.firstObservations[1].role = "unknown";
+  observed(f.observer, f.observer.snapshot(), "watching");
+  assert.deepEqual(history.transitions, [], "Public row mutation cannot change private lastRole");
+  const changedBirth = { ...oldProcess, birth: birth(3) };
+  const changedParent = { ...oldProcess, ppid: 41 };
+  for (const row of [changedBirth, changedParent]) {
+    f.setEnvelope({
+      processes: identities([row]),
+      roles: [{ ...oldProcess, role: "installed-uninstaller-path-match" }],
+      truncated: false,
+    });
+    observed(f.observer, f.observer.snapshot(), "watching");
+  }
+  assert.deepEqual(history.firstObservations.slice(2).map((row) => row.role), [
+    "unknown",
+    "unknown",
+  ]);
+  assert.equal(history.firstObservations.length, 4);
+  assert.deepEqual(history.transitions, []);
+  f.setEnvelope({ processes: identities([oldProcess]), roles: [], truncated: false });
+  observed(f.observer, f.observer.snapshot(), "watching");
+  assert.equal(history.transitions[0].fromRole, "owned-temp-old-uninstaller-candidate");
+  assert.equal(history.transitions[0].toRole, "unknown");
+  assert.equal(history.transitions[0].birth, oldProcess.birth);
+});
+
+test("early identity and transition caps are sticky, finite, and do not evict earlier evidence", () => {
+  const rows = Array.from({ length: 40 }, (_, index) => ({
+    pid: index + 100,
+    ppid: 42,
+    birth: birth(index + 2),
+  }));
+  const f = roleFixture(rows);
+  observed(f.observer, f.observer.snapshot(), "watching");
+  const history = f.observer.receipt.earlyRoles;
+  assert.ok(history, "Early owned role evidence must expose finite retention limits");
+  const first = structuredClone(history.firstObservations[0]);
+  assert.deepEqual(history.limits, { identities: 32, transitions: 32 });
+  assert.equal(history.firstObservations.length, 32);
+  assert.equal(history.sourceRowsTruncated, true);
+  f.setEnvelope({ processes: identities([rows[32]]), roles: [], truncated: false });
+  observed(f.observer, f.observer.snapshot(), "watching");
+  assert.equal(history.identitiesTruncated, true);
+  assert.equal(history.firstObservations.length, 32);
+  for (const role of ["owned-temp-old-uninstaller-candidate", "unknown", "setup-path-match"]) {
+    f.setEnvelope({
+      processes: identities(rows.slice(0, 32)),
+      roles: role === "unknown" ? [] : rows.slice(0, 32).map((row) => ({ ...row, role })),
+      truncated: false,
+    });
+    observed(f.observer, f.observer.snapshot(), "watching");
+  }
+  assert.equal(history.transitions.length, 32);
+  assert.equal(history.transitionsTruncated, true);
+  assert.deepEqual(history.firstObservations[0], first);
+  assert.equal(history.transitions[0].toRole, "owned-temp-old-uninstaller-candidate");
+  assert.equal(f.calls.length, 5);
+  assert.equal(history.observerFault, false);
+  assert.ok(Buffer.byteLength(JSON.stringify(f.observer.receipt)) < 64 * 1024);
+  assert.doesNotMatch(JSON.stringify(history), /D:|Setup\.exe|Uninstall\.exe/);
+});
+
+test("history publication faults cannot change rolling samples, original failure or custody", async () => {
+  const enabled = watchdogFixture(), disabled = watchdogFixture(false);
+  const history = enabled.f.observer.receipt.earlyRoles;
+  assert.ok(history, "Early owned role evidence must isolate its publication failures");
+  Object.freeze(history.firstObservations);
+  for (const f of [enabled, disabled]) {
+    f.processes([rootProcess, oldProcess, { pid: 44, ppid: 42, birth: birth(3) }]);
+    f.tick();
+    f.fire(180000);
+    f.fire(1000);
+  }
+  assert.deepEqual(await enabled.monitor.completed, await disabled.monitor.completed);
+  assert.deepEqual(enabled.signals, disabled.signals);
+  assert.equal(enabled.queryCount(), disabled.queryCount());
+  assert.equal(enabled.f.observer.receipt.earlyRoles.observerFault, true);
+  assert.equal(enabled.f.observer.receipt.observerFault, false);
+  assert.equal(enabled.f.observer.receipt.samples.length, 8);
+  assert.equal(enabled.f.observer.receipt.failureObservation.sampleQuerySequence, 2);
+  assert.equal(enabled.events[0], "original-failure");
+});
