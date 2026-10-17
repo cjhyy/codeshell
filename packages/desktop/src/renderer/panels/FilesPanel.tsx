@@ -22,6 +22,7 @@ import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TrackedProject } from "../projects";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { nativeBasename, nativeDirname } from "../nativePath";
 
 /** localStorage key persisting whether the file tree is shown ("1") or hidden ("0"). */
 const TREE_OPEN_KEY = "codeshell.filesPanel.treeOpen";
@@ -819,7 +820,7 @@ function FileViewer({
 }) {
   const { t } = useT();
   const ext = useMemo(() => (path.split(".").pop() ?? "").toLowerCase(), [path]);
-  const name = useMemo(() => path.split("/").pop() ?? path, [path]);
+  const name = nativeBasename(path, window.codeshell.platform);
   const isImage = IMAGE_EXT.has(ext) || ext === SVG_EXT;
   const isMarkdown = ext === "md" || ext === "markdown";
   // Markdown renders rich by default; switch to 源码 to get per-line comments.
@@ -924,8 +925,7 @@ function ImagePreview({
  */
 function mdBaseDir(root: string, path: string): string {
   const abs = isAbsolutePath(path) ? path : joinPath(root, path);
-  const slash = Math.max(abs.lastIndexOf("/"), abs.lastIndexOf("\\"));
-  return slash > 0 ? abs.slice(0, slash) : abs;
+  return nativeDirname(abs, window.codeshell.platform);
 }
 
 function TextPreview({
@@ -1007,7 +1007,7 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
   const lines = useMemo(() => text.replace(/\n$/, "").split("\n"), [text]);
   const [commenting, setCommenting] = useState<number | null>(null);
   const commentButton = useRef<HTMLButtonElement | null>(null);
-  const name = path.split("/").pop() ?? path;
+  const name = nativeBasename(path, window.codeshell.platform);
   const closeComment = () => {
     setCommenting(null);
     commentButton.current?.focus({ preventScroll: true });
