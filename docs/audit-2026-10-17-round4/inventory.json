@@ -1,0 +1,20 @@
+{
+  "baseline": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "trackedProductionLikeFilesByPackage": {
+    "arena": 50,
+    "browser-devtools": 3,
+    "cdp": 6,
+    "chat": 37,
+    "coding": 65,
+    "core": 588,
+    "desktop": 1126,
+    "host": 3,
+    "link": 10,
+    "optimization-lab": 27,
+    "pet": 44,
+    "server": 151,
+    "tui": 212,
+    "web": 100
+  },
+  "note": "Filename inventory, not executed or deep-reviewed file count; excludes test/spec/dist patterns, includes support files."
+}

@@ -1,0 +1,67 @@
+{
+  "frozenBase": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "actualHead": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "report": "docs/audit-2026-10-17-round4/context.md",
+  "newFindings": 2,
+  "severityCounts": {
+    "P2": 2
+  },
+  "productEdits": false,
+  "gitMutations": false,
+  "realModelCalls": 0,
+  "networkCalls": 0,
+  "testsExpectCurrentWrongBehavior": true,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round4/evidence/context-snip-pairs.test.ts"
+      ],
+      "tests": 2,
+      "assertions": 15,
+      "failures": 0,
+      "skips": 0,
+      "completed": true,
+      "exitCode": 0,
+      "firstRun": true,
+      "retried": false,
+      "testSha256": "f1a979ea657c4d27227b9f8653417e11bbcb669b05f4850c066dcd7db95164b3",
+      "rawCombinedLog": "docs/audit-2026-10-17-round4/evidence/context-snip-pairs.first.log",
+      "rawLogSha256": "30657fc51a3c141066ee94279fa431369cbef487731c9b3bca8b50695aa197e3",
+      "exitReceipt": "docs/audit-2026-10-17-round4/evidence/context-snip-pairs.first.exit.txt"
+    },
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round4/evidence/context-structured-summary.test.ts"
+      ],
+      "tests": 2,
+      "assertions": 14,
+      "failures": 0,
+      "skips": 0,
+      "completed": true,
+      "exitCode": 0,
+      "firstRun": true,
+      "retried": false,
+      "testSha256": "1dcf09a79f8f92772a0d7206394d33fcf4a842ab637eb24a7ba96247bc1afbc6",
+      "rawCombinedLog": "docs/audit-2026-10-17-round4/evidence/context-structured-summary.first.log",
+      "rawLogSha256": "b56498474a9b52196b07aa92bd01bab338379a7ad6791221f9e08ed26ff198a3",
+      "exitReceipt": "docs/audit-2026-10-17-round4/evidence/context-structured-summary.first.exit.txt"
+    }
+  ],
+  "totals": {
+    "tests": 4,
+    "assertions": 29,
+    "failures": 0,
+    "skips": 0
+  },
+  "fixtureDependencyPlatformFailures": 0,
+  "retries": 0,
+  "reportSha256": "54c21c92ef3478959c96061834f5bbda908c62b0ca7c3191024bf7d9396655c7"
+}

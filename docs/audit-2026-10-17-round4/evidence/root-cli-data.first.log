@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round4/evidence/root-cli-data.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+ 8 | 
+ 9 | let networkAttempts = 0;
+10 | const denied = () => { networkAttempts++; throw new Error("audit fixture has no network"); };
+11 | globalThis.fetch = denied as typeof fetch;
+12 | for (const mod of [http, https]) {
+13 |   (mod as any).request = denied;
+        ^
+TypeError: Attempted to assign to readonly property.
+      at /Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/evidence/root-cli-data.test.ts:13:4
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [203.00ms]
+Bun test process failed (1)
