@@ -1,0 +1,16 @@
+{
+  "firstRefreshAssertion": {
+    "chunk_id": "6da109",
+    "exitCode": 1,
+    "output": "Traceback (most recent call last):\n  File \"<stdin>\", line 9, in <module>\nAssertionError\n",
+    "captureKind": "Manual transcript of visible metadata diagnostic;not productraw."
+  },
+  "scope": "Metadata snapshot drift check only;no product test/import/retry;observedcurrentstate saved separately before any merge.",
+  "firstSourceAssemblyAssertion": {
+    "chunk_id": "bf9581",
+    "exitCode": 1,
+    "output": "AssertionError: packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+    "scope": "Metadata sourcecurrent/main/frozen comparison;concurrentmain advanced,not productimport/testfailure orretry. Existingauthorfrozenpins unchanged;Rootwillinspectdeltaandseparatefields.",
+    "captureKind": "Manual diagnostic excerpt from the recorded tool response;not originalraw stdout/stderr,not a productlog."
+  }
+}

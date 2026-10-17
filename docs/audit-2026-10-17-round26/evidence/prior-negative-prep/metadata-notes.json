@@ -1,0 +1,25 @@
+{
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesWritten": 0,
+  "gitCommands": 0,
+  "currentRound25Writes": 0,
+  "metadataFailureCount": 1,
+  "metadataFailures": [
+    {
+      "id": "FRONTIER26-META-01",
+      "stage": "source-range assertion before final manifest write",
+      "exitCode": 1,
+      "firstResponse": "metadata-first-responses.json",
+      "responseFidelity": "Manual visible-response transcription; not original process raw, not saved before inspection.",
+      "cause": "The prior sed command requested354..400 but codex-session-discovery.ts ends at398. Range metadata initially used400 and assertion rejected it.",
+      "correction": "Metadata only: actual selected scope354..398, preserving original command upper bound in notes. No product, fixture, test, import or Git operation."
+    }
+  ],
+  "inventoryAndDedup": "First8 history groups then2additional targeted groups. Both2506-path inventories and counts identical; these were static metadata searches, not product retries.",
+  "historySnapshotLimits": "Broad history snapshot was captured while Root was finishing round25; parent later reportedFF to d9d2. Its inventory/hash list records actual per-file read point, not globally atomic Git state. Supplemental search revisited the same2506paths. Re-inventory current history before any future formal classification.",
+  "sourceHashLimits": "Initial semantic-read SHA was not separately captured. Post-FF first filesystem pin and finish pin are recorded separately; no Git frozen blob is claimed.",
+  "zeroExecutionBoundary": "Only metadata Python/rg/text reads. No product test/import/function call, fixture, VM/AST/eval, real timer/socket/native/network/model/account/auth/security/custody/identity or real user HOME experiment. Source declarations mentioning such operations were read as text only.",
+  "round25Separation": "No changes to frozen round25 author/prep/raw/fixture/receipt. Nothing here contributes to round25 test/source/artifact totals."
+}

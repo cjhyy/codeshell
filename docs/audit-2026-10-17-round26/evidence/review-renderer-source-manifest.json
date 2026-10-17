@@ -1,0 +1,77 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "sourceCount": 4,
+  "sources": [
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          180,
+          204
+        ]
+      ],
+      "bytes": 10859,
+      "lineCount": 242,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "note": "Snapshot props to actual PanelArea",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          742,
+          760
+        ],
+        [
+          860,
+          900
+        ]
+      ],
+      "bytes": 34238,
+      "lineCount": 928,
+      "sha256": "6c99e51b85a5e17fc447b676124c856cb522ba06433502aaad4136c1db1a1193",
+      "note": "Pass reviewFiles/reviewDiff through PanelBody to registry entry.render",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          150,
+          181
+        ]
+      ],
+      "bytes": 15124,
+      "lineCount": 445,
+      "sha256": "d9fc87ec6e513a69ac785ea228266c750145dd5f1619f7cff56bfd56555c8186",
+      "note": "Actual review registry entry renders ReviewPanel with files/turnDiff",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/DesktopBuiltinPanelApp.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          115
+        ]
+      ],
+      "bytes": 5208,
+      "lineCount": 175,
+      "sha256": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "note": "Navigation/context only;not necessary for sentinel proof;no lifecycle/authority verification",
+      "runtimeExecuted": false
+    }
+  ],
+  "author16PinsSeparate": true,
+  "frozenGitBlobCompared": false,
+  "readTimeUtc": "2026-10-17T10:41:23.628791+00:00",
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "gitCommands": 0,
+  "scope": "Reviewer extra current-byte pins only;source hashes do not mean full reading. No expansion to transitive dependencies or platform/runtime behavior;parent may bind frozen Git blobs independently."
+}

@@ -1,0 +1,269 @@
+{
+  "searchedHistoricalSnapshotPaths": 2506,
+  "roots": [
+    "docs",
+    "bugs"
+  ],
+  "archivesIncluded": true,
+  "patterns": {
+    "codex-user-context": "codexUserText|stripInjectedCodexContext|external_codex_apps_open_page|AGENTS.{0,80}(?:title|prompt|标题|正文)|(?:host|injected).{0,35}context.{0,50}(?:title|prompt|user.text|丢|删)",
+    "connection-leaf": "connectionLiveness|ConnectionLiveness|connectionPageHidden",
+    "turn-input": "textWithAttachmentReferences|ExternalRuntimeTurnInput|codeshell_attachments|turn-input\\.ts"
+  },
+  "matchCounts": {
+    "codex-user-context": 44,
+    "connection-leaf": 1,
+    "turn-input": 1
+  },
+  "contextCapPerGroup": 100,
+  "retainedContexts": {
+    "codex-user-context": 44,
+    "connection-leaf": 1,
+    "turn-input": 1
+  },
+  "totalsAtSupplementRead": {
+    "files": 2506,
+    "stringLeaves": 426755,
+    "scalarLeaves": 609605
+  },
+  "parseErrors": [],
+  "matches": {
+    "codex-user-context": [
+      {
+        "path": "docs/architecture/05-presets-prompt-hooks-skills.md",
+        "location": "67",
+        "excerpt": "- user-level `~/.code-shell/{CODESHELL.md,CLAUDE.md,AGENTS.md}` plus `~/.code-shell/rules/*.md`, then compat `~/.claude/*` (`prompt/instruction-scanner.ts:67`);"
+      },
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "location": "67",
+        "excerpt": "6. projects Codex agents, prompts/commands, hooks, and MCP servers for"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+        "location": "112",
+        "excerpt": "- `packages/core/src/protocol/server.ts:195` 到 `packages/core/src/protocol/server.ts:197` 在 `AgentServer` 构造时安装 process-local prompt fn，底层就是上面的 singleton。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+        "location": "131",
+        "excerpt": "/agent-server-stdio.ts:235` 到 `packages/core/src/cli/agent-server-stdio.ts:285`，没有传 per-session `approvalBackend`；因此在有 `AgentServer` prompt fn 时走 `buildPermissionConfig()` 的 singleton interactive backend。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+        "location": "209",
+        "excerpt": "1. 进程内有 `AgentServer`，构造时通过 `setInteractiveApprovalFn()` 安装 prompt fn：`packages/core/src/protocol/server.ts:195` 到 `packages/core/src/protocol/server.ts:197`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+        "location": "233",
+        "excerpt": "- 另一个可选方向是真正 per-session 创建 `InteractiveApprovalBackend`，但要同时保留 `AgentServer` prompt fn 的路由能力；否则 singleton promptFn 仍会把状态混在一起。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+        "location": "84",
+        "excerpt": "- `AgentServer` 构造时安装该全局 promptFn：`packages/core/src/protocol/server.ts:195` 到 `packages/core/src/protocol/server.ts:197`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+        "location": "122",
+        "excerpt": "- 保留现有 `AgentServer` / renderer promptFn 路由，不需要重做协议层。"
+      },
+      {
+        "path": "docs/archive/subagent-design-comparison-2026-05-27.md",
+        "location": "37",
+        "excerpt": "| **定义方式** | `.claude/agents/*.md`，YAML frontmatter + body 作为 system prompt | `.codex/agents/*.toml`，作为 spawn session 的配置层 | 配置中声明 agent，含 `mode` 字段 | 无定义文件，调用时传字符串，临时性 |"
+      },
+      {
+        "path": "docs/archive/subagent-send-input-design.md",
+        "location": "46",
+        "excerpt": "新增:`SubAgentSpawnRequest.resumeSessionId?: string`。spawn 内 `child.run(prompt, { sessionId: req.resumeSessionId })` —— 有则 resume,无则 cold-start(现行为)。"
+      },
+      {
+        "path": "docs/archive/subagent-send-input-design.md",
+        "location": "57",
+        "excerpt": "AgentSendInput(agent_id: string, prompt: string) -> string"
+      },
+      {
+        "path": "docs/archive/subagent-send-input-design.md",
+        "location": "93",
+        "excerpt": "- **后续续接**:`AgentSendInput(agent_id, prompt=<增量指令>)` —— 如\"业务审核 FAIL,按以下意见改:…\",子代理 resume 后带着自己刚写的分析记忆改稿,不用重发全文。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"history_identity\"][93][\"context\"]",
+        "excerpt": "view_image、MCP、apps/connectors、plugins、skills、hooks、notify、AGENTS.md、custom prompts。 |\n| 配置 | config layer precedence、profile、project trust、model/provider、sandbox/approval、MCP、hooks、features、TUI、OTel、history、env vars。 |\n| 模型/provider | GPT-5.6 Sol/Terra/Luna、GPT-5.4、GPT-5.3-Codex-Spark、OpenAI/API key、custom provider、Azure、Bedrock、Ollama/LM Studio。 |\n| Slash 命令 | 官方内置 slash commands、queued slash、session 控制、权限/model/status/diff/review/mcp/plugins/hooks/subagents 等。 |\n| 多 agent | subag"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "location": "$[\"hits\"][138][\"excerpt\"]",
+        "excerpt": "与扩展 | shell/unified exec、file changes/apply_patch、web search、view_image、MCP、apps/connectors、plugins、skills、hooks、notify、AGENTS.md、custom prompts。 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"identity_cache\"][150][\"context\"]",
+        "excerpt": "engine/engine.ts:1792-1841, 2156-2193`(HEAD 基准,锚点定位)\n\n既有行为快照依据(充分,不新增测试):`engine.context-anchor.test.ts`(anchor 兼容性播种)、`injected-context-cache.test.ts`(userContext/volatile 注入与剥离)、`engine.prompt-cache.test.ts` + `cache-hit-rate.test.ts`(seed 一次性/缓存前缀)、`engine.context-package.test.ts`、`engine.prompt-too-long.test.ts`。\n\n- [ ] **Step 1: 跑基线**\n\n```bash\nbun test packages/core/src/engine/engine.context-anchor.test.ts packages/core/src/engine/injected-context-cache.test.ts packages/core/src/engine/en"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"identity_cache\"][151][\"context\"]",
+        "excerpt": "- [ ] **Step 1: 跑基线**\n\n```bash\nbun test packages/core/src/engine/engine.context-anchor.test.ts packages/core/src/engine/injected-context-cache.test.ts packages/core/src/engine/engine.prompt-cache.test.ts\n```\n\n- [ ] **Step 2: 创建 `run-context.ts`(三个函数,体为原样搬运)**\n\n```ts\n/**\n * Run context — ContextManager creation/seeding and the per-run message-list\n * assembly (user context, lifecycle reminders, volatile dynamic context, and\n * the runtime-context system-prompt tail).\n */\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/injection.md",
+        "location": "29",
+        "excerpt": "`stripInjectedContextMessages` 的 [identity 契约](../../packages/core/src/engine/injected-context-cache.ts#L3) 与真实运行一致：删除精确的 run-scoped 对象，内容相等的 durable 用户消息仍保留；没有注入时返回新外层数组，消息对象 identity 不变。既有基线明确保留已经不在首位的 user-context 对象，本轮不把此行为改写为 bug。[run-context.ts:112](../../packages/core/src/engine/run-context.ts#L112) 与 [run-finalize.ts:239](../../packages/core/src/engine/run-finalize.ts#L239) 只作静态生产/消费定位，没有执行完整缓存生命周期。人为让 userContext 与 dynamicContext 共用同一对象、或构造没有普通生产者的克隆/重排，不登记正式问题。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "location": "$[\"hits\"][\"retention_context\"][87][\"context\"]",
+        "excerpt": "er，也不声称真实图片字节丢失或用户可见故障。\n\n## 正常对照、已有策略与排除\n\n`stripInjectedContextMessages` 的 [identity 契约](../../packages/core/src/engine/injected-context-cache.ts#L3) 与真实运行一致：删除精确的 run-scoped 对象，内容相等的 durable 用户消息仍保留；没有注入时返回新外层数组，消息对象 identity 不变。既有基线明确保留已经不在首位的 user-context 对象，本轮不把此行为改写为 bug。[run-context.ts:112](../../packages/core/src/engine/run-context.ts#L112) 与 [run-finalize.ts:239](../../packages/core/src/engine/run-finalize.ts#L239) 只作静态生产/消费定位，没有执行完整缓存生命周期。人为让 userContext 与 dynamicContext 共用同一对象、或构造没有普通生产者的克隆/重排，不登记正式问题。\n\nsteer 的 trim/drop blank 和浅复制附件数组是明确实现行为。聚焦对照只确认复制外层附件列表，未宣称 deep immutable snapshot。没有制造附件对象后续突变来登记缺"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+        "location": "$[\"hits\"][109][\"text\"]",
+        "excerpt": "| **定义方式** | `.claude/agents/*.md`，YAML frontmatter + body 作为 system prompt | `.codex/agents/*.toml`，作为 spawn session 的配置层 | 配置中声明 agent，含 `mode` 字段 | 无定义文件，调用时传字符串，临时性 |"
+      },
+      {
+        "path": "docs/core-deep-dive/07-run-automation-goal.md",
+        "location": "33",
+        "excerpt": "`EngineRunner` 把引擎包进一个 in-process `AgentServer`+`AgentClient`(所以一次 run 走和 REPL 一样的协议接缝),并往系统提示注入 `AUTOMATION_PROMPT_NOTE`(\"没人在看。你就是自动化,别问用户问题……\")。"
+      },
+      {
+        "path": "docs/core-deep-dive/v2-05-protocol-hosts-orchestration-deep-dive.md",
+        "location": "266",
+        "excerpt": "`EngineRunner`(`run/EngineRunner.ts`)把引擎包进一个 *in-process* `AgentServer`+`AgentClient`(所以一次 run 走和 REPL 一样的协议接缝——又一个接缝复用),并往系统提示注入 `AUTOMATION_PROMPT_NOTE`(\"没人在看。你就是自动化,别问用户问题……\")。"
+      },
+      {
+        "path": "docs/nightly-2026-07-10/codex-capability-catalog.md",
+        "location": "402",
+        "excerpt": "与扩展 | shell/unified exec、file changes/apply_patch、web search、view_image、MCP、apps/connectors、plugins、skills、hooks、notify、AGENTS.md、custom prompts。 |"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+        "location": "130",
+        "excerpt": "- `identity`：Phase 1 本地 `sessionId`（投影中兼容记为 `agentSessionId`）、title、workspace display name；多用户后切换为 public `agentSessionId`；"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+        "location": "357",
+        "excerpt": "- `PetSendDirection(agentSessionId, prompt, delivery)`（后续 Phase）"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-27-subagent-redesign.md",
+        "location": "7",
+        "excerpt": "**Architecture:** 新增 `.code-shell/agents/*.md` 角色定义（frontmatter + body=systemPrompt），由 `AgentDefinitionRegistry` 加载。`Agent` 工具新增可选 `agentType` 参数：传入时加载角色配置（工具集、模型、prompt、maxTurns），不传时退化为现有临时模式（完全向后兼容）。子 Engine 的 LLM 从写死的父级克隆改为按角色 `model` key 经 `ModelPool.resolveLLMConfig` 解析。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-27-subagent-redesign.md",
+        "location": "771",
+        "excerpt": "现状子 Engine 用 `appendSystemPrompt: this.config.appendSystemPrompt`（engine.ts:571，继承父级）。改为让 spawn 请求可追加角色 prompt：在 `SubAgentSpawnRequest`（context.ts）加 `appendSystemPrompt?: string`，并在 `spawn`（engine.ts:571）改为："
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-27-subagent-redesign.md",
+        "location": "1252",
+        "excerpt": "- **类型一致性**：`SubAgentSpawnRequest` 在 Task 3 加 `model`/`toolAllowlist`，Task 6 再加 `appendSystemPrompt`/`signal`（signal 已有）；`resolveChildLlm`/`resolveChildToolScope`/`resolveAgentTypeOverrides` 三个纯函数命名全程一致。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-06-mobile-remote-control.md",
+        "location": "1469",
+        "excerpt": "    expect(parseExternalAgentSlash(\"/cc fix tests\")).toEqual({ kind: \"claude-code\", prompt: \"fix tests\", mode: undefined });"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-06-mobile-remote-control.md",
+        "location": "1473",
+        "excerpt": "    expect(parseExternalAgentSlash(\"/cc --safe fix tests\")).toEqual({ kind: \"claude-code\", prompt: \"fix tests\", mode: \"safe\" });"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-06-mobile-remote-control.md",
+        "location": "1477",
+        "excerpt": "    expect(parseExternalAgentSlash(\"/cc --dangerous fix tests\")).toEqual({ kind: \"claude-code\", prompt: \"fix tests\", mode: \"dangerous\" });"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-06-mobile-remote-control.md",
+        "location": "1481",
+        "excerpt": "    expect(parseExternalAgentSlash(\"/codex review diff\")).toEqual({ kind: \"codex\", prompt: \"review diff\", mode: undefined });"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-15-pet-extraction-phase1b.md",
+        "location": "36",
+        "excerpt": "  /** Wraps host-supplied runtime context (profileParams.runtimeContext) into a system-prompt tail block. */"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+        "location": "360",
+        "excerpt": "git commit -m \"feat(web): SPA reuses the shared stream reducer (tool results, subagents, goals, titles)\""
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+        "location": "1767",
+        "excerpt": "既有行为快照依据(充分,不新增测试):`engine.context-anchor.test.ts`(anchor 兼容性播种)、`injected-context-cache.test.ts`(userContext/volatile 注入与剥离)、`engine.prompt-cache.test.ts` + `cache-hit-rate.test.ts`(seed 一次性/缓存前缀)、`engine.context-package.test.ts`、`engine.prompt-too-long.test.ts`。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+        "location": "1772",
+        "excerpt": "bun test packages/core/src/engine/engine.context-anchor.test.ts packages/core/src/engine/injected-context-cache.test.ts packages/core/src/engine/engine.prompt-cache.test.ts"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-27-subagent-config-panel-design.md",
+        "location": "61",
+        "excerpt": "- `listAgents(cwd)` → `AgentSummary[]`：合并两源后的列表，每项含 name / description / model / maxTurns / tools / systemPrompt / source / override / filePath / disabled（disabled 由 settings.disabledAgents 推出）。"
+      },
+      {
+        "path": "docs/todo/parent-child-bidirectional-notification-phase0-design.md",
+        "location": "11",
+        "excerpt": "去 resume。child 启动时建立一个与其现有 `Engine` 绑定的 live control handle，并在 `asyncAgentRegistry` 中持有单写者 lease。父 agent 对运行中 child 调用 `AgentSendInput(agent_id, prompt, delivery)` 时，只验证直属 tree 边、构造并路由 `direction` envelope："
+      },
+      {
+        "path": "docs/todo/parent-child-bidirectional-notification-phase0-design.md",
+        "location": "461",
+        "excerpt": "  P->>R: AgentSendInput(agentId, prompt, next-safe-point)"
+      },
+      {
+        "path": "docs/todo/parent-child-bidirectional-notification-phase0-design.md",
+        "location": "484",
+        "excerpt": "  P->>R: AgentSendInput(agentId, prompt, interrupt-and-redrive)"
+      },
+      {
+        "path": "docs/todo/parent-child-bidirectional-notification-phase0-design.md",
+        "location": "520",
+        "excerpt": "- 父 agent 需要时主动读 AgentStatus。系统 prompt 继续 discourages 高频 polling；UI 可被 bus 被动刷新。"
+      },
+      {
+        "path": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "location": "29",
+        "excerpt": "- 账本/真实 Engine/Host 冷读定向：22 pass / 0 fail。包括复制同 SID state 到另一 storage、restart/fork/replay、生产 SubAgentSpawner、晚到 title、external 重发、SDK 真正 fetch retry、流式失败后 fallback、缺 usage/零 usage/未知价格、账本故障不额外付费、两个 Bun 进程并发发布。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-CORE.md",
+        "location": "221",
+        "excerpt": "- The earlier `400c90b1` commit extracted only injected-context removal. Session hooks, usage/state persistence, title/memory dispatch, and result mapping remain in `engine.ts` and remain listed as incomplete Task 4 work."
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QCBEHAVIOR.md",
+        "location": "223",
+        "excerpt": "全量无新增失败，`ExternalAgentSessionStore concurrent writers` 预存基线失败本次未复现。现有 side-chat system prompt/行为限制未修改。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/prompt-cache-deepen.md",
+        "location": "258",
+        "excerpt": "- `buildUserContextMessage()` 中的日期与 CODESHELL/CLAUDE/AGENTS 指令（`packages/core/src/prompt/composer.ts:75-100`）位于 messages 头部而非 wire system。它变化时三段 hash 可能都不变，但 history breakpoint 命中仍可能下降，因此归因必须使用 `no_tracked_prefix_change`，不能误报“provider eviction 已确定”。"
+      }
+    ],
+    "connection-leaf": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][2396]",
+        "excerpt": "packages/web/src/lib/connectionLiveness.ts"
+      }
+    ],
+    "turn-input": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][126]",
+        "excerpt": "packages/coding/src/external-runtimes/turn-input.ts"
+      }
+    ]
+  },
+  "note": "Supplement searches the already recorded2506 history paths; no new broad inventory/read expansion. Static text metadata only; no execution/import/Git. Keyword cap not semanticexhaustion."
+}

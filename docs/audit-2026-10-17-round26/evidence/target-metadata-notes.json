@@ -1,0 +1,52 @@
+{
+  "allWritesUnder": "/tmp/codeshell-audit-round26-review-frontier",
+  "productTestImportFixtureVMNativePTYGitNetworkSecurityAuthCustodyExecution": 0,
+  "sourceImportsNotExecuted": [
+    "node:child_process",
+    "node:fs",
+    "node:fs/promises",
+    "node:path",
+    "node:util",
+    "@cjhyy/code-shell-core/extension",
+    "./review-prompt.js"
+  ],
+  "toolOutputLimits": [
+    {
+      "action": "Initial broad docs/bugs inventory filter returned1451 lines and tool truncation.",
+      "effect": "Navigation only; no semantic coverage claimed. Complete history is collected by bounded metadata script and relevant prior parents separately read."
+    },
+    {
+      "action": "Combined target406/test280/caller output exceeded aggregate budget; test initial lines were truncated.",
+      "effect": "Target406 displayed fully; test1-100,101-200,201-280 and prompt/caller sections separately read in bounded outputs before claiming full tests."
+    }
+  ],
+  "navigationNoMatch": [
+    {
+      "action": "Final rg query in docs/todo and docs/architecture for target names/command syntax",
+      "exitCode": 1,
+      "meaning": "No-match navigation, after preceding source reads. Not product/test failure, no retry or product fallback."
+    }
+  ],
+  "instructions": "CODESHELL full read and unchanged SHA56d9ffdd…dad5a2. Parent owns branch/freeze metadata and all Git operations. No .git reads or Git commands by this subagent.",
+  "formalPhase": {
+    "writes": "Only round26 review-target-report.md and evidence/target-* after parent authorization.",
+    "gitCommandsExecuted": 0,
+    "prohibitedRuntimeAttempts": 0,
+    "dedupRescan": "New metadata-only script excludes round26. Original /tmp prep is byte-preserved; same prior totals observed at second snapshot.",
+    "noRawRuntimeReceipt": "No runtime raw/exit exists because no product/test/import/fixture attempt occurred."
+  },
+  "supplementalNavigation": [
+    {
+      "action": "After actual command/test inventory, mistakenly queried absent packages/tui/src/cli/commands/registry.test.ts with rg.",
+      "exitCode": 2,
+      "firstDisplayedOutput": "rg: packages/tui/src/cli/commands/registry.test.ts: IO error for operation on packages/tui/src/cli/commands/registry.test.ts: No such file or directory (os error 2)",
+      "capture": "Manual note of first displayed tool response, not process raw saved before inspection.",
+      "disposition": "Path abandoned. Did not create, recover, retry or execute any registry test. Existing inventory showed review-command.test.ts, but no test file was loaded or run as an alternative."
+    },
+    {
+      "action": "Broad root-branch-scan JSON cat and first supplemental spacing search print exceeded tool output budgets.",
+      "disposition": "Not claimed full. Later metadata supplemental stores counts/limited contexts plus all4 registry hits and reads actual R4 parent report/validation; source target and branch evidence remains bounded static."
+    }
+  ],
+  "classificationRevision": "Author report revised to0formal/0candidate/1old-related after dedup found prior CLI-R4-01. Original /tmp proposal/copy bytes remain unchanged."
+}

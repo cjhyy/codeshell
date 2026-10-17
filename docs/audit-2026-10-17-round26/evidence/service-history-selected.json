@@ -1,0 +1,97 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "selectedSavedContexts": [
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "location": "60",
+      "excerpt": "只读 `root-unified-diff.test.ts` /原始 `root-unified-diff.log`、`parseUnifiedDiff.ts`、`ReviewService`生产分派、`desktop-services.gitRun`与各diff参数、`UnifiedDiffViewer`的parse/filter/title/open/comment接线；未执行测试或Git命令。保留 R2-09/P2、R2-10/P3、R2-11/P2。",
+      "valueCharacters": 231
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "location": "64",
+      "excerpt": "- **R2-11不存在生产统一禁用quotePath的反证。** `ReviewService:72–75`分派到getGitDiffForReview/getGitRangeDiff/getGitCommitDiff；`desktop-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。",
+      "valueCharacters": 431
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/root.md",
+      "location": "106",
+      "excerpt": "- 生产接线：ReviewService 使用 desktop-services 的 getGitDiffForReview / range / commit diff，未对 core.quotePath 设置 false，也未在返回前解码；UnifiedDiffViewer 直接使用 parser。引号/控制字符即便 quotePath=false 仍需处理，未另行动态扩展该边界。",
+      "valueCharacters": 193
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "location": "32",
+      "excerpt": "- 生产链静态核对：[desktop-services.ts:599](../../packages/desktop/src/main/desktop-services.ts#L599) 为 Review 全仓 diff 调用普通 `git diff --no-color --unified=3`；range 与 selected commit 分支也返回普通 patch。ReviewService 默认使用该 helper，[UnifiedDiffViewer.tsx:82](../../packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx#L82) 直接 parse。",
+      "valueCharacters": 319
+    },
+    {
+      "group": "exact",
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "location": "23",
+      "excerpt": "主要位置：[ReviewService:155](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/review-service.ts:155) 对所选 commit 一律拼 `${hash}^..${hash}`，默认用 `HEAD~1..HEAD`；root commit 无父提交。[getGitRangeDiff:621](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/desktop-services.ts:621) 把 Git 错误吞成空串，fan-in 得到 diff=\"\"、errors=[]；实际 [UnifiedDiffViewer:180](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:180) 因此显示“no changes”。",
+      "valueCharacters": 554
+    },
+    {
+      "group": "exact",
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "location": "27",
+      "excerpt": "[便携 fixture](reproductions/terminal-review-round13/review-first-commit.test.tsx) 创建真实自有 Git 首提交，`git show --format= --root HASH` 确认有新增正文。ReviewService 只注入一个合法授权 root，Git discovery、recent commits、range diff 均用生产实现。真实提交列表包含 root；显式选择和单提交默认请求都返回空 diff、无 errors。实际 UnifiedDiffViewer 接真实 service 回包显示“no changes”，没有新增正文或 Git 失败提示。",
+      "valueCharacters": 325
+    },
+    {
+      "group": "scope",
+      "path": "docs/audit-2026-10-17/root.md",
+      "location": "87",
+      "excerpt": "- 生产接线：`UnifiedDiffViewer.tsx:82` 对 Review service 和 turn snapshot 的 diff 使用该 parser，`:261` / `:346` 使用路径显示/打开。仅 parser 动态验证，没有运行 Electron。",
+      "valueCharacters": 139
+    },
+    {
+      "group": "scope",
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "location": "32",
+      "excerpt": "- 生产链静态核对：[desktop-services.ts:599](../../packages/desktop/src/main/desktop-services.ts#L599) 为 Review 全仓 diff 调用普通 `git diff --no-color --unified=3`；range 与 selected commit 分支也返回普通 patch。ReviewService 默认使用该 helper，[UnifiedDiffViewer.tsx:82](../../packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx#L82) 直接 parse。",
+      "valueCharacters": 319
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "location": "62",
+      "excerpt": "- **R2-09合法正文错认header可达。** 原始日志是自有Git实际生成的补丁：hunk后合法 `--- before` / `+++ after` 正文来自文本 `-- before` → `++ after`。parser `:62–72` 不检查curHunk就改路径并continue，`:105–118`还排除三个加减号开头内容；因此actual AST路径before/after、无add/del、context从1而非2开始都与代码相符。普通ASCII修改对照正确。这是普通文本改动的审查内容遗漏，不需要手工伪造Git输出，P2合理。UI错误打开/评论路径仅静态接线，现报告没有冒充点击复现。",
+      "valueCharacters": 309
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "location": "69",
+      "excerpt": "查重：10-16的A01是执行rename丢mode、D01是@文件搜索的ls-files路径解码；当前file-search已用NUL输出，该修复不触达Review parser。10-12 Review R59是首提交无父range错误，不是hunk header、纯rename或quoted path解析。对10-12主Markdown与remaining findings的parseUnifiedDiff/quotePath/rename关键词有限查重未见同项。R2-08只影响外部CLI changedFiles收集，与纯rename Review AST为独立实现/修复，不重复同一缺陷。",
+      "valueCharacters": 302
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/audit-2026-10-17/root.md",
+      "location": "85",
+      "excerpt": "- 影响：Review 展示遗漏真正改动，文件标题、计数和后续行定位错误。打开文件/添加评论会使用错误 AST 路径是静态接线结论，未执行 UI 点击或真实评论。",
+      "valueCharacters": 81
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/audit-2026-10-17/root.md",
+      "location": "90",
+      "excerpt": "### R2-10 [P3] Review 中纯重命名文件丢失两个路径",
+      "valueCharacters": 35
+    },
+    {
+      "group": "mechanism",
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "location": "44",
+      "excerpt": "产品 guarded 首次实验无失败或重试。审查元数据参考有两个不存在的猜测路径；扩大查重正则时有一次编译错误，后续只修 metadata 并重新生成记录。工具首次响应的明确转录见 [metadata notes](evidence/desktop-metadata-notes.md)，这些不计为产品失败 shard。所有产品 raw combined stdout/stderr 与 exit 都先保存再查看；没有通过修支架重跑掩盖失败。",
+      "valueCharacters": 221
+    }
+  ],
+  "note": "Selected prior contexts,not all history semantically read. Source-parent passages separately read in report manifest."
+}

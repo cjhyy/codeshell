@@ -1,0 +1,302 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "baselineProvidedByParent": true,
+  "sourceFrozenGitVerifiedByThisAuthor": false,
+  "readTimeUtc": "2026-10-17T10:36:03.186178+00:00",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "lineCount": 217,
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          377
+        ]
+      ],
+      "lineCount": 377,
+      "bytes": 14224,
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          367
+        ]
+      ],
+      "lineCount": 367,
+      "bytes": 13426,
+      "sha256": "d2c5080afb5ca379004e5bc7b6a8766fa6b4e45021b48defd0b44a5923fd95da",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-services.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          175
+        ],
+        [
+          215,
+          280
+        ],
+        [
+          480,
+          910
+        ]
+      ],
+      "lineCount": 1141,
+      "bytes": 37885,
+      "sha256": "c386d825b7c123d0fae678978e40e1ebb6b2f6f4c6df8c7377857f61402b36af",
+      "runtimeExecuted": false,
+      "reviewFocusRanges": [
+        [
+          78,
+          153
+        ],
+        [
+          233,
+          251
+        ],
+        [
+          556,
+          896
+        ]
+      ],
+      "note": "Actual displayed ranges also include navigation/context outside Review helpers;not full semantic audit of worktree cleanup or other Desktop services."
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-services.review-diff.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          358
+        ]
+      ],
+      "lineCount": 358,
+      "bytes": 15584,
+      "sha256": "538d589d138d4c7d7fcd1e039d1beedacece319e0658f9f8e3474b8275c8fbd5",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/shared/review.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "lineCount": 67,
+      "bytes": 1932,
+      "sha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "lineCount": 127,
+      "bytes": 7442,
+      "sha256": "fb516a99b912b783736ef1561a6adecb5abf86798bab9a809684fb9483a2ba26",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-types.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          12
+        ],
+        [
+          85,
+          112
+        ]
+      ],
+      "lineCount": 179,
+      "bytes": 6636,
+      "sha256": "8738013e7535b7da512329af44a5b197064949154763b01a6a882781d36b36de",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          85,
+          89
+        ],
+        [
+          122,
+          134
+        ],
+        [
+          1040,
+          1060
+        ]
+      ],
+      "lineCount": 2982,
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "runtimeExecuted": false,
+      "note": "Review public-type/import/composition segments only;other rg navigation snippets not claimed reviewed plugin interfaces."
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6423,
+          6458
+        ]
+      ],
+      "lineCount": 7330,
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          235
+        ]
+      ],
+      "lineCount": 424,
+      "bytes": 17885,
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "lineCount": 56,
+      "bytes": 2052,
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-04-workbench-builtins-design.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          290,
+          345
+        ]
+      ],
+      "lineCount": 410,
+      "bytes": 12401,
+      "sha256": "d9111f0080c4a022b1c5d2ae974c261d064dceec5292de8dd11817f9645014bd",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-01-github-pr-workflow-design.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          70,
+          87
+        ]
+      ],
+      "lineCount": 184,
+      "bytes": 8686,
+      "sha256": "c9ba1a576ccb99773285922f916fe794d2663c8f0b092266a5a5a8d6e29fed98",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          21,
+          35
+        ]
+      ],
+      "lineCount": 43,
+      "bytes": 8432,
+      "sha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          80,
+          109
+        ]
+      ],
+      "lineCount": 127,
+      "bytes": 18621,
+      "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          59,
+          68
+        ]
+      ],
+      "lineCount": 73,
+      "bytes": 14882,
+      "sha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          25,
+          37
+        ]
+      ],
+      "lineCount": 50,
+      "bytes": 8725,
+      "sha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "runtimeExecuted": false
+    }
+  ],
+  "sourceCount": 18,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "gitCommands": 0,
+  "scopeLimit": "Current bytes pin actual full/selected read scope;no Git command used. Parent integration may independently bind these hashes to frozen Git blobs. Hashing does not prove full semantic review;tests are read-only declarations,not passed tests."
+}

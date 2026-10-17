@@ -1,0 +1,19 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "metadataFailures": [],
+  "metadataFailureCount": 0,
+  "productFailures": 0,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "productChanges": false,
+  "sourceChronology": "Initial11pins taken before assigned semantic reads except previously full-read unchangedCODESHELL. Four necessary dependencies/consumers and FilesChangedCard added at metadata follow-up after or concurrent with selected reads; no claim their SHA preceded semantic reading. All current hashes match first captured.",
+  "frozenHashBoundary": "Author preserved0Gitcommands; parent-suppliedfreeze6d61 is context. frozenSha256/frozenGitBlob are null, not invented; Root finalaggregate may independently compare frozen/current bytes.",
+  "coverage": "Assigned10targets9full+selectedbucket290lines=1753; additional5consumer/dependency sources545lines; total15product/test sources2298lines. Instruction source217lines separate. Text hashes do not mean entire selected files reviewed.",
+  "navigationBoundary": "PanelArea/PanelRegistry rg locations were navigation only, not semantic body review or extra full-source pins. The static finding rests on actual card event/bucket snapshot+ReviewPanel/parser/Select/value/helper/viewer source contract.",
+  "historyBoundary": "Fresh2509historypaths read excludingallround26 includingpriorprep. broadreview-draft4302matches capped220; exact155 anddraft-session185 retained in full. Supplement sentinel0/draftappend4, all4onlyround25integration inventory paths. Keywords/caps and selected excerpts do not prove semantic exhaustion.",
+  "outputBoundary": "One tool display of history contexts was truncated; complete retained contexts remain in renderer-dedup.json. No claim of full semantic reading of all matches.",
+  "copiedPriorPrep": "Prior negative proposal12files unchanged. Its metadata EOF assertion/initialhash limitations belong to that prior exploration only, not current renderer metadata failures.",
+  "zeroExecutionBoundary": "Python/rg metadata/text operations only; no product import/test/fixture/React/DOM/browser/VM/AST/native/network/model/realHOME/permission/security/custody/identity operation. No raw/exit invented for nonexistent product runs."
+}

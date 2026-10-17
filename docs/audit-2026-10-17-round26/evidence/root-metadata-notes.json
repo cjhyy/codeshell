@@ -1,0 +1,25 @@
+{
+  "productAttempts": 0,
+  "productReruns": 0,
+  "metadata": [
+    {
+      "kind": "Guessedsourceextension",
+      "firstResponse": {
+        "chunk_id": "1c7699",
+        "exitCode": 2,
+        "output": "packages/tui/src/ui/app-helpers.tsx\nrg: packages/tui/src/ui/app-helpers.ts: IO error for operation on packages/tui/src/ui/app-helpers.ts: No such file or directory (os error 2)\n"
+      },
+      "action": "Skipped nonexistent.ts;read actual inventory.tsx statically. No product rerun."
+    },
+    {
+      "kind": "Pendingreceiptlocator",
+      "firstResponse": {
+        "chunk_id": "f24ace",
+        "exitCode": 1,
+        "diagnostic": "sed: docs/audit-2026-10-17-round26/evidence/service-artifact-receipt.json: No such file or directory"
+      },
+      "action": "Skipped guessedreceipt;Rootwilluseactual inventory beforeaggregation. No author/productfile modified."
+    }
+  ],
+  "normalNoMatch": "rg exit1 withno matchandwithoutIOdiagnostic is inventory/search evidence,not a productfailure or fabricatednewcandidate."
+}

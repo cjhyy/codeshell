@@ -1,0 +1,152 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "roots": [
+    "docs",
+    "bugs"
+  ],
+  "archivesIncluded": true,
+  "excludedCurrentRound": "docs/audit-2026-10-17-round26/** including copied prior-negative-prep",
+  "totals": {
+    "files": 2509,
+    "markdown": 1241,
+    "json": 1268,
+    "stringLeaves": 426811,
+    "scalarLeaves": 609678,
+    "parseErrors": 0
+  },
+  "patterns": {
+    "exact": "useReviewPrompt|ReviewPanel(?:\\.workspace)?|composerSeed|usePanelBuckets(?:\\.subagent)?|reviewSnapshot",
+    "review-draft": "(?:review|审查).{0,80}(?:draft|composer|seed|selection|session|草稿|会话|选区)|(?:draft|composer|seed|草稿|选区).{0,60}(?:review|审查)",
+    "draft-session": "(?:draft|composerSeed|initialDraft|seedDraft).{0,80}(?:session|会话|selected|selection)|(?:session|会话).{0,70}(?:draft|composerSeed|草稿)"
+  },
+  "matchCounts": {
+    "exact": 155,
+    "review-draft": 4302,
+    "draft-session": 185
+  },
+  "retainedContexts": {
+    "exact": 155,
+    "review-draft": 220,
+    "draft-session": 185
+  },
+  "sourceDirectedSupplement": {
+    "matchCounts": {
+      "all-sentinel": 0,
+      "draft-append": 4
+    },
+    "retainedCounts": {
+      "all-sentinel": 0,
+      "draft-append": 4
+    },
+    "changedSinceInitialSnapshot": [],
+    "parseErrors": []
+  },
+  "selectedHistory": [
+    {
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "sha256AtCorpusRead": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "coverage": "selected historical reference",
+      "selectedLineRanges": [
+        [
+          21,
+          31
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 21,
+          "end": 31,
+          "text": "## R59 / P3：审阅仓库首提交时显示“no changes”\n\n主要位置：[ReviewService:155](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/review-service.ts:155) 对所选 commit 一律拼 `${hash}^..${hash}`，默认用 `HEAD~1..HEAD`；root commit 无父提交。[getGitRangeDiff:621](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/desktop-services.ts:621) 把 Git 错误吞成空串，fan-in 得到 diff=\"\"、errors=[]；实际 [UnifiedDiffViewer:180](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:180) 因此显示“no changes”。\n\n触发入口：[ReviewPanel 提交子菜单:233](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/panels/ReviewPanel.tsx:233) 直接列出 `getRecentCommits` 返回的最近 20 项，没有过滤其中的首次提交；选择后以 [rootId + hash:151](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/panels/ReviewPanel.tsx:151) 发请求。新仓库仅一个提交时默认 committed scope 也受影响。\n\n[便携 fixture](reproductions/terminal-review-round13/review-first-commit.test.tsx) 创建真实自有 Git 首提交，`git show --format= --root HASH` 确认有新增正文。ReviewService 只注入一个合法授权 root，Git discovery、recent commits、range diff 均用生产实现。真实提交列表包含 root；显式选择和单提交默认请求都返回空 diff、无 errors。实际 UnifiedDiffViewer 接真实 service 回包显示“no changes”，没有新增正文或 Git 失败提示。\n\n正常对照：创建第二个真实提交后，选第二提交可显示新增正文；再选 root 仍为空，不会因仓库多了一次提交而修复。显式给 viewer 真实 root diffText 可显示首提交正文，证明渲染器能显示该内容；这只是渲染正常对照，**不代表现有菜单提供恢复按钮或自动备份**。完整 ReviewPanel 下拉交互和 Electron Main 本轮未挂载，正式菜单接线静态核对，动态范围是实际 service + viewer。\n\n影响仅首提交差异无法从该菜单查看，历史和文件保留，后续提交正常。外部 `git show --root` 可查看；若恰有对应的 turn snapshot，也可能走已有快照查看，但不保证每个历史 root commit 都有快照。建议 P3。修复应对 root commit 使用 empty-tree 或等价 `git show --root`，并让失败 range 显式返回错误，避免把失败显示为成功无变化。"
+        }
+      ],
+      "decision": "OldR59 is root-commit parent range/error swallowing, different from option/file sentinel collision. No Git/service/viewer rerun."
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+      "sha256AtCorpusRead": "171cc6cab7750b1f435d1e4d5e3835f6806c3ee1207fc637122247b81c089808",
+      "coverage": "selected historical reference",
+      "selectedLineRanges": [
+        [
+          109,
+          120
+        ],
+        [
+          173,
+          180
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 109,
+          "end": 120,
+          "text": "### 3.5 ReviewPanel / UnifiedDiffViewer：workspace 变化后的状态重置\n\n`UnifiedDiffViewer.tsx:49-73` 的 effect 已把 cwd 放在依赖中，resolved root 变化后会自动重新查询，不必改变 IPC shape。需要补两点状态卫生：\n\n- 发新请求前 `setError(null)`、`setDiff(null)`，避免 workspace 切换期间继续展示旧 worktree diff。\n- 保留 cancelled guard，旧 cwd 响应不得覆盖新 cwd。\n\n`ReviewPanel.tsx` 还缓存了 cwd 相关状态：\n\n- `commits` 在 `:71-72` 只首次加载，cwd 改变后不会自动清空；增加 `[cwd]` effect 重置 `commits`、`selectedCommit`、`range`、`stats`。\n- scope 可保持用户选择；若旧 selected commit 不属于新 worktree，清空后会回到该 scope 默认 `HEAD~1..HEAD`。\n- `turnDiff` 是来源 turn 的权威快照（`:29-35`），不重新调用 git。cwd 更新只影响 diff 内“打开文件”动作所使用的根目录（`UnifiedDiffViewer.tsx:120-125`）。"
+        },
+        {
+          "start": 173,
+          "end": 180,
+          "text": "  - 返回 worktree root；\n  - repo draft 不发 IPC并使用 main root；\n  - A 请求晚于 B 返回时不能覆盖 B；\n  - 只响应匹配 session 的 `workspace:changed`；\n  - IPC reject 回退 repoPath且不保留旧 session root；\n  - unmount 正确退订。\n- PanelArea/PanelRegistry 测试：workspace 未 ready 时不创建 Terminal/Review；ready 后所有 cwd-sensitive panel 获得同一 root。\n- ReviewPanel 测试：cwd 改变会清空 commits/selected commit 并触发新 diff；旧 promise 晚返回不覆盖新 diff；turnDiff 不触发 git 查询。"
+        }
+      ],
+      "decision": "Old workspace async state cleanup; current context/target guards are counterevidence. Not same cause and not runtime evidence."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/unread.md",
+      "sha256AtCorpusRead": "03bf50585b504667977ac4fb54c4f1f493a4b261b32088ec92dd4f11b86514ad",
+      "coverage": "selected historical reference",
+      "selectedLineRanges": [
+        [
+          11,
+          12
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 11,
+          "end": 12,
+          "text": "- **影响边界**：候选仅涉及当前页面的会话未读提示消失。不声称消息/历史丢失、错误导航、草稿移动、数据错发或持续不可恢复；后续 stream 是否重新标记取决于完整调用链，未运行。\n- **去重**：完整旧资料未命中这三个 helper 名称。旧 R61 是 Desktop shared SessionCatalog 的跨窗口导航投影，旧 W11 是新建确认前后台 stream 自动绑定/草稿迁移；二者已读作排重对照，均没有复跑。本候选是已存在导航 guard 前的未读清除接线，不将上述旧条目再次计为新增，也不将旧记录当成本候选的动态证据。"
+        }
+      ],
+      "decision": "Prior unread candidate discusses navigation guard/background state, not actual-file/all-file value collision. No hook replay."
+    }
+  ],
+  "sourceDirectedMatches": [
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][23]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx"
+    },
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][24]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.ts"
+    },
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/main-source-review.json",
+      "location": "$[\"externalPaths\"][23]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx"
+    },
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/main-source-review.json",
+      "location": "$[\"externalPaths\"][24]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.ts"
+    }
+  ],
+  "newCause": "Actual root-relative file name __all__ shares All-files Select state; viewer and prepared snapshot scope are two consumers of one cause.",
+  "decisions": [
+    "No __all__/ALL_FILES source-directed historical match in all2509saved paths; no same causal issue identified in selected review. This is not semantic exhaustion.",
+    "Existing source tests are read as contracts/counterevidence; no historical or authored pass counts are borrowed.",
+    "Prior code-review/R59/root-commit/wrong-cwd/mapper draft navigation issues remain dedup only. No new related registration.",
+    "Normal async context/session/bucket defenses checked before classification. Unchanged-context hypothetical hook reuse and malformed event inputs are not user bugs.",
+    "Shared SimpleSelect empty sentinel is not made a second finding; this record is exact ReviewPanel __all__ root-file collision only.",
+    "Prior-negative-prep12files have a different read/snapshot time and0runtime; preserved unchanged, never spliced into this fresh history or source/test totals."
+  ],
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "productAttempts": 0,
+  "testAttempts": 0
+}

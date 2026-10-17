@@ -1,0 +1,1354 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "mainHead": "5e10a7e19734cfebd940fc11020bab3600b6e802",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "mainBytes": 206,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "mainBytes": 17639,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "mainSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentBytes": 339166,
+      "mainBytes": 339166,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "bytes": 8725,
+      "sha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "currentSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "mainSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "currentBytes": 8725,
+      "mainBytes": 8725,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/root.md",
+      "bytes": 5808,
+      "sha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "currentSha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "mainSha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "currentBytes": 5808,
+      "mainBytes": 5808,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "bytes": 14882,
+      "sha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c",
+      "currentSha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c",
+      "mainSha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c",
+      "currentBytes": 14882,
+      "mainBytes": 14882,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "bytes": 18621,
+      "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "currentSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "mainSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "currentBytes": 18621,
+      "mainBytes": 18621,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "bytes": 8432,
+      "sha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "currentSha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "mainSha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "currentBytes": 8432,
+      "mainBytes": 8432,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-04-workbench-builtins-design.md",
+      "bytes": 12401,
+      "sha256": "d9111f0080c4a022b1c5d2ae974c261d064dceec5292de8dd11817f9645014bd",
+      "currentSha256": "d9111f0080c4a022b1c5d2ae974c261d064dceec5292de8dd11817f9645014bd",
+      "mainSha256": "d9111f0080c4a022b1c5d2ae974c261d064dceec5292de8dd11817f9645014bd",
+      "currentBytes": 12401,
+      "mainBytes": 12401,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-01-github-pr-workflow-design.md",
+      "bytes": 8686,
+      "sha256": "c9ba1a576ccb99773285922f916fe794d2663c8f0b092266a5a5a8d6e29fed98",
+      "currentSha256": "c9ba1a576ccb99773285922f916fe794d2663c8f0b092266a5a5a8d6e29fed98",
+      "mainSha256": "c9ba1a576ccb99773285922f916fe794d2663c8f0b092266a5a5a8d6e29fed98",
+      "currentBytes": 8686,
+      "mainBytes": 8686,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "mainSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentBytes": 7063,
+      "mainBytes": 7063,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-discovery.ts",
+      "bytes": 14325,
+      "sha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "currentSha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "mainSha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "currentBytes": 14325,
+      "mainBytes": 14325,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "bytes": 8844,
+      "sha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "currentSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "mainSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "currentBytes": 8844,
+      "mainBytes": 8844,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-user-text.ts",
+      "bytes": 1495,
+      "sha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "currentSha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "mainSha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "currentBytes": 1495,
+      "mainBytes": 1495,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/turn-input.ts",
+      "bytes": 1137,
+      "sha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "currentSha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "mainSha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "currentBytes": 1137,
+      "mainBytes": 1137,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "bytes": 6524,
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "currentSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "mainSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "currentBytes": 6524,
+      "mainBytes": 6524,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "bytes": 220,
+      "sha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "currentSha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "mainSha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "currentBytes": 220,
+      "mainBytes": 220,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "bytes": 6380,
+      "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "currentSha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "mainSha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "currentBytes": 6380,
+      "mainBytes": 6380,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "bytes": 7390,
+      "sha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "currentSha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "mainSha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "currentBytes": 7390,
+      "mainBytes": 7390,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/review/review-target.test.ts",
+      "bytes": 12207,
+      "sha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "currentSha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "mainSha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "currentBytes": 12207,
+      "mainBytes": 12207,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/coding/src/review/review-target.ts",
+      "bytes": 15379,
+      "sha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "currentSha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "mainSha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "currentBytes": 15379,
+      "mainBytes": 15379,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/protocol/client.ts",
+      "bytes": 22495,
+      "sha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "currentSha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "mainSha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "currentBytes": 22495,
+      "mainBytes": 22495,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-services.review-diff.test.ts",
+      "bytes": 15584,
+      "sha256": "538d589d138d4c7d7fcd1e039d1beedacece319e0658f9f8e3474b8275c8fbd5",
+      "currentSha256": "538d589d138d4c7d7fcd1e039d1beedacece319e0658f9f8e3474b8275c8fbd5",
+      "mainSha256": "538d589d138d4c7d7fcd1e039d1beedacece319e0658f9f8e3474b8275c8fbd5",
+      "currentBytes": 15584,
+      "mainBytes": 15584,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-services.ts",
+      "bytes": 37885,
+      "sha256": "c386d825b7c123d0fae678978e40e1ebb6b2f6f4c6df8c7377857f61402b36af",
+      "currentSha256": "c386d825b7c123d0fae678978e40e1ebb6b2f6f4c6df8c7377857f61402b36af",
+      "mainSha256": "c386d825b7c123d0fae678978e40e1ebb6b2f6f4c6df8c7377857f61402b36af",
+      "currentBytes": 37885,
+      "mainBytes": 37885,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "currentSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "currentBytes": 299337,
+      "mainBytes": 299337,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.test.ts",
+      "bytes": 13426,
+      "sha256": "d2c5080afb5ca379004e5bc7b6a8766fa6b4e45021b48defd0b44a5923fd95da",
+      "currentSha256": "d2c5080afb5ca379004e5bc7b6a8766fa6b4e45021b48defd0b44a5923fd95da",
+      "mainSha256": "d2c5080afb5ca379004e5bc7b6a8766fa6b4e45021b48defd0b44a5923fd95da",
+      "currentBytes": 13426,
+      "mainBytes": 13426,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "bytes": 14224,
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "currentSha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "mainSha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "currentBytes": 14224,
+      "mainBytes": 14224,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "bytes": 7442,
+      "sha256": "fb516a99b912b783736ef1561a6adecb5abf86798bab9a809684fb9483a2ba26",
+      "currentSha256": "fb516a99b912b783736ef1561a6adecb5abf86798bab9a809684fb9483a2ba26",
+      "mainSha256": "fb516a99b912b783736ef1561a6adecb5abf86798bab9a809684fb9483a2ba26",
+      "currentBytes": 7442,
+      "mainBytes": 7442,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-types.ts",
+      "bytes": 6636,
+      "sha256": "8738013e7535b7da512329af44a5b197064949154763b01a6a882781d36b36de",
+      "currentSha256": "8738013e7535b7da512329af44a5b197064949154763b01a6a882781d36b36de",
+      "mainSha256": "8738013e7535b7da512329af44a5b197064949154763b01a6a882781d36b36de",
+      "currentBytes": 6636,
+      "mainBytes": 6636,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "mainSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentBytes": 102234,
+      "mainBytes": 102234,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "mainSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentBytes": 122863,
+      "mainBytes": 122863,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "currentSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "mainSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "currentBytes": 10859,
+      "mainBytes": 10859,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "bytes": 12507,
+      "sha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "currentSha256": "10a2841bb73638291ff5385cadd1dfe8a5efd67ac9aa3d36ecffaffb2c175714",
+      "mainSha256": "10a2841bb73638291ff5385cadd1dfe8a5efd67ac9aa3d36ecffaffb2c175714",
+      "currentBytes": 12885,
+      "mainBytes": 12885,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40415,
+      "sha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "currentSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "mainSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "currentBytes": 40459,
+      "mainBytes": 40459,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+      "bytes": 3075,
+      "sha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "currentSha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "mainSha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "currentBytes": 3075,
+      "mainBytes": 3075,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "bytes": 2513,
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "currentSha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "mainSha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "currentBytes": 2513,
+      "mainBytes": 2513,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+      "bytes": 7542,
+      "sha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "currentSha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "mainSha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "currentBytes": 7542,
+      "mainBytes": 7542,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "bytes": 16988,
+      "sha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "currentSha256": "31d77cfe853aceaa92f16bd91a9a63779b9e7ea079adf5831410c63abd82d220",
+      "mainSha256": "31d77cfe853aceaa92f16bd91a9a63779b9e7ea079adf5831410c63abd82d220",
+      "currentBytes": 17458,
+      "mainBytes": 17458,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "bytes": 8028,
+      "sha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "currentSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "mainSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "currentBytes": 8028,
+      "mainBytes": 8028,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "bytes": 660,
+      "sha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "currentSha256": "71a2811fc2060194ea1a1641da91749a76357920b33c0385c329a2adfb0e392c",
+      "mainSha256": "71a2811fc2060194ea1a1641da91749a76357920b33c0385c329a2adfb0e392c",
+      "currentBytes": 2395,
+      "mainBytes": 2395,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "bytes": 437,
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "currentSha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "mainSha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "currentBytes": 1903,
+      "mainBytes": 1903,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 15998,
+      "sha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "currentSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "mainSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "currentBytes": 16212,
+      "mainBytes": 16212,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/DesktopBuiltinPanelApp.tsx",
+      "bytes": 5208,
+      "sha256": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "currentSha256": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "mainSha256": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "currentBytes": 5208,
+      "mainBytes": 5208,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "bytes": 34238,
+      "sha256": "6c99e51b85a5e17fc447b676124c856cb522ba06433502aaad4136c1db1a1193",
+      "currentSha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "mainSha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "currentBytes": 34235,
+      "mainBytes": 34235,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "bytes": 15124,
+      "sha256": "d9fc87ec6e513a69ac785ea228266c750145dd5f1619f7cff56bfd56555c8186",
+      "currentSha256": "d9fc87ec6e513a69ac785ea228266c750145dd5f1619f7cff56bfd56555c8186",
+      "mainSha256": "d9fc87ec6e513a69ac785ea228266c750145dd5f1619f7cff56bfd56555c8186",
+      "currentBytes": 15124,
+      "mainBytes": 15124,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "bytes": 17885,
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "currentSha256": "88ce19d0b9d5b358c09e76300080fdaa0c1f50a3f4d926c6c86ada9520656d08",
+      "mainSha256": "88ce19d0b9d5b358c09e76300080fdaa0c1f50a3f4d926c6c86ada9520656d08",
+      "currentBytes": 18347,
+      "mainBytes": 18347,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "bytes": 11449,
+      "sha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "currentSha256": "a06d87548ca73be6235dd81953b64a75a5564488a84038067f6f954d441b4591",
+      "mainSha256": "a06d87548ca73be6235dd81953b64a75a5564488a84038067f6f954d441b4591",
+      "currentBytes": 13600,
+      "mainBytes": 13600,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+      "bytes": 3725,
+      "sha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "currentSha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "mainSha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "currentBytes": 3725,
+      "mainBytes": 3725,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "bytes": 2052,
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "currentSha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "mainSha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "currentBytes": 2052,
+      "mainBytes": 2052,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/shared/review.ts",
+      "bytes": 1932,
+      "sha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "currentSha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "mainSha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "currentBytes": 1932,
+      "mainBytes": 1932,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "bytes": 8173,
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "currentSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "mainSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "currentBytes": 8173,
+      "mainBytes": 8173,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/review-command.test.ts",
+      "bytes": 6452,
+      "sha256": "686ebad4c48fb1285e32ec98111919ff328a1b7048a4d520dbf528c2099557f2",
+      "currentSha256": "686ebad4c48fb1285e32ec98111919ff328a1b7048a4d520dbf528c2099557f2",
+      "mainSha256": "686ebad4c48fb1285e32ec98111919ff328a1b7048a4d520dbf528c2099557f2",
+      "currentBytes": 6452,
+      "mainBytes": 6452,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "bytes": 7302,
+      "sha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "currentSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "mainSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "currentBytes": 7302,
+      "mainBytes": 7302,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "mainSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentBytes": 90976,
+      "mainBytes": 90976,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "currentSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "mainSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "currentBytes": 11321,
+      "mainBytes": 11321,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/ui/query-guard.ts",
+      "bytes": 4947,
+      "sha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "currentSha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "mainSha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "currentBytes": 4947,
+      "mainBytes": 4947,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "bytes": 12268,
+      "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "currentSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "mainSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "currentBytes": 12268,
+      "mainBytes": 12268,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/connectionLiveness.ts",
+      "bytes": 2886,
+      "sha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "currentSha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "mainSha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "currentBytes": 2886,
+      "mainBytes": 2886,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "mainSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentBytes": 3723,
+      "mainBytes": 3723,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/coding/src/git/utils.ts",
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "sha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/ui/query-guard.ts",
+      "sha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/cli/commands/builtin/review-command.test.ts",
+      "sha256": "686ebad4c48fb1285e32ec98111919ff328a1b7048a4d520dbf528c2099557f2",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/coding/src/review/review-target.ts",
+      "sha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "sha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/main/review-service.ts",
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/shared/review.ts",
+      "sha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/protocol/client.ts",
+      "sha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round4/root.md",
+      "sha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/coding/src/index.git.ts",
+      "sha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "sha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/coding/src/review/review-target.test.ts",
+      "sha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/coding/src/review/review-target.ts",
+      "sha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/desktop/src/main/review-service.ts",
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "sha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "target-source-manifest.json",
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+      "sha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "sha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+      "sha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "sha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "sha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "sha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "sha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "sha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+      "sha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "sha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "renderer-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/main/review-service.ts",
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/main/review-service.test.ts",
+      "sha256": "d2c5080afb5ca379004e5bc7b6a8766fa6b4e45021b48defd0b44a5923fd95da",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/main/desktop-services.ts",
+      "sha256": "c386d825b7c123d0fae678978e40e1ebb6b2f6f4c6df8c7377857f61402b36af",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/main/desktop-services.review-diff.test.ts",
+      "sha256": "538d589d138d4c7d7fcd1e039d1beedacece319e0658f9f8e3474b8275c8fbd5",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/shared/review.ts",
+      "sha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "sha256": "fb516a99b912b783736ef1561a6adecb5abf86798bab9a809684fb9483a2ba26",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/preload/project-authority-types.ts",
+      "sha256": "8738013e7535b7da512329af44a5b197064949154763b01a6a882781d36b36de",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "scope": "full",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "docs/superpowers/specs/2026-06-04-workbench-builtins-design.md",
+      "sha256": "d9111f0080c4a022b1c5d2ae974c261d064dceec5292de8dd11817f9645014bd",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "docs/superpowers/specs/2026-09-01-github-pr-workflow-design.md",
+      "sha256": "c9ba1a576ccb99773285922f916fe794d2663c8f0b092266a5a5a8d6e29fed98",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "sha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "docs/audit-2026-10-17/root.md",
+      "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "sha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "service-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "sha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "review-renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "review-renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "sha256": "6c99e51b85a5e17fc447b676124c856cb522ba06433502aaad4136c1db1a1193",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "review-renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "sha256": "d9fc87ec6e513a69ac785ea228266c750145dd5f1619f7cff56bfd56555c8186",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    },
+    {
+      "manifest": "review-renderer-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/DesktopBuiltinPanelApp.tsx",
+      "sha256": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "scope": "selected",
+      "rootIndependentlyBoundFrozenBlob": true,
+      "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+    }
+  ],
+  "priorPrepHashOnlyChecks": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "packages/web/src/lib/connectionLiveness.ts",
+      "sha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "bytes": 2886,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "bytes": 12268,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-user-text.ts",
+      "sha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "bytes": 1495,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/turn-input.ts",
+      "sha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "bytes": 1137,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "sha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "bytes": 8844,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-discovery.ts",
+      "sha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "bytes": 14325,
+      "newFrozenBlobVerified": true,
+      "initialSemanticReadSha256": null,
+      "note": "New6d freeze independentlycomparedtocapturedprepfilesystempin;cannot reconstruct first semantic readSHA or claim newfullreading."
+    },
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "sha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "sha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/coding/src/review/review-target.test.ts",
+      "sha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/coding/src/review/review-target.ts",
+      "sha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "note": "Originaltargetprep pin recheck only;readscope preservedinoriginalcopy;no newsemanticreading."
+    }
+  ],
+  "changedFromFrozenPaths": [
+    "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+    "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+    "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+    "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+    "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+    "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+    "packages/desktop/src/renderer/panels/PanelArea.tsx",
+    "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+    "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx"
+  ],
+  "note": "Frozenoldblob/rootcurrentmainseparate;9selectedconcurrentchangesrecorded.66author/reviewchecks include duplicates;15preprechecks are not newfullreading."
+}

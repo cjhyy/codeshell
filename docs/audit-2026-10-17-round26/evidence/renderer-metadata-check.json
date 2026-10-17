@@ -1,0 +1,311 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "kind": "metadata only;0product/test/import/Git",
+  "sourcePinCount": 16,
+  "productTestConsumerReadLines": 2298,
+  "assignedTargetCount": 10,
+  "assignedTargetReadLines": 1753,
+  "additionalConsumerDependencyReadLines": 545,
+  "sourceChecks": [
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+      "sha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "sha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+      "sha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "sha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "matchesFirstCaptured": true,
+      "coverage": "selected",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "sha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "sha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesFirstCaptured": true,
+      "coverage": "selected",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "sha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "matchesFirstCaptured": true,
+      "coverage": "selected",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "sha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "matchesFirstCaptured": true,
+      "coverage": "selected",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+      "sha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "sha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "matchesFirstCaptured": true,
+      "coverage": "selected",
+      "frozenComparedByAuthor": false
+    },
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFirstCaptured": true,
+      "coverage": "full",
+      "frozenComparedByAuthor": false
+    }
+  ],
+  "frozenComparedByAuthor": false,
+  "frozenComparisonNote": "Root aggregate may independently verify source against suppliedfreeze; author uses0Gitcommands and does not invent frozen blobs.",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runtimeAttempts": 0,
+  "existingTestSourceDeclarations": 23,
+  "existingTestsExecuted": 0,
+  "raw": null,
+  "exit": null,
+  "localLinkCount": 34,
+  "localLinks": [
+    {
+      "link": "evidence/renderer-findings.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-candidates.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-related.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:21",
+      "exists": true,
+      "line": 21
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:312",
+      "exists": true,
+      "line": 312
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx:173",
+      "exists": true,
+      "line": 173
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/app/usePanelBuckets.ts:827",
+      "exists": true,
+      "line": 827
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:48",
+      "exists": true,
+      "line": 48
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:153",
+      "exists": true,
+      "line": 153
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:206",
+      "exists": true,
+      "line": 206
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:112",
+      "exists": true,
+      "line": 112
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/components/ui/simple-select.tsx:131",
+      "exists": true,
+      "line": 131
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:310",
+      "exists": true,
+      "line": 310
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:119",
+      "exists": true,
+      "line": 119
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:404",
+      "exists": true,
+      "line": 404
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:181",
+      "exists": true,
+      "line": 181
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:189",
+      "exists": true,
+      "line": 189
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/diff/reviewSnapshot.ts:4",
+      "exists": true,
+      "line": 4
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:172",
+      "exists": true,
+      "line": 172
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/panels/useReviewPrompt.ts:8",
+      "exists": true,
+      "line": 8
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/chat/composerSeed.ts:39",
+      "exists": true,
+      "line": 39
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/app/usePanelBuckets.ts:786",
+      "exists": true,
+      "line": 786
+    },
+    {
+      "link": "../../packages/desktop/src/renderer/App.tsx:1159",
+      "exists": true,
+      "line": 1159
+    },
+    {
+      "link": "evidence/renderer-validation.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-dedup.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-dedup-supplement.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "../review-2026-10-12/terminal-review-round13.md:21",
+      "exists": true,
+      "line": 21
+    },
+    {
+      "link": "../todo/small-features-2026-07-10/review-panel-wrong-cwd.md:109",
+      "exists": true,
+      "line": 109
+    },
+    {
+      "link": "evidence/renderer-history-decisions.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-source-manifest.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/prior-negative-prep/proposal.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-metadata-notes.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-metadata-check.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/renderer-artifact-receipt.json",
+      "exists": true,
+      "line": null
+    }
+  ],
+  "authorArtifactCountWithoutReceipt": 15,
+  "metadataFailureCount": 0,
+  "copiedPriorNegativePrepModified": false,
+  "productChanges": false,
+  "gitWrites": false
+}

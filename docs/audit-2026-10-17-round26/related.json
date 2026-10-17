@@ -1,0 +1,25 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "count": 1,
+  "observations": [
+    {
+      "id": "TARGET-R26-R1",
+      "priorId": "CLI-R4-01",
+      "classification": "old-related source-only current review consumer trace; not a new bug or promoted candidate",
+      "source": "packages/tui/src/cli/commands/registry.ts",
+      "lines": [
+        133,
+        135
+      ],
+      "currentConsumer": "packages/tui/src/cli/commands/builtin/git-commands.ts:132-188 -> packages/coding/src/review/review-target.ts:42-158",
+      "normalInput": "/review \"src/a  b.ts\"",
+      "staticDerivation": "Registry split(/\\s+/) and join(\" \") collapse the two interior spaces before calling /review. The new quote-aware parser receives \"src/a b.ts\" instead of the named path. This is source reasoning only; no function or command executed.",
+      "contract": "parseReviewArguments quote branch preserves interior whitespace and exposes a file path; its existing tests declare quoted paths. App statically registers gitCommands into this registry.",
+      "impactLimit": "Only static argument text transformation is established. No real path creation, Git collection, wrong file selection, TUI, model or OS result executed.",
+      "priorRecord": "docs/audit-2026-10-17-round4/root.md:21",
+      "priorFailure": "Round4 validation.runs[3]: fixture failed before product imports,0 pass/1 fail/1 error/no Completed; original candidate remains unconfirmed and whole failed direction skipped. No repair/retry/recovery.",
+      "distinctionFromHL01": "HL-01 trims leading/trailing whitespace in Link file selection. This is global slash-registry interior whitespace compression, already CLI-R4-01; do not merge principles or double-count.",
+      "evidence": "evidence/target-registry-history.json"
+    }
+  ]
+}

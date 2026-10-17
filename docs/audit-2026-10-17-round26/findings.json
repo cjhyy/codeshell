@@ -1,0 +1,180 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "count": 2,
+  "findings": [
+    {
+      "id": "TUI-R26-01",
+      "priority": "P2",
+      "title": "Treat branch creation flags as complete argument tokens",
+      "source": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "lineStart": 122,
+      "lineEnd": 124,
+      "cause": "Wholeargument substring includes andglobalreplace treat -c insideordinarybranch names ascreateflag anddeletethatpart.",
+      "ordinaryInput": "/branch feature-cache",
+      "expectedRequest": [
+        "checkout",
+        "feature-cache"
+      ],
+      "sourceInferredRequest": [
+        "checkout",
+        "-b",
+        "featureache"
+      ],
+      "evidenceKind": "Static direct source derivation only;not capturedprocessargv orruntime reproduction.",
+      "normalProducer": "Appregistered gitCommands→dispatch helper→registry.dispatch→actualbranch.execute→gitCheckout validation/argv construction.",
+      "impact": "Normal switch request targets anothername andcreationmode. ActualGit outcome dependsrepository state;no nativebranch/files/commit mutation wasrun orclaimed.",
+      "counterevidence": [
+        "Emptyarg lists;topic plain or topic --create follow correctsourcebranches. These controlsnotexecuted.",
+        "gitCheckout nonempty/non-leadingdash guarddoesnotrejectthe ordinaryinput orrestoredeletedbytes.",
+        "Registry oldwhitespacefamilyis unchangedanddoesnotalterthisshortone-token sample.",
+        "Samecausalrootexplicitcreate damagedname notsecondissue."
+      ],
+      "productAttempts": 0,
+      "testsRun": 0,
+      "fixed": false,
+      "report": "docs/audit-2026-10-17-round26/tui-branch-report.md",
+      "latestSourceMetadata": {
+        "id": "TUI-R26-01",
+        "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+        "lineStart": 122,
+        "lineEnd": 124,
+        "note": "Branchblockunchanged"
+      }
+    },
+    {
+      "id": "RENDERER-R26-01",
+      "priority": "P3",
+      "title": "A root file named __all__ cannot be selected alone in a multi-file turn review",
+      "source": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "lineStart": 312,
+      "lineEnd": 318,
+      "classification": "formal static source finding; no dynamic UI validation",
+      "ordinaryTrigger": "A normal multi-file historical turn snapshot includes root-relative file __all__ and at least one other file. The existing review card sends its actual snapshot; parsed paths are reused directly as Select values. No malformed DTO, permissions or unusual OS behavior is required.",
+      "contract": "The turn file dropdown is a single-file filter, and the AI draft request is intended to review exactly the selected historical file. Its root-relative file-name domain does not reserve __all__.",
+      "cause": "ReviewPanel uses __all__ as the All-files sentinel and also emits every actual parsed path verbatim as an option value. Both choices therefore have the same string state. activeTurnFileSel===ALL_FILES converts that actual path to null before both viewer.onlyPath and selectReviewSnapshot.",
+      "staticValueFlow": [
+        {
+          "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+          "ranges": [
+            [
+              165,
+              183
+            ]
+          ],
+          "meaning": "Actual review click sends files.map(path) and sessionDiffText."
+        },
+        {
+          "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+          "ranges": [
+            [
+              827,
+              845
+            ]
+          ],
+          "meaning": "Actual event consumer stores reviewFiles/reviewDiff."
+        },
+        {
+          "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+          "ranges": [
+            [
+              48,
+              74
+            ],
+            [
+              153,
+              159
+            ],
+            [
+              206,
+              265
+            ]
+          ],
+          "meaning": "Normal a/__all__/b/__all__ and ---/+++ paths survive as root-relative __all__; no sentinel reservation."
+        },
+        {
+          "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+          "ranges": [
+            [
+              21,
+              21
+            ],
+            [
+              105,
+              121
+            ],
+            [
+              306,
+              318
+            ]
+          ],
+          "meaning": "Sentinel and actual file use identical option/state value."
+        },
+        {
+          "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+          "ranges": [
+            [
+              70,
+              72
+            ],
+            [
+              131,
+              143
+            ]
+          ],
+          "meaning": "Nonempty __all__ remains the same value through onChange; no filename encoding or separate option identity."
+        },
+        {
+          "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+          "ranges": [
+            [
+              189,
+              199
+            ],
+            [
+              404,
+              409
+            ]
+          ],
+          "meaning": "That state becomes null onlyPath and null snapshot filter, so both paths choose the entire snapshot."
+        },
+        {
+          "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+          "ranges": [
+            [
+              4,
+              5
+            ]
+          ],
+          "meaning": "null intentionally means whole snapshot; helper itself behaves as specified."
+        }
+      ],
+      "expectedStaticScope": "Only the __all__ file chunk when choosing that real file.",
+      "actualStaticScope": "The state has no representation distinct from All files; viewer receives null onlyPath and AI snapshot preparation receives the full turnDiff/undefined file label.",
+      "impact": "The exact root filename cannot be narrowed in a multi-file turn review; both displayed review scope and prepared draft scope remain All. This is one cause, not separate viewer/AI findings.",
+      "counterevidence": [
+        "Requires at least2 parsed files because the file dropdown is hidden for a single file. A lone __all__ file has no extra-file scope impact.",
+        "Normal distinct paths including nested dir/__all__ do not equal the sentinel. All-files selection itself is intended.",
+        "selectReviewSnapshot(diff,null) returning the entire diff is correct; no defect is assigned to the helper null branch.",
+        "Source is sufficient to show identical state values. No actual existing user repository containing this name, UI click, Radix exception, prompt delivery, model behavior or browser result was observed.",
+        "No cross-permission/security/custody/identity implication; no sensitive-data or auto-send claim."
+      ],
+      "validation": "Static only:0product/import/test/fixture/React/browser/native/network attempts. Existing tests are read, not passed evidence.",
+      "dedup": "Fresh recursive docs/bugs MD+JSON scalar search including archives excludes round26. Supplement across same2509paths has0__all__/ALL_FILES matches; old R59 root-commit range and wrong-cwd state mechanisms are different. Keyword search is not semantic exhaustion.",
+      "fixed": false,
+      "latestSourceMetadata": {
+        "id": "RENDERER-R26-01",
+        "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+        "frozenLineStart": 312,
+        "frozenLineEnd": 318,
+        "currentLineStart": 329,
+        "currentLineEnd": 335,
+        "additionalCurrentLines": [
+          212,
+          214,
+          424
+        ],
+        "note": "SameALL_FILES/pathvaluecollision andnullfilterremain,currentselectedanchorsread;no dynamicfixverification."
+      }
+    }
+  ]
+}

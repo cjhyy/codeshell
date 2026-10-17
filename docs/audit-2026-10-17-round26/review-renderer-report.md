@@ -1,0 +1,24 @@
+# Review renderer：单文件选区与草稿接线
+
+冻结上下文 `6d61f57ade1ef1b9fdc4d33020652007d995e7a7`，分支 `codex/audit/review-targets-round26-20261017`。本方向 **1 个静态正式 P3 / 0 候选 / 0 related**，产品、import、测试、fixture、React、浏览器及 native 运行均为 **0**。[findings](evidence/renderer-findings.json) / [candidates](evidence/renderer-candidates.json) / [related](evidence/renderer-related.json)。
+
+**RENDERER-R26-01 — 根文件名 `__all__` 与“全部文件”选项同值，无法单独审阅。** 普通多文件历史 turn snapshot 若包含根路径 `__all__` 和另一文件，ReviewPanel 的 [ALL_FILES](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:21) 与 [真实文件选项](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:312) 都使用字符串 `"__all__"`。这是实际文件名与 UI 控制标记碰撞，没有 malformed DTO 或额外权限条件。
+
+普通静态 producer／consumer 链如下；本轮没有点击或运行任何组件：
+
+1. [FilesChangedCard 的审查按钮](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx:173) 把真实 `files.map(f.path)` 和 `sessionDiffText` 发为 `codeshell:review-files`；[bucket 消费者](../../packages/desktop/src/renderer/app/usePanelBuckets.ts:827) 保存 `reviewFiles/reviewDiff`。ReviewPanel 本身接受历史 `turnDiff`，并明确以该快照提供单文件筛选。
+2. [diff parser](../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:48) 读取普通 `a/__all__` / `b/__all__`，[unquoted 路径](../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:153) 与 [header helper](../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:206) 保留这个 root-relative 名称，没有保留名转换。ReviewPanel [解析选项](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:112) 后原样使用 path 作 value。
+3. [SimpleSelect](../../packages/desktop/src/renderer/components/ui/simple-select.tsx:131) 以 value 找选项并原样回传非空 `__all__`；ReviewPanel [onChange](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:310) 写入 `turnFileSel`。[activeTurnFileSel](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:119) 仍为同一字符串，无法表达“真实文件”与“All”两种选择。
+4. [viewer onlyPath](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:404) 因相等而变成 `null`，viewer 的 [过滤](../../packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:181) 因而保留整份快照；[AI snapshot request](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:189) 也把过滤路径转为 `null`、文件 label 转为 `undefined`，送入整份 turnDiff。这两处结果共用一个原因，只登记一项。
+
+预期是选中该真实文件时只保留它的 chunk；源码中的实际状态没有这个独立表示。影响限定于 **多文件快照中的精确根路径 `__all__`**。单文件时下拉框不会出现，全部与唯一文件范围相同；`dir/__all__` 等不同路径不碰撞，用户主动选 All 也是正常行为。[selectReviewSnapshot(diff, null)](../../packages/desktop/src/renderer/diff/reviewSnapshot.ts:4) 返回整份快照本来就符合 helper 合同，本项不把正常 null 分支记作缺陷，也没有用手工镜像或单独运行它来冒充 UI 验证。未观察实际用户仓库恰有该文件，未验证 Radix 异常、动态 UI、提示送达或模型行为；不扩展成跨权限、安全、自动发送或数据丢失结论。
+
+异步与草稿反证已核：ReviewPanel 的 [reviewContext](../../packages/desktop/src/renderer/panels/ReviewPanel.tsx:172) 包含 cwd、Session、request、refresh、snapshot、文件选区、附加说明与 Git availability；[useReviewPrompt](../../packages/desktop/src/renderer/panels/useReviewPrompt.ts:8) 在 context 更新、请求 sequence 与 unmount 上使迟到结果失效。[composer bridge](../../packages/desktop/src/renderer/chat/composerSeed.ts:39) 要求同步接收确认，[bucket listener](../../packages/desktop/src/renderer/app/usePanelBuckets.ts:786) 重新核当前 bucket 的 engine Session；[App 回调](../../packages/desktop/src/renderer/App.tsx:1159) 用 captured bucket 函数式追加文本，保留已有 attachments。没有把“孤立 hook 人为复用 context 对象”升级成实际 Session race，也没有证明正常会话切换会迁移或丢失草稿。
+
+已有 5 份测试文件共 **23 个 test declarations** 全部只读：hook 3、workspace 7、composer bridge 5、bucket/subagent 7、snapshot 1。源码覆盖意图包括迟到结果忽略、重复准备保护、Session ack、batched chat switch、无 Git 的历史快照，以及 a/b 切到 c/d 后清空失效筛选；这些不是本批通过证据。[validation](evidence/renderer-validation.json) 的 runs / guardedRuns 均为空，test/import/render/native/network 等尝试全为 0，pass/fail/expect/executed 也全为 0；没有伪造 raw 或 exit，没有重跑旧基线。
+
+[新去重证据](evidence/renderer-dedup.json) 遍历 docs/bugs 全部递归 MD 与 JSON 标量，含 archives、排除整轮 round26（含复制的 prior-negative-prep）：2509 文件（1241 MD + 1268 JSON），426811 string leaves / 609678 scalar leaves，0 parse error；exact 155 全留、review-draft 4302 中留 220、draft-session 185 全留。[定向补搜](evidence/renderer-dedup-supplement.json) 对相同 2509 paths 搜 `__all__` / `ALL_FILES` 等为 0；draft-append 4 项仅是 round25 并行改动路径记录。旧 [R59 首提交范围](../review-2026-10-12/terminal-review-round13.md:21)、[wrong-cwd 状态卫生](../todo/small-features-2026-07-10/review-panel-wrong-cwd.md:109) 与当前字符串选项碰撞不同；[历史判断](evidence/renderer-history-decisions.json) 保留边界，不借用旧 Git／UI 结果或恢复旧失败方向。关键词和有界上下文不是语义穷尽证明。
+
+[来源清单](evidence/renderer-source-manifest.json) 为 **16 pins**：指定 10 目标九全文 + bucket 选段 290 行，合计 1753 行；必要 5 个实际 producer／consumer／依赖再读 545 行，共 15 个产品／测试来源 2298 行，另 CODESHELL 指令全文 217 行。每项列出 full/selected、行界与 first/current SHA；PanelArea/Registry 的 rg 导航不算全文审查。作者保持 0 Git 命令，冻结 SHA 来自主审上下文，未独立读取 frozen blob，`frozenSha256/frozenGitBlob=null` 表示未核，主审可在最终聚合中另行核对。不同时间的 [prior negative proposal](evidence/prior-negative-prep/proposal.json) 12 文件原样保存，不拼入本批统计。
+
+[metadata notes](evidence/renderer-metadata-notes.json)、[metadata check](evidence/renderer-metadata-check.json) 与 [author receipt](evidence/renderer-artifact-receipt.json) 保留来源、15 个作者 artifacts（另 receipt 自身排除）、分类和本地链接；本作者 0 产品改动、0 Git 写，本方向 0 产品执行。

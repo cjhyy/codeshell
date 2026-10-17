@@ -1,0 +1,53 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "historySnapshotFiles": 2509,
+  "totals": {
+    "files": 2509,
+    "stringLeaves": 426811,
+    "scalarLeaves": 609678
+  },
+  "patterns": {
+    "all-sentinel": "__all__|ALL_FILES|sentinel.{0,60}(?:file|选)|(?:review|审查).{0,80}(?:file.filter|文件筛选|文件过滤)",
+    "draft-append": "appendReviewDraft|requestComposerSeed|code-review.{0,80}(?:draft|session|草稿)|useReviewPrompt"
+  },
+  "matchCounts": {
+    "all-sentinel": 0,
+    "draft-append": 4
+  },
+  "retainedCounts": {
+    "all-sentinel": 0,
+    "draft-append": 4
+  },
+  "contextCapPerGroup": 120,
+  "matches": [
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][23]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx"
+    },
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/integration-plan.json",
+      "location": "$[\"externalMainPaths\"][24]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.ts"
+    },
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/main-source-review.json",
+      "location": "$[\"externalPaths\"][23]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx"
+    },
+    {
+      "group": "draft-append",
+      "path": "docs/audit-2026-10-17-round25/evidence/main-source-review.json",
+      "location": "$[\"externalPaths\"][24]",
+      "excerpt": "packages/desktop/src/renderer/panels/useReviewPrompt.ts"
+    }
+  ],
+  "parseErrors": [],
+  "changedSinceInitialSnapshot": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "note": "Metadata-only source-directed supplemental history search across same2509paths. No semantic-exhaustion claim."
+}

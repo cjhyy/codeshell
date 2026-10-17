@@ -1,0 +1,12 @@
+{
+  "kind": "manual transcription of first metadata command response, not original process raw",
+  "stage": "source manifest metadata range bound assertion",
+  "exitCode": 1,
+  "firstOutput": "Traceback (most recent call last):\n  File \"<stdin>\", line 17, in <module>\nAssertionError\n",
+  "savedBeforeInspection": false,
+  "productExecution": false,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "gitCommands": 0,
+  "correctionPolicy": "Only inspect file line counts and clamp a sed command upper bound to actual EOF; no product execution, import, fixture, rerun or alternate validation."
+}

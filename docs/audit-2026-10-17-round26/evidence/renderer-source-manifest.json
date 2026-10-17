@@ -1,0 +1,374 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "branchReportedByRoot": "codex/audit/review-targets-round26-20261017",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "lineCount": 56,
+      "coveredLineCount": 56,
+      "bytes": 2052,
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "currentSha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "firstCapturedSha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Latest-only async draft preparation hook; static only."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          113
+        ]
+      ],
+      "lineCount": 113,
+      "coveredLineCount": 113,
+      "bytes": 3725,
+      "sha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "currentSha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "firstCapturedSha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Existing hook cases read, never imported or run."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          424
+        ]
+      ],
+      "lineCount": 424,
+      "coveredLineCount": 424,
+      "bytes": 17885,
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "currentSha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "firstCapturedSha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Actual scope/file selection, context dependencies, snapshot request and viewer props."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          352
+        ]
+      ],
+      "lineCount": 352,
+      "coveredLineCount": 352,
+      "bytes": 11449,
+      "sha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "currentSha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "firstCapturedSha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Existing workspace/snapshot/draft cases read only; no pass claim."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "lineCount": 61,
+      "coveredLineCount": 61,
+      "bytes": 2513,
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "currentSha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "firstCapturedSha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Synchronous event ack and normalized Session-bound review draft bridge, read only."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          94
+        ]
+      ],
+      "lineCount": 94,
+      "coveredLineCount": 94,
+      "bytes": 3075,
+      "sha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "currentSha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "firstCapturedSha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Existing bridge tests read only; never imported or run."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          87
+        ],
+        [
+          121,
+          211
+        ],
+        [
+          662,
+          695
+        ],
+        [
+          768,
+          845
+        ]
+      ],
+      "lineCount": 1033,
+      "coveredLineCount": 290,
+      "bytes": 40415,
+      "sha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "currentSha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "firstCapturedSha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Selected Params, ref/bucket setup, panel materialization, actual composer consumer and review-files event handoff only; unrelated lifecycle/authority bodies not reviewed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          338
+        ]
+      ],
+      "lineCount": 338,
+      "coveredLineCount": 338,
+      "bytes": 12507,
+      "sha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "currentSha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "firstCapturedSha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Existing test file read in full; review ack/batched bucket tests are source counterevidence, not this batch execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "lineCount": 12,
+      "coveredLineCount": 12,
+      "bytes": 437,
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "currentSha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "firstCapturedSha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Real selected snapshot adapter; null path intentionally returns full snapshot. No invocation."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "lineCount": 13,
+      "coveredLineCount": 13,
+      "bytes": 660,
+      "sha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "currentSha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "firstCapturedSha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Existing one-file selection test read only; not run."
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1128,
+          1183
+        ]
+      ],
+      "lineCount": 2924,
+      "coveredLineCount": 56,
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "firstCapturedSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Actual appendReviewDraft callback uses captured bucket and functional update, preserves existing attachments. No App import/render."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          115
+        ],
+        [
+          145,
+          161
+        ],
+        [
+          206,
+          265
+        ]
+      ],
+      "lineCount": 265,
+      "coveredLineCount": 192,
+      "bytes": 8028,
+      "sha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "currentSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "firstCapturedSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Header/file path flow plus unquoted Git path handling only; ordinary root __all__ allowed. Quoted path decoder body not reviewed or exercised."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          150,
+          187
+        ]
+      ],
+      "lineCount": 437,
+      "coveredLineCount": 38,
+      "bytes": 16988,
+      "sha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "currentSha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "firstCapturedSha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "OnlyPath filtering and whole-scope stats contract only; no component render."
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          212
+        ]
+      ],
+      "lineCount": 212,
+      "coveredLineCount": 212,
+      "bytes": 7542,
+      "sha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "currentSha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "firstCapturedSha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Actual Select string value adapter read in full. No Radix/library/browser invocation or claim of dynamic behavior."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          145,
+          191
+        ]
+      ],
+      "lineCount": 413,
+      "coveredLineCount": 47,
+      "bytes": 15998,
+      "sha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "currentSha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "firstCapturedSha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "product-or-test",
+      "note": "Actual review button dispatches files and turn snapshot as event; no click, process or complete turn execution."
+    },
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "lineCount": 217,
+      "coveredLineCount": 217,
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstCapturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFirstCaptured": true,
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "instruction",
+      "note": "Previously full-read workflow instruction; unchanged SHA rechecked at start, not counted as a product target."
+    }
+  ],
+  "sourcePinCount": 16,
+  "productTestConsumerPinCount": 15,
+  "instructionPinCount": 1,
+  "productTestConsumerReadLines": 2298,
+  "assignedTargetCount": 10,
+  "assignedTargetReadLines": 1753,
+  "dependencyConsumerReadLines": 545,
+  "gitCommands": 0,
+  "productChanges": false,
+  "gitWrites": false,
+  "frozenComparison": "Parent supplied frozen commit; this author used0Git commands and did not independently compute frozen blob/hash. null means unknown, not mismatch. Root aggregate verifier can compare these current filesystem pins against6d61.",
+  "coverageRule": "Hash pins full bytes; semantic review is only full/selected declared ranges. Existing tests are source reading only; static history excerpts are corpus references, not additional product source targets."
+}

@@ -1,0 +1,65 @@
+{
+  "files": [
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/artifact-receipt.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/artifact-receipt.json",
+      "bytes": 1291,
+      "sha256": "5261b593bb09cf06cf333176ece3767a7cfcc81ee913ef943c8070d1eca2027f",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/dedup.py",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/dedup.py",
+      "bytes": 4571,
+      "sha256": "dca97ed7eec420bec5f8687994c985184fdb8f60287ab77e041230c389774466",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/history-selected.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/history-selected.json",
+      "bytes": 13846,
+      "sha256": "c0c4f3d9ccc20e875717fb0821e1b191906f655c400cc1b4619a3d6d85d8a57f",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/history.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/history.json",
+      "bytes": 648080,
+      "sha256": "421a365a60c1c236fe6687a1e34a947bbc6c1fdacfc43d58ff6fca2e205ff444",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/inventory.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/inventory.json",
+      "bytes": 2973,
+      "sha256": "eb8c7cd6f5af33ae4836a1ddbd026b3b05adea58f622b3358a156affb5796645",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/metadata-notes.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/metadata-notes.json",
+      "bytes": 1431,
+      "sha256": "b3200e78fd4ab598002447d0202ad33efb22c6b7ff347bf7f0edf1942bf897db",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/proposal.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/proposal.json",
+      "bytes": 6379,
+      "sha256": "3d6cce98cd592bfa558e9e2d4844088c2a538883fa33ae47da8641b1d9c37891",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round26-review-frontier/source-manifest.json",
+      "destination": "docs/audit-2026-10-17-round26/evidence/target-prep/source-manifest.json",
+      "bytes": 6326,
+      "sha256": "6b2413ff06542a50df4e1e8f2227c8ae0bf51b0f02640bd210c82dc14ba945a8",
+      "byteIdentical": true
+    }
+  ],
+  "fileCount": 8,
+  "sourcePreserved": true,
+  "copyOnlyNoNewReadingOrValidation": true,
+  "productRuns": 0,
+  "gitCommands": 0
+}

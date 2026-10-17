@@ -1,0 +1,381 @@
+{
+  "corpus": {
+    "files": 2509,
+    "markdown": 1241,
+    "json": 1268,
+    "stringLeaves": 426811,
+    "scalarLeaves": 609678,
+    "parseErrors": 0
+  },
+  "excluded": "round26",
+  "includesArchives": true,
+  "counts": {
+    "command-spacing": 782,
+    "registry-split": 4
+  },
+  "caps": {
+    "command-spacing": 20,
+    "registry-split": 100
+  },
+  "hits": {
+    "command-spacing": [
+      {
+        "path": "docs/architecture/09-tui.md",
+        "location": "64",
+        "excerpt": "The input row is `CommandInput` wrapping `TextInput`. `CommandInput` shows autocomplete only for leading slash commands before the first space, filters by name/description, supports arrow navigation, Tab completion, Enter submit, Esc dismissal, and history navigation when autocomplete is inactive (`packages/tui/src/ui/components/CommandInput.tsx:68`, `packages/tui/src/ui/components/CommandInput.tsx:73`, `packages/tui/src/ui/components/CommandInput.tsx:92`, `packages/tui/src/ui/components/CommandInput.tsx:102`, `packages/tui/src/ui/components/CommandInput.tsx:117`, `packages/tui/src/ui/"
+      },
+      {
+        "path": "docs/architecture/09-tui.md",
+        "location": "68",
+        "excerpt": "Slash command dispatch is split cleanly. `App` handles `/help` locally, otherwise builds a `CommandContext` containing protocol client, cwd, model setters, session id, `QueryGuard`, UI openers, fullscreen toggles, pending image queue, and goal hooks (`packages/tui/src/ui/App.tsx:1501`, `packages/tui/src/ui/App.tsx:1508`, `packages/tui/src/ui/App.tsx:1532`, `packages/tui/src/ui/App.tsx:1536`, `packages/tui/src/ui/App.tsx:1570`, `packages/tui/src/ui/App.tsx:1580`). The registry "
+      },
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "location": "171",
+        "excerpt": "single-quoted path words become quoted references to the injected environment;"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[44][\"title\"]",
+        "excerpt": "Regex for bash redirection doesn't handle quoted paths"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[44][\"detail\"]",
+        "excerpt": "The pattern `/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[44][\"fix\"]",
+        "excerpt": "Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\s*(['\"]?)([^'\"]*?)\\1\\s*$/` or use a proper shell parser."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[65][\"detail\"]",
+        "excerpt": "The quote() function at lines 115-116 only escapes double quotes but not backslashes. In SBPL quoted string syntax, backslashes are escape characters. If a path contains a literal backslash (valid on Unix), it will not be properly escaped, causing potential sandbox profile mismatches. For example, a path like \"/tmp\\test\" would generate (subpath \"/tmp\\test\") which SBPL may parse incorrectly. This could cause the sandbox to fail to apply the intended restrictions or permissions for such paths."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[14][\"detail\"]",
+        "excerpt": "The quote() function at lines 115-116 only escapes double quotes but not backslashes. In SBPL quoted string syntax, backslashes are escape characters. If a path contains a literal backslash (valid on Unix), it will not be properly escaped, causing potential sandbox profile mismatches. For example, a path like \"/tmp\\test\" would generate (subpath \"/tmp\\test\") which SBPL may parse incorrectly. This could cause the sandbox to fail to apply the intended restrictions or permissions for such paths."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[14][\"verify_reason\"]",
+        "excerpt": "The quote() function at lines 115-116 only escapes double quotes but not backslashes. In SBPL (Sandbox Profile Language) quoted strings, backslashes are escape characters. When a path contains a literal backslash (valid on Unix filesystems), it will not be properly escaped, causing SBPL to interpret the backslash as an escape sequence (e.g., \\f as form feed, \\n as newline) rather than a literal backslash. This causes the sandbox rule to fail to match the intended path, potentially bypassing the intended sandbox restrictions. Testing confirmed that a path with an unescaped backslash like \"/tmp/test\\file.txt\" in SBPL does not p"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51][\"title\"]",
+        "excerpt": "Regex for bash redirection doesn't handle quoted paths"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51][\"detail\"]",
+        "excerpt": "The pattern `/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51][\"fix\"]",
+        "excerpt": "Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\s*(['\"]?)([^'\"]*?)\\1\\s*$/` or use a proper shell parser."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51][\"verify_note\"]",
+        "excerpt": " defect, but the severity is low because: (1) artifact tracking is non-critical infrastructure (used for recovery/audit, not core functionality), (2) quoted paths with spaces in bash redirects are relatively uncommon in automated script generation, (3) the failure mode is graceful - it records a wrong path rather than crashing or exposing a security issue. The reviewer's proposed fix is sound but the practical impact is limited."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51][\"verify_reason\"]",
+        "excerpt": "-whitespace characters only. For a command like `cmd > \"my file.txt\"`, the capturing group will match `\"my` (stopping at the space), not the complete quoted path. The extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51][\"verify_reason\"]",
+        "excerpt": "ed value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[44][\"title\"]",
+        "excerpt": "Regex for bash redirection doesn't handle quoted paths"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[44][\"detail\"]",
+        "excerpt": "The pattern `/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[44][\"fix\"]",
+        "excerpt": "Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\s*(['\"]?)([^'\"]*?)\\1\\s*$/` or use a proper shell parser."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[65][\"detail\"]",
+        "excerpt": "The quote() function at lines 115-116 only escapes double quotes but not backslashes. In SBPL quoted string syntax, backslashes are escape characters. If a path contains a literal backslash (valid on Unix), it will not be properly escaped, causing potential sandbox profile mismatches. For example, a path like \"/tmp\\test\" would generate (subpath \"/tmp\\test\") which SBPL may parse incorrectly. This could cause the sandbox to fail to apply the intended restrictions or permissions for such paths."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "location": "$[44][\"reason\"]",
+        "excerpt": "-whitespace characters only. For a command like `cmd > \"my file.txt\"`, the capturing group will match `\"my` (stopping at the space), not the complete quoted path. The extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      }
+    ],
+    "registry-split": [
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "location": "8",
+        "excerpt": "| `agent/agent-definition-registry.ts` | `join(`×1 |"
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "location": "199",
+        "excerpt": "| `tool-system/registry.ts` | `join(`×1, `exec`×11, `timeout`×16, `AbortController`×2 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/root.md",
+        "location": "21",
+        "excerpt": "| CLI-R4-01 | `packages/tui/src/cli/commands/registry.ts:133–135` 将完整输入按空白拆开再 join，`/image \"a  b.png\"` 的文件名变成 `a b.png`；App 注册了真实 imageCommand，该命令自身支持双引号空格路径。`/config set`、`/memory add` 内还有相同的内容归一化 | 静态，实际文件/queue 对照没有执行；全参数保真与各命令内部解析属于相关家族，未拆成多个确认 bug |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+        "location": "$[\"hits\"][79][\"text\"]",
+        "excerpt": "| `agent/agent-definition-registry.ts` | `join(`×1 |"
+      }
+    ]
+  },
+  "byfile": {
+    "command-spacing": {
+      "docs/architecture/09-tui.md": 2,
+      "docs/architecture/13-plugin-parity-and-video-editor.md": 1,
+      "docs/archive/review-2026-05-30/backlog.json": 4,
+      "docs/archive/review-2026-05-30/backlog_confirmed.json": 8,
+      "docs/archive/review-2026-05-30/backlog_ided.json": 4,
+      "docs/archive/review-2026-05-30/backlog_verdicts.json": 4,
+      "docs/archive/review-2026-05-30/findings.json": 4,
+      "docs/archive/review-2026-05-30/low_confirmed.json": 6,
+      "docs/archive/review-2026-05-30/low_section.md": 1,
+      "docs/archive/review-2026-07-09/01-core-engine-structure.md": 1,
+      "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md": 1,
+      "docs/audit-2026-10-16/desktop.md": 2,
+      "docs/audit-2026-10-17/README.md": 2,
+      "docs/audit-2026-10-17/evidence/quality-ui-review.md": 2,
+      "docs/audit-2026-10-17/findings.json": 2,
+      "docs/audit-2026-10-17/pet-data.md": 2,
+      "docs/audit-2026-10-17/root.md": 7,
+      "docs/audit-2026-10-17-round10/evidence/pet-dedup.json": 3,
+      "docs/audit-2026-10-17-round10/evidence/root-dedup.json": 6,
+      "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json": 3,
+      "docs/audit-2026-10-17-round11/evidence/chat-dedup.json": 4,
+      "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json": 3,
+      "docs/audit-2026-10-17-round11/evidence/host-dedup.json": 3,
+      "docs/audit-2026-10-17-round11/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round12/desktop.md": 1,
+      "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json": 8,
+      "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json": 5,
+      "docs/audit-2026-10-17-round12/evidence/patch-dedup.json": 5,
+      "docs/audit-2026-10-17-round12/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json": 3,
+      "docs/audit-2026-10-17-round12/evidence/tui-dedup.json": 3,
+      "docs/audit-2026-10-17-round13/evidence/groups-dedup.json": 3,
+      "docs/audit-2026-10-17-round13/evidence/root-dedup.json": 4,
+      "docs/audit-2026-10-17-round13/evidence/search-dedup.json": 3,
+      "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json": 3,
+      "docs/audit-2026-10-17-round14/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round14/evidence/utils-dedup.json": 3,
+      "docs/audit-2026-10-17-round15/documents.md": 1,
+      "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json": 3,
+      "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json": 6,
+      "docs/audit-2026-10-17-round15/evidence/injection-dedup.json": 3,
+      "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json": 3,
+      "docs/audit-2026-10-17-round15/evidence/migration-dedup.json": 1,
+      "docs/audit-2026-10-17-round15/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round15/migration.md": 1,
+      "docs/audit-2026-10-17-round16/evidence/bidi-dedup.json": 3,
+      "docs/audit-2026-10-17-round16/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json": 3,
+      "docs/audit-2026-10-17-round16/evidence/tasknoise-dedup.json": 3,
+      "docs/audit-2026-10-17-round17/evidence/catalog-dedup.json": 3,
+      "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json": 3,
+      "docs/audit-2026-10-17-round17/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round18/evidence/presentation-dedup.json": 3,
+      "docs/audit-2026-10-17-round18/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.json": 1,
+      "docs/audit-2026-10-17-round19/evidence/reviewprompt-related.json": 1,
+      "docs/audit-2026-10-17-round19/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round19/evidence/simplediff-dedup.json": 2,
+      "docs/audit-2026-10-17-round19/related.json": 1,
+      "docs/audit-2026-10-17-round19/reviewprompt-report.md": 2,
+      "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json": 3,
+      "docs/audit-2026-10-17-round20/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json": 3,
+      "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json": 3,
+      "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json": 3,
+      "docs/audit-2026-10-17-round21/evidence/ndjson-dedup.json": 3,
+      "docs/audit-2026-10-17-round21/evidence/root-dedup.json": 4,
+      "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json": 3,
+      "docs/audit-2026-10-17-round22/evidence/budget-dedup.json": 3,
+      "docs/audit-2026-10-17-round22/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json": 3,
+      "docs/audit-2026-10-17-round22/evidence/terminal-commands.json": 3,
+      "docs/audit-2026-10-17-round22/evidence/terminal-history.json": 3,
+      "docs/audit-2026-10-17-round22/evidence/title-dedup.json": 3,
+      "docs/audit-2026-10-17-round23/README.md": 1,
+      "docs/audit-2026-10-17-round23/evidence/cron-dedup.json": 3,
+      "docs/audit-2026-10-17-round23/evidence/product-cwd-dedup.json": 3,
+      "docs/audit-2026-10-17-round23/evidence/product-dedup.json": 3,
+      "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json": 3,
+      "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json": 3,
+      "docs/audit-2026-10-17-round23/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round23/evidence/root-prep/history.json": 3,
+      "docs/audit-2026-10-17-round24/README.md": 1,
+      "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.json": 3,
+      "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json": 3,
+      "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.json": 3,
+      "docs/audit-2026-10-17-round24/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json": 3,
+      "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json": 3,
+      "docs/audit-2026-10-17-round24/evidence/windows-dedup.json": 3,
+      "docs/audit-2026-10-17-round25/evidence/data-prep/history.json": 3,
+      "docs/audit-2026-10-17-round25/evidence/integration-plan.json": 1,
+      "docs/audit-2026-10-17-round25/evidence/link-prep/history.json": 3,
+      "docs/audit-2026-10-17-round25/evidence/main-source-review.json": 1,
+      "docs/audit-2026-10-17-round25/evidence/output-dedup.json": 3,
+      "docs/audit-2026-10-17-round4/evidence/coding-dedup.json": 1,
+      "docs/audit-2026-10-17-round4/evidence/context-dedup.json": 1,
+      "docs/audit-2026-10-17-round4/root.md": 1,
+      "docs/audit-2026-10-17-round5/evidence/chat-dedup.json": 3,
+      "docs/audit-2026-10-17-round5/evidence/profile-dedup.json": 4,
+      "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json": 3,
+      "docs/audit-2026-10-17-round5/evidence/root-web-dedup.json": 1,
+      "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json": 65,
+      "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json": 5,
+      "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json": 2,
+      "docs/audit-2026-10-17-round7/evidence/files-dedup.json": 4,
+      "docs/audit-2026-10-17-round7/evidence/providers-dedup-corpus.json": 3,
+      "docs/audit-2026-10-17-round7/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round7/tui.md": 1,
+      "docs/audit-2026-10-17-round8/README.md": 2,
+      "docs/audit-2026-10-17-round8/evidence/cross-review-plugins.md": 2,
+      "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md": 3,
+      "docs/audit-2026-10-17-round8/evidence/plugins-dedup-corpus.json": 4,
+      "docs/audit-2026-10-17-round8/evidence/plugins-findings.json": 3,
+      "docs/audit-2026-10-17-round8/evidence/plugins-metadata-assembly-note.md": 1,
+      "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json": 4,
+      "docs/audit-2026-10-17-round8/evidence/root-git-dedup.json": 3,
+      "docs/audit-2026-10-17-round8/evidence/root-git-diff-dedup.json": 1,
+      "docs/audit-2026-10-17-round8/evidence/web-dedup.json": 3,
+      "docs/audit-2026-10-17-round8/findings.json": 2,
+      "docs/audit-2026-10-17-round8/plugins.md": 3,
+      "docs/audit-2026-10-17-round8/quality-review.md": 1,
+      "docs/audit-2026-10-17-round8/root-git.md": 2,
+      "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json": 47,
+      "docs/audit-2026-10-17-round9/evidence/root-dedup.json": 3,
+      "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json": 6,
+      "docs/audit-2026-10-17-round9/evidence/tools-dedup.json": 3,
+      "docs/core-deep-dive/v2-03-tool-system-security-deep-dive.md": 1,
+      "docs/deployment.md": 1,
+      "docs/docker-deployment.md": 1,
+      "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md": 1,
+      "docs/refactor/goal-judge-v1-final-review-codex.md": 1,
+      "docs/research/driveagent-worktree-cwd-visibility-gap.md": 1,
+      "docs/review-2026-10-12/browser-stop-preflight-round22.md": 1,
+      "docs/review-2026-10-12/cli-quality-round9.md": 1,
+      "docs/review-2026-10-12/file-navigation-quality-round14.md": 4,
+      "docs/review-2026-10-12/file-navigation-round14.md": 3,
+      "docs/review-2026-10-12/fresh-project-quality-round18.md": 1,
+      "docs/review-2026-10-12/goal-bound-quality-round20.md": 6,
+      "docs/review-2026-10-12/goal-sleep-round20.md": 4,
+      "docs/review-2026-10-12/high-risk-quality-round17.md": 3,
+      "docs/review-2026-10-12/hub-session-operations-quality-round18.md": 1,
+      "docs/review-2026-10-12/multiwindow-round13.md": 9,
+      "docs/review-2026-10-12/priority-quality-round20.md": 3,
+      "docs/review-2026-10-12/project-recovery-quality-round16.md": 1,
+      "docs/review-2026-10-12/project-recovery-round16.md": 2,
+      "docs/review-2026-10-12/session-operations-quality-round17.md": 1,
+      "docs/review-2026-10-12/terminal-review-round13.md": 6,
+      "docs/review-2026-10-12/validation/desktop-renderer-results.json": 1,
+      "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json": 56,
+      "docs/review-2026-10-12/validation/latest-a66f4ef2/reproduction-results.json": 6,
+      "docs/review-2026-10-12/validation/latest-reproduction-results.json": 2,
+      "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json": 1,
+      "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json": 1,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-preflight-round22.md": 1,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-quality-final-round22.md": 1,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json": 8,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json": 56,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json": 8,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json": 40,
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json": 8,
+      "docs/review-2026-10-12/validation/original-file-navigation-round14/original-report.md": 3,
+      "docs/review-2026-10-12/validation/original-file-navigation-round14/quality-audit.md": 4,
+      "docs/review-2026-10-12/validation/original-file-root-round27/independent-files-static-first.raw.md": 8,
+      "docs/review-2026-10-12/validation/original-file-root-round27/independent-files-static.raw.md": 8,
+      "docs/review-2026-10-12/validation/original-goal-sleep-round20/goal-bound-quality-round20.md": 6,
+      "docs/review-2026-10-12/validation/original-goal-sleep-round20/report.md": 4,
+      "docs/review-2026-10-12/validation/original-hub-session-operations-round18/quality-audit.md": 1,
+      "docs/review-2026-10-12/validation/original-project-recovery-round16/quality-audit.md": 1,
+      "docs/review-2026-10-12/validation/original-project-recovery-round16/report.md": 2,
+      "docs/review-2026-10-12/validation/original-session-continuation-round26/PLAN.md": 1,
+      "docs/review-2026-10-12/validation/original-session-continuation-round26/independent-fork-quality.final.raw.md": 4,
+      "docs/review-2026-10-12/validation/original-session-continuation-round26/independent-fork-quality.static-initial.raw.md": 4,
+      "docs/review-2026-10-12/validation/original-session-continuation-round26/independent-fork-quality.static-with-counter.raw.md": 4,
+      "docs/review-2026-10-12/validation/original-session-operations-round17/quality-audit.md": 1,
+      "docs/review-2026-10-12/validation/original-terminal-lifecycle-round14/owner-audit.md": 1,
+      "docs/review-2026-10-12/validation/reproduction-results.json": 6,
+      "docs/review-remaining-2026-10-12/coding-tui-chat.md": 2,
+      "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md": 1,
+      "docs/superpowers/specs/2026-07-13-pet-work-agent-boundary-design.md": 1,
+      "docs/todo/claude-repository-optimization-2026-08-30.md": 1,
+      "docs/todo/multi-folder-local-project-plan.md": 1,
+      "docs/todo/p0-p1-release-2026-10-12.md": 2,
+      "docs/todo/release-real-operations-2026-10-16.md": 2,
+      "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-UI.md": 1,
+      "docs/todo/worktree-session-isolation-research.md": 1
+    },
+    "registry-split": {
+      "docs/archive/core-risk-signal-index.md": 2,
+      "docs/audit-2026-10-17-round4/root.md": 1,
+      "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json": 1
+    }
+  },
+  "priorParents": [
+    {
+      "path": "docs/audit-2026-10-17-round4/root.md",
+      "sha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "readScope": "full",
+      "value": "# TUI CLI 与日志审查\n\n冻结基线 `4ee32f28f78b8315112cca77cfc22b2f2f80ced6`。本报告确认 1 项 P3。CLI 聚焦组因夹具导入前失败而跳过，4 条线索保留为候选，不能宣称动态验证通过。产品源码未修改。\n\n## LOG-R4-01 [P3] 日志轮转按 bucket 前缀排序，删掉当天 engine 日志却保留更早 UI 日志\n\n- 位置：`packages/core/src/logging/logger.ts:439–445`，两个实际写入 bucket 在 `:350–361`；TUI 启动调用 `packages/tui/src/bootstrap/setup.ts:24–25`，该处明确意图是保留最近七天，实际常量上限仅七个文件。\n- 触发：用户已有七天的 `engine-YYYY-MM-DD.log` 与 `ui-ink-YYYY-MM-DD.log`，当日再次启动 TUI。\n- 预期：按日期保留最近诊断记录，至少不应删掉当天 engine 日志却保留六天前 UI 日志。\n- 实际：`readdirSync(...).filter(...).sort()` 按整个 basename 排序，所有 `engine-` 都排在 `ui-ink-` 前。14 个文件删前七个后，仅留下七份 UI 日志，包括最早日期；当天已有 engine 日志也消失。随后启动的新 engine 日志不会恢复此前记录。\n- 影响：正常重启时丢失最近引擎诊断历史。仅诊断资料损失，不声称 transcript、会话或用户项目文件受损；P3。\n- 证据：[独立 fixture](evidence/root-log-retention.test.ts)、[首次原始日志](evidence/root-log-retention.first.log)、[exit](evidence/root-log-retention.exit.txt)。直接调用生产 `rotateLogs`/`getRecentLogs`，文件全在自有 tmp；首跑 2 pass / 7 expect / 0 fail / 0 skipped / Completed，exit 0。单 bucket 八天对照会正确留下最新七天，隔离出跨 bucket 的排序问题。没有启动真实 TUI；启动接线为静态核验。\n- 查重：对近期三批 audit 与 `docs/review-2026-10-12/{README,priority-and-coverage}.md`、`docs/review-remaining-2026-10-12/*.md` 的 rotateLogs/rotation/bucket/日志轮转定向核对未发现同根因已确认项。`docs/archive/core-modules/logging.md` 描述七文件上限，不提供按前缀删除最近记录的功能合同。\n\n## CLI 首次失败与跳过\n\n[原始 fixture](evidence/root-cli-data.test.ts) 首次执行在第 13 行向 ESM namespace 的 readonly property 赋值时报错；发生在产品模块动态 import 之前。日志为 [root-cli-data.first.log](evidence/root-cli-data.first.log)，exit 1，0 pass / 1 fail / 1 error，无 Completed。没有业务断言执行，不能把它计为产品 bug。没有修支架、改 import、换方法或重跑这一组。下面四条保留源代码线索，不计本批确认数：\n\n| 临时编号 | 源码线索与候选影响 | 当前证据边界 |\n| --- | --- | --- |\n| CLI-R4-01 | `packages/tui/src/cli/commands/registry.ts:133–135` 将完整输入按空白拆开再 join，`/image \"a  b.png\"` 的文件名变成 `a b.png`；App 注册了真实 imageCommand，该命令自身支持双引号空格路径。`/config set`、`/memory add` 内还有相同的内容归一化 | 静态，实际文件/queue 对照没有执行；全参数保真与各命令内部解析属于相关家族，未拆成多个确认 bug |\n| CLI-R4-02 | `packages/tui/src/cli/commands/builtin/extra-commands.ts:293–295` 的 `/log` 仍读无 bucket 前缀的 `<date>.log`；当前 logger 写 engine/ui-ink 文件 | 静态，真实 writer+command 首次组未执行；独立 retention 实验测的是删除排序，没有验证或重试这个命令 |\n| CLI-R4-03 | `packages/tui/src/cli/commands/builtin/core-commands.ts:433` 的 `/compact` 不传 ctx.sessionId，Server 当前默认 detachedQueryEngine，Engine.forceCompact 无 lastSessionId 则返回 0/0 | 静态；与旧 A07 permission detached 家族相关，但这是另一个命令缺少 session 参数；未执行真实/fake owner 对照，不计新增确认 |\n| CLI-R4-04 | 同文件 `/config` 的 `new SettingsManager(ctx.cwd)` 为 project scope，REPL 使用 full scope；可能显示错误的 user-level context.maxTokens | 静态，user 配置/control fixture 未执行。与本轮 Settings YAML writer 问题不同，仍仅列候选 |\n\n未启动真实 Ink/PTY、浏览器、模型、外部 CLI 或账户。额外阅读了 CLI run/runs/input/renderers/options、loop/list-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。\n\n## 独立 dev recorder 日期候选：首跑失败后跳过\n\n`packages/core/src/logging/session-recorder.ts:145–147` 按 sid 缓存路径并在判断当前日期之前返回。一个开启 dev recorder 的长回合跨 UTC 午夜后，可能继续写入旧日期目录；`recordSessionEnd` 清缓存，下一回合才能重新选日期。仅诊断文件分桶候选，不是用户会话/Transcript 数据损失。\n\n[独立夹具](evidence/root-recorder-day.test.ts) 采用既有 session-recorder 测试的逐字节临时副本方式，确保 `import.meta.url` 与输出根都在自有 tmp，使用受控时钟；[首次原始日志](evidence/root-recorder-day.first.log) 在第25行输出根控制断言失败：fixture 的 `/var/...` 与 Bun import.meta 的 `/private/var/...` 路径字符串不同。**0 pass / 1 fail / 2 expect / exit 1 / 无 Completed**。仅完成源码字节相等和该路径控制两次断言，尚未写入事件，不能用该收据证明跨日行为；临时目录、时钟和 env 在 finally 恢复。没有改成 realpath、修支架、换方法或重跑。临时测试编号 LOG-R4-02 保持原样，仅作候选，不纳入确认问题索引。\n"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/validation.json",
+      "sha256": "000475ed026908747e641927bd282379704d71171adfac4d68b31e6cf8d16f17",
+      "readScope": "$.runs[3] and $.notes",
+      "value": {
+        "log": "evidence/root-cli-data.first.log",
+        "exitFile": "evidence/root-cli-data.exit.txt",
+        "exitCode": 1,
+        "firstRun": true,
+        "completed": false,
+        "passed": 0,
+        "failed": 1,
+        "errors": 1,
+        "expectations": null,
+        "selectedTests": null,
+        "skipped": null,
+        "sha256": "92529ee3c186f7e39c9f61e859a6028419638021f91d1fc31616ac26f92f0c7f",
+        "phase": "failed-fixture-skipped-no-retry",
+        "note": "Before product dynamic imports; ESM readonly namespace assignment"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "sha256": "53c4eb98275b007dc9c72c3b65e74d9b0b46c5e74e709e466bf5cf0cc8ec3b03",
+      "readScope": "lines5-17",
+      "value": "## 确认问题\n\n### HL-01 · P3 · 精确 GitHub 文件引用裁掉文件名首尾空格，合并不同路径\n\n- **位置**：`packages/link/src/file-selection.ts:15`，由 `:42` 将路径传入共用 `text()`；普通 UI 在 `packages/desktop/src/renderer/credentials/LinkedFileSourcesDialog.tsx:26` 也先裁剪每行路径。\n- **可达触发**：选择带前导或尾随空格的仓库路径，例如 ` report.md`、`report.md ` 或全角空格开头的 `　report.md`。该字符串通过现有类型、长度和分段校验。条件是仓库确实含这种文件名；本轮没有访问真实仓库。\n- **预期契约**：已有 `packages/link/src/file-selection.test.ts:27` 的正常路径测试写明精确 paths/refs；Desktop 的 `LinkedFileSourcesDialog.tsx:37` 与 `linked-file-sources-service.ts:144` 将选择定义为保存精确引用。owner/repo 的大小写归一化不意味着可以修改文件路径。\n- **实际**：生产 resolver 返回的 `params.path` 是 `report.md`。四种不同输入与原始 `report.md` 都归为相同的 adapter 配置。`linked-file-sources-service.ts:117` 将该配置用于 `identity`，`:120` 计算 source ID，`:122` 保存默认标签。因此这些原本不同的精确路径会被同一 source identity 合并；输入已丢失，后续 reader 无法恢复。\n- **影响**：这种文件名无法按原样选择。若裁剪后路径也存在，保存的引用指向它；若不存在，后续读取会找不到文件。**动态只证明路径变更及一个自有 Map 中的不同内容命中，未读取实际 GitHub 文件、未运行 UI/IPC 或 source 持久化。** identity 合并和后续读取影响由上述生产接线静态推出。Core 的 `packages/core/src/links/http.ts:174` 同样裁剪路径字符串，修复时需一并评估该边界；本轮未改代码。\n- **证据**：[fixture](evidence/host-link-selection.test.ts) 第一项及 [首次 raw log](evidence/host-link-selection.raw.log)，4 个输入均打印 requested/selected；整组 `4 pass / 0 fail / 26 expect`，并有 `Completed Bun shard: 4 tests, 0 skipped; 0 failures.`。\n\n### HL-02 · P3 · 长路径默认文件标签从半个 emoji 开始\n"
+    }
+  ],
+  "decision": "Registry split/join is exactly old static CLI-R4-01 and old first CLI fixture failed before product imports. Preserve SKIP and do not confirm/reproduce. Current quoted-review consumer trace is old-related TARGET-R26-R1 only. HL-01 is distinct leading/trailing trim, not this interior-whitespace compression.",
+  "metadataOnly": true,
+  "productRuns": 0,
+  "gitCommands": 0,
+  "allPriorInventoryHashesStillMatch": true
+}

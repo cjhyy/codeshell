@@ -1,0 +1,293 @@
+diff --git a/packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx b/packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx
+index 4529daa9a..eb7a7f5af 100644
+--- a/packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx
++++ b/packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx
+@@ -139,0 +140,10 @@ describe("subagent conversation dock requests", () => {
++  test("preserves an explicitly empty review snapshot while opening its turn", async () => {
++    hook = await renderHook(useHarness);
++    await act(async () => {
++      window.dispatchEvent(
++        new CustomEvent("codeshell:review-files", { detail: { files: ["a.ts"], diff: "" } }),
++      );
++    });
++    expect(hook.result.current.activePanelState.reviewDiff).toBe("");
++  });
++
+diff --git a/packages/desktop/src/renderer/app/usePanelBuckets.ts b/packages/desktop/src/renderer/app/usePanelBuckets.ts
+index e296d3abf..fc534981a 100644
+--- a/packages/desktop/src/renderer/app/usePanelBuckets.ts
++++ b/packages/desktop/src/renderer/app/usePanelBuckets.ts
+@@ -833 +833 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
+-      if (!gitReviewAvailableRef.current && !detail?.diff?.trim()) return;
++      if (!gitReviewAvailableRef.current && typeof detail?.diff !== "string") return;
+@@ -838 +838 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
+-        reviewDiff: detail?.diff || undefined,
++        reviewDiff: typeof detail?.diff === "string" ? detail.diff : undefined,
+diff --git a/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx b/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx
+index ffe945aa7..6c868b0a9 100644
+--- a/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx
++++ b/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx
+@@ -3,0 +4 @@ import { parseUnifiedDiff, type DiffFile } from "./parseUnifiedDiff";
++import { groupReviewSnapshot } from "./reviewSnapshot";
+@@ -115 +116 @@ export function UnifiedDiffViewer({
+-        files: loadedFiles({ rootId: "snapshot", repoRoot: cwd }, diffText),
++        files: loadedFiles({ rootId: "snapshot", repoRoot: cwd }, groupReviewSnapshot(diffText)),
+@@ -233,4 +234,3 @@ const MAX_RENDERED_LINES = 2000;
+-/** Keep whole files from the front of the diff until adding the next one would
+- *  exceed the line budget. Always returns at least the first file so something
+- *  shows. */
+-function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
++/** Keep the first files/lines within the budget, including a single file whose
++ * merged edit hunks exceed it. The source snapshot and stats stay complete. */
++export function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
+@@ -241 +241,13 @@ function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
+-    if (out.length > 0 && used + lines > budget) break;
++    if (used >= budget) break;
++    if (used + lines > budget) {
++      let remaining = budget - used;
++      const hunks = [] as DiffFile["hunks"];
++      for (const hunk of loaded.file.hunks) {
++        if (remaining <= 0) break;
++        const kept = hunk.lines.slice(0, remaining);
++        hunks.push({ ...hunk, lines: kept });
++        remaining -= kept.length;
++      }
++      out.push({ ...loaded, file: { ...loaded.file, hunks } });
++      break;
++    }
+@@ -355 +367 @@ function DiffFileBlock({
+-          <div key={h.header || i} className="overflow-x-auto border-b last:border-b-0">
++          <div key={`${i}:${h.header}`} className="overflow-x-auto border-b last:border-b-0">
+diff --git a/packages/desktop/src/renderer/diff/reviewSnapshot.test.ts b/packages/desktop/src/renderer/diff/reviewSnapshot.test.ts
+index 9e0cd1908..a05f3e71d 100644
+--- a/packages/desktop/src/renderer/diff/reviewSnapshot.test.ts
++++ b/packages/desktop/src/renderer/diff/reviewSnapshot.test.ts
+@@ -2 +2,2 @@ import { expect, test } from "bun:test";
+-import { selectReviewSnapshot } from "./reviewSnapshot";
++import { groupReviewSnapshot, selectReviewSnapshot } from "./reviewSnapshot";
++import { parseUnifiedDiff } from "./parseUnifiedDiff";
+@@ -13,0 +15,34 @@ test("selects one historical file without regenerating line numbers or touching
++
++test("groups every recorded legacy hunk for a file under one file header", () => {
++  const first = patch("src/a.ts", "first");
++  const other = patch("src/b.ts", "other");
++  const second = patch("src/a.ts", "second");
++  const grouped = groupReviewSnapshot(first + other + second);
++  const files = parseUnifiedDiff(grouped);
++  expect(files.map((file) => file.newPath)).toEqual(["src/a.ts", "src/b.ts"]);
++  expect(files[0]?.hunks).toHaveLength(2);
++  expect(grouped).toContain("+first");
++  expect(grouped).toContain("+second");
++  expect(grouped).toContain("+other");
++  expect(groupReviewSnapshot(grouped)).toBe(grouped);
++  const selected = selectReviewSnapshot(first + other + second, "src/a.ts");
++  expect(parseUnifiedDiff(selected)).toHaveLength(1);
++  expect(selected).toContain("+first");
++  expect(selected).toContain("+second");
++  expect(selected).not.toContain("+other");
++});
++
++test("does not merge distinct paths or infer rename identity from matching destinations", () => {
++  const rename =
++    "diff --git a/old.ts b/new.ts\nsimilarity index 100%\nrename from old.ts\nrename to new.ts\n";
++  const plain = patch("new.ts", "new");
++  expect(groupReviewSnapshot(rename + plain)).toBe(rename + plain);
++});
++
++test("reordering A/B/A keeps file boundaries when the final patch has no trailing newline", () => {
++  const raw = patch("a.ts", "first") + patch("b.ts", "other") + patch("a.ts", "last").trimEnd();
++  const grouped = groupReviewSnapshot(raw);
++  expect(parseUnifiedDiff(grouped).map((file) => file.newPath)).toEqual(["a.ts", "b.ts"]);
++  expect(grouped).not.toContain("+lastdiff --git");
++  expect(selectReviewSnapshot(raw, "b.ts")).toContain("+other");
++});
+diff --git a/packages/desktop/src/renderer/diff/reviewSnapshot.ts b/packages/desktop/src/renderer/diff/reviewSnapshot.ts
+index d75827b4f..758cfca95 100644
+--- a/packages/desktop/src/renderer/diff/reviewSnapshot.ts
++++ b/packages/desktop/src/renderer/diff/reviewSnapshot.ts
+@@ -2,0 +3,34 @@ import { parseUnifiedDiff } from "./parseUnifiedDiff";
++/**
++ * Legacy turn snapshots contain one file section per tool call. Keep every
++ * recorded hunk under one file header, without guessing a net change from
++ * partial snippets. Live Git queries keep their repository-scoped identities.
++ */
++export function groupReviewSnapshot(diff: string): string {
++  const grouped = new Map<string, string>();
++  let duplicate = false;
++  const chunks = diff.split(/(?=^diff --git )/m);
++  chunks.forEach((chunk, index) => {
++    const file = parseUnifiedDiff(chunk)[0];
++    const path = file?.newPath ?? file?.oldPath;
++    // Renames carry two identities; keep those transitions separate rather
++    // than merging unrelated files that happen to share a destination name.
++    const key =
++      path && !(file.oldPath && file.newPath && file.oldPath !== file.newPath)
++        ? `file:${path}`
++        : `section:${index}`;
++    const previous = grouped.get(key);
++    if (previous === undefined) {
++      grouped.set(key, chunk);
++      return;
++    }
++    duplicate = true;
++    const payloadStart = chunk.search(/^@@ |^Binary files |^GIT binary patch/m);
++    const payload =
++      payloadStart >= 0 ? chunk.slice(payloadStart) : chunk.slice(chunk.indexOf("\n") + 1);
++    grouped.set(key, `${previous}${previous.endsWith("\n") ? "" : "\n"}${payload}`);
++  });
++  return duplicate
++    ? [...grouped.values()].map((chunk) => (chunk.endsWith("\n") ? chunk : `${chunk}\n`)).join("")
++    : diff;
++}
++
+@@ -5,2 +39,3 @@ export function selectReviewSnapshot(diff: string, onlyPath: string | null): str
+-  if (!onlyPath) return diff;
+-  return diff
++  const grouped = groupReviewSnapshot(diff);
++  if (!onlyPath) return grouped;
++  return grouped
+diff --git a/packages/desktop/src/renderer/messages/FilesChangedCard.tsx b/packages/desktop/src/renderer/messages/FilesChangedCard.tsx
+index 372f94a02..0b844a12d 100644
+--- a/packages/desktop/src/renderer/messages/FilesChangedCard.tsx
++++ b/packages/desktop/src/renderer/messages/FilesChangedCard.tsx
+@@ -1 +1 @@
+-import React, { memo, useEffect, useRef, useState } from "react";
++import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+@@ -11,0 +12 @@ import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
++import { groupReviewSnapshot } from "../diff/reviewSnapshot";
+@@ -82 +83,7 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
+-  const sessionDiffText = message.sessionDiffs?.map((d) => d.diff).join("\n");
++  const sessionDiffText = useMemo(
++    () =>
++      message.sessionDiffs === undefined
++        ? undefined
++        : groupReviewSnapshot(message.sessionDiffs.map((d) => d.diff).join("\n")),
++    [message.sessionDiffs],
++  );
+diff --git a/packages/desktop/src/renderer/panels/PanelArea.tsx b/packages/desktop/src/renderer/panels/PanelArea.tsx
+index 074429585..02b38dc5b 100644
+--- a/packages/desktop/src/renderer/panels/PanelArea.tsx
++++ b/packages/desktop/src/renderer/panels/PanelArea.tsx
+@@ -213 +213 @@ function ResolvedPanelArea({
+-  const hasReviewSnapshot = Boolean(reviewDiff?.trim());
++  const hasReviewSnapshot = reviewDiff !== undefined;
+diff --git a/packages/desktop/src/renderer/panels/ReviewPanel.tsx b/packages/desktop/src/renderer/panels/ReviewPanel.tsx
+index ed3be3fa2..c3c55a940 100644
+--- a/packages/desktop/src/renderer/panels/ReviewPanel.tsx
++++ b/packages/desktop/src/renderer/panels/ReviewPanel.tsx
+@@ -18 +18 @@ import { useT } from "../i18n/I18nProvider";
+-import { selectReviewSnapshot } from "../diff/reviewSnapshot";
++import { groupReviewSnapshot, selectReviewSnapshot } from "../diff/reviewSnapshot";
+@@ -95 +95,7 @@ export function useWorkspaceRecentCommits(
+-export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDiff }: Props) {
++export function ReviewPanel({
++  cwd,
++  sessionId,
++  gitAvailable = true,
++  files,
++  turnDiff: rawTurnDiff,
++}: Props) {
+@@ -96,0 +103,4 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
++  const turnDiff = useMemo(
++    () => (rawTurnDiff === undefined ? undefined : groupReviewSnapshot(rawTurnDiff)),
++    [rawTurnDiff],
++  );
+@@ -99 +109,4 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
+-  const hasTurnSnapshot = !!turnDiff?.trim();
++  // An explicitly empty snapshot is authoritative: this turn has no net diff.
++  // Only an absent snapshot may use the legacy live-Git fallback.
++  const hasTurnSnapshot = turnDiff !== undefined;
++  const hasReviewableTurnDiff = Boolean(turnDiff?.trim());
+@@ -115,3 +128,7 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
+-    return parseUnifiedDiff(turnDiff)
+-      .map((f) => f.newPath ?? f.oldPath)
+-      .filter((p): p is string => !!p);
++    return [
++      ...new Set(
++        parseUnifiedDiff(turnDiff)
++          .map((f) => f.newPath ?? f.oldPath)
++          .filter((p): p is string => !!p),
++      ),
++    ];
+@@ -188 +205 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
+-    if (activeScope === "turn" && !hasTurnSnapshot) return;
++    if (activeScope === "turn" && !hasReviewableTurnDiff) return;
+@@ -327 +344 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
+-              aiReview.phase === "preparing" || (activeScope === "turn" && !hasTurnSnapshot)
++              aiReview.phase === "preparing" || (activeScope === "turn" && !hasReviewableTurnDiff)
+@@ -368 +385 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
+-              aiReview.phase === "preparing" || (activeScope === "turn" && !hasTurnSnapshot)
++              aiReview.phase === "preparing" || (activeScope === "turn" && !hasReviewableTurnDiff)
+diff --git a/packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx b/packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx
+index 6c6eace8e..4eff8147b 100644
+--- a/packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx
++++ b/packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx
+@@ -50,0 +51,29 @@ describe("ReviewPanel workspace requests", () => {
++  test("repeated historical edits render one file block and one menu option per path", async () => {
++    const second = snapshot.replace("after-note", "after-second-edit");
++    const other = snapshot.replaceAll("note.txt", "other.txt");
++    const container = document.createElement("div");
++    root = createRoot(container);
++    await act(async () => {
++      root?.render(
++        <ReviewPanel
++          cwd="/repo"
++          sessionId="session-a"
++          gitAvailable={false}
++          turnDiff={snapshot + other + second}
++        />,
++      );
++      await flushMicrotasks();
++    });
++    expect(
++      nodes(container).filter((node) => node.getAttribute?.("title") === "note.txt"),
++    ).toHaveLength(1);
++    expect(
++      nodes(container).filter((node) => node.getAttribute?.("title") === "other.txt"),
++    ).toHaveLength(1);
++    expect(text(container)).toContain("after-note");
++    expect(text(container)).toContain("after-second-edit");
++    // The file selector counts files rather than sequential edit operations.
++    expect(text(container)).toContain("全部文件（2）");
++    expect(text(container)).not.toContain("全部文件（3）");
++  });
++
+@@ -228 +257 @@ describe("ReviewPanel workspace requests", () => {
+-  test("does not mount a Git viewer without a repository or a nonempty snapshot", async () => {
++  test("does not mount a Git viewer without a repository or a supplied snapshot", async () => {
+@@ -240 +269 @@ describe("ReviewPanel workspace requests", () => {
+-    for (const turnDiff of [undefined, " \n\t"]) {
++    for (const turnDiff of [undefined]) {
+@@ -257,0 +287,32 @@ describe("ReviewPanel workspace requests", () => {
++  test("an explicit empty turn snapshot never falls back to unrelated working-tree changes", async () => {
++    const requests: unknown[] = [];
++    Object.assign(window, {
++      codeshell: {
++        getReviewDiff: async (...args: unknown[]) => {
++          requests.push(args);
++          throw new Error("must not query the live repository for an empty turn");
++        },
++      },
++    });
++    const container = document.createElement("div");
++    root = createRoot(container);
++    for (const gitAvailable of [true, false]) {
++      for (const turnDiff of ["", " \n\t"]) {
++        await act(async () => {
++          root?.render(
++            <ReviewPanel
++              cwd="/repo"
++              sessionId="session-a"
++              gitAvailable={gitAvailable}
++              files={["a.ts"]}
++              turnDiff={turnDiff}
++            />,
++          );
++          await flushMicrotasks();
++        });
++        expect(text(container)).toContain("no changes");
++      }
++    }
++    expect(requests).toEqual([]);
++  });
++

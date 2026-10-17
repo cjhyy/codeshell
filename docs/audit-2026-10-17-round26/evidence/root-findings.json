@@ -1,0 +1,34 @@
+[
+  {
+    "id": "TUI-R26-01",
+    "priority": "P2",
+    "title": "Treat branch creation flags as complete argument tokens",
+    "source": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+    "lineStart": 122,
+    "lineEnd": 124,
+    "cause": "Wholeargument substring includes andglobalreplace treat -c insideordinarybranch names ascreateflag anddeletethatpart.",
+    "ordinaryInput": "/branch feature-cache",
+    "expectedRequest": [
+      "checkout",
+      "feature-cache"
+    ],
+    "sourceInferredRequest": [
+      "checkout",
+      "-b",
+      "featureache"
+    ],
+    "evidenceKind": "Static direct source derivation only;not capturedprocessargv orruntime reproduction.",
+    "normalProducer": "Appregistered gitCommands→dispatch helper→registry.dispatch→actualbranch.execute→gitCheckout validation/argv construction.",
+    "impact": "Normal switch request targets anothername andcreationmode. ActualGit outcome dependsrepository state;no nativebranch/files/commit mutation wasrun orclaimed.",
+    "counterevidence": [
+      "Emptyarg lists;topic plain or topic --create follow correctsourcebranches. These controlsnotexecuted.",
+      "gitCheckout nonempty/non-leadingdash guarddoesnotrejectthe ordinaryinput orrestoredeletedbytes.",
+      "Registry oldwhitespacefamilyis unchangedanddoesnotalterthisshortone-token sample.",
+      "Samecausalrootexplicitcreate damagedname notsecondissue."
+    ],
+    "productAttempts": 0,
+    "testsRun": 0,
+    "fixed": false,
+    "report": "docs/audit-2026-10-17-round26/tui-branch-report.md"
+  }
+]

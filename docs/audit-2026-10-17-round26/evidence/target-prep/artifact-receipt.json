@@ -1,0 +1,45 @@
+{
+  "artifactCount": 7,
+  "files": [
+    {
+      "path": "dedup.py",
+      "bytes": 4571,
+      "sha256": "dca97ed7eec420bec5f8687994c985184fdb8f60287ab77e041230c389774466"
+    },
+    {
+      "path": "history-selected.json",
+      "bytes": 13846,
+      "sha256": "c0c4f3d9ccc20e875717fb0821e1b191906f655c400cc1b4619a3d6d85d8a57f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 648080,
+      "sha256": "421a365a60c1c236fe6687a1e34a947bbc6c1fdacfc43d58ff6fca2e205ff444"
+    },
+    {
+      "path": "inventory.json",
+      "bytes": 2973,
+      "sha256": "eb8c7cd6f5af33ae4836a1ddbd026b3b05adea58f622b3358a156affb5796645"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1431,
+      "sha256": "b3200e78fd4ab598002447d0202ad33efb22c6b7ff347bf7f0edf1942bf897db"
+    },
+    {
+      "path": "proposal.json",
+      "bytes": 6379,
+      "sha256": "3d6cce98cd592bfa558e9e2d4844088c2a538883fa33ae47da8641b1d9c37891"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 6326,
+      "sha256": "6b2413ff06542a50df4e1e8f2227c8ae0bf51b0f02640bd210c82dc14ba945a8"
+    }
+  ],
+  "receiptExcludesItself": true,
+  "gitCommandsExecuted": 0,
+  "productRuns": 0,
+  "parentReportedFreeze": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "independentGitBlobVerification": false
+}
