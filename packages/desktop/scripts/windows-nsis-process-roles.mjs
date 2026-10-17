@@ -123,7 +123,7 @@ export function createNsisReplacementRoleObserver({
   temporary,
   environment,
   execFile = execFileSync,
-  now = performance.now,
+  now = () => performance.now(),
 } = {}) {
   const hints = roleHints({ root, setup, uninstaller, temporary });
   let started = 0;
