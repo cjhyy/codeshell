@@ -1,0 +1,83 @@
+{
+  "atUTC": "2026-10-17T11:37:26.249888+00:00",
+  "parentReportedBaseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/README.md",
+      "name": "README.md",
+      "bytes": 1613,
+      "sha256": "2dda988b1f4ae4007d933f1074b13cb6650e7d656e6433f77f66f38b9e70a806"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/consumer-initial-pin.json",
+      "name": "consumer-initial-pin.json",
+      "bytes": 282,
+      "sha256": "cd8fcc451aafb731025bc0d9ed2997c906d80a39ef814a4ace4340f00d534397"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/extra-initial-pins.json",
+      "name": "extra-initial-pins.json",
+      "bytes": 2109,
+      "sha256": "efa55c39e3fbd227f574ac3b06d0f88640b6376c7fa3619cb5c9f527e66ae19f"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/finish-hash-checks.json",
+      "name": "finish-hash-checks.json",
+      "bytes": 1855,
+      "sha256": "f179aa4068d05f2d4ff0ac804c16fca2d5f84b3f17948e001545c374f1ebc6bf"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/history-decisions.json",
+      "name": "history-decisions.json",
+      "bytes": 4543,
+      "sha256": "cc0e7f7bcaa411f421097b72a69b19d149317b3458bc989ba2365aa1d7431530"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/history-method.py",
+      "name": "history-method.py",
+      "bytes": 3475,
+      "sha256": "5df8e637e3ee04592cbbbb0b938dfa04ffb93f82d6b5934a01940cdf8e896852"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/history.json",
+      "name": "history.json",
+      "bytes": 651772,
+      "sha256": "fc1700f90f30909f4f78955dff6d25fa510954c2f65b8470ffd95857330ae290"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/initial-pins.json",
+      "name": "initial-pins.json",
+      "bytes": 1680,
+      "sha256": "73f75f2ecd43d0c6d00ad866b77c80b6fd8df87b65eb0288583eda6999bed686"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/proposal.json",
+      "name": "proposal.json",
+      "bytes": 1627,
+      "sha256": "e2afbd4334b66eae30a70b7b507bb628911bf354056a5144cfc02d867f87a987"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/selection.json",
+      "name": "selection.json",
+      "bytes": 1509,
+      "sha256": "d1adf923dce8c111001429ac2298cf7c582c86ff86f1f3c94f2911ed17a774f2"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/source-manifest.json",
+      "name": "source-manifest.json",
+      "bytes": 8114,
+      "sha256": "d3e722359c0b80bae5bca66544fc61baf87191fb0b5b6ff081e38dd226dd460a"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round29-core-frontier/validation.json",
+      "name": "validation.json",
+      "bytes": 515,
+      "sha256": "073e583356b806d4c74062cef05075b8c04ecd22c86cafaafea9c68ed368a36f"
+    }
+  ],
+  "artifactCount": 12,
+  "selfExcluded": true,
+  "sourcePins": 10,
+  "productFunctionsInvoked": 0,
+  "gitCommands": 0
+}

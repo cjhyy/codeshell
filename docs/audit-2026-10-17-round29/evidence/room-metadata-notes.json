@@ -1,0 +1,17 @@
+{
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "notes": [
+    {
+      "kind": "Source pin timing limitation",
+      "source": "packages/web/src/lib/streamReducer.ts",
+      "meaning": "Reducer selected consumer ranges were read during source follow-up before a durable pin was written. Preserve initialSemanticReadSha256=null and mark first captured hash after read; current hash will not be retroactively called a read-start proof.",
+      "runtimeFailure": false,
+      "productRerun": false
+    },
+    {
+      "kind": "Boundary limit",
+      "meaning": "Room DTO fields mention snapshot/cursor/request sequencing and transcript recovery. Read only ordinary browser-facing DTO/catchup/display logic; journal/authentication/permission/identity mechanics not validated or executed."
+    }
+  ]
+}

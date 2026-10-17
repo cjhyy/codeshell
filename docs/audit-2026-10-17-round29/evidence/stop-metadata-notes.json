@@ -1,0 +1,19 @@
+{
+  "productAttempts": 0,
+  "productReruns": 0,
+  "metadataLocatorErrors": 1,
+  "notes": [
+    {
+      "toolResponse": "Consumer locator searched guessed packages/desktop/src/renderer/SessionPanelDock.tsx alongside actual app directory",
+      "diagnostic": "rg: packages/desktop/src/renderer/SessionPanelDock.tsx: No such file or directory (os error 2)",
+      "outerExitCode": null,
+      "exitReason": "Wrapper printed output text only; original numeric tool result not serialized, no inner or outer code invented.",
+      "captureKind": "Manual diagnostic excerpt from displayed first tool response, not product raw.",
+      "action": "The same inventory search returned actual app/SessionPanelDock.tsx; read its selected consumer range. No product execution or test retry."
+    },
+    {
+      "kind": "Output budget",
+      "action": "Large multi-file history output was truncated; final declared old-contract ranges were reread in bounded snippets. Hashes do not imply large full-file reading."
+    }
+  ]
+}

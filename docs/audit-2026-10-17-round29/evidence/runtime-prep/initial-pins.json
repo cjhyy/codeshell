@@ -1,0 +1,41 @@
+{
+  "atUTC": "2026-10-17T11:33:28.666031+00:00",
+  "parentReportedBaseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "gitCommands": 0,
+  "independentGitBlobVerification": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coveragePrepSha256": null,
+      "matchesEarlierCoverageSnapshot": false,
+      "structuredCoverageStatus": null,
+      "firstPinBeforeThisTaskSemanticRead": false,
+      "historicalFullSemanticReadingNotInferred": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "lines": 101,
+      "firstFilesystemSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "coveragePrepSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "matchesEarlierCoverageSnapshot": true,
+      "structuredCoverageStatus": "current-sha-pin-only-no-semantic-coverage",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "historicalFullSemanticReadingNotInferred": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "bytes": 7513,
+      "lines": 207,
+      "firstFilesystemSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "coveragePrepSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "matchesEarlierCoverageSnapshot": true,
+      "structuredCoverageStatus": "current-sha-pin-only-no-semantic-coverage",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "historicalFullSemanticReadingNotInferred": true
+    }
+  ]
+}

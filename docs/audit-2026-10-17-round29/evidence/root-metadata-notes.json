@@ -1,0 +1,23 @@
+{
+  "productExecution": false,
+  "productReruns": 0,
+  "events": [
+    {
+      "toolChunk": "5ed584",
+      "operation": "rg --files docs/audit-2026-10-17-round29 /tmp | rg (round29|round28-finalize)",
+      "kind": "Root scope mistake in metadata discovery",
+      "outerExitCode": 0,
+      "innerExitCode": null,
+      "outputTruncated": true,
+      "visibleDiagnostic": "rg: /tmp/tmp-mount-Bt5lKS: Permission denied (os error 13)",
+      "note": "Accidentally traversed broad /tmp rather than exact owned paths. Unrelated names were navigation only and not treated as evidence. No content opened, no writes or product execution. Do not repeat."
+    },
+    {
+      "toolChunk": "47d879",
+      "operation": "cat known verify-audit.py followed by guessed root-dedup.py",
+      "exitCode": 1,
+      "diagnostic": "cat: docs/audit-2026-10-17-round28/evidence/root-dedup.py: No such file or directory",
+      "note": "Metadata locator failed; resolved by rg --files exact prior evidence directory. No product execution or retry."
+    }
+  ]
+}

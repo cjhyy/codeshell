@@ -1,0 +1,21 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "testRuns": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productImports": 0,
+    "productReruns": 0
+  },
+  "authorValidations": [
+    "evidence/root-validation.json",
+    "evidence/runtime-validation.json",
+    "evidence/room-validation.json",
+    "evidence/stop-validation.json"
+  ],
+  "mode": "static-only",
+  "rawLogs": [],
+  "note": "Existing declarations, old test receipts and static source protections are never counted as current passes."
+}

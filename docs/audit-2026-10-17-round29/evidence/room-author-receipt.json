@@ -1,0 +1,76 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "sourcePins": 12,
+  "productContractReadLines": 1251,
+  "instructionLines": 222,
+  "priorReportLines": 79,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "files": [
+    {
+      "path": "evidence/room-candidates.json",
+      "bytes": 109,
+      "sha256": "9736d2cf89af319669c6d06992e25585e4ca1179aed7a7a8af6e68643d35e8f1"
+    },
+    {
+      "path": "evidence/room-consumer-initial-pins.json",
+      "bytes": 1978,
+      "sha256": "e5ffed89b96f63d3bddd2aa7f55d210d76c7cb6188deb9c9c7f894373ac1e19d"
+    },
+    {
+      "path": "evidence/room-dedup.json",
+      "bytes": 708175,
+      "sha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+    },
+    {
+      "path": "evidence/room-dedup.py",
+      "bytes": 3324,
+      "sha256": "dafb4e595bd36b0c6a457adebae1a7b1e6c4658ed8eb452be97aecdee5bc46a1"
+    },
+    {
+      "path": "evidence/room-findings.json",
+      "bytes": 107,
+      "sha256": "2ec6c33a53831f116330d53b0b0f3a346d59491abcee487ca31bf8748fb7f4ba"
+    },
+    {
+      "path": "evidence/room-history-decisions.json",
+      "bytes": 2220,
+      "sha256": "985f6fc2d9c8fc30ab4eb1694c663063a1ea280d884bd06f7666984fad2f6abf"
+    },
+    {
+      "path": "evidence/room-initial-source-pins.json",
+      "bytes": 1551,
+      "sha256": "5e26bb395f2f5909950892e6f871e24b76eff3579ca7b2a5c50136e2c2a0694c"
+    },
+    {
+      "path": "evidence/room-metadata-notes.json",
+      "bytes": 796,
+      "sha256": "785cd514c7c804242d291da87ec5c5f2c61af90f218eb55266b85b52e467c898"
+    },
+    {
+      "path": "evidence/room-related.json",
+      "bytes": 111,
+      "sha256": "2d0732f1f982e7e91116eccb04d076f61aeae78970427e0eda767cc59b16a624"
+    },
+    {
+      "path": "evidence/room-source-manifest.json",
+      "bytes": 10900,
+      "sha256": "b9ecbee4420b9ff840ad725ed6c3b49eba4f1137073882e7b88eab183885a287"
+    },
+    {
+      "path": "evidence/room-supplemental-pins.json",
+      "bytes": 1538,
+      "sha256": "700e0174578f5bebb13e9bc879c976436ea494072b87b0a69833c079eb88faea"
+    },
+    {
+      "path": "evidence/room-validation.json",
+      "bytes": 840,
+      "sha256": "b5c60d129fab1f30607a7193e0f6ce5a424a3fb24bd40ea83494b3ba4b2b1906"
+    },
+    {
+      "path": "room-report.md",
+      "bytes": 4060,
+      "sha256": "272901153859e10fb97f3f7cec7b93464250fb8077ca2bb5ac67db2665f1f547"
+    }
+  ]
+}

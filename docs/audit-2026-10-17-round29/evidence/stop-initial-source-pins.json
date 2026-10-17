@@ -1,0 +1,71 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "bytes": 1757,
+      "lineCount": 42,
+      "firstFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.approvals.test.tsx",
+      "bytes": 10480,
+      "lineCount": 297,
+      "firstFilesystemSha256": "60f3d8fcbc0ca9e9e26c255c4ccd05888771611b5ee7d641b01ee4838f9fb9e1",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "bytes": 6072,
+      "lineCount": 177,
+      "firstFilesystemSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "lineCount": 1247,
+      "firstFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "bytes": 1083,
+      "lineCount": 24,
+      "firstFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "firstFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "firstFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "semanticRead": false,
+      "note": "Before this task semantic source read; whole-file pin is metadata only. CODESHELL/AGENTS read earlier unchanged sha, parent instruction still applies."
+    }
+  ],
+  "gitCommands": 0,
+  "productAttempts": 0
+}

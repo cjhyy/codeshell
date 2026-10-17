@@ -1,0 +1,41 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [],
+  "guardedRuns": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "productFunctionEvaluations": 0,
+  "fixturesWritten": 0,
+  "fixturesExecuted": 0,
+  "reactRenders": 0,
+  "browserActions": 0,
+  "vmAstEvaluations": 0,
+  "nativeBusinessActions": 0,
+  "realStopCancelActions": 0,
+  "networkRequests": 0,
+  "modelCalls": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "productChanges": false,
+  "passedTests": 0,
+  "expectations": 0,
+  "failedTests": 0,
+  "existingTestsExecuted": 0,
+  "focusedTestsExecuted": 0,
+  "sourceTestIntent": {
+    "stopRoutingNamedTests": 5,
+    "launchParameterizedDeclaration": 1,
+    "launchMatrixVariants": 3,
+    "executed": 0
+  },
+  "raw": null,
+  "exit": null,
+  "limitations": [
+    "Selected stop-target ordinary data path only, not full cancel completion/native/browser/permission/identity validation.",
+    "Existing test declarations and helpers are source only. UI stopped is not proof of Main/Core ACK. No old failure recovery/retry/alternative runtime."
+  ]
+}

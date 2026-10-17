@@ -1,0 +1,37 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "historyCases": [
+    {
+      "id": "R14 roomHistory baseline",
+      "decision": "Existing old8case/9expect record covers same accumulator basic contract; no new current runtime confirmation or severity. Arbitrary failed-instance reuse/MAX_SAFE_INTEGER constructions were already excluded."
+    },
+    {
+      "id": "MAPPERS-R17-C1",
+      "decision": "Synthetic history tool start IDs versus later real live result IDs remain old candidate. Current consumer values justify retaining boundary as old, but no new ordinary cross-snapshot in-flight producer proof or identity/journal experiment was added; do not upgrade/re-report."
+    },
+    {
+      "id": "Old non-array guard",
+      "decision": "roomHistoryToEvents Array.isArray is existing documented robustness fix, not new. Malformed/null entries do not establish an ordinary frozen range; no malicious payload experiment."
+    },
+    {
+      "id": "Old failed displays and parsers",
+      "decision": "R14 userMessageDisplay/old i18n/Question directions andR27 compose import failures remain skipped. Reading ordinary mapper/reducer source does not restore tests or borrow old pass counts."
+    }
+  ],
+  "ordinaryCounterevidence": [
+    "Accumulator enforces fixed snapshot boundary, contiguous seqs, completion throughSeq, no cursor loop/empty intermediate; consumer commits only after accept returns completed range.",
+    "Web catchup marks failure without folding partial range or advancing catchup boundary; Desktop collect returns all before replay, then live is reconciled.",
+    "Mapped complete prose becomes assistant_text; real tool IDs pair start/result, legacy seq-derived/idless paths are explicitly best effort. Structured args survive ordinary mappings."
+  ],
+  "boundaries": [
+    "No pressure/cap, MAX_SAFE_INTEGER, malformed records, error-instance reuse or arbitrary object mutation simulation.",
+    "No journal/native/authentication/permission/identity behavior validation; only public DTO fields and ordinary display consumer read."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

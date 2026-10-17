@@ -1,0 +1,48 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "initialUtc": "2026-10-17T11:37:08.426635+00:00",
+  "files": [
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "bytes": 7039,
+      "lineCount": 144,
+      "firstFilesystemSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "captureTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "bytes": 13196,
+      "lineCount": 267,
+      "firstFilesystemSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "captureTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "firstFilesystemSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "captureTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "bytes": 35323,
+      "lineCount": 966,
+      "firstFilesystemSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "captureTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "lineCount": 2982,
+      "firstFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "captureTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+      "gitBlobCompared": false
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

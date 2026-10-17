@@ -1,0 +1,54 @@
+{
+  "atUTC": "2026-10-17T11:34:09.852430+00:00",
+  "gitCommands": 0,
+  "files": [
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "lines": 79,
+      "firstFilesystemSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "firstPinBeforeThisTaskSemanticRead": false,
+      "note": "Tests were read as text already; no earlier dedicated read-time hash claimed."
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "lines": 999,
+      "firstFilesystemSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "note": "Pinned before selected producer/consumer reading."
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "bytes": 9383,
+      "lines": 229,
+      "firstFilesystemSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "firstPinBeforeThisTaskSemanticRead": false,
+      "note": "Tests were read as text already; no earlier dedicated read-time hash claimed."
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lines": 800,
+      "firstFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "note": "Pinned before selected producer/consumer reading."
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lines": 1377,
+      "firstFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "note": "Pinned before selected producer/consumer reading."
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "lines": 396,
+      "firstFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "note": "Pinned before selected producer/consumer reading."
+    }
+  ]
+}

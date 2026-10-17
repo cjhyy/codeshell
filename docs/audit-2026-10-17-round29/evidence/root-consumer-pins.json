@@ -1,0 +1,37 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.ts",
+      "bytes": 2283,
+      "lineCount": 63,
+      "initialFilesystemSha256": null,
+      "sha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "pinTiming": "after full63 source read"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "initialFilesystemSha256": null,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinTiming": "after selected235-310 consumer read"
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "lineCount": 396,
+      "initialFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "pinTiming": "before selected150-270 semantic read; earlier rg/wc navigation only"
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+      "bytes": 4946,
+      "lineCount": 152,
+      "initialFilesystemSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "sha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "pinTiming": "before full152 source read"
+    }
+  ],
+  "productExecution": false
+}

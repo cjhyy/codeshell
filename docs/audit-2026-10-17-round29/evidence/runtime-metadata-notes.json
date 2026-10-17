@@ -1,0 +1,24 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "authorProductAttempts": 0,
+  "authorGitCommands": 0,
+  "metadataFailures": 0,
+  "notes": [
+    {
+      "kind": "Two parent-reported documentation baselines",
+      "detail": "Original prep parent32c is preserved byte-for-byte; formal parentb348 supplied later. Author did not run Git. Same10 source filesystem hashes rechecked; Root binds frozen blobs."
+    },
+    {
+      "kind": "No double count",
+      "detail": "No new source semantic reading on formalization. 308main lines and1685declared total are one prep reading reused, not doubled."
+    },
+    {
+      "kind": "Current history only metadata refresh",
+      "detail": "Original2677-history excluded mutable28; formal2765-history includes frozen28/excludes29. This is a pure file/JSON value-scalar search, not a product attempt or replacement validation."
+    },
+    {
+      "kind": "Navigation excluded areas",
+      "detail": "MobileOutputClient1–165 was read during caller location then excluded; no auth/journal-identity behavior or experiments. userMessageDisplay source/helper not reopened, imported or called. Existing replay tests only text; their imports never executed."
+    }
+  ]
+}
