@@ -40,6 +40,8 @@ export const misc = {
         statusDownloaded: "新版本 {version} 已下载",
         statusInstalling: "正在重启并安装 {version}…",
         statusError: "失败：{message}",
+        statusErrorSummary: "更新失败",
+        errorDetails: "错误详情",
       },
       status: {
         running: "运行中…",
@@ -182,6 +184,8 @@ export const misc = {
         statusDownloaded: "Version {version} downloaded",
         statusInstalling: "Restarting to install {version}…",
         statusError: "Failed: {message}",
+        statusErrorSummary: "Failed to update",
+        errorDetails: "Error details",
       },
       status: {
         running: "Running…",
