@@ -17,10 +17,17 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedSessionCatalog,
+  waitForAsyncFunction,
+  waitForSessionCatalogSelection,
 } from "./electron-harness.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { getElectronKeychainPreflightDiagnostic } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import {
+  preferenceGoalDeleteGuardSource,
+  reconcilePreferenceGoalLedger,
+} from "./preference-goal-delete-acceptance.mjs";
 
 assert.equal(process.env.NODE_ENV, "test", "Use the isolated native smoke runner");
 assert.equal(process.env.CODE_SHELL_TEST_HOME, join(process.env.HOME, ".code-shell"));
@@ -64,6 +71,12 @@ const operations = [],
   failures = [],
   rendererErrors = [],
   observerFailures = [];
+const goalConfig = {
+  sessionIds: ["owned-preference-goal-a", "owned-preference-goal-b"],
+  goalId: "owned-paused-goal-a",
+  revision: 7,
+  ledger: join(isolated.home, "goal-delete-rpc.jsonl"),
+};
 const receipt = {
   fixture: "native-preferences-operation-cycles",
   status: "failed",
@@ -73,6 +86,7 @@ const receipt = {
   privateHomeRemoved: false,
   operations,
   processes,
+  goalDeleteAcceptance: { status: "pending", required: true, operations: 0 },
   boundary:
     "Production Electron/Main/preload/renderer; nativeTheme overrides only owned process Chromium media, not the user's OS appearance; no native crypto or account acceptance",
 };
@@ -201,6 +215,210 @@ async function operation(action, run) {
   await assertGuard();
   operations.push({ action, result });
   await write(join(evidence, "operations.json"), operations);
+}
+async function deletePausedGoal() {
+  stage = "paused Goal: owned session seed";
+  await win.getByRole("button", { name: "Back to app", exact: true }).click();
+  const projectPath = await realpath(project);
+  const ownedProject = await win.evaluate(
+    async (path) =>
+      (await window.codeshell.projectRegistry.list()).find((entry) =>
+        entry.roots.some((root) => root.path === path),
+      ),
+    projectPath,
+  );
+  assert.ok(ownedProject?.id && ownedProject.primaryRootId);
+  const seeded = goalConfig.sessionIds.map((id, index) => ({
+    sessionId: id,
+    title: `Owned paused Goal ${index === 0 ? "A" : "B"}`,
+    cwd: projectPath,
+    project: { projectId: ownedProject.id, mainRootId: ownedProject.primaryRootId },
+    origin: "desktop",
+    kind: "work",
+    parentSessionId: null,
+    status: "completed",
+    startedAt: 1,
+    model: "owned-unused-native-model",
+    provider: "owned-unused-provider",
+    stateRevision: 0,
+    goalLifecycle: {
+      version: 1,
+      phase: "paused",
+      goalId: index === 0 ? goalConfig.goalId : "owned-paused-goal-b",
+      revision: goalConfig.revision,
+      config: {
+        objective: `Owned durable paused objective ${index === 0 ? "A 中文" : "B"}`,
+        maxTurns: 3,
+      },
+      updatedAtMs: 1,
+    },
+  }));
+  const sessionFile = (id, file) => join(isolated.codeShellHome, "sessions", id, file);
+  for (const state of seeded) {
+    await write(sessionFile(state.sessionId, "state.json"), state);
+    await write(
+      sessionFile(state.sessionId, "transcript.jsonl"),
+      JSON.stringify({
+        id: state.sessionId + "-message",
+        timestamp: 1,
+        turnNumber: 1,
+        type: "message",
+        data: { role: "user", content: state.title },
+      }) + "\n",
+    );
+  }
+  const [a, b] = seeded;
+  const before = {
+    a: await readFile(sessionFile(a.sessionId, "state.json")),
+    aTranscript: await readFile(sessionFile(a.sessionId, "transcript.jsonl")),
+    b: await readFile(sessionFile(b.sessionId, "state.json")),
+    bTranscript: await readFile(sessionFile(b.sessionId, "transcript.jsonl")),
+  };
+  await app.evaluate(() => {
+    globalThis.__preferenceOperations.goalDelete.armed = true;
+  });
+  await seedSessionCatalog(win, {
+    [ownedProject.id]: {
+      sessions: seeded.map((state) => ({
+        id: state.sessionId,
+        engineSessionId: state.sessionId,
+        title: state.title,
+        createdAt: 1,
+        updatedAt: 1,
+      })),
+      activeSessionId: null,
+    },
+  });
+  await win.reload();
+  await observe(win);
+  await viewOnly();
+  await expandSidebar(win);
+  const projectButton = win.locator("aside").getByRole("button", {
+    name: "Owned preference project",
+    exact: true,
+  });
+  if ((await projectButton.getAttribute("aria-expanded")) === "false") await projectButton.click();
+  await win.getByRole("button", { name: a.title, exact: true }).click();
+  await waitForSessionCatalogSelection(win, ownedProject.id, a.sessionId);
+  const composer = () => win.locator('textarea[aria-autocomplete="list"]:visible');
+  await composer().waitFor();
+  const prefix = "OWNED_PAUSED_GOAL_UNSENT 中文";
+  await composer().fill(prefix);
+  const beforeDeleteDraft = await composer().inputValue();
+  assert.equal(beforeDeleteDraft, prefix);
+  const controls = async () => ({
+    model: await win.locator("button[data-active-model]:visible").getAttribute("data-active-model"),
+    permission: await win
+      .getByRole("button", { name: /^Conversation permission:/ })
+      .getAttribute("aria-label"),
+  });
+  const beforeControls = await controls();
+  const status = win.getByRole("button", {
+    name: "View session status and task details",
+    exact: true,
+  });
+  // Opening the real hover popover avoids clicking its hover-open toggle closed.
+  await status.hover();
+  const popover = win.locator('[data-status-popover="true"]:visible');
+  await popover.getByText(a.goalLifecycle.config.objective, { exact: true }).waitFor();
+  await popover.getByText("Paused", { exact: true }).waitFor();
+  stage = "paused Goal: real Delete click and original fallback";
+  await popover.getByRole("button", { name: "Delete", exact: true }).click();
+  await waitForAsyncFunction(
+    app,
+    () =>
+      globalThis.__preferenceOperations.goalDelete.rows.some(
+        (row) => row.kind === "response" && row.response.result?.deleted === true,
+      ),
+    undefined,
+    { timeout: 5_000, polling: 50 },
+  );
+  await popover.waitFor({ state: "hidden" });
+  const afterDeleteDraft = await composer().inputValue();
+  const afterDeleteControls = await controls();
+  assert.equal(afterDeleteDraft, beforeDeleteDraft);
+  assert.deepEqual(afterDeleteControls, beforeControls);
+  const afterBytes = await readFile(sessionFile(a.sessionId, "state.json"));
+  const after = JSON.parse(afterBytes);
+  assert.equal(after.goalLifecycle.phase, "terminal");
+  assert.equal(after.goalLifecycle.terminal.reason, "user_cleared");
+  assert.equal(after.goalLifecycle.goalId, a.goalLifecycle.goalId);
+  assert.equal(after.goalLifecycle.revision, a.goalLifecycle.revision);
+  assert.deepEqual(after.goalLifecycle.config, a.goalLifecycle.config);
+  assert.equal(after.stateRevision, a.stateRevision + 1);
+  const businessFields = [
+    "sessionId",
+    "title",
+    "cwd",
+    "project",
+    "origin",
+    "kind",
+    "parentSessionId",
+    "status",
+    "startedAt",
+    "model",
+    "provider",
+  ];
+  for (const field of businessFields) assert.deepEqual(after[field], a[field]);
+  assert.deepEqual(
+    await readFile(sessionFile(a.sessionId, "transcript.jsonl")),
+    before.aTranscript,
+  );
+  assert.deepEqual(await readFile(sessionFile(b.sessionId, "state.json")), before.b);
+  assert.deepEqual(
+    await readFile(sessionFile(b.sessionId, "transcript.jsonl")),
+    before.bTranscript,
+  );
+  stage = "paused Goal: actual reload and durable null";
+  await win.reload();
+  await observe(win);
+  await viewOnly();
+  await waitForSessionCatalogSelection(win, ownedProject.id, a.sessionId);
+  await composer().waitFor();
+  const restored = await win.evaluate((id) => window.codeshell.goalGet(id), a.sessionId);
+  assert.deepEqual(restored, { ok: true, goal: null, paused: false });
+  await status.hover();
+  await win
+    .getByText(a.goalLifecycle.config.objective, { exact: true })
+    .waitFor({ state: "hidden" });
+  assert.equal(await win.locator('[data-status-popover="true"]:visible').count(), 0);
+  assert.equal(await win.getByText(a.goalLifecycle.config.objective, { exact: true }).count(), 0);
+  const reloadedControls = await controls();
+  assert.deepEqual(await readFile(sessionFile(a.sessionId, "state.json")), afterBytes);
+  assert.deepEqual(await readFile(sessionFile(b.sessionId, "state.json")), before.b);
+  assert.deepEqual(
+    await readFile(sessionFile(b.sessionId, "transcript.jsonl")),
+    before.bTranscript,
+  );
+  assert.deepEqual(
+    await readFile(sessionFile(a.sessionId, "transcript.jsonl")),
+    before.aTranscript,
+  );
+  await assertGuard();
+  receipt.goalDeleteAcceptance = {
+    status: "ui-and-disk-verified",
+    required: true,
+    operations: 1,
+    actualMainPid: active.child.pid,
+    sessionId: a.sessionId,
+    goalId: goalConfig.goalId,
+    expectedRevision: goalConfig.revision,
+    terminal: after.goalLifecycle,
+    stateRevision: { before: a.stateRevision, after: after.stateRevision },
+    businessFields,
+    beforeStateSHA256: hash(before.a),
+    afterStateSHA256: hash(await readFile(sessionFile(a.sessionId, "state.json"))),
+    unaffectedBStateSHA256: hash(before.b),
+    unaffectedBTranscriptSHA256: hash(before.bTranscript),
+    unaffectedATranscriptSHA256: hash(before.aTranscript),
+    controls: { before: beforeControls, afterDelete: afterDeleteControls },
+    draft: { before: beforeDeleteDraft, afterDelete: afterDeleteDraft },
+    reloadGoal: restored,
+    reloadedControls,
+    reloadedComposerValue: await composer().inputValue(),
+    boundary:
+      "Real Delete click, preload, original no-child Goal fallback and SessionManager CAS; synthetic paused owned A/B only. Nonempty draft equality is before/after deletion in one renderer; reload proves durable Goal absence, not cross-reload draft persistence. No active run, Engine or model.",
+  };
 }
 async function launch() {
   stage = `cold Main ${processes.length + 1}: launch`;
@@ -353,6 +571,9 @@ try {
       .execFileSync("git", ["rev-parse", "HEAD"], { cwd: appDir, encoding: "utf8", timeout: 5_000 })
       .trim(),
     fixtureSHA256: hash(await readFile(fileURLToPath(import.meta.url))),
+    goalDeleteHelperSHA256: hash(
+      await readFile(new URL("./preference-goal-delete-acceptance.mjs", import.meta.url)),
+    ),
     mainSHA256: hash(await readFile(join(appDir, "out/main/index.mjs"))),
     preloadSHA256: hash(await readFile(join(appDir, "out/preload/index.cjs"))),
     rendererHTMLSHA256: hash(rendererHTML),
@@ -407,6 +628,7 @@ ipcMain.on = (channel, listener) => on(channel, channel !== "agent:msg" ? listen
   if (request?.method === "agent/run") { state.coreTurnAttempts++; attempt("core-turn"); throw new Error("Preference fixture forbids Core turns"); }
   return listener(event, line);
 });
+${preferenceGoalDeleteGuardSource(goalConfig)}
 `,
   );
   fixture = await prepareConfinedElectronFixture({
@@ -598,6 +820,7 @@ ipcMain.on = (channel, listener) => on(channel, channel !== "agent:msg" ? listen
     },
   );
   assert.equal(operations.length, 6);
+  await deletePausedGoal();
 } catch (error) {
   const diagnostic = getElectronKeychainPreflightDiagnostic(error);
   failures.push({
@@ -621,6 +844,11 @@ ipcMain.on = (channel, listener) => on(channel, channel !== "agent:msg" ? listen
     failures.push({ stage: "renderer", message: "Renderer error before shutdown completed" });
   if (observerFailures.length) failures.push({ stage: "observer", messages: observerFailures });
   for (const processProof of processes) {
+    if (
+      processProof.finalState?.goalDelete?.pending !== 0 ||
+      processProof.finalState?.goalDelete?.failures?.length !== 0
+    )
+      failures.push({ stage: "goal-delete-final", message: "Goal RPC observation did not settle" });
     for (const stream of ["stdout", "stderr"])
       await write(
         join(evidence, `main-${processProof.cycle}.${stream}.log`),
@@ -651,9 +879,30 @@ ipcMain.on = (channel, listener) => on(channel, channel !== "agent:msg" ? listen
       stage: "confinement",
       message: "Denied runtime attempt observed before Main exit",
     });
+  try {
+    const snapshot = processes.at(-1)?.finalState?.goalDelete;
+    assert.deepEqual(failures, []);
+    assert.equal(receipt.goalDeleteAcceptance.status, "ui-and-disk-verified");
+    assert.deepEqual(snapshot.failures, []);
+    assert.equal(snapshot.pending, 0);
+    const raw = await readFile(goalConfig.ledger, "utf8");
+    assert.ok(Buffer.byteLength(raw) <= 128 * 1024);
+    const rows = raw.trim().split("\n").filter(Boolean).map(JSON.parse);
+    receipt.goalDeleteAcceptance.rpc = reconcilePreferenceGoalLedger(
+      goalConfig,
+      snapshot.rows,
+      rows,
+    );
+    receipt.goalDeleteAcceptance.ledgerSHA256 = hash(raw);
+    receipt.goalDeleteAcceptance.status = "passed";
+  } catch (error) {
+    receipt.goalDeleteAcceptance.status = "failed";
+    failures.push({ stage: "goal-delete-final", message: error.message });
+  }
   receipt.failures = failures;
   if (
     !failures.length &&
+    receipt.goalDeleteAcceptance.status === "passed" &&
     operations.length === 6 &&
     processes.length === 3 &&
     processes.every(
@@ -678,6 +927,7 @@ console.log(
     status: receipt.status,
     evidence,
     scenarios: operations.length,
+    goalDelete: receipt.goalDeleteAcceptance.status,
     privateHomeRemoved: receipt.privateHomeRemoved,
   }),
 );
