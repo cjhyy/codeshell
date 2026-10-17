@@ -247,6 +247,64 @@ are independently verified through DOM/Main receipts. SW/Auth lifecycle receipt
 limits remain as previously recorded. No local native launch, provider request,
 real account operation, tag or publication was added for these two matrices.
 
+The next operation cycle closes lifecycle and installation coverage gaps; CI14
+remains the latest completed matrix and does not cover these subsequent changes.
+The existing real child-browser red receipt
+`/private/tmp/codeshell-web-subagent-browser-red-verified-20261017/receipt.json`
+(SHA256 `ca8e4dd5a81ff9d1daaffc6c7ba190b1d774c41996d98c6b3f1a46a2e89382a2`)
+proves six UI assertions can fail while Chrome exits normally, all nine observed
+incarnations settle cleaned and the fixture still deletes HOME. The fixed old
+reducer is `a3a735643bf6acd1f53d86bb7c13112a6ca8fd18`, SHA256
+`3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5`;
+the two ordinary Send controls pass in that same run. This is an actual old
+browser failure receipt, not a new browser launch or reconstructed result.
+
+Independently reviewed `6f8108744` now makes owned HOME deletion require both
+the original lifecycle gates and all eight UI cases passing without failures;
+its successful-result criteria are unchanged. A guarded pure Node experiment
+executes the exact selected cleanup source against actual exclusive directories:
+the old source deletes two failed/incomplete scenarios, while the new source
+correctly preserves three failed/incomplete scenarios and deletes the successful
+control. The frozen summary is
+`/private/tmp/codeshell-subagent-home-retention-proof-GbzDYr/verified-summary.json`,
+SHA256 `ed3b8940a913979c2e2b5ce0f35aa579c7c8c517009485912c8bf336d4039aea`.
+This proves that cleanup segment's filesystem behavior, not full browser execution.
+The known final-report-write-after-successful-HOME-removal limitation remains.
+
+Prepared task `fb04bc8d0` adds a separate expected-negative CI run of that fixed
+old reducer, retaining the normal current-reducer eight-case run. Its verifier
+requires exactly the two passing controls/six known UI failures, normal Chrome
+exit, cleaned observed custody with no query/truncation/late ledger failures,
+current source fingerprints and a physically retained owned HOME/profile.
+The old real report is correctly rejected because its HOME was deleted, with
+the original report bytes unchanged. Syntax/lint/format and 24 workflow paths
+pass; two jobs/35 Bash blocks/five inline Node blocks parse. This new browser
+failure proof is still pending remote execution and is not counted among the
+normal 31 passing browser behaviors. Only precise receipts/logs/screenshots are
+uploaded; the retained private profile is excluded.
+
+Auth and ServiceWorker lifecycle changes are being prepared separately. They
+must preserve all four Auth/eleven SW operations and original time limits,
+including real trusted focus and exact-origin SW proxy behavior. The installed
+Playwright 1.64 client/dispatcher source confirms that a public persistent owner
+context can provide a Browser whose independent `newContext()` calls remain
+incognito. This uses [the public persistent-context API](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-persistent-context)
+without rewriting SDK arguments; its fresh background blank context will not
+participate in login, SW operations or focus. The former default headless-shell
+binary selection must also be preserved. No new lifecycle fields are treated
+as passing before actual CI evidence.
+
+Windows installer acceptance is also being prepared: the current 83/12 evidence
+covers a directory package, not production NSIS install/replace/uninstall. The
+implementation is restricted to the authorized disposable hosted Windows CI
+VM and must reject existing product processes/keys/shortcuts/cache, preserve
+the verified baseline while production NSIS adds its expected elevate helper,
+then verify two installed-copy UI runs and actual same-version replacement and
+uninstall. Product HKCU keys, shortcuts and updater cache are real temporary CI
+account side effects, not HOME-isolated data. Production NSIS can invoke
+basename-based process termination; our watcher does not turn that installer
+into an OS sandbox. No native installer has been built or run for this addition.
+
 Windows CI11's frozen summary is
 `ci-39012279115-windows-20261017/verified-summary.json` (SHA256
 `930fec0f5d24624cb582509279fcecb2e6be8c8d2a46c1d44a6e4f7f8d92c234`).
