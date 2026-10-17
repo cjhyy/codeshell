@@ -1,0 +1,14 @@
+{
+  "baseline": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "main": "9a2d118502fe184dc0271360f97c8fdbe06deb01",
+  "paths": [
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/core/src/session/turn-diff.test.ts",
+    "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+    "packages/desktop/scripts/windows-nsis-leftover-metadata.mjs",
+    "packages/desktop/src/renderer/types.test.ts",
+    "packages/desktop/src/renderer/types.ts"
+  ],
+  "productRuns": 0
+}

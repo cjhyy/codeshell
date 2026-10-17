@@ -1,0 +1,21 @@
+{
+  "capturedUTC": "2026-10-17T16:23:32.731892+00:00",
+  "originalObject": {
+    "path": "docs/audit-2026-10-17-round9/evidence/tools-source-manifest.json",
+    "jsonPointer": "/files/13",
+    "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+    "row": {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "readScope": "1-115",
+      "frozenBlobSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "frozenBlobBytes": 3951,
+      "frozenLines": 97,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  "originalManifestScope": "Selected read sources only; transitive dependency preflight is not a source review claim",
+  "originalReport": "docs/audit-2026-10-17-round9/tools.md discusses ToolSearch/Registry/RunToolSurface, not an explicit resolve-preset full-file claim. Exact round9 inventory did not identify a source capture to settle the overshoot.",
+  "assessment": "Same-SHA readScope1–115 spans beyond frozenLines97; possible prior-to-EOF reading, neither silently normalized to full nor labeled unread/no-full.",
+  "parentAuthorization": "Root authorized directed ordinary preset-contract re-check if no further full support; not an unread frontier or first full coverage claim.",
+  "fallback": "Colorizer remains byte pin only, body0; old ANSI failed directions not reopened."
+}

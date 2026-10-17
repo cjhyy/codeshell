@@ -1,0 +1,78 @@
+{
+  "files": [],
+  "newSemanticProductFileCount": 0,
+  "newSemanticProductLines": 0,
+  "fullNewProductReads": 0,
+  "selectedNewProductReads": 0,
+  "navigationProductBodyLines": 0,
+  "displayProductBodyLines": 0,
+  "hashOnlyProducts": [
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "lines": 124,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "pinBeforeProductBody": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "lines": 147,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "pinBeforeProductBody": true
+    }
+  ],
+  "filenameOnlyNavigation": [
+    "packages/core/src/agent/agent-definition-registry.ts",
+    "packages/core/src/agent/agent-definition.ts",
+    "packages/core/src/agent/agent-definition.skills.test.ts",
+    "packages/core/src/agent/agent-definition-registry.test.ts",
+    "packages/core/src/agent/agent-definition.sandbox-mcp.test.ts",
+    "packages/core/src/agent/agent-definition.test.ts"
+  ],
+  "instructionsHashOnly": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinBeforeProductBody": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinBeforeProductBody": true
+    }
+  ],
+  "instructionStatus": "CODESHELL217 full current read in preceding71;sameSHA carried, no repeat semantic read77. AGENTS carried unchanged.",
+  "canonicalCoverageMetadata": [
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "bytes": 9769,
+      "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+      "selectedObjects": [
+        "/files/4",
+        "/files/5"
+      ],
+      "purpose": "ReviewMode complete original rows only, not current product source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "actualReadRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "purpose": "Old report full53 metadata lines to verify static complete vs selected and old SKIP boundaries; no source body"
+    }
+  ],
+  "rootReportedContextOnly": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684 external prior notification;ownGit0",
+  "scope": "Two sameSHAoldcompletegate exclusions; no ordinary product contract correctness conclusion.",
+  "productsExecuted": 0,
+  "Git": 0
+}

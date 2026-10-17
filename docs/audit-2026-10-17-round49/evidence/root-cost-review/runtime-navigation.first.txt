@@ -1,0 +1,9 @@
+16:import { UsageLedger } from "../cost-ledger/store.js";
+23:  costTracker: CostTracker;
+24:  usageLedger?: UsageLedger;
+38:  readonly costTracker: CostTracker;
+39:  readonly usageLedger: UsageLedger;
+49:  constructor(opts: EngineRuntimeOptions) {
+54:    this.costTracker = opts.costTracker;
+57:      new UsageLedger({
+60:    this.costTracker.bindLedger?.(this.usageLedger);

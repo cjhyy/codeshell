@@ -1,0 +1,259 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "contextVerification": "Parent report only; reviewer Git0",
+  "files": [
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "bytes": 9402,
+      "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "lines": 242,
+      "beforeSelectedDisplayUTC": "2026-10-17T16:20:15.729394+00:00",
+      "displayedLineRanges": [
+        [
+          14,
+          36
+        ],
+        [
+          47,
+          91
+        ],
+        [
+          202,
+          230
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          18
+        ],
+        [
+          20,
+          35
+        ],
+        [
+          47,
+          52
+        ],
+        [
+          54,
+          90
+        ],
+        [
+          203,
+          206
+        ],
+        [
+          214,
+          218
+        ],
+        [
+          225,
+          229
+        ]
+      ],
+      "semanticLineCount": 78,
+      "displayedLineCount": 97,
+      "purpose": "Only ordinary query DTO declaration/validation and forwarding/error mapping. 118–201 scope/visibility/store-event filtering not opened; displayed53 and207–211/219–223 mechanism-adjacent lines excluded. ModelTraceStore sorting/trimming/files not read.",
+      "endingBytes": 9402,
+      "endingSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:23:04.066308+00:00",
+      "initialSemanticReadSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "dedicatedSelectedReadSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb"
+    },
+    {
+      "path": "packages/server/src/model-trace-http.ts",
+      "bytes": 5245,
+      "sha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "lines": 112,
+      "beforeSelectedDisplayUTC": "2026-10-17T16:21:23.224152+00:00",
+      "displayedLineRanges": [
+        [
+          20,
+          39
+        ],
+        [
+          73,
+          74
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          22
+        ],
+        [
+          24,
+          38
+        ],
+        [
+          73,
+          74
+        ]
+      ],
+      "semanticLineCount": 20,
+      "displayedLineCount": 22,
+      "purpose": "Only ordinary scalar query decoding and direct list/sessions dispatch; workspace authorization line23 merely displayed/excluded. HTTP/auth/network/response mechanisms not reviewed or run.",
+      "endingBytes": 5245,
+      "endingSha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:23:04.066308+00:00",
+      "initialSemanticReadSha256": null,
+      "dedicatedSelectedReadSha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "initialTextObservation": "Unpinned rg navigation matches preceded dedicated producer pin; no initial read-time SHA invented. Dedicated pin preceded selected block display."
+    },
+    {
+      "path": "packages/web/src/model-trace-api.ts",
+      "bytes": 2466,
+      "sha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "lines": 72,
+      "beforeSelectedDisplayUTC": "2026-10-17T16:21:23.226670+00:00",
+      "displayedLineRanges": [
+        [
+          25,
+          54
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          25,
+          29
+        ],
+        [
+          35,
+          40
+        ],
+        [
+          43,
+          54
+        ]
+      ],
+      "semanticLineCount": 23,
+      "displayedLineCount": 30,
+      "purpose": "Only DTO interface/query encoding/delegation to injected requester. Host scope guard41–42 and authentication comment34 excluded from semantic scope. Production consumer not established in searched web/mobile/renderer paths: definition+test navigation only, no test body or runtime.",
+      "endingBytes": 2466,
+      "endingSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:23:04.066308+00:00",
+      "initialSemanticReadSha256": null,
+      "dedicatedSelectedReadSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "initialTextObservation": "Unpinned rg navigation matches preceded dedicated producer pin; no initial read-time SHA invented. Dedicated pin preceded selected block display."
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "bytes": 36755,
+      "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "lines": 925,
+      "beforeSelectedDisplayUTC": "2026-10-17T16:21:23.227688+00:00",
+      "displayedLineRanges": [
+        [
+          245,
+          262
+        ],
+        [
+          290,
+          307
+        ],
+        [
+          368,
+          385
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          250,
+          258
+        ],
+        [
+          299,
+          306
+        ],
+        [
+          372,
+          382
+        ]
+      ],
+      "semanticLineCount": 28,
+      "displayedLineCount": 54,
+      "purpose": "Actual ordinary session/list cursor DTO calls and page items/nextCursor consumption only. React lifecycle/races, actual host IPC binding and native behavior not validated.",
+      "endingBytes": 36755,
+      "endingSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:23:04.066308+00:00",
+      "initialSemanticReadSha256": null,
+      "dedicatedSelectedReadSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "initialTextObservation": "Unpinned rg navigation matches preceded dedicated producer pin; no initial read-time SHA invented. Dedicated pin preceded selected block display."
+    },
+    {
+      "path": "packages/desktop/src/main/trace-history-service.ts",
+      "bytes": 528,
+      "sha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "lines": 13,
+      "beforeSelectedDisplayUTC": "2026-10-17T16:21:23.228536+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6,
+          9
+        ],
+        [
+          11,
+          13
+        ]
+      ],
+      "semanticLineCount": 7,
+      "displayedLineCount": 13,
+      "purpose": "Only wrapper factory delegates optional store to same server adapter. Native complete-history comment5 and directory construction10 excluded; no session-root filesystem/custody mechanisms read or certified.",
+      "endingBytes": 528,
+      "endingSha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:23:04.066308+00:00",
+      "initialSemanticReadSha256": null,
+      "dedicatedSelectedReadSha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "initialTextObservation": "Unpinned rg navigation matches preceded dedicated producer pin; no initial read-time SHA invented. Dedicated pin preceded selected block display."
+    }
+  ],
+  "counts": {
+    "selectedProductRows": 5,
+    "fullProductRows": 0,
+    "productSemanticLines": 156,
+    "productDisplayedLines": 216,
+    "testDeclarationLines": 0,
+    "newRuntimeValidation": 0,
+    "uniqueAcrossAllAudits": false
+  },
+  "historyGate": {
+    "scope": "Fresh docs/bugs recursive scalar/MD machine inventory incl48/exclude49+",
+    "metadataRowsRead": 8,
+    "pathWindowsActuallyRead": 14,
+    "shaWindowsActuallyRead": 5,
+    "allRetainedShortWindowsRead": true,
+    "sameShaFullEstablished": false,
+    "interpretation": "Inventory/rank/incidental only in actual rows; absence of explicit full is not never-read assurance. No new finding so no new same-cause assertion."
+  },
+  "instructionReuse": "CODESHELL217+AGENTS5 read in immediately preceding prep72 at16:15:50UTC, SHA56d9ffdd…/29806470…; no source change reported between tasks. Not counted as another full instruction read.",
+  "navigationOnlyUnreviewed": [
+    "packages/core/src/model-traces/store.ts",
+    "packages/server/src/model-trace-http.test.ts",
+    "packages/web/src/model-trace-api.test.ts",
+    "packages/desktop/src/preload/model-trace-api.ts"
+  ],
+  "boundaries": [
+    "No real trace/history/model files",
+    "No Core store sorting/trimming/filesystem/lock review",
+    "No workspace/auth/authority/custody/identity mechanisms",
+    "No product import/helper/functions, tests/fixture, React, clock, model, native, network or Git execution"
+  ]
+}

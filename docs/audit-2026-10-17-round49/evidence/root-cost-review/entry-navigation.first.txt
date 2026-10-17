@@ -1,0 +1,21 @@
+packages/tui/src/cli/main.ts:13:import { costTracker, installCostTracking } from "@cjhyy/code-shell-core";
+packages/tui/src/cli/main.ts:76:/** Options shared by both ways of entering interactive mode:
+packages/tui/src/cli/main.ts:219:  // This diagnostic only reads connection metadata and CLI login. Shared setup
+packages/tui/src/cli/main.ts:232:  const tokens = costTracker.getTotalTokens();
+packages/tui/src/cli/main.ts:233:  if (tokens.total > 0 || (costTracker.getUsageSummary()?.requests ?? 0) > 0) {
+packages/tui/src/cli/main.ts:234:    process.stderr.write("\n" + costTracker.formatSummary(CHALK_COLORIZER) + "\n");
+packages/core/src/cost-tracker.ts:2: * Cost tracker — tracks token usage and calculates estimated costs.
+packages/core/src/cost-tracker.ts:92:  bindLedger(ledger: UsageLedger): void {
+packages/core/src/cost-tracker.ts:292:      lines.push(c.dim("    (costs may be inaccurate due to usage of unknown models)"));
+packages/core/src/cost-tracker.ts:371:export const costTracker = new CostTracker();
+packages/core/src/cost-tracker.ts:374: * Wire the LLM base-class usage hook into the singleton cost tracker.
+packages/core/src/cost-tracker.ts:380:  LLMClientBase.onUsage = (model, usage) => {
+packages/core/src/cost-tracker.ts:382:    costTracker.record(
+packages/core/src/cost-tracker.ts:384:      usage.promptTokens,
+packages/core/src/cost-tracker.ts:385:      usage.completionTokens,
+packages/core/src/cost-tracker.ts:387:      usage.cacheReadTokens ?? 0,
+packages/core/src/cost-tracker.ts:388:      usage.cacheCreationTokens ?? 0,
+packages/tui/src/ui/hooks/useSessionUsage.ts:2:import type { AgentClient, UsageSummary } from "@cjhyy/code-shell-core";
+packages/tui/src/ui/hooks/useSessionUsage.ts:24:  client: Pick<AgentClient, "query">,
+packages/tui/src/ui/hooks/useSessionUsage.ts:39:          await client.query("usage", {
+packages/tui/src/ui/hooks/useSessionUsage.ts:45:        if (!isOwnedSummary(summary, target)) throw new Error("Invalid Session usage response");

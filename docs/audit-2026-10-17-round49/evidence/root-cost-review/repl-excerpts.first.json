@@ -1,0 +1,58 @@
+{
+  "atUTC": "2026-10-17T16:30:42.667964+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "displayedRanges": [
+        [
+          1,
+          29
+        ],
+        [
+          217,
+          242
+        ],
+        [
+          255,
+          284
+        ],
+        [
+          322,
+          331
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            1,
+            29
+          ],
+          "text": "   1 import { join } from \"node:path\";\n   2 import { sessionsRoot } from \"@cjhyy/code-shell-core\";\n   3 /**\n   4  * Interactive REPL mode \u2014 uses Ink (React for CLI) for the terminal UI.\n   5  *\n   6  * Wiring: Engine \u2192 AgentServer \u2192 [in-process transport] \u2192 AgentClient \u2192 UI\n   7  */\n   8 \n   9 import chalk from \"chalk\";\n  10 import { Engine } from \"@cjhyy/code-shell-core\";\n  11 import { mergePluginMcpServers } from \"@cjhyy/code-shell-core\";\n  12 import { EngineRuntime } from \"@cjhyy/code-shell-core\";\n  13 import { ChatSessionManager } from \"@cjhyy/code-shell-core\";\n  14 import { SessionManager } from \"@cjhyy/code-shell-core\";\n  15 import { AgentServer } from \"@cjhyy/code-shell-core\";\n  16 import { AgentClient } from \"@cjhyy/code-shell-core\";\n  17 import { createInProcessTransport } from \"@cjhyy/code-shell-core\";\n  18 import { SettingsManager } from \"@cjhyy/code-shell-core\";\n  19 import { personalizationFrom } from \"@cjhyy/code-shell-core\";\n  20 import { MCPManager } from \"@cjhyy/code-shell-core\";\n  21 import { resolveLLMConfigForTag } from \"@cjhyy/code-shell-core\";\n  22 import { costTracker } from \"@cjhyy/code-shell-core\";\n  23 import { defaultSandboxConfig } from \"@cjhyy/code-shell-core/internal\";\n  24 import { configureModelTracing } from \"@cjhyy/code-shell-core/internal\";\n  25 import type { ClientDefaults, LLMConfig, PermissionMode } from \"@cjhyy/code-shell-core\";\n  26 import { startInkRepl } from \"../../ui/index.js\";\n  27 import { runInkOnboarding } from \"../../ui/onboarding-runner.js\";\n  28 import type { AgentPresetName } from \"@cjhyy/code-shell-core\";\n  29 import { getInteractiveApprovalBackend } from \"@cjhyy/code-shell-core/internal\";"
+        },
+        {
+          "range": [
+            217,
+            242
+          ],
+          "text": " 217   // 3. Build the shared EngineRuntime\n 218   const runtime = new EngineRuntime({\n 219     modelPool,\n 220     toolRegistry,\n 221     settings: settingsManager,\n 222     mcpPool,\n 223     costTracker: sessionCostTracker,\n 224     usageStorageDir: join(settings.session.storageDir ?? sessionsRoot(), \".usage-ledger\"),\n 225   });\n 226 \n 227   // 4. ChatSessionManager \u2014 single session \"tui-main\" (or resumed sid)\n 228   const chatManager = new ChatSessionManager({\n 229     runtime,\n 230     engineFactory: (slice) =>\n 231       new Engine({\n 232         llm: resolvedLlmConfig,\n 233         cwd,\n 234         runtime,\n 235         origin: \"tui\",\n 236         ...sharedCfg,\n 237         // Per-session overrides from the protocol request take precedence\n 238         ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),\n 239         ...(slice.preset ? { preset: slice.preset } : {}),\n 240         ...(slice.customSystemPrompt !== undefined\n 241           ? { customSystemPrompt: slice.customSystemPrompt }\n 242           : {}),"
+        },
+        {
+          "range": [
+            255,
+            284
+          ],
+          "text": " 255   chatManager.startIdleSweeper();\n 256 \n 257   // 5. Create in-process transport pair\n 258   const [serverTransport, clientTransport] = createInProcessTransport();\n 259   // Must use the same configured root as every Engine created above; otherwise\n 260   // /resume can display/control a different state.json tree when users override\n 261   // session.storageDir.\n 262   const goalDiskManager = new SessionManager(\n 263     settings.session.storageDir,\n 264     composition.engine.sessionWorkspaces[0]?.value,\n 265   );\n 266 \n 267   // 6. Wire up AgentServer (wraps chatManager, handles protocol)\n 268   const server = new AgentServer({\n 269     chatManager,\n 270     composition,\n 271     transport: serverTransport,\n 272     settingsReader: () => settingsManager.load(),\n 273     readActiveGoalFromDisk: (sessionId) => goalDiskManager.readActiveGoal(sessionId),\n 274     updateActiveGoalOnDisk: (sessionId, patch) =>\n 275       goalDiskManager.updateActiveGoal(sessionId, patch)?.goal,\n 276     clearActiveGoalOnDisk: (sessionId, expected) =>\n 277       goalDiskManager.clearActiveGoal(sessionId, expected),\n 278   });\n 279 \n 280   // 7. Create AgentClient (UI-side)\n 281   const client = new AgentClient({ transport: clientTransport });\n 282 \n 283   // \u2500\u2500 Cron (B1 + B2) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 284   // Give the shared cron singleton a persistence store, restore any jobs"
+        },
+        {
+          "range": [
+            322,
+            331
+          ],
+          "text": " 322   // 8. Launch Ink UI with the client\n 323   await startInkRepl({\n 324     client,\n 325     model,\n 326     effort,\n 327     maxTurns,\n 328     cwd,\n 329     maxContextTokens,\n 330     sessionId: tuiSessionId,\n 331     prefill: options.prefill,"
+        }
+      ]
+    }
+  ],
+  "scope": "Ordinary actual in-process UI client/engine wiring only; no transport/auth/socket/model/helper execution."
+}

@@ -1,0 +1,71 @@
+{
+  "files": [],
+  "newSourceSemanticFiles": 0,
+  "newSourceSemanticLines": 0,
+  "newSourceDisplayLines": 0,
+  "hashOnlyProducts": [
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "lines": 147,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "hashOnlyCheckedUTC": "2026-10-17T16:26:05.669392+00:00",
+      "bodyDisplay": false,
+      "semanticLines": 0,
+      "matchesCanonical": true,
+      "endingBytes": 6078,
+      "endingSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "unchanged": true,
+      "coverage": "hash-only independent gate receipt",
+      "selectedLineRanges": [],
+      "displayedLineRanges": []
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "lines": 124,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "hashOnlyCheckedUTC": "2026-10-17T16:26:05.671259+00:00",
+      "bodyDisplay": false,
+      "semanticLines": 0,
+      "matchesCanonical": true,
+      "endingBytes": 4696,
+      "endingSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "unchanged": true,
+      "coverage": "hash-only independent gate receipt",
+      "selectedLineRanges": [],
+      "displayedLineRanges": []
+    }
+  ],
+  "canonicalMetadata": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "bytes": 9769,
+      "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+      "metadataRead": {
+        "selectedObjects": [
+          "/files/4",
+          "/files/5"
+        ]
+      }
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "metadataRead": {
+        "actualLineRanges": [
+          [
+            1,
+            53
+          ]
+        ],
+        "purpose": "primary full vs selected caller contrast; failed fixture/S-C2 SKIP boundary"
+      }
+    }
+  ],
+  "prep77Artifacts": "16 byte/hash pins in checks; report/source/gate/detail/validation/notes/oldobjects/receipt metadata inspected, method/history/large context artifacts opaque hash only.",
+  "scope": "Only two specific reviewMode complete canonical rows gate supported; not universal alias adaptation, product root-cause review, old runtime pass/fix certification or coverage count update.",
+  "Git": 0,
+  "productOrMethodOrFixtureExecutions": 0
+}

@@ -1,0 +1,150 @@
+{
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeDisplayUTC": "2026-10-17T16:30:31.480915+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "semanticRead": "pending manual scope interpretation"
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.252428+00:00",
+      "displayedLineRanges": [
+        [
+          142,
+          166
+        ],
+        [
+          783,
+          826
+        ],
+        [
+          863,
+          894
+        ],
+        [
+          72,
+          84
+        ],
+        [
+          827,
+          849
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:33:22.595804+00:00",
+      "additionalSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lines": 800,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.254686+00:00",
+      "displayedLineRanges": [
+        [
+          37,
+          67
+        ],
+        [
+          184,
+          205
+        ],
+        [
+          211,
+          235
+        ],
+        [
+          276,
+          301
+        ],
+        [
+          381,
+          408
+        ],
+        [
+          560,
+          607
+        ],
+        [
+          608,
+          612
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:32:55.391994+00:00",
+      "additionalSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1"
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "bytes": 2110,
+      "lines": 50,
+      "sha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.255635+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:31:41.308343+00:00",
+      "additionalSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049"
+    },
+    {
+      "path": "packages/web/app/workbench-types.ts",
+      "bytes": 2491,
+      "lines": 69,
+      "sha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:32:31.486123+00:00",
+      "displayedLineRanges": [
+        [
+          18,
+          24
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:32:55.390152+00:00",
+      "additionalSha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933"
+    },
+    {
+      "path": "packages/web/app/useHubController.tsx",
+      "bytes": 32206,
+      "lines": 870,
+      "sha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:32:31.488745+00:00",
+      "displayedLineRanges": [
+        [
+          62,
+          62
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          580,
+          609
+        ],
+        [
+          811,
+          811
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:32:55.390915+00:00",
+      "additionalSha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808"
+    }
+  ]
+}

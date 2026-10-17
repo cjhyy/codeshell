@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:32:58.249661+00:00",
+  "path": "packages/tui/src/cli/main.ts",
+  "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+  "displayedRanges": [
+    [
+      120,
+      125
+    ]
+  ],
+  "text": " 120 addInteractiveOptions(\n 121   addCommonOptions(program.command(\"repl\").description(\"Interactive REPL mode (default)\")),\n 122 ).action(async (opts) => {\n 123   await replCommand({ ...resolveOpts(opts), prefill: opts.prefill as string | undefined });\n 124 });\n 125 "
+}

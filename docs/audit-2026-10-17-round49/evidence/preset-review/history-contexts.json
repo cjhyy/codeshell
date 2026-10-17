@@ -1,0 +1,3316 @@
+{
+  "capturedUTC": "2026-10-17T16:21:33.337025+00:00",
+  "hits": {
+    "target_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/192",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "2fad2c50ead1bcdda50c866118c1f310e960cc8c1e46741ec3e21699cfa341d1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "jsonPointer": "/files/34/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "1bb01c7a5f35bba6aa40ab3634b80b6cfdc40972c0c99f87c6f26da1b2972290"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/584",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/163/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/331/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1497/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1497/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1498/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1498/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1499/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1499/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1500/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1500/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1501/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1501/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/641/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/641/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/599",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/641/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "jsonPointer": "/files/16/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "jsonPointer": "/files/32/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-source-manifest.json",
+        "jsonPointer": "/files/13/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "d35b29a2c5908a78e625441e8876c715a10a603c9fbae7b3e9bce137b216f7a8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/6/path",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-08-14-composition-phase-b.md",
+        "jsonPointer": null,
+        "line": 98,
+        "needle": "packages/core/src/composition/resolve-preset.ts",
+        "context": "支\n- [ ] `git checkout -b composition-cutover`\n\n### Task 1: core 内部桥 + Engine 跑在 composition 上（commit 1）\n**Files:** Create `packages/core/src/composition/legacy-bridge.ts`（Phase A tests/helpers 的两个 from* 函数搬进 core，标注 cutover 结束即删 + 合并进程全局注册表）；Create `packages/core/src/composition/resolve-preset.ts`（resolvePresetFromComposition + 注入名单推导 `presetInjectedToolNames(composition)` 规则 1）；Modify engine/types.ts（加 `composition?/modules?`，旧字段标注即将删除）；Modify engine.ts 全部消费点；Modify preset/index.ts（resolveBuiltinToolNames 新签名，旧签名暂留给未迁调用方）；Modify subagent-spawner.ts。\n\n- [ ] Engine ctor 顶部：\n```ts\nthis.composition =\n  config.composition ??\n  compileComposition({\n    modules: [\n      ...resolveCapabilities(config.capabilities).map(fromCapabilityModule),\n      ...(config.extensionModules ?? []).map(fromExtensionModule),\n      ...(config.modules ?? []),\n    ],\n  });\n```\n- [ ] 逐点替换上表 Engine 消费点；每替换一处跑 `bun test packages/core/src/engine tests/engine-config-",
+        "documentSha256": "e262d46b798d79c75acd881390e30c5e0303b48d78b9fa126e2823a44b92ae01"
+      }
+    ],
+    "target_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/5/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "2fad2c50ead1bcdda50c866118c1f310e960cc8c1e46741ec3e21699cfa341d1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "jsonPointer": "/files/34/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "1bb01c7a5f35bba6aa40ab3634b80b6cfdc40972c0c99f87c6f26da1b2972290"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/163/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/163/claims/0/sourceSha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/163/claims/1/sourceSha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/331/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1498/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1499/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1499/sourceHashFields/frozenBlobSha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1500/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1501/sourceHashFields/frozenBlobSha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/641/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/641/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/641/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "jsonPointer": "/files/16/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "jsonPointer": "/files/16/frozenBlobSha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "jsonPointer": "/files/32/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-source-manifest.json",
+        "jsonPointer": "/files/13/frozenBlobSha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "d35b29a2c5908a78e625441e8876c715a10a603c9fbae7b3e9bce137b216f7a8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/6/sha256",
+        "line": 1,
+        "needle": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "context": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "documentSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      }
+    ],
+    "target_name": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/192",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/hits/immutability/37/context",
+        "line": 2,
+        "needle": "resolve-preset",
+        "context": "RL fetch. Search corpus/overlap/index bounds read, not exhaustive ranking validation. Old R49 error-guidance issue explicitly excluded. |\n| composition/capability/config | Whole activation/lifetime/freeze/compiler/resolve-preset/protocol-attach; capability service/overlay/disabled-lists; disk-defaults whole and refreshRuntimeConfig `engine.ts:3964–4039`; server single-session/global reload `server.ts:3055–3090,3149–3204`. Existing compile/lifetime/activation suites plus cancellat",
+        "documentSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/hits/immutability/40/context",
+        "line": 2,
+        "needle": "resolve-preset",
+        "context": "RL fetch. Search corpus/overlap/index bounds read, not exhaustive ranking validation. Old R49 error-guidance issue explicitly excluded. |\n| composition/capability/config | Whole activation/lifetime/freeze/compiler/resolve-preset/protocol-attach; capability service/overlay/disabled-lists; disk-defaults whole and refreshRuntimeConfig `engine.ts:3964–4039`; server single-session/global reload `server.ts:3055–3090,3149–3204`. Existing compile/lifetime/activation suites plus cancellat",
+        "documentSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "2fad2c50ead1bcdda50c866118c1f310e960cc8c1e46741ec3e21699cfa341d1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "jsonPointer": "/files/34/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "1bb01c7a5f35bba6aa40ab3634b80b6cfdc40972c0c99f87c6f26da1b2972290"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/584",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/163/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/331/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1497/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1497/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1498/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1498/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1499/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1499/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1500/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1500/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1501/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1501/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/641/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/641/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/599",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/641/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "jsonPointer": "/files/16/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "jsonPointer": "/files/32/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-source-manifest.json",
+        "jsonPointer": "/files/13/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "d35b29a2c5908a78e625441e8876c715a10a603c9fbae7b3e9bce137b216f7a8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/6/path",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/305",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/composition/resolve-preset.ts",
+        "documentSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/core-lifecycle.md",
+        "jsonPointer": null,
+        "line": 74,
+        "needle": "resolve-preset",
+        "context": "ic only; no child parser or remote URL fetch. Search corpus/overlap/index bounds read, not exhaustive ranking validation. Old R49 error-guidance issue explicitly excluded. |\n| composition/capability/config | Whole activation/lifetime/freeze/compiler/resolve-preset/protocol-attach; capability service/overlay/disabled-lists; disk-defaults whole and refreshRuntimeConfig `engine.ts:3964–4039`; server single-session/global reload `server.ts:3055–3090,3149–3204`. Existing compile/lifetime/activation suites plus cancellation late-resource control pass; declarations/lifetime rollback and stale generation checks traced. | Full real Engine ready/dispose, Host observer integration, all config hot-reload error states/concurrent writes, dynamic capability installs and per-session generation fanout not executed. No permission-bypass testing. |\n\nNo additional defect was established in the listed normal controls. Thi",
+        "documentSha256": "c75cb5a43357e34fca599dfec4e989e55bb06f67bbf3c9b1abe58e71976a8390"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "jsonPointer": "/modules/5/productionFiles/7",
+        "line": 1,
+        "needle": "resolve-preset",
+        "context": "composition/resolve-preset.ts",
+        "documentSha256": "e633c7a607420e27750c2d2f2bba294a405728d93ddf6310c2aefa6e62634bb9"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-lifecycle-report.md",
+        "jsonPointer": null,
+        "line": 74,
+        "needle": "resolve-preset",
+        "context": "ic only; no child parser or remote URL fetch. Search corpus/overlap/index bounds read, not exhaustive ranking validation. Old R49 error-guidance issue explicitly excluded. |\n| composition/capability/config | Whole activation/lifetime/freeze/compiler/resolve-preset/protocol-attach; capability service/overlay/disabled-lists; disk-defaults whole and refreshRuntimeConfig `engine.ts:3964–4039`; server single-session/global reload `server.ts:3055–3090,3149–3204`. Existing compile/lifetime/activation suites plus cancellation late-resource control pass; declarations/lifetime rollback and stale generation checks traced. | Full real Engine ready/dispose, Host observer integration, all config hot-reload error states/concurrent writes, dynamic capability installs and per-session generation fanout not executed. No permission-bypass testing. |\n\nNo additional defect was established in the listed normal controls. Thi",
+        "documentSha256": "1e816bcd90685fa55323e10ffec1725cf98de6276dc3f02cc97802f584f393d8"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-08-14-composition-phase-b.md",
+        "jsonPointer": null,
+        "line": 98,
+        "needle": "resolve-preset",
+        "context": "sition-cutover`\n\n### Task 1: core 内部桥 + Engine 跑在 composition 上（commit 1）\n**Files:** Create `packages/core/src/composition/legacy-bridge.ts`（Phase A tests/helpers 的两个 from* 函数搬进 core，标注 cutover 结束即删 + 合并进程全局注册表）；Create `packages/core/src/composition/resolve-preset.ts`（resolvePresetFromComposition + 注入名单推导 `presetInjectedToolNames(composition)` 规则 1）；Modify engine/types.ts（加 `composition?/modules?`，旧字段标注即将删除）；Modify engine.ts 全部消费点；Modify preset/index.ts（resolveBuiltinToolNames 新签名，旧签名暂留给未迁调用方）；Modify subagent-spawner.ts。\n\n- [ ] Engine ctor 顶部：\n```ts\nthis.composition =\n  config.composition ??\n  compileComposition({\n    modules: [\n      ...resolveCapabilities(config.capabilities).map(fromCapabilityModule),\n      ...(config.extensionModules ?? []).map(fromExtensionModule),\n      ...(config.modules ?? []),\n    ],\n  });\n```\n- [ ] 逐点替换上表 Engine 消费点；每替换一处跑 `bun test packages/core/src/engine tests/engine-conf",
+        "documentSha256": "e262d46b798d79c75acd881390e30c5e0303b48d78b9fa126e2823a44b92ae01"
+      }
+    ],
+    "fallback_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/184",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/411",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/153/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "jsonPointer": "/rankedCandidates/221/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/319/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1458/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1458/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1459/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1459/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1460/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1460/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/629/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/629/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/587",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/629/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/7/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "packages/core/src/colorizer.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      }
+    ],
+    "fallback_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/153/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/153/claims/0/sourceSha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/153/claims/1/sourceSha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "jsonPointer": "/rankedCandidates/221/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/319/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1459/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1460/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/629/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/629/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/629/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/7/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/5/sha256",
+        "line": 1,
+        "needle": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "context": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "documentSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      }
+    ],
+    "fallback_name": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 2647,
+        "needle": "colorizer",
+        "context": "ication\n             └─ consensus / planning detail expansion\n```\n\n### 30.2 文件覆盖矩阵：按源码目录\n\n| 目录 | 非测试 TS 文件数 | 文档覆盖章节 | 覆盖说明 |\n|---|---:|---|---|\n| root | 9 | 2, 19, 21, 23 | `index.ts/types.ts/state.ts/exceptions.ts/onboarding/updater/migrate-models/colorizer` 等；入口、类型、全局状态、辅助启动逻辑 |\n| `agent` | 3 | 24 | Agent definition registry/coordinator；与 Agent builtin 和 sub-agent 生命周期关联 |\n| `arena` | 48 | 27, 30 | 多模型协作分析；planner/research/review/debate/adjudication/consensus/ledger/tools/providers/strategies |\n| `automation` | 7 | 26, 30 | CronScheduler、CronStore、runner、write policy、cron expr |\n| `capability-control` | 5 | 12, 15, 23 | project capability overlay，disabledSkills/Plugins/Agents 生效路径 |\n| `cli` | 3 | 7, 30 | stdio/tcp AgentServer worker 与 graceful shutdown |\n| `context` | 4 | 10, 23, 30 | ContextManager、compaction、token counter、tool-result storage |\n| `cron` | 3 | 26 | runtime/store/scheduler 支撑 c",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 2712,
+        "needle": "colorizer",
+        "context": "d` 的可读版索引，按模块列出：入口、内部流程、使用方式、bug/风险。范围是 `packages/core/src/**/*.ts` 非测试源码。\n\n## 1. 顶层入口 / root\n\n### 文件\n\n- `src/index.ts`\n- `src/types.ts`\n- `src/state.ts`\n- `src/exceptions.ts`\n- `src/onboarding.ts`\n- `src/updater.ts`\n- `src/migrate-models.ts`\n- `src/colorizer.ts`\n\n### 入口\n\n- SDK 用户从 `src/index.ts` 导入 `Engine`、`createClient`、`createServer`、`createRunManager`、tool/LLM/session 类型。\n- 核心共享类型在 `types.ts`：`Message`、`ToolCall`、`ToolResult`、`StreamEvent`、`TerminalReason`、`LLMConfig` 等。\n- 全局进程态在 `state.ts`，包括 session id、cwd、model override、token/cost 计数、turn timing。\n\n### 内部流程\n\n```text\nconsumer import\n  → src/index.ts barrel export\n  → Engine / Protocol / Run / Tool / LLM / Settings APIs\n```\n\n`state.ts` 被 Engine、ModelFacade、CostTracker、UI 兼容层间接使用。它不是 per-session object，而是 process-wide mutable state。\n\n### 使用方式\n\n```ts\nimport { Engine, createClient, createServer, createRunManager } from \"@cjhyy/code-shell-core\";",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/184",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2316",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/411",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/153/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "jsonPointer": "/rankedCandidates/221/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/319/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/3945/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1458/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1458/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1459/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1459/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1460/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1460/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15829/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15829/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15830/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/15830/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/629/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/4268/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/629/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/4268/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/587",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/3858",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/629/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/4269/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/tui/src/utils/colorizer.ts",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/7/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/5/path",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "packages/core/src/colorizer.ts",
+        "documentSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/445",
+        "line": 1,
+        "needle": "colorizer",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/colorizer.ts",
+        "documentSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      }
+    ],
+    "ordinary_contract": [
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "jsonPointer": null,
+        "line": 48,
+        "needle": "sliceansi",
+        "context": " 守 Array.isArray,+1 测(同审计三轮 mobile 加固一脉)。其余(access-passcode 锁定/pairing 边界/JSON try-catch/reducer)均干净或已守。**这是第 12 个真 bug;7 批扫完,孤立面确已尽。**\n> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**\n> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**\n> - **bug-scan 第四批(desktop ma",
+        "documentSha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c"
+      },
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "jsonPointer": null,
+        "line": 49,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**\n> - **bug-scan 第四批(desktop main/browser-driver/credentials-login/cdp)4 候选**:Bug1 `cdp waitForLoad(NaN)` →`deadline=NaN`→`while(true)` 无穷循环 ✅**已修 HIGH**(`08c31b22`,非有限/非正 timeout 回退默认 10s);Bug3 `cdp scroll(NaN)`→NaN deltaY ✅**同 commit 修**(回退 600+`Math.abs` 顺修负 amount 翻向);Bug4 `ptyResize(NaN)`→`Math.max(1,NaN)=NaN`→node-pty 崩 ✅**已修**(`970e9f02`,抽 `clampPtyDim` 纯helper+3测);Bug2 credentials-login listener「泄漏」→**核验判误报**(`finish()` 调 `handle.close()`→`win.close()` 销毁窗口→webContents+其 listener 随之释放,且每次登录全新 window+partition 不复用,无僵尸)。范围其余(window-state/runs-service/github-skill/keymap/sender/activ",
+        "documentSha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 1631,
+        "needle": "sliceansi",
+        "context": " 工具等需要执行外部命令时应优先走这类封装，避免环境变量、cwd、stdio、信号处理不一致。\n\n### 18.4 Utils\n\n`src/utils/**` 是通用工具集合，包括：\n\n- `format.ts`\n- `theme.ts`\n- `toolDisplay.ts`\n- `debug.ts`\n- `env.ts`\n- `envUtils.ts`\n- `execFileNoThrow.ts`\n- `lockfile.ts`\n- `memoize.ts`\n- `semver.ts`\n- `sliceAnsi.ts`\n- `intl.ts`\n- `earlyInput.ts`\n- `systemTheme.ts`\n- `task-sanitizer.ts`\n\n这些工具被 CLI/UI/core 多处复用。修改时要注意它们可能是跨层依赖。\n\n## 19. 状态与成本统计模块\n\n### 19.1 `state.ts`\n\n`src/state.ts` 是 process-wide 状态兼容层，包含：\n\n- sessionId / cwd / projectRoot。\n- interactive/headless 标记。\n- model override。\n- token counters。\n- per-model usage。\n- API duration。\n- lines changed。\n- turn hook/tool/classifier duration。\n- telemetry counter stubs。\n- remote mode / sdk betas 等状态。\n\n它的设计像是从产品层抽出来的轻量全局状态，很多函数是 no-op/stub，保证 core 不强依赖 UI/telemetry 实现。\n\n风险：全局 mutable state 在多 Engine、多 session、嵌入式 server 场景容易串扰。尤其 token/cost/per-model usage 如果没有 session isolation，UI 展示可能混多个 run。\n\n### 19.2 `",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 3300,
+        "needle": "sliceansi",
+        "context": "-and-forget memory pipeline。\n- 风险：后台任务丢失、错误只记录。\n\n### Logging\n\n- `logging/logger.ts`\n- `logging/sanitize-messages.ts`\n- `logging/session-recorder.ts`\n- 风险：redaction 过少泄密，过多影响调试。\n\n### Utils\n\n- theme/format/toolDisplay/debug/env/lockfile/memoize/semver/sliceAnsi/intl/earlyInput 等。\n- 风险：跨层复用，改动影响 CLI/UI/core 多处。\n\n## 14. 总风险清单压缩版\n\n1. VERSION 与 package.json 不一致。\n2. Engine finalization hook 可阻断 saveState。\n3. maxTurns 可能重复 turn_complete。\n4. multi-session approval resolver 链路需复核。\n5. FileRunStore id path safety。\n6. OpenAI streamUsage capability 未完全生效。\n7. Plugin Stop/PreCompact 映射语义问题。\n8. Plugin PreToolUse 不能 deny。\n9. Engine.run mutate options。\n10. RunManager reason 分类粗。\n11. EngineRunner overrides 可覆盖 automation note。\n12. Stdio/TCP malformed JSON 静默跳过。\n13. AgentClient request 无 timeout。\n14. Transcript flush failure 被吞。\n15. FileHistory 覆盖工具不全。\n16. MCP tool name 未 sanitize。\n17. MCP direct image handling 不一致。\n",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-modules/utils.md",
+        "jsonPointer": null,
+        "line": 26,
+        "needle": "sliceansi",
+        "context": "before the UI is ready (`startCapturingEarlyInput`/`consumeEarlyInput`/…). |\n| `toolDisplay.ts` | Tool-call display helpers (`formatToolArgs`, `singleLine`, `MAX_LINE_WIDTH`, `TOOL_DOT_COLORS`). |\n| `debug.ts` | `logForDebugging` debug logging. |\n| `sliceAnsi.ts` | ANSI-aware string slicing (default export). |\n| `theme.ts` / `systemTheme.ts` / `theme-xterm` | Theme palette + OS theme detection. |\n\n## 公开接口 / Public API\n\n```ts\n// lockfile.ts — proper-lockfile, loaded lazily\nfunction lock(file: string, options?: LockOptions): Promise<() => Promise<void>>; // returns release fn\nfunction lockSync(file: string, options?: LockOptions): () => void;\nfunction unlock(file: string, options?: UnlockOptions): Promise<void>;\nfunction check(file: string, options?: CheckOptions): Promise<boolean>;\n\n// exec.ts — cross-platform binary resolution\nfunction resolveExecutable(command: string, env?: NodeJS.ProcessEnv): ",
+        "documentSha256": "f48c0c63c91d00dfa3e6102223f8082da5c58d35e8b02089e468b6e90ef9cdc2"
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "jsonPointer": null,
+        "line": 213,
+        "needle": "sliceansi",
+        "context": ", `join(`×8, `exec`×2, `timeout`×3 |\n| `utils/envUtils.ts` | `join(`×3, `throw new Error`×1 |\n| `utils/execFileNoThrow.ts` | `as any`×1, `spawn`×3, `exec`×13, `timeout`×3 |\n| `utils/format.ts` | `join(`×1 |\n| `utils/intl.ts` | `catch {`×1 |\n| `utils/sliceAnsi.ts` | `exec`×1 |\n| `utils/systemTheme.ts` | `exec`×2 |\n| `utils/toolDisplay.ts` | `join(`×1 |\n",
+        "documentSha256": "316fe82e34d1c76cdbea35e8700d45132ab7b689e9b45a61f64618bf0e82ffc4"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/739",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/hits/composition/57/context",
+        "line": 3,
+        "needle": "resolvepreset",
+        "context": "105,520：删 registerCapability\n- desktop dream-service.ts:73-81：加 `modules: [createCodingModule()]`\n- desktop capabilities-service.ts:29-48：用 compileComposition + resolvePresetFromComposition + adjusters 重写\n- server serve/cli.ts:78-81 resolveWorkerEntry→core bin；headless-server.ts:161 buildEnv 注入 `CODE_SHELL_CAPABILITY_MODULES=<coding>#createCodingModule`\n- TUI main.ts:13,21 删 registerCapability；repl.ts:35,150,158,187,279 → modules+comp",
+        "documentSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "jsonPointer": "/hits/7/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "3658d0cd18f0bbe5685f1a8fb1bcab77da97bf331729556baf9af0853612716e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "jsonPointer": "/hits/8/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "3658d0cd18f0bbe5685f1a8fb1bcab77da97bf331729556baf9af0853612716e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "jsonPointer": "/hits/68/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "3658d0cd18f0bbe5685f1a8fb1bcab77da97bf331729556baf9af0853612716e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "jsonPointer": "/hits/70/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "3658d0cd18f0bbe5685f1a8fb1bcab77da97bf331729556baf9af0853612716e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/candidates.json",
+        "jsonPointer": "/candidates/0/title",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "sliceAnsi uses UTF-16 indexes where ordinary consumers pass display columns",
+        "documentSha256": "b65882914ad35cfcf4851c837cc38e28ae9202bb60f35741e0510ee84115ddfc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/candidates.json",
+        "jsonPointer": "/candidates/0/source",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "b65882914ad35cfcf4851c837cc38e28ae9202bb60f35741e0510ee84115ddfc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/candidates.json",
+        "jsonPointer": "/candidates/1/title",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "sliceAnsi stops before a trailing SGR reset even for an entire basic styled string",
+        "documentSha256": "b65882914ad35cfcf4851c837cc38e28ae9202bb60f35741e0510ee84115ddfc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/candidates.json",
+        "jsonPointer": "/candidates/1/source",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "b65882914ad35cfcf4851c837cc38e28ae9202bb60f35741e0510ee84115ddfc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/review-utils.md",
+        "jsonPointer": null,
+        "line": 7,
+        "needle": "sliceansi",
+        "context": "、测试、失败 fixture、替代算法、UI、终端或 Git 写操作。**\n\n结论：当前材料支持 **0 formal、2 静态候选、1 旧关联** 的保守分类，没有阻止整合的实质问题。\n\n- Slice 首次 raw 字节数 497、SHA `d8cdd4fea84b2aec613adba982ac420f09737d3ab14e890ab0395fcfc8386409` 与 exit receipt 一致。Bun 因 `../../../../packages/core/src/utils/sliceAnsi.ts` 多退一层而加载失败，0 pass / 1 fail / 1 error，exit 1、没有 Completed。该结果没有加载目标 Slice 或测试体，两个候选的预期输出均只是源代码推演。\n- format 首次 raw 字节数 649、SHA `c57d556a4b03d3bd5c2cacf98035bdf1c1093c4745d2062ea4c3e2a59b2ff416` 与 exit receipt 一致。6 pass / 6 expect / 0 fail / 0 skipped，存在完整 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。既有测试只调用 formatDuration，覆盖 0、1、500、999、1000、1500ms，不支持其他 formatter、Intl formatter 行为或全仓结论。\n- `utils-cache-format-controls.test.ts` 没有运行收据/日志，报告与 validation 明确 0 attempts，且仍包含错误相对 import。不得从其中断言提取新的实测结论；本次复核也没有执行或修复它。\n- C1 源码的 display-column 头部与 code-unit `.slice`/visIdx 相悖；普通消费者的 stringWidth/start/end 接线确实存在。报告同时保留 header 对 wide-charact",
+        "documentSha256": "48f29d91ff14e6404948f162f14280298e31e7130bc1a912ca8757425f7f998b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-candidates.json",
+        "jsonPointer": "/candidates/0/title",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "sliceAnsi uses UTF-16 indexes where ordinary consumers pass display columns",
+        "documentSha256": "60fb8c22c1776d4cdd74709fa796b63529581f0850368ea274ffe01ced2dc9dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-candidates.json",
+        "jsonPointer": "/candidates/0/source",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "60fb8c22c1776d4cdd74709fa796b63529581f0850368ea274ffe01ced2dc9dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-candidates.json",
+        "jsonPointer": "/candidates/1/title",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "sliceAnsi stops before a trailing SGR reset even for an entire basic styled string",
+        "documentSha256": "60fb8c22c1776d4cdd74709fa796b63529581f0850368ea274ffe01ced2dc9dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-candidates.json",
+        "jsonPointer": "/candidates/1/source",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "60fb8c22c1776d4cdd74709fa796b63529581f0850368ea274ffe01ced2dc9dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/patterns/target_paths",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "(semver\\.ts|memoize\\.ts|sliceAnsi|toolDisplay|format\\.ts)",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/7/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/8/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/14/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "- `sliceAnsi.ts`",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/16/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "- theme/format/toolDisplay/debug/env/lockfile/memoize/semver/sliceAnsi/intl/earlyInput 等。",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/27/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "| `sliceAnsi.ts` | ANSI-aware string slicing (default export). |",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/44/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "| `utils/sliceAnsi.ts` | `exec`×1 |",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/99/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/184/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/185/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/186/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/187/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/238/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/265/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/290/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/296/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/302/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/308/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/314/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/320/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/326/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/332/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/338/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/344/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/350/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/356/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/362/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/368/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/375/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/381/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/387/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/393/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/399/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/405/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/411/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/417/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/423/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/429/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/435/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/441/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/447/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/453/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/459/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/470/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "utils/sliceAnsi.ts",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/500/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "- [x] **Step B1:** For every tui import of an internal-set symbol (list in recon report; includes getGraphemeSegmenter, sliceAnsi, env, execFileNoThrow, gte, logForDebugging, isEnvTruthy/isEnvDefinedFalsy, stopCapturingEarlyInput, formatBytes/formatToolArgs/singleLine/MAX_LINE_WIDTH/TOOL_DOT_COLORS, classifyBashLines, formatDuration/formatTokens, getTheme/Theme/ThemeName/ThemeSetting/resolveThemeSetting, rotateLogs, recordUIEvent, getInteractiveApprovalBackend, defaultSandboxConfig/SandboxConfig, buildNotificationMessage/buildNotificationSummary/notificationQueue/NotificationItem, CronStore/CronRunResult/bindCronToEngine/cronScheduler, asyncAgentRegistry/AsyncAgentEntry, createInProcessClient, ProtocolModelEntry, CachedModel/defaultCacheDir/fetchModelList/FetchResult/s",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/501/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "  - Keep: /internal runtime-export pin list (update to new actual list), no Engine/Arena on internal, root must export Engine/createServer and must NOT export leaked symbols — extend the must-NOT list with a sample of moved host symbols (e.g. `sliceAnsi`, `notificationQueue`, `cronScheduler`).",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-skip-note.md",
+        "jsonPointer": null,
+        "line": 5,
+        "needle": "sliceansi",
+        "context": ".raw.log`，随后保存 `utils-slice-columns.first.exit.json`，才读取日志。guarded Bun 返回 1；日志为 0 pass / 1 fail / 1 error，未完成零失败 JUnit gate。\n\n失败是我编写的 fixture 相对 import 多写一层：fixture 位于 `docs/audit-2026-10-17-round14/evidence`，却引用 `../../../../packages/core/src/utils/sliceAnsi.ts`。Bun 在加载时找不到该路径，目标源模块未加载，任何测试体都未执行。这是审查 fixture 错误，不是产品 bug。\n\n按用户“有问题的跳过”和根任务规则，整个 Slice 动态方向立即 SKIP。原 fixture 保持失败时字节；没有修正路径、重跑、用别的入口/运行时/自写等价算法挽救验证。所有 slice 现象只作为源码候选，不能把 fixture 内尚未执行的断言当成实际结果。\n\n`utils-cache-format-controls.test.ts` 在 Slice 首跑前一并写入，但从未执行；事后静态看到它也使用同样的错误相对 import。保留未执行材料，不修正/运行它，也不把其中预期与断言作为实证。其 memoize/semver/toolDisplay 方向没有动态结论。\n\n独立的仓库现有 `packages/core/src/utils/format.test.ts` 直接按真实库存路径首跑，是已读的叶级 format/intl 基线，不导入 Slice，也未验证/修复失败方向。6 pass / 6 expect / 0 fail / 0 skipped；只覆盖现有 sub-second duration 案例。\n",
+        "documentSha256": "214d35387852e40336d2e5ccede931506ce72c1aabe95bc96d479e3e82a23011"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/pattern",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "(render-border|sliceAnsi|ANSI.{0,100}(trunc|slice|截断|bleed|reset)|(?:reset|style).{0,60}(?:missing|丢失))",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/0/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/2/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/3/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/8/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/9/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/10/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/11/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/12/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/13/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/14/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/15/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/16/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/17/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/18/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/19/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/20/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/21/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/22/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/23/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/24/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/25/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/26/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/27/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/28/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/29/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/30/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/31/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/32/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/33/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/34/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/35/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/36/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/37/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "utils/sliceAnsi.ts",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/38/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/39/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/40/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+        "jsonPointer": "/matches/41/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "ccbe8b55a96df0413cb24a62ec3145e0af17798c93ca40c9f97feb1ab3b3bf0a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+        "jsonPointer": "/sources/2/path",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "5b9454b7fa68f96d5af1023e658c234f5b2e8edaebce1a0a656fecc43cd63be0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/pattern",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "(sliceAnsi|wrap-text\\.ts|render/output\\.ts|水平裁剪|horizontal.{0,25}clip|CJK.{0,80}(?:clip|截|slice)|(?:clip|裁剪).{0,80}CJK)",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/0/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "- `sliceAnsi.ts`",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/1/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "- theme/format/toolDisplay/debug/env/lockfile/memoize/semver/sliceAnsi/intl/earlyInput 等。",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/2/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "| `utils/sliceAnsi.ts` | `exec`×1 |",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/3/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/4/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/6/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/10/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/11/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/32/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "- [x] **Step B1:** For every tui import of an internal-set symbol (list in recon report; includes getGraphemeSegmenter, sliceAnsi, env, execFileNoThrow, gte, logForDebugging, isEnvTruthy/isEnvDefinedFalsy, stopCapturingEarlyInput, formatBytes/formatToolArgs/singleLine/MAX_LINE_WIDTH/TOOL_DOT_COLORS, classifyBashLines, formatDuration/formatTokens, getTheme/Theme/ThemeName/ThemeSetting/resolveThemeSetting, rotateLogs, recordUIEvent, getInteractiveApprovalBackend, defaultSandboxConfig/SandboxConfig, buildNotificationMessage/buildNotificationSummary/notificationQueue/NotificationItem, CronStore/CronRunResult/bindCronToEngine/cronScheduler, asyncAgentRegistry/AsyncAgentEntry, createInProcessClient, ProtocolModelEntry, CachedModel/defaultCacheDir/fetchModelList/FetchResult/s",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/33/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "  - Keep: /internal runtime-export pin list (update to new actual list), no Engine/Arena on internal, root must export Engine/createServer and must NOT export leaked symbols — extend the must-NOT list with a sample of moved host symbols (e.g. `sliceAnsi`, `notificationQueue`, `cronScheduler`).",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/34/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+        "jsonPointer": "/matches/35/text",
+        "line": 1,
+        "needle": "sliceansi",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts",
+        "documentSha256": "6494bf6e20823528a795a3362e8196eeb96db1439a56a3619c67293c05172dc4"
+      }
+    ]
+  },
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/5",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "currentMatchesFrozen": true,
+        "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "jsonPointer": "/files/34",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/153",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "lines": 36,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][7]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][5]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/163",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "lines": 97,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-hash-or-inventory-only",
+            "rawCoverageLabel": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review.",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][5]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+                "jsonLocation": "$[\"files\"][34]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+                "jsonLocation": "$[\"files\"][16]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][32]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "jsonPointer": "/rankedCandidates/221",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "lines": 36,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "coverageStatus": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 2,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/319",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "lines": 36,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/331",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "lines": 97,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/629",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lines": 36,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C001459",
+          "C001460",
+          "C001461"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 2,
+          "limited-or-not-full-scope-unknown": 1
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/641",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lines": 97,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C001498",
+          "C001499",
+          "C001500",
+          "C001501",
+          "C001502"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 3,
+          "limited-or-not-full-scope-unknown": 1,
+          "scope-unknown": 1
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/629",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lines": 36
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/641",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lines": 97
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/629",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lines": 36,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/641",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lines": 97,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+      "jsonPointer": "/files/16",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "frozenBlobSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "jsonPointer": "/files/32",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/7",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "worktreeMatchesFrozen": true,
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-source-manifest.json",
+      "jsonPointer": "/files/13",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "readScope": "1-115",
+        "frozenBlobSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "frozenBlobBytes": 3951,
+        "frozenLines": 97,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/5",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "row": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/6",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "row": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "notSemanticExhaustion": true
+}

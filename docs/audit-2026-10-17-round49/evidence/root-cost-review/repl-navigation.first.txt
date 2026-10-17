@@ -1,0 +1,36 @@
+6: * Wiring: Engine → AgentServer → [in-process transport] → AgentClient → UI
+12:import { EngineRuntime } from "@cjhyy/code-shell-core";
+15:import { AgentServer } from "@cjhyy/code-shell-core";
+16:import { AgentClient } from "@cjhyy/code-shell-core";
+26:import { startInkRepl } from "../../ui/index.js";
+27:import { runInkOnboarding } from "../../ui/onboarding-runner.js";
+108:    const result = await runInkOnboarding();
+115:    // takes effect immediately without a restart.
+148:  // Temperature is a cross-model runtime knob (ClientDefaults), no longer part
+152:  const clientDefaults: ClientDefaults = {
+168:    clientDefaults,
+196:  const seedEngine = new Engine({
+198:    clientDefaults,
+210:  // MCPManager: no-op holder satisfying EngineRuntime type; individual
+212:  // TODO(future): aggregate MCP connections across sessions at the runtime level.
+217:  // 3. Build the shared EngineRuntime
+218:  const runtime = new EngineRuntime({
+229:    runtime,
+231:      new Engine({
+234:        runtime,
+255:  chatManager.startIdleSweeper();
+258:  const [serverTransport, clientTransport] = createInProcessTransport();
+267:  // 6. Wire up AgentServer (wraps chatManager, handles protocol)
+268:  const server = new AgentServer({
+280:  // 7. Create AgentClient (UI-side)
+281:  const client = new AgentClient({ transport: clientTransport });
+292:    const cronEngine = new Engine({
+295:      runtime,
+299:      // contract from cron-runtime — cron is unattended.
+322:  // 8. Launch Ink UI with the client
+323:  await startInkRepl({
+324:    client,
+333:    // started so a detached `npm run dev` doesn't outlive the CLI as an
+335:    // process.exit(0) inside startInkRepl): any code AFTER this await is
+342:          await runtime.close();
+344:          client.close();

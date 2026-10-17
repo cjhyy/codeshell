@@ -1,0 +1,2516 @@
+[
+  {
+    "historyPath": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+    "at": "$[\"files\"][6]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "bytes": 11626,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected64–76,93–105,125–134 and positiveIntOption references; not executed"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+    "at": "$[\"files\"][58]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][59]",
+    "row": {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+    "at": "$[\"sources\"][2]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "readScope": "selected static option definition and action ranges",
+      "selectedLineRanges": [
+        [
+          1,
+          155
+        ]
+      ],
+      "lineCount": 265,
+      "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round20/source-manifest.json",
+    "at": "$[\"files\"][32]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round20/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][2]",
+    "row": {
+      "manifest": "positiveint-source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/evidence/jsonoutput-source-manifest.json",
+    "at": "$[\"files\"][4]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesFrozen": true,
+      "bytes": 11626,
+      "lineCount": 265,
+      "ranges": [
+        "50-109"
+      ],
+      "kind": "selected output format CLI contract static only"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/evidence/ndjson-source-manifest.json",
+    "at": "$[\"sources\"][2]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "readScope": "selected static CLI options/task route",
+      "selectedLineRanges": [
+        [
+          1,
+          18
+        ],
+        [
+          50,
+          115
+        ],
+        [
+          185,
+          210
+        ]
+      ],
+      "lineCount": 265,
+      "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/source-manifest.json",
+    "at": "$[\"files\"][33]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][4]",
+    "row": {
+      "manifest": "jsonoutput-source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][14]",
+    "row": {
+      "manifest": "ndjson-source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+    "at": "$[\"files\"][25]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "scope": "Selected88-116 positional/piped caller only; no CLI import/run/process.stdin.",
+      "lineCount": 265,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/source-manifest.json",
+    "at": "$[\"files\"][73]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][25]",
+    "row": {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][183]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "lines": 391,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 2,
+      "claimVariants": 2,
+      "claims": [
+        {
+          "sourceSha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+              "jsonLocation": "$[\"files\"][4]"
+            }
+          ]
+        },
+        {
+          "sourceSha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+              "jsonLocation": "$[\"files\"][16]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][897]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "lines": 817,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+              "jsonLocation": "$[\"files\"][13]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+              "jsonLocation": "$[\"files\"][57]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][919]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "status": "current-sha-selected-only",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 2,
+      "currentSelectedUnionLines": 181,
+      "currentSelectedUnionRanges": [
+        [
+          1,
+          155
+        ],
+        [
+          185,
+          210
+        ]
+      ],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 2,
+      "claimVariants": 4,
+      "claims": [
+        {
+          "sourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": "selected64–76,93–105,125–134 and positiveIntOption references; not executed",
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+              "jsonLocation": "$[\"files\"][6]"
+            }
+          ]
+        },
+        {
+          "sourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+              "jsonLocation": "$[\"files\"][58]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][59]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+              "jsonLocation": "$[\"files\"][32]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][2]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-source-manifest.json",
+              "jsonLocation": "$[\"files\"][4]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+              "jsonLocation": "$[\"files\"][33]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][4]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][14]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+              "jsonLocation": "$[\"files\"][25]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+              "jsonLocation": "$[\"files\"][73]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][25]"
+            }
+          ]
+        },
+        {
+          "sourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "explicit-ranges-without-full-claim",
+          "rawCoverageLabel": "selected static option definition and action ranges",
+          "selectedLineRanges": [
+            [
+              1,
+              155
+            ]
+          ],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][2]"
+            }
+          ]
+        },
+        {
+          "sourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "explicit-ranges-without-full-claim",
+          "rawCoverageLabel": "selected static CLI options/task route",
+          "selectedLineRanges": [
+            [
+              1,
+              18
+            ],
+            [
+              50,
+              115
+            ],
+            [
+              185,
+              210
+            ]
+          ],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round21/evidence/ndjson-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][2]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][993]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "lines": 66,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "status": "current-sha-explicit-full-claim",
+      "currentFullClaimVariants": 1,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 2,
+      "claims": [
+        {
+          "sourceSha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "explicit-full",
+          "rawCoverageLabel": "full",
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][15]"
+            }
+          ]
+        },
+        {
+          "sourceSha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+              "jsonLocation": "$[\"files\"][77]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][369]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "lines": 391,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][3700]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "lines": 817,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][3744]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][3921]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "lines": 66,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/initial-pins.json",
+    "at": "$[\"files\"][14]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lineCount": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "initialFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "pinTiming": "before selected semantic read; prior rg filenames only",
+      "coverage": "inventory-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "finishFilesystemSha256": null
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json",
+    "at": "$[\"files\"][11]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lineCount": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "initialFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "pinTiming": "before selected semantic read; prior rg filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          145,
+          165
+        ]
+      ],
+      "coveredLineCount": 21,
+      "finishFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesInitialPin": true,
+      "role": "source-only-metadata-and-caller-boundary"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/finish-hash-checks.json",
+    "at": "$[\"sourceChecks\"][3]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "unchanged": true,
+      "coverage": "selected"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/initial-pins.json",
+    "at": "$[\"files\"][3]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "captureUtc": "2026-10-17T12:17:39.205952+00:00",
+      "beforeNewDirectionRead": true,
+      "firstSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "priorSemanticRead": false
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/source-manifest.json",
+    "at": "$[\"files\"][3]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          153,
+          159
+        ]
+      ],
+      "semanticLines": 7,
+      "initialSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "initialFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "directionPinUtc": "2026-10-17T12:17:39.205952+00:00",
+      "frozenUtc": "2026-10-17T12:20:28.015872+00:00",
+      "semanticReadUtc": null,
+      "gitBlobCompared": false,
+      "timingNote": "Pinned before this direction semantic read; per-read semantic timestamps not recorded."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+    "at": "$[\"files\"][39]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentBytes": 11626,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainBytes": 11626,
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][13]",
+    "row": {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][39]",
+    "row": {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+    "at": "$[\"files\"][13]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round4/source-manifest.json",
+    "at": "$[\"files\"][57]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/actual-ui-entry-pins.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lineCount": 265,
+      "pinUTC": "2026-10-17T14:21:38.592870+00:00",
+      "semanticRead": false
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/finish-checks.json",
+    "at": "$[\"sourceChecks\"][11]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "unchanged": true,
+      "coverage": "selected"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][32]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "startLine": 10,
+      "endLine": 10,
+      "text": "import { replCommand } from \"./commands/repl.js\";\n",
+      "bytes": 50,
+      "sha256": "fcca4a9a615ccd01b7f7e6069ecdafa48645090e4a01c031870e5ee3dd36d701",
+      "wholeSourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "semanticScope": "Explicit subsets in source-manifest.json; displayed adjacency is not coverage"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][33]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "startLine": 118,
+      "endLine": 124,
+      "text": "// ─── repl (default) ──────────────────────────────────────────────\n\naddInteractiveOptions(\n  addCommonOptions(program.command(\"repl\").description(\"Interactive REPL mode (default)\")),\n).action(async (opts) => {\n  await replCommand({ ...resolveOpts(opts), prefill: opts.prefill as string | undefined });\n});\n",
+      "bytes": 406,
+      "sha256": "659f73a5f0638c438f28bdbd94006752d083ac18e8e732ec5bbd8649472e5eae",
+      "wholeSourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "semanticScope": "Explicit subsets in source-manifest.json; displayed adjacency is not coverage"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][34]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "startLine": 176,
+      "endLine": 188,
+      "text": "\naddInteractiveOptions(\n  addCommonOptions(program.argument(\"[task]\", \"Task to execute (or omit for REPL mode)\")),\n)\n  .passThroughOptions()\n  .action(async (task: string | undefined, opts) => {\n    const resolved = resolveOpts(opts);\n    if (task) {\n      await runCommand({ task, ...resolved });\n    } else {\n      await replCommand({ ...resolved, prefill: opts.prefill });\n    }\n  });\n",
+      "bytes": 388,
+      "sha256": "61d7375127f1f3ef610644a07220daa4fcf48809e8b0afae0a6a4999c7b8bdc7",
+      "wholeSourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "semanticScope": "Explicit subsets in source-manifest.json; displayed adjacency is not coverage"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-manifest.json",
+    "at": "$[\"files\"][11]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lineCount": 265,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          177,
+          188
+        ]
+      ],
+      "semanticLineCount": 20,
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          176,
+          188
+        ]
+      ],
+      "displayedLineCount": 21,
+      "role": "static-production-entry-only",
+      "beforeThisReviewSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "actual-ui-entry-pins.json",
+      "pinUTC": "2026-10-17T14:21:38.592870+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-review/author-metadata-checks.json",
+    "at": "$[\"authorSourceHashOnlyChecks\"][11]",
+    "row": {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matches": true,
+      "semanticReadingAdopted": false
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-review/entry-initial-pins.json",
+    "at": "$[\"files\"][1]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lineCount": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-review/source-manifest.json",
+    "at": "$[\"hashOnlyFiles\"][4]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lineCount": 265,
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        10,
+        123,
+        186
+      ],
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          123,
+          123
+        ],
+        [
+          186,
+          186
+        ]
+      ],
+      "displayedLineCount": 3,
+      "initialPinArtifact": "entry-initial-pins.json",
+      "initialPinUTC": "2026-10-17T14:26:25.676812+00:00",
+      "initialBeforeThisReviewSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/tui/src/cli/main.ts",
+        "bytes": 11626,
+        "lineCount": 265,
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "pinBeforeSelectedBodyOrLocatorRead": true
+      },
+      "finishBytes": 11626,
+      "finishSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "sourceKind": "product"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-review/source-manifest.json",
+    "at": "$[\"hashOnlyFiles\"][4][\"prepRow\"]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lineCount": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/source-manifest.json",
+    "at": "$[\"files\"][25]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentBytes": 11626,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainBytes": 11626,
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][11]",
+    "row": {
+      "manifest": "transcript-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round42/source-manifest.json",
+    "at": "$[\"hashOnlyChecks\"][8]",
+    "row": {
+      "manifest": "transcript-review/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "hash-only/navigation; zero semantic body coverage",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][1645]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/cost-tracker.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 122,
+          "jsonPointer": "/32"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/28"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/37"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/65"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/66"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/67"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/68"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/69"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/70"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/71"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/72"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/73"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/74"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/75"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/76"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/77"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/78"
+        },
+        {
+          "historyRow": 2764,
+          "jsonPointer": "/hits/cost_tracker/79"
+        },
+        {
+          "historyRow": 2796,
+          "jsonPointer": "/findings/1"
+        }
+      ],
+      "claimId": "C001646"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][1646]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/cost-tracker.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/209"
+        },
+        {
+          "historyRow": 1119,
+          "jsonPointer": "/files/800"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/final/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/final/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3193,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/final/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3202,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/444"
+        },
+        {
+          "historyRow": 3212,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/444"
+        }
+      ],
+      "claimId": "C001647"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][1647]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sourceHashFields": {
+        "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/cost-tracker.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/183"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/369"
+        },
+        {
+          "historyRow": 2798,
+          "jsonPointer": "/files/16"
+        }
+      ],
+      "claimId": "C001648"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][1648]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sourceHashFields": {
+        "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "limited-or-not-full-scope-unknown",
+      "scopeFields": {
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/cost-tracker.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2769,
+          "jsonPointer": "/files/4"
+        }
+      ],
+      "claimId": "C001649"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][1649]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "scope-unknown",
+      "scopeFields": {
+        "scope": "Exported standalone/unbound CostTracker API. EngineRuntime binds UsageLedger and its primary accounting route is explicitly excluded."
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/cost-tracker.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2765,
+          "jsonPointer": "/0"
+        }
+      ],
+      "claimId": "C001650"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14743]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/commands/builtin/core-commands.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 117,
+          "jsonPointer": "/100"
+        },
+        {
+          "historyRow": 118,
+          "jsonPointer": "/73"
+        },
+        {
+          "historyRow": 119,
+          "jsonPointer": "/100"
+        },
+        {
+          "historyRow": 121,
+          "jsonPointer": "/3"
+        },
+        {
+          "historyRow": 122,
+          "jsonPointer": "/144"
+        },
+        {
+          "historyRow": 122,
+          "jsonPointer": "/145"
+        },
+        {
+          "historyRow": 123,
+          "jsonPointer": "/42"
+        }
+      ],
+      "claimId": "C014744"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14744]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/commands/builtin/core-commands.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/2110"
+        }
+      ],
+      "claimId": "C014745"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14745]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sourceHashFields": {
+        "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/commands/builtin/core-commands.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/897"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/3700"
+        },
+        {
+          "historyRow": 2279,
+          "jsonPointer": "/files/13"
+        },
+        {
+          "historyRow": 2289,
+          "jsonPointer": "/files/57"
+        }
+      ],
+      "claimId": "C014746"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14946]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "finishSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "coverage": "hash-only/navigation; zero semantic body coverage"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2571,
+          "jsonPointer": "/hashOnlyFiles/4"
+        }
+      ],
+      "claimId": "C014947"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14947]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "coverage": "hash-only/navigation; zero semantic body coverage"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2577,
+          "jsonPointer": "/hashOnlyChecks/8"
+        }
+      ],
+      "claimId": "C014948"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14948]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "initialFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "coverage": "inventory-only"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1773,
+          "jsonPointer": "/files/14"
+        }
+      ],
+      "claimId": "C014949"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14949]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "beforeThisReviewSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "finishSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-selected",
+      "scopeFields": {
+        "coverage": "selected",
+        "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            10,
+            10
+          ],
+          [
+            118,
+            124
+          ],
+          [
+            177,
+            188
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true,
+      "roleBoundaryFields": {
+        "role": "static-production-entry-only"
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2548,
+          "jsonPointer": "/files/11"
+        }
+      ],
+      "claimId": "C014950"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14950]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "initialFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "finishFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-selected",
+      "scopeFields": {
+        "coverage": "selected"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            145,
+            165
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true,
+      "roleBoundaryFields": {
+        "role": "source-only-metadata-and-caller-boundary"
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1776,
+          "jsonPointer": "/files/11"
+        }
+      ],
+      "claimId": "C014951"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14951]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "initialSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "initialFilesystemSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-selected",
+      "scopeFields": {
+        "coverage": "selected"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            153,
+            159
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1791,
+          "jsonPointer": "/files/3"
+        }
+      ],
+      "claimId": "C014952"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14952]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-selected",
+      "scopeFields": {
+        "readScope": "selected static CLI options/task route"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            1,
+            18
+          ],
+          [
+            50,
+            115
+          ],
+          [
+            185,
+            210
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 859,
+          "jsonPointer": "/sources/2"
+        }
+      ],
+      "claimId": "C014953"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14953]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-selected",
+      "scopeFields": {
+        "readScope": "selected static option definition and action ranges"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            1,
+            155
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 785,
+          "jsonPointer": "/sources/2"
+        }
+      ],
+      "claimId": "C014954"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14954]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 117,
+          "jsonPointer": "/105"
+        },
+        {
+          "historyRow": 117,
+          "jsonPointer": "/106"
+        },
+        {
+          "historyRow": 118,
+          "jsonPointer": "/28"
+        },
+        {
+          "historyRow": 118,
+          "jsonPointer": "/75"
+        },
+        {
+          "historyRow": 119,
+          "jsonPointer": "/105"
+        },
+        {
+          "historyRow": 119,
+          "jsonPointer": "/106"
+        },
+        {
+          "historyRow": 122,
+          "jsonPointer": "/156"
+        },
+        {
+          "historyRow": 122,
+          "jsonPointer": "/157"
+        },
+        {
+          "historyRow": 122,
+          "jsonPointer": "/158"
+        },
+        {
+          "historyRow": 123,
+          "jsonPointer": "/44"
+        }
+      ],
+      "claimId": "C014955"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14955]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/2140"
+        }
+      ],
+      "claimId": "C014956"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14956]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 539,
+          "jsonPointer": "/files/58"
+        },
+        {
+          "historyRow": 824,
+          "jsonPointer": "/files/32"
+        },
+        {
+          "historyRow": 888,
+          "jsonPointer": "/files/33"
+        },
+        {
+          "historyRow": 1032,
+          "jsonPointer": "/files/73"
+        },
+        {
+          "historyRow": 1818,
+          "jsonPointer": "/files/39"
+        },
+        {
+          "historyRow": 2577,
+          "jsonPointer": "/files/25"
+        }
+      ],
+      "claimId": "C014957"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14957]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 539,
+          "jsonPointer": "/workerSourceChecks/59"
+        },
+        {
+          "historyRow": 824,
+          "jsonPointer": "/workerSourceChecks/2"
+        },
+        {
+          "historyRow": 888,
+          "jsonPointer": "/workerSourceChecks/4"
+        },
+        {
+          "historyRow": 888,
+          "jsonPointer": "/workerSourceChecks/14"
+        },
+        {
+          "historyRow": 1032,
+          "jsonPointer": "/workerSourceChecks/25"
+        },
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/919"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/3744"
+        },
+        {
+          "historyRow": 2528,
+          "jsonPointer": "/files/0"
+        },
+        {
+          "historyRow": 2554,
+          "jsonPointer": "/authorSourceHashOnlyChecks/11"
+        },
+        {
+          "historyRow": 2557,
+          "jsonPointer": "/files/1"
+        },
+        {
+          "historyRow": 2571,
+          "jsonPointer": "/hashOnlyFiles/4/prepRow"
+        }
+      ],
+      "claimId": "C014958"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14958]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {
+        "unparsedRangeFields.ranges": "[\"50-109\"]"
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 846,
+          "jsonPointer": "/files/4"
+        }
+      ],
+      "claimId": "C014959"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14959]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "firstSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1786,
+          "jsonPointer": "/files/3"
+        }
+      ],
+      "claimId": "C014960"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14960]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "fcca4a9a615ccd01b7f7e6069ecdafa48645090e4a01c031870e5ee3dd36d701",
+        "wholeSourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "same-object-conflicted",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2547,
+          "jsonPointer": "/snapshots/32"
+        }
+      ],
+      "claimId": "C014961"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14961]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "659f73a5f0638c438f28bdbd94006752d083ac18e8e732ec5bbd8649472e5eae",
+        "wholeSourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "same-object-conflicted",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2547,
+          "jsonPointer": "/snapshots/33"
+        }
+      ],
+      "claimId": "C014962"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14962]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "61d7375127f1f3ef610644a07220daa4fcf48809e8b0afae0a6a4999c7b8bdc7",
+        "wholeSourceSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "same-object-conflicted",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2547,
+          "jsonPointer": "/snapshots/34"
+        }
+      ],
+      "claimId": "C014963"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14963]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "limited-or-not-full-scope-unknown",
+      "scopeFields": {
+        "coverage": "selected"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1784,
+          "jsonPointer": "/sourceChecks/3"
+        },
+        {
+          "historyRow": 2537,
+          "jsonPointer": "/sourceChecks/11"
+        }
+      ],
+      "claimId": "C014964"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14964]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "limited-or-not-full-scope-unknown",
+      "scopeFields": {
+        "coverage": "selected"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1818,
+          "jsonPointer": "/workerSourceChecks/13"
+        },
+        {
+          "historyRow": 1818,
+          "jsonPointer": "/workerSourceChecks/39"
+        }
+      ],
+      "claimId": "C014965"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14965]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "limited-or-not-full-scope-unknown",
+      "scopeFields": {
+        "coverage": "selected"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2577,
+          "jsonPointer": "/workerSourceChecks/11"
+        }
+      ],
+      "claimId": "C014966"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14966]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "limited-or-not-full-scope-unknown",
+      "scopeFields": {
+        "coverage": "selected64–76,93–105,125–134 and positiveIntOption references; not executed"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 534,
+          "jsonPointer": "/files/6"
+        }
+      ],
+      "claimId": "C014967"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][14967]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "sourceHashFields": {
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "limited-or-not-full-scope-unknown",
+      "scopeFields": {
+        "scope": "Selected88-116 positional/piped caller only; no CLI import/run/process.stdin."
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/cli/main.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1026,
+          "jsonPointer": "/files/25"
+        }
+      ],
+      "claimId": "C014968"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15737]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sourceHashFields": {
+        "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "readScope": "full"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/ui/hooks/useSessionUsage.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2679,
+          "jsonPointer": "/sources/15"
+        }
+      ],
+      "claimId": "C015738"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15738]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/ui/hooks/useSessionUsage.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/2300"
+        }
+      ],
+      "claimId": "C015739"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15739]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sourceHashFields": {
+        "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/tui/src/ui/hooks/useSessionUsage.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/993"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/3921"
+        },
+        {
+          "historyRow": 2688,
+          "jsonPointer": "/files/77"
+        }
+      ],
+      "claimId": "C015740"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][679]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "lines": 391,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C001646",
+        "C001647",
+        "C001648",
+        "C001649",
+        "C001650"
+      ],
+      "claimKindCounts": {
+        "incidental-path-or-pin-object": 3,
+        "limited-or-not-full-scope-unknown": 1,
+        "scope-unknown": 1
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][4023]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "lines": 817,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C014744",
+        "C014745",
+        "C014746"
+      ],
+      "claimKindCounts": {
+        "incidental-path-or-pin-object": 3
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][4067]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lines": 265,
+      "status": "current-sha-explicit-selected-object",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [
+        "C014950",
+        "C014951",
+        "C014952",
+        "C014953",
+        "C014954"
+      ],
+      "currentSelectedUnionLines": 199,
+      "claimIds": [
+        "C014947",
+        "C014948",
+        "C014949",
+        "C014950",
+        "C014951",
+        "C014952",
+        "C014953",
+        "C014954",
+        "C014955",
+        "C014956",
+        "C014957",
+        "C014958",
+        "C014959",
+        "C014960",
+        "C014961",
+        "C014962",
+        "C014963",
+        "C014964",
+        "C014965",
+        "C014966",
+        "C014967",
+        "C014968"
+      ],
+      "claimKindCounts": {
+        "explicit-nonsemantic-or-hash-only": 3,
+        "explicit-selected": 5,
+        "incidental-path-or-pin-object": 9,
+        "limited-or-not-full-scope-unknown": 5
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][4244]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "lines": 66,
+      "status": "current-sha-explicit-full-object",
+      "currentExplicitFullClaimIds": [
+        "C015738"
+      ],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C015738",
+        "C015739",
+        "C015740"
+      ],
+      "claimKindCounts": {
+        "explicit-full": 1,
+        "incidental-path-or-pin-object": 2
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][679]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "lines": 391
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][4023]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "lines": 817
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][4067]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lines": 265
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][4244]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "lines": 66
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][679]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "lines": 391,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][4024]",
+    "row": {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "lines": 817,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][4068]",
+    "row": {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lines": 265,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "carryable-explicit-selected-no-full"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][4245]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "lines": 66,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "carryable-explicit-full"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+    "at": "$[\"sources\"][15]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "bytes": 2357,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round7/source-manifest.json",
+    "at": "$[\"files\"][77]",
+    "row": {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+    "at": "$[\"files\"][4]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round9/source-manifest.json",
+    "at": "$[\"files\"][16]",
+    "row": {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  }
+]

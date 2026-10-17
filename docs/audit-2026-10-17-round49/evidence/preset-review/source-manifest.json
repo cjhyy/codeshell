@@ -1,0 +1,714 @@
+{
+  "capturedUTC": "2026-10-17T16:26:30.477455+00:00",
+  "rootReportedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684 last supplied externally; no own Git/current-head certification",
+  "files": [
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "bytes": 3951,
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "lineCount": 97,
+      "kind": "product",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "selectedLineRanges": [
+        [
+          13,
+          50
+        ]
+      ],
+      "semanticLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          97
+        ]
+      ],
+      "bodyDisplayedLineCount": 97,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          97
+        ]
+      ],
+      "displayedLineCount": 97,
+      "initialSemanticReadSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "initialPinUTC": "2026-10-17T16:20:43.003698+00:00",
+      "pinTiming": "before76 source body or line navigation",
+      "endingSame": true,
+      "scope": "Directed ordinary name/default selection, preset-tags catalog/injection and prompt-record mapping of a file possibly previously read to EOF. registerAlwaysTools, lifetime/registry activation and instruction/path boundaries displayed only. No first-full or unread frontier claim.",
+      "prepPinRow": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lineCount": 97,
+        "pinUTC": "2026-10-17T16:20:43.003698+00:00",
+        "timing": "before76 source body or line navigation"
+      }
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "bytes": 9117,
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "lineCount": 221,
+      "kind": "product",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "selectedLineRanges": [
+        [
+          62,
+          67
+        ],
+        [
+          107,
+          115
+        ],
+        [
+          125,
+          134
+        ]
+      ],
+      "semanticLineCount": 25,
+      "bodyDisplayedLineRanges": [
+        [
+          62,
+          68
+        ],
+        [
+          105,
+          135
+        ]
+      ],
+      "bodyDisplayedLineCount": 38,
+      "additionalNavigationSnippetLines": [
+        31,
+        93,
+        146,
+        168,
+        172,
+        201,
+        203,
+        207,
+        208,
+        209,
+        210,
+        211,
+        215,
+        219
+      ],
+      "displayedLineRanges": [
+        [
+          31,
+          31
+        ],
+        [
+          62,
+          68
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          105,
+          135
+        ],
+        [
+          146,
+          146
+        ],
+        [
+          168,
+          168
+        ],
+        [
+          172,
+          172
+        ],
+        [
+          201,
+          201
+        ],
+        [
+          203,
+          203
+        ],
+        [
+          207,
+          211
+        ],
+        [
+          215,
+          215
+        ],
+        [
+          219,
+          219
+        ]
+      ],
+      "displayedLineCount": 52,
+      "initialSemanticReadSha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "initialPinUTC": "2026-10-17T16:24:03.963903+00:00",
+      "pinTiming": "before76 first current body/line-navigation display",
+      "endingSame": true,
+      "scope": "Normal engine contribution keys, tagged-tool DTO and resolved catalog/preset/prompt arrays only. Hook/service/activation types navigation only.",
+      "prepPinRow": {
+        "path": "packages/core/src/composition/types.ts",
+        "bytes": 9117,
+        "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+        "lineCount": 221,
+        "pinUTC": "2026-10-17T16:24:03.963903+00:00",
+        "timing": "before76 first current body/line-navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "bytes": 12385,
+      "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "lineCount": 328,
+      "kind": "product",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "selectedLineRanges": [
+        [
+          178,
+          245
+        ],
+        [
+          275,
+          278
+        ]
+      ],
+      "semanticLineCount": 72,
+      "bodyDisplayedLineRanges": [
+        [
+          175,
+          245
+        ],
+        [
+          273,
+          280
+        ]
+      ],
+      "bodyDisplayedLineCount": 79,
+      "additionalNavigationSnippetLines": [
+        35,
+        40,
+        41,
+        56,
+        92,
+        94,
+        100,
+        104,
+        115,
+        130,
+        141,
+        152,
+        163,
+        165,
+        166,
+        267
+      ],
+      "displayedLineRanges": [
+        [
+          35,
+          35
+        ],
+        [
+          40,
+          41
+        ],
+        [
+          56,
+          56
+        ],
+        [
+          92,
+          92
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          115,
+          115
+        ],
+        [
+          130,
+          130
+        ],
+        [
+          141,
+          141
+        ],
+        [
+          152,
+          152
+        ],
+        [
+          163,
+          163
+        ],
+        [
+          165,
+          166
+        ],
+        [
+          175,
+          245
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          273,
+          280
+        ]
+      ],
+      "displayedLineCount": 95,
+      "initialSemanticReadSha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "initialPinUTC": "2026-10-17T16:24:03.964879+00:00",
+      "pinTiming": "before76 first current body/line-navigation display",
+      "endingSame": true,
+      "scope": "Ordinary keyed preset replacement/default selection/prompt list production only. No module activation/lifetime/security/services mechanism review.",
+      "prepPinRow": {
+        "path": "packages/core/src/composition/compiler.ts",
+        "bytes": 12385,
+        "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+        "lineCount": 328,
+        "pinUTC": "2026-10-17T16:24:03.964879+00:00",
+        "timing": "before76 first current body/line-navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "kind": "product",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "selectedLineRanges": [
+        [
+          663,
+          666
+        ],
+        [
+          691,
+          691
+        ],
+        [
+          695,
+          707
+        ],
+        [
+          4070,
+          4071
+        ]
+      ],
+      "semanticLineCount": 20,
+      "bodyDisplayedLineRanges": [
+        [
+          663,
+          708
+        ],
+        [
+          4066,
+          4086
+        ]
+      ],
+      "bodyDisplayedLineCount": 67,
+      "additionalNavigationSnippetLines": [
+        146,
+        147,
+        148,
+        151
+      ],
+      "displayedLineRanges": [
+        [
+          146,
+          148
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          663,
+          708
+        ],
+        [
+          4066,
+          4086
+        ]
+      ],
+      "displayedLineCount": 71,
+      "initialSemanticReadSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "initialPinUTC": "2026-10-17T16:24:03.966224+00:00",
+      "pinTiming": "before76 first current body/line-navigation display",
+      "endingSame": true,
+      "scope": "Actual composition producer use and helper data consumers, selected preset name/text/catalog wiring only. Availability/permission/lifetime/tool execution and settings authority stop at display boundary.",
+      "prepPinRow": {
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210666,
+        "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+        "lineCount": 5082,
+        "pinUTC": "2026-10-17T16:24:03.966224+00:00",
+        "timing": "before76 first current body/line-navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "bytes": 8530,
+      "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "lineCount": 260,
+      "kind": "test-declaration",
+      "coverage": "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim",
+      "selectedLineRanges": [
+        [
+          135,
+          156
+        ]
+      ],
+      "semanticLineCount": 22,
+      "bodyDisplayedLineRanges": [
+        [
+          135,
+          156
+        ]
+      ],
+      "bodyDisplayedLineCount": 22,
+      "additionalNavigationSnippetLines": [
+        7,
+        12,
+        13,
+        17,
+        29,
+        33,
+        39,
+        50,
+        56,
+        62,
+        68,
+        79,
+        82,
+        90,
+        93,
+        94,
+        103,
+        106,
+        110,
+        119,
+        127,
+        130,
+        158,
+        164,
+        171,
+        175,
+        176,
+        183,
+        184,
+        214,
+        216,
+        218,
+        222,
+        224,
+        228
+      ],
+      "displayedLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          56,
+          56
+        ],
+        [
+          62,
+          62
+        ],
+        [
+          68,
+          68
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          90,
+          90
+        ],
+        [
+          93,
+          94
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          110,
+          110
+        ],
+        [
+          119,
+          119
+        ],
+        [
+          127,
+          127
+        ],
+        [
+          130,
+          130
+        ],
+        [
+          135,
+          156
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          164,
+          164
+        ],
+        [
+          171,
+          171
+        ],
+        [
+          175,
+          176
+        ],
+        [
+          183,
+          184
+        ],
+        [
+          214,
+          214
+        ],
+        [
+          216,
+          216
+        ],
+        [
+          218,
+          218
+        ],
+        [
+          222,
+          222
+        ],
+        [
+          224,
+          224
+        ],
+        [
+          228,
+          228
+        ]
+      ],
+      "displayedLineCount": 57,
+      "initialSemanticReadSha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "initialPinUTC": "2026-10-17T16:24:03.966579+00:00",
+      "pinTiming": "before76 first current body/line-navigation display",
+      "endingSame": true,
+      "scope": "Existing default-preset declarations only, not executed; neighboring test matching lines remain navigation, not a module/identity/activation or permission experiment.",
+      "prepPinRow": {
+        "path": "packages/core/src/composition/compiler.test.ts",
+        "bytes": 8530,
+        "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+        "lineCount": 260,
+        "pinUTC": "2026-10-17T16:24:03.966579+00:00",
+        "timing": "before76 first current body/line-navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "bytes": 10423,
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "lineCount": 333,
+      "kind": "navigation-only",
+      "coverage": "navigation-only; no semantic body",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        298
+      ],
+      "displayedLineRanges": [
+        [
+          298,
+          298
+        ]
+      ],
+      "displayedLineCount": 1,
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:24:03.965236+00:00",
+      "pinTiming": "before76 first current body/line-navigation display",
+      "endingSame": true,
+      "scope": "One existing ordinary consumer documentation locator; no current source body or preset manager behavior review.",
+      "prepPinRow": {
+        "path": "packages/core/src/preset/index.ts",
+        "bytes": 10423,
+        "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+        "lineCount": 333,
+        "pinUTC": "2026-10-17T16:24:03.965236+00:00",
+        "timing": "before76 first current body/line-navigation display"
+      }
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "kind": "instruction-carried-hash",
+      "coverage": "hash-only; no current source semantic reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:20:43.000573+00:00",
+      "pinTiming": "same current hash of carried instructions; no new semantic read",
+      "endingSame": true,
+      "scope": "Carried instruction hash",
+      "prepPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lineCount": 217,
+        "pinUTC": "2026-10-17T16:20:43.000573+00:00",
+        "timing": "same current hash of carried instructions; no new semantic read"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "kind": "instruction-carried-hash",
+      "coverage": "hash-only; no current source semantic reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:20:43.002663+00:00",
+      "pinTiming": "same current hash of carried instructions; no new semantic read",
+      "endingSame": true,
+      "scope": "Carried instruction hash",
+      "prepPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lineCount": 5,
+        "pinUTC": "2026-10-17T16:20:43.002663+00:00",
+        "timing": "same current hash of carried instructions; no new semantic read"
+      }
+    },
+    {
+      "path": "packages/core/src/colorizer.ts",
+      "bytes": 1045,
+      "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "lineCount": 36,
+      "kind": "unused-fallback-hash",
+      "coverage": "hash-only; no current source semantic reading",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSemanticReadSha256": null,
+      "initialPinUTC": "2026-10-17T16:20:43.004460+00:00",
+      "pinTiming": "before76 source body or line navigation",
+      "endingSame": true,
+      "scope": "Fallback not enabled; ANSI/sliceAnsi old failures not reopened.",
+      "prepPinRow": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lineCount": 36,
+        "pinUTC": "2026-10-17T16:20:43.004460+00:00",
+        "timing": "before76 source body or line navigation"
+      }
+    }
+  ],
+  "scopeCounts": {
+    "semanticProductLines": 155,
+    "testDeclarationLines": 22,
+    "semanticTotalLines": 177,
+    "displayedUniqueSourceLines": 373,
+    "selectedRows": 5,
+    "navigationOnlyRows": 1,
+    "hashOnlyRows": 3,
+    "newFullRows": 0,
+    "firstFullCoverageClaims": 0
+  },
+  "rangeConvention": "Inclusive one-based selected ranges; canonical displayedLineRanges is body plus extra rg navigation union, checked within captured line bounds. Repeat display not new semantic coverage.",
+  "historicalResolverScope": "Unresolved possible prior-to-EOF read: R9 readScope1–115 with frozenLines97 and sameSHA; top-level selected scope. Retained as inconsistent original metadata, no unread/no-full or first-full claim.",
+  "runs": {
+    "product": 0,
+    "helper": 0,
+    "fixture": 0,
+    "test": 0,
+    "react": 0,
+    "terminal": 0,
+    "native": 0,
+    "model": 0,
+    "network": 0,
+    "git": 0
+  }
+}

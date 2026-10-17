@@ -1,0 +1,70 @@
+packages/core/src/cost-ledger/types.ts:3:export type UsagePurpose =
+packages/core/src/cost-ledger/types.ts:5:  | "aux_summary"
+packages/core/src/cost-ledger/types.ts:6:  | "tool_summary"
+packages/core/src/cost-ledger/types.ts:14:export interface UsageIdentity {
+packages/core/src/cost-ledger/types.ts:20:export interface UsageReceipt extends UsageIdentity {
+packages/core/src/cost-ledger/types.ts:36:  transmission?: "not-sent";
+packages/core/src/cost-ledger/types.ts:49:export interface UsageTotals {
+packages/core/src/cost-ledger/types.ts:50:  notSentRequests?: number;
+packages/core/src/cost-ledger/types.ts:58:  unknownCostRequests: number;
+packages/core/src/cost-ledger/types.ts:62:export interface UsageSummary extends UsageTotals {
+packages/core/src/cost-ledger/types.ts:77:export interface UsageQuery {
+packages/core/src/cost-ledger/ledger.test.ts:66:  expect(first.summary().requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:67:  expect(second.summary().requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:68:  expect(first.summary({ scope: "session", sessionId: "same" }).requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:69:  expect(second.summary({ scope: "session", sessionId: "same" }).requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:70:  expect(first.summary({ scope: "store" }).requests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:72:  expect(restarted.summary({ scope: "session", sessionId: "same" }).requests).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:74:  expect(restarted.summary({ scope: "session", sessionId: "same" }).requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:78:  expect(foreign.summary({ scope: "store" }).requests).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:86:  expect(ledger.summary().requests).toBe(3);
+packages/core/src/cost-ledger/ledger.test.ts:87:  expect(ledger.summary({ scope: "session", sessionId: "parent" }).requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:89:    ledger.summary({ scope: "session", sessionId: "parent", includeChildren: true }).requests,
+packages/core/src/cost-ledger/ledger.test.ts:91:  expect(ledger.summary({ scope: "session", sessionId: "child" }).requests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:102:  const summary = ledger.summary();
+packages/core/src/cost-ledger/ledger.test.ts:103:  expect(summary.unknownCostRequests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:104:  expect(summary.unknownUsageRequests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:105:  expect(summary.knownEstimatedCostUsd).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:109:  expect(restarted.summary({ scope: "store" }).partial).toBe(true);
+packages/core/src/cost-ledger/ledger.test.ts:110:  expect(restarted.summary({ scope: "store" }).unknownUsageRequests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:111:  expect(restarted.summary({ scope: "store", limit: 1 }).nextCursor).toBeDefined();
+packages/core/src/cost-ledger/ledger.test.ts:121:  expect(ledger.summary().requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:125:  expect(restarted.summary({ scope: "session", sessionId: "source" }).requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:164:  expect(ledger.summary().requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:165:  expect(ledger.summary().partial).toBe(true);
+packages/core/src/cost-ledger/ledger.test.ts:166:  expect(ledger.summary().persistenceErrors).toBeGreaterThan(0);
+packages/core/src/cost-ledger/ledger.test.ts:189:  expect(ledger.summary().requests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:190:  expect(ledger.summary().unknownUsageRequests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:210:  expect(ledger.summary().requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:211:  expect(ledger.summary().unknownUsageRequests).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:212:  expect(ledger.summary().promptTokens).toBe(100);
+packages/core/src/cost-ledger/ledger.test.ts:252:  expect(ledger.summary().requests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:253:  expect(ledger.summary().promptTokens).toBe(200);
+packages/core/src/cost-ledger/ledger.test.ts:254:  expect(ledger.summary().unknownUsageRequests).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:268:  expect(ledger.summary().requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:269:  expect(ledger.summary().unknownUsageRequests).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:279:  expect(ledger.summary().requests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:280:  expect(ledger.summary().bySession).toHaveLength(2);
+packages/core/src/cost-ledger/ledger.test.ts:281:  expect(ledger.summary({ scope: "session", sessionId: "same" }, "alice").requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:282:  expect(ledger.summary({ scope: "session", sessionId: "same" }, "bob").requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:318:    expect(ledger.summary().requests).toBe(2);
+packages/core/src/cost-ledger/ledger.test.ts:319:    expect(ledger.summary().unknownCostRequests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:320:    expect(ledger.summary().unknownUsageRequests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:321:    expect(ledger.summary().knownEstimatedCostUsd).toBe(0);
+packages/core/src/cost-ledger/ledger.test.ts:370:    expect(new UsageLedger({ storageDir }).summary({ scope: "store" }).requests).toBe(1);
+packages/core/src/cost-ledger/ledger.test.ts:383:  expect(restarted.summary({ scope: "session", sessionId: "legacy" }).partial).toBe(true);
+packages/core/src/cost-ledger/ledger.test.ts:398:    ledger.summary({ scope: "session", sessionId: "same" }, "/private/session-scope-B").requests,
+packages/core/src/cost-ledger/ledger.test.ts:408:    restarted.summary({ scope: "session", sessionId: "same" }, "/private/session-scope-A").requests,
+packages/core/src/cost-ledger/ledger.test.ts:431:    expect(() => ledger.summary(invalid as never)).toThrow("Invalid usage query");
+packages/core/src/cost-ledger/ledger.test.ts:433:  expect(() => ledger.summary({ scope: "session" })).toThrow("Session is required");
+packages/core/src/cost-ledger/ledger.test.ts:434:  expect(ledger.summary().persistenceErrors).toBe(0);
+packages/core/src/cost-ledger/store.ts:16:import { summarizeReceipts } from "./summary.js";
+packages/core/src/cost-ledger/store.ts:29:  "aux_summary",
+packages/core/src/cost-ledger/store.ts:30:  "tool_summary",
+packages/core/src/cost-ledger/store.ts:103:    (r.transmission === undefined || r.transmission === "not-sent") &&
+packages/core/src/cost-ledger/store.ts:110:    (r.transmission !== "not-sent" ||
+packages/core/src/cost-ledger/store.ts:249:    if (receipt.transmission === "not-sent") return;
+packages/core/src/cost-ledger/store.ts:266:    receipt.transmission = "not-sent";
+packages/core/src/cost-ledger/store.ts:326:      summary: this.summary({ scope: "session", sessionId }, sessionScope),
+packages/core/src/cost-ledger/store.ts:352:  summary(query: UsageQuery = {}, sessionScope = "default"): UsageSummary {
+packages/core/src/cost-ledger/store.ts:431:    return summarizeReceipts(receipts, {

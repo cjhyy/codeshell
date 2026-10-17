@@ -1,0 +1,132 @@
+{
+  "rows": [
+    {
+      "index": 35,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "pointer": "/files/10/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "lineCount": 140
+      }
+    },
+    {
+      "index": 48,
+      "candidate": "mobile-history",
+      "historyPath": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "pointer": "/files/1/path",
+      "row": {
+        "path": "packages/server/src/mobile-remote/mobile-history.ts",
+        "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+        "frozenSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            41
+          ]
+        ],
+        "lineCount": 41
+      }
+    },
+    {
+      "index": 49,
+      "candidate": "mobile-history",
+      "historyPath": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/12/path",
+      "row": {
+        "path": "packages/server/src/mobile-remote/mobile-history.ts",
+        "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+        "scope": "Full initial static by Root; Room lane owns ordinary reader projection controls.",
+        "lineCount": 41
+      }
+    },
+    {
+      "index": 440,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/1/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only selection/exclusion metadata; zero body read",
+        "selectedLineRanges": [],
+        "lineCount": 140
+      }
+    },
+    {
+      "index": 442,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round40/source-manifest.json",
+      "pointer": "/hashOnlyChecks/11/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only selection/exclusion metadata; zero body read"
+      }
+    },
+    {
+      "index": 609,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/1/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only selection/exclusion",
+        "semanticRead": false,
+        "selectedLineRanges": []
+      }
+    },
+    {
+      "index": 612,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "pointer": "/hashOnlyChecks/1/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only selection/exclusion"
+      }
+    },
+    {
+      "index": 728,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "pointer": "/hashOnlyFiles/24/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only; no product body semantic reading"
+      }
+    },
+    {
+      "index": 730,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "pointer": "/hashOnlyChecks/24/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "coverage": "hash-only; no product body semantic reading"
+      }
+    },
+    {
+      "index": 881,
+      "candidate": "format",
+      "historyPath": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/5/path",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "review": "whole-file"
+      }
+    }
+  ],
+  "actualCompactRowsRead": 10,
+  "canonicalOriginalObjectsRead": 4,
+  "savedLocatorContextWindowsRead": 0,
+  "full900RowSemanticReadingClaim": false
+}

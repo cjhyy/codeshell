@@ -1,0 +1,27 @@
+{
+  "capturedUTC": "2026-10-17T16:21:45.940112+00:00",
+  "canonicalMetadata": "docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+  "topLevelWithoutFiles": {
+    "frozenCommit": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+    "fileCount": 26,
+    "allMatchFrozen": true
+  },
+  "reviewModeVariants": [
+    "caller-contract-or-selected-excerpts",
+    "complete",
+    "complete in-scope local-discovery/cache/metadata branches; installed plugin/panel branch wiring read only"
+  ],
+  "originalReport": {
+    "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+    "bytes": 9203,
+    "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+    "actualReadLineRanges": [
+      [
+        1,
+        53
+      ]
+    ],
+    "note": "Opening1–45 then45–53; no product source text opened. Runtime failed fixture/SKIP preserved, not borrowed as new validation."
+  },
+  "aliasInterpretation": "For only these two original rows reviewMode complete contrasted with explicit caller-contract-or-selected-excerpts and complete in-scope branch variant. No contrary selected/exclusion qualifier attached to rows4/5; report contract anchors are citations, not a declared only-ranges limit. Do not auto-adapt unrelated documents."
+}

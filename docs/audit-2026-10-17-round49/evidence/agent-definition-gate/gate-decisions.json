@@ -1,0 +1,35 @@
+{
+  "createdUTC": "2026-10-17T16:22:34.842870+00:00",
+  "canonicalReviewModeRows": [
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "jsonPointer": "/files/4",
+      "reviewMode": "complete",
+      "uniqueDirectPath": true,
+      "uniqueCurrentSourceSHA": true,
+      "sameBytesAndLines": true,
+      "contradictoryLimitedRowQualifier": false,
+      "sourceBodyBeforeGate": false,
+      "decision": "sameSHA old complete primary module, stop before body"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "jsonPointer": "/files/5",
+      "reviewMode": "complete",
+      "uniqueDirectPath": true,
+      "uniqueCurrentSourceSHA": true,
+      "sameBytesAndLines": true,
+      "contradictoryLimitedRowQualifier": false,
+      "sourceBodyBeforeGate": false,
+      "decision": "sameSHA old complete primary module, stop before body"
+    }
+  ],
+  "reportScopeContext": "R6 skills-agents.md11 covers ordinary definitions/registry/caller contracts;53 explicitly distinguishes complete primary modules and selected caller/contract excerpts.49 excluded runtime/security directions do not negate static complete labels onrows4/5.",
+  "readerAliasLimitation": "Old scope whitelist and derived indexes omitted reviewMode;0initial scoped rows is not unread evidence. No universal classifier/index changed.",
+  "oldCandidateDirection": "R6 S-C2 remains failed-fixture SKIP; not executed, repaired or re-reported.",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "oldFullGateExclusions": 2,
+  "newProductSemanticFiles": 0
+}

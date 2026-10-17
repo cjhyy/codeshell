@@ -1,0 +1,33 @@
+{
+  "atUTC": "2026-10-17T16:18:29.688992+00:00",
+  "decisions": [
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "decision": "Select for current ordinary summary review; oldR9 selected/excerpt is not explicitfull. No first-ever/unread claim.",
+      "canonical": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json /files/14"
+    },
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "decision": "Unchosen hash-only; Root body0; peer75 may own separately after own gate.",
+      "machinePathHits": 14,
+      "machineShaHits": 5,
+      "notAllContextsRead": true
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "decision": "Exclude before body, oldsameSHA full",
+      "canonical": [
+        "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json /sources/5 review=full",
+        "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json /files/10 scope=Full static source only; compaction/retention/image bytes not imported or exercised."
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/cron-list.definition.ts",
+      "decision": "Unchosen hash-only; body0; inventory absence of explicitfull is not unread proof."
+    }
+  ],
+  "metadataRowsActualCompactRead": 58,
+  "machineBroadContractHits": 98,
+  "machineBroadContractContextCap": 60,
+  "notAllBroadContextsRead": true
+}

@@ -1,0 +1,41 @@
+{
+  "capturedUTC": "2026-10-17T16:19:59.951760+00:00",
+  "links": [
+    {
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "coverage-gate-objects.json",
+      "exists": true
+    },
+    {
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 7,
+  "oldFullExcludedPaths": 2,
+  "newSemantic": 0,
+  "sourceBodyReads": 0,
+  "metadataErrors": [],
+  "consoleTruncations": [],
+  "aliasRequired": false,
+  "productRuns": 0
+}

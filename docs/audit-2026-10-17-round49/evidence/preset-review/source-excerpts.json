@@ -1,0 +1,77 @@
+{
+  "snapshots": [
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "range": [
+        1,
+        97
+      ],
+      "capturedUTC": "2026-10-17T16:23:32.734458+00:00",
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "text": "/**\n * Runtime helpers over a ResolvedComposition. Preset selection and\n * validation happen HERE, at use time — not at compile time — because the\n * preset can change per session (config slice) and per settings hot reload.\n */\nimport type { AgentPreset } from \"../preset/index.js\";\nimport type { BuiltinTool } from \"../tool-system/builtin/index.js\";\nimport type { ExtensionTool } from \"../tool-system/capability-module.js\";\nimport type { ResolvedComposition } from \"./types.js\";\nimport { ConfigError } from \"../exceptions.js\";\nimport { LifetimeScope, type DisposableLike, type Dispose } from \"./lifetime.js\";\n\n/** Resolve a preset by name (or the composition default), failing loud. */\nexport function resolvePresetFromComposition(\n  composition: ResolvedComposition,\n  name?: string,\n): AgentPreset {\n  const resolvedName = name || composition.engine.defaultPreset;\n  const found = composition.engine.presets.find((p) => p.key === resolvedName);\n  if (found) return found.value;\n  const allowed = composition.engine.presets.map((p) => p.key).join(\", \");\n  throw new Error(`Unknown agent preset \"${resolvedName}\". Available presets: ${allowed}`);\n}\n\n/** All preset-tags tools — the composed catalog in effective order. */\nexport function compositionToolCatalog(composition: ResolvedComposition): BuiltinTool[] {\n  return composition.engine.tools.flatMap((t) => (t.kind === \"preset-tags\" ? [t.tool] : []));\n}\n\n/**\n * Preset-tags tools force-joined to the ACTIVE preset regardless of its name.\n * Rule: tools owned by modules that contribute no presets (pet-style catalog\n * tools) — presets snapshot their tool lists from catalogs known at module\n * authoring time, which can never include such packages. Modules that DO\n * contribute presets (core, coding) reference their tools via preset tags\n * already. Visibility stays gated by each tool's exposure.availability.\n */\nexport function presetInjectedTools(composition: ResolvedComposition): BuiltinTool[] {\n  const presetOwners = new Set(composition.engine.presets.map((p) => p.moduleId));\n  return composition.engine.tools.flatMap((t) =>\n    t.kind === \"preset-tags\" && !presetOwners.has(t.moduleId) ? [t.tool] : [],\n  );\n}\n\n/** Module-contributed named prompt sections as a plain record. */\nexport function compositionPromptSections(\n  composition: ResolvedComposition,\n): Record<string, string> {\n  return Object.fromEntries(composition.engine.promptSections.map((s) => [s.key, s.value]));\n}\n\n/**\n * Register always-exposure tools on the engine-local registry fork.\n * Cross-module uniqueness is compiler-enforced; this guards collisions with\n * runtime-registered tools.\n */\nexport function registerAlwaysTools(\n  composition: ResolvedComposition,\n  registry: {\n    hasTool(name: string): boolean;\n    registerTool(\n      definition: ExtensionTool[\"definition\"],\n      execute: ExtensionTool[\"execute\"],\n    ): DisposableLike;\n  },\n): Dispose {\n  const owner = new LifetimeScope(\"engine\", \"always-tools\");\n  try {\n    for (const contribution of composition.engine.tools) {\n      if (contribution.kind !== \"always\") continue;\n      const name = contribution.tool.definition.name;\n      if (registry.hasTool(name)) {\n        throw new ConfigError(`Capability tool conflicts with registered tool: ${name}`, {\n          duplicateCapabilityTool: name,\n          capabilityId: contribution.moduleId,\n        });\n      }\n      owner.own(registry.registerTool(contribution.tool.definition, contribution.tool.execute));\n    }\n  } catch (error) {\n    void owner.dispose().catch(() => {});\n    throw error;\n  }\n  return () => owner.dispose();\n}\n\n/** First non-null module instruction boundary, in module order. */\nexport function resolveCompositionInstructionBoundary(\n  composition: ResolvedComposition,\n  cwd: string,\n): string | null {\n  for (const boundary of composition.engine.instructionBoundaries) {\n    const found = boundary.value(cwd);\n    if (found) return found;\n  }\n  return null;\n}"
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "range": [
+        62,
+        68
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.453939+00:00",
+      "text": "export interface AgentEngineContributions {\n  readonly tools?: readonly AgentModuleToolContribution[];\n  readonly presets?: readonly AgentPreset[];\n  /** Preset used when the host does not choose one. At most one module may declare it. */\n  readonly defaultPreset?: string;\n  readonly promptSections?: Readonly<Record<string, string>>;\n  readonly dynamicContextProviders?: readonly CapabilityDynamicContextProvider[];"
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "range": [
+        105,
+        135
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.454991+00:00",
+      "text": "}\n\nexport interface ResolvedContribution<T> {\n  readonly key: string;\n  readonly moduleId: string;\n  readonly value: T;\n}\n\nexport type ResolvedToolContribution =\n  | { readonly kind: \"preset-tags\"; readonly moduleId: string; readonly tool: BuiltinTool }\n  | { readonly kind: \"always\"; readonly moduleId: string; readonly tool: ExtensionTool };\n\nexport interface ResolvedEngineHook {\n  readonly moduleId: string;\n  readonly event: HookEventName;\n  readonly handler: CapabilityEngineHookContribution[\"handler\"];\n  readonly priority: number;\n  readonly name: string;\n}\n\nexport interface ResolvedEngineComposition {\n  /**\n   * Effective registry order: every preset-tags tool (module order) first,\n   * then every always tool (module order) — mirrors the current engine's\n   * composeToolCatalog() + registerExtensionModules() sequence.\n   */\n  readonly tools: readonly ResolvedToolContribution[];\n  readonly presets: readonly ResolvedContribution<AgentPreset>[];\n  readonly defaultPreset: string;\n  readonly promptSections: readonly ResolvedContribution<string>[];\n  readonly dynamicContextProviders: readonly ResolvedContribution<CapabilityDynamicContextProvider>[];"
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "range": [
+        175,
+        245
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.455817+00:00",
+      "text": "  // mirrors resolveAgentPreset(), which resolves capability-contributed\n  // presets before builtins (e.g. coding's extended \"general\"). The shadow is\n  // surfaced as a diagnostic; host-vs-host duplicates still fail loud.\n  const presets: Array<ResolvedContribution<AgentPreset>> = [];\n  const presetIndex = new Map<string, number>();\n  const coreModuleId = registered[0]?.resolved.id ?? \"core\";\n  for (const { module } of registered) {\n    for (const preset of module.engine?.presets ?? []) {\n      const existing = presetIndex.get(preset.name);\n      if (existing === undefined) {\n        presetIndex.set(preset.name, presets.length);\n        presets.push({ key: preset.name, moduleId: module.id, value: preset });\n        continue;\n      }\n      const owner = presets[existing];\n      if (!owner || owner.moduleId !== coreModuleId) {\n        throw duplicate(\"preset\", preset.name, owner?.moduleId ?? coreModuleId, module.id);\n      }\n      presets[existing] = { key: preset.name, moduleId: module.id, value: preset };\n      diagnostics.push({\n        code: \"core_preset_shadowed\",\n        moduleId: module.id,\n        message: `Module \"${module.id}\" shadows core preset \"${preset.name}\"`,\n      });\n    }\n  }\n\n  // Default preset: at most one distinct declaration wins; none → core default.\n  let defaultPreset: { name: string; moduleId: string } | undefined;\n  for (const { module } of registered) {\n    const declared = module.engine?.defaultPreset;\n    if (!declared) continue;\n    if (defaultPreset && defaultPreset.name !== declared) {\n      throw new CompositionError(\n        `Conflicting default presets: \"${defaultPreset.name}\" (${defaultPreset.moduleId}) vs \"${declared}\" (${module.id})`,\n        {\n          code: \"conflicting_default_preset\",\n          key: declared,\n          firstModuleId: defaultPreset.moduleId,\n          secondModuleId: module.id,\n        },\n      );\n    }\n    defaultPreset ??= { name: declared, moduleId: module.id };\n  }\n  const defaultPresetName = defaultPreset?.name ?? DEFAULT_AGENT_PRESET;\n  if (!presets.some((p) => p.key === defaultPresetName)) {\n    throw new CompositionError(`Default preset \"${defaultPresetName}\" is not contributed`, {\n      code: \"unknown_default_preset\",\n      key: defaultPresetName,\n      firstModuleId: defaultPreset?.moduleId ?? \"core\",\n    });\n  }\n\n  // Preset tool references must resolve to preset-tags tools.\n  const presetTagToolNames = new Set(presetTagTools.map((t) => t.tool.definition.name));\n  for (const { key, moduleId, value } of presets) {\n    for (const toolName of value.builtinTools) {\n      if (!presetTagToolNames.has(toolName)) {\n        throw new CompositionError(`Preset \"${key}\" references unknown tool \"${toolName}\"`, {\n          code: \"unknown_preset_tool\",\n          key: toolName,\n          firstModuleId: moduleId,\n        });\n      }\n    }\n  }\n\n  const promptSections = collectKeyed(registered, \"prompt section\", (m) =>\n    Object.entries(m.engine?.promptSections ?? {}),\n  );"
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "range": [
+        273,
+        280
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.455883+00:00",
+      "text": "\n  return {\n    tools,\n    presets,\n    defaultPreset: defaultPresetName,\n    promptSections,\n    dynamicContextProviders: collectMany(registered, (m) => m.engine?.dynamicContextProviders),\n    instructionBoundaries: collectSingle(registered, (m) => m.engine?.instructionBoundary),"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "range": [
+        663,
+        708
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.458107+00:00",
+      "text": "      // Single composition fact source for every module contribution.\n      this.composition =\n        config.composition ?? compileComposition({ modules: config.modules ?? [] });\n      this.toolCatalog = compositionToolCatalog(this.composition);\n      this.toolGuards = new Map(\n        this.toolCatalog.flatMap((tool) =>\n          tool.exposure.availability\n            ? ([[tool.definition.name, tool.exposure.availability]] as const)\n            : [],\n        ),\n      );\n      this.toolRewriters = new Map(\n        this.toolCatalog.flatMap((tool) =>\n          tool.exposure.rewriteDefinition\n            ? ([[tool.definition.name, tool.exposure.rewriteDefinition]] as const)\n            : [],\n        ),\n      );\n      // Behavior profile registry: core defaults first, then host config, then\n      // module contributions — later registrations override earlier ones by id.\n      const moduleProfiles = this.composition.engine.behaviorProfiles;\n      this.behaviorProfiles = new Map(\n        [\n          ...moduleProfiles.filter((p) => p.moduleId === \"core\").map((p) => p.value),\n          ...(config.behaviorProfiles ?? []),\n          ...moduleProfiles.filter((p) => p.moduleId !== \"core\").map((p) => p.value),\n        ].map((profile) => [profile.id, profile] as const),\n      );\n      this.capabilityPromptSections = compositionPromptSections(this.composition);\n      this.capabilityDynamicContextProviders = this.composition.engine.dynamicContextProviders.map(\n        (c) => c.value,\n      );\n      this.preset = resolvePresetFromComposition(this.composition, config.preset);\n      // Catalog tools owned by modules that contribute no presets join the\n      // active preset regardless of its name: presets snapshot their tool lists\n      // from catalogs known at module authoring time, which can never include\n      // such packages. Visibility stays gated by exposure.availability.\n      const injectedTools = presetInjectedTools(this.composition);\n      if (injectedTools.length > 0) {\n        this.preset = {\n          ...this.preset,\n          builtinTools: [\n            ...this.preset.builtinTools,\n            ...injectedTools.map((tool) => tool.definition.name),\n          ],\n          defaultPermissionRules: ["
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "range": [
+        4066,
+        4086
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.458157+00:00",
+      "text": "    this.config = { ...this.config, ...patch };\n    // #2: re-resolve the prompt-affecting preset so the next-turn PromptComposer\n    // (rebuilt per turn from this.preset) reflects the new preset's system\n    // prompt / behavior. Only when the preset actually changed.\n    if (patch.preset !== undefined && patch.preset !== prevPresetName) {\n      const nextPreset = resolvePresetFromComposition(this.composition, this.config.preset);\n      // The builtin tool SET is ctor-frozen and may be shared via runtime — we\n      // do NOT rebuild it here. If the new preset implies a different builtin\n      // tool set, that part of the change only lands on session restart.\n      const adjusters = this.composition.engine.toolSelectionAdjusters.map((a) => a.value);\n      const prevTools = resolveToolNamesForPreset({\n        preset: resolvePresetFromComposition(this.composition, prevPresetName),\n        host: this.config.builtinToolHost,\n        adjusters,\n      })\n        .slice()\n        .sort()\n        .join(\",\");\n      const nextTools = resolveToolNamesForPreset({\n        preset: nextPreset,\n        host: this.config.builtinToolHost,"
+    },
+    {
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "range": [
+        135,
+        156
+      ],
+      "capturedUTC": "2026-10-17T16:24:40.459031+00:00",
+      "text": "  test(\"conflicting default presets fail; single wins; none falls back to harness-min\", () => {\n    expect(\n      compileComposition({\n        modules: [{ id: \"alpha\", engine: { presets: [preset(\"p1\")], defaultPreset: \"p1\" } }],\n      }).engine.defaultPreset,\n    ).toBe(\"p1\");\n    expect(compileComposition({}).engine.defaultPreset).toBe(\"harness-min\");\n    expect(() =>\n      compileComposition({\n        modules: [\n          { id: \"alpha\", engine: { presets: [preset(\"p1\")], defaultPreset: \"p1\" } },\n          { id: \"beta\", engine: { presets: [preset(\"p2\")], defaultPreset: \"p2\" } },\n        ],\n      }),\n    ).toThrow(CompositionError);\n  });\n\n  test(\"default preset must exist among resolved presets\", () => {\n    expect(() =>\n      compileComposition({ modules: [{ id: \"alpha\", engine: { defaultPreset: \"ghost\" } }] }),\n    ).toThrow(/ghost/);\n  });"
+    }
+  ]
+}

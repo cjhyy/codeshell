@@ -1,0 +1,65 @@
+{
+  "checkedUTC": "2026-10-17T16:35:43.587218+00:00",
+  "repositoryUsedOnly": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "originalHistoryMembers": 4492,
+  "currentFilteredMembers": 4492,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "sourceRows": 6,
+  "allSourceUnchanged": true,
+  "sourceChecks": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "bytes": 2110,
+      "sha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/workbench-types.ts",
+      "bytes": 2491,
+      "sha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/useHubController.tsx",
+      "bytes": 32206,
+      "sha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "unchanged": true
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "newSemanticLines": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "newSemanticLines": 0
+    }
+  ],
+  "newSemanticReadsDuringEnding": 0,
+  "primaryTreeNotRead": true
+}

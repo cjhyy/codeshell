@@ -1,0 +1,15 @@
+{
+  "rootReportedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "contextVerification": "parent only; no Git",
+  "files": [
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "bytes": 9402,
+      "lines": 242,
+      "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:19:32.569602+00:00",
+      "semanticRead": false
+    }
+  ],
+  "instructions": "CODESHELL217+AGENTS5 read in immediately preceding prep72 at16:15:50UTC, SHA56d9ffdd…/29806470…; no source change reported between tasks. Not counted as another full instruction read."
+}

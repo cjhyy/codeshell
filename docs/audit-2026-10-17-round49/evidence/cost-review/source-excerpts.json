@@ -1,0 +1,922 @@
+{
+  "capturedUTC": "2026-10-17T16:33:36.380334+00:00",
+  "captureTiming": "After recorded displays, first/finish hashes equal, no retroactive before-read capture claim",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "selected": [
+        {
+          "range": [
+            7,
+            7
+          ],
+          "text": "import { Command } from \"commander\";"
+        },
+        {
+          "range": [
+            10,
+            10
+          ],
+          "text": "import { replCommand } from \"./commands/repl.js\";"
+        },
+        {
+          "range": [
+            13,
+            13
+          ],
+          "text": "import { costTracker, installCostTracking } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "range": [
+            54,
+            64
+          ],
+          "text": "function addCommonOptions(cmd: Command): Command {\n  return (\n    cmd\n      .option(\"-m, --model <model>\", \"Model name (e.g. anthropic/claude-opus-4-6)\")\n      // No default here: a hard \"openai\" default would make opts.provider always\n      // truthy, so the `options.provider ?? settings.model.provider` fallback in\n      // repl.ts/run.ts could never reach the user's configured provider. The\n      // \"openai\" last-resort default lives at the tail of those ?? chains.\n      .option(\"-p, --provider <provider>\", \"LLM provider (anthropic, openai)\")\n      .option(\"--preset <preset>\", \"Agent preset (general, terminal-coding)\")\n      .option(\"--base-url <url>\", \"LLM API base URL (e.g. https://openrouter.ai/api/v1)\")"
+        },
+        {
+          "range": [
+            70,
+            74
+          ],
+          "text": "      .option(\"-o, --output <format>\", \"Output format (text, json, jsonl, stream-json)\", \"text\")\n      .option(\"--max-turns <n>\", \"Maximum turns\", positiveIntOption(\"--max-turns\"), 100)\n      .option(\"--effort <level>\", \"Reasoning effort (low, medium, high, max)\", \"high\")\n  );\n}"
+        },
+        {
+          "range": [
+            76,
+            83
+          ],
+          "text": "/** Options shared by both ways of entering interactive mode:\n * `code-shell repl` and the command-less `code-shell` default. Keeping these\n * in one builder prevents the two entry points from silently drifting apart. */\nfunction addInteractiveOptions(cmd: Command): Command {\n  return cmd\n    .option(\"--resume <sessionId>\", \"Resume a previous session\")\n    .option(\"--prefill <text>\", \"Pre-fill the input box without submitting\");\n}"
+        },
+        {
+          "range": [
+            118,
+            124
+          ],
+          "text": "// ─── repl (default) ──────────────────────────────────────────────\n\naddInteractiveOptions(\n  addCommonOptions(program.command(\"repl\").description(\"Interactive REPL mode (default)\")),\n).action(async (opts) => {\n  await replCommand({ ...resolveOpts(opts), prefill: opts.prefill as string | undefined });\n});"
+        },
+        {
+          "range": [
+            177,
+            188
+          ],
+          "text": "addInteractiveOptions(\n  addCommonOptions(program.argument(\"[task]\", \"Task to execute (or omit for REPL mode)\")),\n)\n  .passThroughOptions()\n  .action(async (task: string | undefined, opts) => {\n    const resolved = resolveOpts(opts);\n    if (task) {\n      await runCommand({ task, ...resolved });\n    } else {\n      await replCommand({ ...resolved, prefill: opts.prefill });\n    }\n  });"
+        },
+        {
+          "range": [
+            192,
+            197
+          ],
+          "text": "function resolveOpts(opts: Record<string, unknown>) {\n  return {\n    model: opts.model as string | undefined,\n    provider: opts.provider as string | undefined,\n    preset: opts.preset as AgentPresetName | undefined,\n    baseUrl: opts.baseUrl as string | undefined,"
+        },
+        {
+          "range": [
+            200,
+            207
+          ],
+          "text": "    output: opts.output as \"text\" | \"json\" | \"jsonl\" | \"stream-json\" | undefined,\n    // commander's argParser already converted --max-turns to a number.\n    maxTurns: opts.maxTurns as number | undefined,\n    resume: opts.resume as string | undefined,\n    effort: opts.effort as \"low\" | \"medium\" | \"high\" | \"max\" | undefined,\n    outputLastMessage: opts.outputLastMessage as string | undefined,\n  };\n}"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            7,
+            17
+          ],
+          "text": "import { Command } from \"commander\";\nimport { positiveIntOption } from \"./parse-int-option.js\";\nimport { runCommand } from \"./commands/run.js\";\nimport { replCommand } from \"./commands/repl.js\";\nimport { resolveTaskFromArgOrStdin } from \"./input/read-stdin.js\";\nimport { setup } from \"../bootstrap/setup.js\";\nimport { costTracker, installCostTracking } from \"@cjhyy/code-shell-core\";\nimport { getCurrentVersion } from \"@cjhyy/code-shell-core/internal\";\nimport { CHALK_COLORIZER } from \"../utils/colorizer.js\";\nimport type { AgentPresetName } from \"@cjhyy/code-shell-core\";\nimport type { SessionStatus } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "range": [
+            32,
+            125
+          ],
+          "text": "      return \"error\";\n    case \"goal_budget_exhausted\":\n      return \"budget\";\n    case \"stop_hook_prevented\":\n    case \"hook_stopped\":\n      return \"hook_stop\";\n    default:\n      return s;\n  }\n}\n\nconst program = new Command();\n\nprogram\n  .name(\"code-shell\")\n  .description(\n    \"Code Shell — general orchestration framework with a terminal coding assistant preset\",\n  )\n  .version(getCurrentVersion());\n\n// ─── Shared options ───────────────────────────────────────────────\n\nfunction addCommonOptions(cmd: Command): Command {\n  return (\n    cmd\n      .option(\"-m, --model <model>\", \"Model name (e.g. anthropic/claude-opus-4-6)\")\n      // No default here: a hard \"openai\" default would make opts.provider always\n      // truthy, so the `options.provider ?? settings.model.provider` fallback in\n      // repl.ts/run.ts could never reach the user's configured provider. The\n      // \"openai\" last-resort default lives at the tail of those ?? chains.\n      .option(\"-p, --provider <provider>\", \"LLM provider (anthropic, openai)\")\n      .option(\"--preset <preset>\", \"Agent preset (general, terminal-coding)\")\n      .option(\"--base-url <url>\", \"LLM API base URL (e.g. https://openrouter.ai/api/v1)\")\n      .option(\"--api-key <key>\", \"API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)\")\n      .option(\n        \"--permission-mode <mode>\",\n        \"Permission mode (default, acceptEdits, bypassPermissions)\",\n      )\n      .option(\"-o, --output <format>\", \"Output format (text, json, jsonl, stream-json)\", \"text\")\n      .option(\"--max-turns <n>\", \"Maximum turns\", positiveIntOption(\"--max-turns\"), 100)\n      .option(\"--effort <level>\", \"Reasoning effort (low, medium, high, max)\", \"high\")\n  );\n}\n\n/** Options shared by both ways of entering interactive mode:\n * `code-shell repl` and the command-less `code-shell` default. Keeping these\n * in one builder prevents the two entry points from silently drifting apart. */\nfunction addInteractiveOptions(cmd: Command): Command {\n  return cmd\n    .option(\"--resume <sessionId>\", \"Resume a previous session\")\n    .option(\"--prefill <text>\", \"Pre-fill the input box without submitting\");\n}\n\n// ─── run ──────────────────────────────────────────────────────────\n\naddCommonOptions(\n  program\n    .command(\"run\")\n    .description(\n      \"Execute a single task (headless mode). Reads the task from stdin if omitted and piped.\",\n    )\n    .argument(\"[task]\", \"The task to execute (or pipe it via stdin)\"),\n)\n  .option(\"--resume <sessionId>\", \"Resume a previous session\")\n  .option(\"--output-last-message <file>\", \"Write the final assistant message to a file\")\n  .option(\"--no-wait-background-agents\", \"Exit without waiting for in-flight background work\")\n  .option(\n    \"--background-wait-ms <ms>\",\n    \"Max ms to wait for background work to finish (default: 300000)\",\n    positiveIntOption(\"--background-wait-ms\"),\n  )\n  .action(async (task: string | undefined, opts) => {\n    const resolvedTask = await resolveTaskFromArgOrStdin(task);\n    if (!resolvedTask) {\n      console.error(\"Error: no task provided. Pass a <task> argument or pipe a prompt via stdin.\");\n      process.exit(2);\n    }\n    await runCommand({\n      task: resolvedTask,\n      ...resolveOpts(opts),\n      // Commander maps --no-wait-background-agents to waitBackgroundAgents=false.\n      waitBackgroundAgents: opts.waitBackgroundAgents as boolean | undefined,\n      backgroundWaitMs: opts.backgroundWaitMs as number | undefined,\n    });\n  });\n\n// ─── repl (default) ──────────────────────────────────────────────\n\naddInteractiveOptions(\n  addCommonOptions(program.command(\"repl\").description(\"Interactive REPL mode (default)\")),\n).action(async (opts) => {\n  await replCommand({ ...resolveOpts(opts), prefill: opts.prefill as string | undefined });\n});\n"
+        },
+        {
+          "range": [
+            174,
+            212
+          ],
+          "text": "// builders are safe here because registration order + pass-through preserve\n// the subcommand namespace while sharing one source of truth.\n\naddInteractiveOptions(\n  addCommonOptions(program.argument(\"[task]\", \"Task to execute (or omit for REPL mode)\")),\n)\n  .passThroughOptions()\n  .action(async (task: string | undefined, opts) => {\n    const resolved = resolveOpts(opts);\n    if (task) {\n      await runCommand({ task, ...resolved });\n    } else {\n      await replCommand({ ...resolved, prefill: opts.prefill });\n    }\n  });\n\n// ─── Helpers ──────────────────────────────────────────────────────\n\nfunction resolveOpts(opts: Record<string, unknown>) {\n  return {\n    model: opts.model as string | undefined,\n    provider: opts.provider as string | undefined,\n    preset: opts.preset as AgentPresetName | undefined,\n    baseUrl: opts.baseUrl as string | undefined,\n    apiKey: opts.apiKey as string | undefined,\n    permissionMode: opts.permissionMode as string | undefined,\n    output: opts.output as \"text\" | \"json\" | \"jsonl\" | \"stream-json\" | undefined,\n    // commander's argParser already converted --max-turns to a number.\n    maxTurns: opts.maxTurns as number | undefined,\n    resume: opts.resume as string | undefined,\n    effort: opts.effort as \"low\" | \"medium\" | \"high\" | \"max\" | undefined,\n    outputLastMessage: opts.outputLastMessage as string | undefined,\n  };\n}\n\n// ─── Initialization ──────────────────────────────────────────────\n\n// PreAction hook: shared setup before any command executes.\n//"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 132,
+          "text": "  .action(async (opts) => {"
+        },
+        {
+          "line": 133,
+          "text": "    const { SessionManager } = await import(\"@cjhyy/code-shell-core\");"
+        },
+        {
+          "line": 143,
+          "text": "      const date = new Date(s.startedAt).toLocaleString();"
+        },
+        {
+          "line": 151,
+          "text": "import { createRunsCommand } from \"./commands/runs.js\";"
+        },
+        {
+          "line": 156,
+          "text": "import { createPluginCommand } from \"./commands/plugin.js\";"
+        },
+        {
+          "line": 161,
+          "text": "import { createLinkCommand, isLinkStatusCommand } from \"./commands/link.js\";"
+        },
+        {
+          "line": 164,
+          "text": "import {"
+        },
+        {
+          "line": 215,
+          "text": "// headless commands (run) check for a key in their own action and"
+        },
+        {
+          "line": 218,
+          "text": "program.hook(\"preAction\", async (thisCommand, actionCommand) => {"
+        },
+        {
+          "line": 219,
+          "text": "  // This diagnostic only reads connection metadata and CLI login. Shared setup"
+        },
+        {
+          "line": 221,
+          "text": "  if (isLinkStatusCommand(actionCommand) || isSettingsRecoveryCommand(actionCommand)) return;"
+        },
+        {
+          "line": 226,
+          "text": "      \"acceptEdits\") as import(\"@cjhyy/code-shell-core\").PermissionMode,"
+        },
+        {
+          "line": 246,
+          "text": "// Backstop for any promise that rejects outside the awaited parse chain"
+        },
+        {
+          "line": 247,
+          "text": "// (e.g. a fire-and-forget started by a command). Without this, Node prints a"
+        },
+        {
+          "line": 255,
+          "text": "const { installDefaultLinkProviders } = await import(\"@cjhyy/code-shell-server/links\");"
+        },
+        {
+          "line": 258,
+          "text": "// parseAsync (not parse) so commander awaits each async .action() handler and"
+        },
+        {
+          "line": 262,
+          "text": "  await program.parseAsync();"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "selected": [
+        {
+          "range": [
+            3,
+            6
+          ],
+          "text": "/**\n * Interactive REPL mode — uses Ink (React for CLI) for the terminal UI.\n *\n * Wiring: Engine → AgentServer → [in-process transport] → AgentClient → UI"
+        },
+        {
+          "range": [
+            10,
+            17
+          ],
+          "text": "import { Engine } from \"@cjhyy/code-shell-core\";\nimport { mergePluginMcpServers } from \"@cjhyy/code-shell-core\";\nimport { EngineRuntime } from \"@cjhyy/code-shell-core\";\nimport { ChatSessionManager } from \"@cjhyy/code-shell-core\";\nimport { SessionManager } from \"@cjhyy/code-shell-core\";\nimport { AgentServer } from \"@cjhyy/code-shell-core\";\nimport { AgentClient } from \"@cjhyy/code-shell-core\";\nimport { createInProcessTransport } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "range": [
+            22,
+            22
+          ],
+          "text": "import { costTracker } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "range": [
+            26,
+            26
+          ],
+          "text": "import { startInkRepl } from \"../../ui/index.js\";"
+        },
+        {
+          "range": [
+            42,
+            54
+          ],
+          "text": "export interface ReplOptions {\n  model?: string;\n  provider?: string;\n  preset?: AgentPresetName;\n  baseUrl?: string;\n  apiKey?: string;\n  permissionMode?: string;\n  maxTurns?: number;\n  output?: string;\n  resume?: string;\n  effort?: EffortLevel;\n  prefill?: string;\n}"
+        },
+        {
+          "range": [
+            69,
+            69
+          ],
+          "text": "export async function replCommand(options: ReplOptions): Promise<void> {"
+        },
+        {
+          "range": [
+            214,
+            223
+          ],
+          "text": "  // CostTracker: fresh shared instance for this process.\n  const sessionCostTracker = costTracker;\n\n  // 3. Build the shared EngineRuntime\n  const runtime = new EngineRuntime({\n    modelPool,\n    toolRegistry,\n    settings: settingsManager,\n    mcpPool,\n    costTracker: sessionCostTracker,"
+        },
+        {
+          "range": [
+            227,
+            235
+          ],
+          "text": "  // 4. ChatSessionManager — single session \"tui-main\" (or resumed sid)\n  const chatManager = new ChatSessionManager({\n    runtime,\n    engineFactory: (slice) =>\n      new Engine({\n        llm: resolvedLlmConfig,\n        cwd,\n        runtime,\n        origin: \"tui\","
+        },
+        {
+          "range": [
+            257,
+            258
+          ],
+          "text": "  // 5. Create in-process transport pair\n  const [serverTransport, clientTransport] = createInProcessTransport();"
+        },
+        {
+          "range": [
+            267,
+            271
+          ],
+          "text": "  // 6. Wire up AgentServer (wraps chatManager, handles protocol)\n  const server = new AgentServer({\n    chatManager,\n    composition,\n    transport: serverTransport,"
+        },
+        {
+          "range": [
+            280,
+            281
+          ],
+          "text": "  // 7. Create AgentClient (UI-side)\n  const client = new AgentClient({ transport: clientTransport });"
+        },
+        {
+          "range": [
+            322,
+            331
+          ],
+          "text": "  // 8. Launch Ink UI with the client\n  await startInkRepl({\n    client,\n    model,\n    effort,\n    maxTurns,\n    cwd,\n    maxContextTokens,\n    sessionId: tuiSessionId,\n    prefill: options.prefill,"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            3,
+            6
+          ],
+          "text": "/**\n * Interactive REPL mode — uses Ink (React for CLI) for the terminal UI.\n *\n * Wiring: Engine → AgentServer → [in-process transport] → AgentClient → UI"
+        },
+        {
+          "range": [
+            10,
+            22
+          ],
+          "text": "import { Engine } from \"@cjhyy/code-shell-core\";\nimport { mergePluginMcpServers } from \"@cjhyy/code-shell-core\";\nimport { EngineRuntime } from \"@cjhyy/code-shell-core\";\nimport { ChatSessionManager } from \"@cjhyy/code-shell-core\";\nimport { SessionManager } from \"@cjhyy/code-shell-core\";\nimport { AgentServer } from \"@cjhyy/code-shell-core\";\nimport { AgentClient } from \"@cjhyy/code-shell-core\";\nimport { createInProcessTransport } from \"@cjhyy/code-shell-core\";\nimport { SettingsManager } from \"@cjhyy/code-shell-core\";\nimport { personalizationFrom } from \"@cjhyy/code-shell-core\";\nimport { MCPManager } from \"@cjhyy/code-shell-core\";\nimport { resolveLLMConfigForTag } from \"@cjhyy/code-shell-core\";\nimport { costTracker } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "range": [
+            41,
+            75
+          ],
+          "text": "\nexport interface ReplOptions {\n  model?: string;\n  provider?: string;\n  preset?: AgentPresetName;\n  baseUrl?: string;\n  apiKey?: string;\n  permissionMode?: string;\n  maxTurns?: number;\n  output?: string;\n  resume?: string;\n  effort?: EffortLevel;\n  prefill?: string;\n}\n\nfunction getEffortConfig(level: EffortLevel): { temperature: number; maxTokens: number } {\n  switch (level) {\n    case \"low\":\n      return { temperature: 0.1, maxTokens: 4096 };\n    case \"medium\":\n      return { temperature: 0.3, maxTokens: 8192 };\n    case \"high\":\n      return { temperature: 0.5, maxTokens: 16384 };\n    case \"max\":\n      return { temperature: 0.7, maxTokens: 32768 };\n  }\n}\n\nexport async function replCommand(options: ReplOptions): Promise<void> {\n  const cwd = process.cwd();\n\n  // Load settings — single SettingsManager instance reused throughout.\n  // Host terminal entrypoint reads the full hierarchy (incl. user ~/.code-shell).\n  const settingsManager = new SettingsManager(cwd, \"full\");\n  let settings = settingsManager.get();"
+        },
+        {
+          "range": [
+            213,
+            243
+          ],
+          "text": "  const mcpPool = new MCPManager(toolRegistry);\n  // CostTracker: fresh shared instance for this process.\n  const sessionCostTracker = costTracker;\n\n  // 3. Build the shared EngineRuntime\n  const runtime = new EngineRuntime({\n    modelPool,\n    toolRegistry,\n    settings: settingsManager,\n    mcpPool,\n    costTracker: sessionCostTracker,\n    usageStorageDir: join(settings.session.storageDir ?? sessionsRoot(), \".usage-ledger\"),\n  });\n\n  // 4. ChatSessionManager — single session \"tui-main\" (or resumed sid)\n  const chatManager = new ChatSessionManager({\n    runtime,\n    engineFactory: (slice) =>\n      new Engine({\n        llm: resolvedLlmConfig,\n        cwd,\n        runtime,\n        origin: \"tui\",\n        ...sharedCfg,\n        // Per-session overrides from the protocol request take precedence\n        ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),\n        ...(slice.preset ? { preset: slice.preset } : {}),\n        ...(slice.customSystemPrompt !== undefined\n          ? { customSystemPrompt: slice.customSystemPrompt }\n          : {}),\n        ...(slice.appendSystemPrompt !== undefined"
+        },
+        {
+          "range": [
+            257,
+            282
+          ],
+          "text": "  // 5. Create in-process transport pair\n  const [serverTransport, clientTransport] = createInProcessTransport();\n  // Must use the same configured root as every Engine created above; otherwise\n  // /resume can display/control a different state.json tree when users override\n  // session.storageDir.\n  const goalDiskManager = new SessionManager(\n    settings.session.storageDir,\n    composition.engine.sessionWorkspaces[0]?.value,\n  );\n\n  // 6. Wire up AgentServer (wraps chatManager, handles protocol)\n  const server = new AgentServer({\n    chatManager,\n    composition,\n    transport: serverTransport,\n    settingsReader: () => settingsManager.load(),\n    readActiveGoalFromDisk: (sessionId) => goalDiskManager.readActiveGoal(sessionId),\n    updateActiveGoalOnDisk: (sessionId, patch) =>\n      goalDiskManager.updateActiveGoal(sessionId, patch)?.goal,\n    clearActiveGoalOnDisk: (sessionId, expected) =>\n      goalDiskManager.clearActiveGoal(sessionId, expected),\n  });\n\n  // 7. Create AgentClient (UI-side)\n  const client = new AgentClient({ transport: clientTransport });\n"
+        },
+        {
+          "range": [
+            322,
+            333
+          ],
+          "text": "  // 8. Launch Ink UI with the client\n  await startInkRepl({\n    client,\n    model,\n    effort,\n    maxTurns,\n    cwd,\n    maxContextTokens,\n    sessionId: tuiSessionId,\n    prefill: options.prefill,\n    // TUI quit — tear down sessions and reap any background shells the user\n    // started so a detached `npm run dev` doesn't outlive the CLI as an"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 1,
+          "text": "import { join } from \"node:path\";"
+        },
+        {
+          "line": 2,
+          "text": "import { sessionsRoot } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "line": 23,
+          "text": "import { defaultSandboxConfig } from \"@cjhyy/code-shell-core/internal\";"
+        },
+        {
+          "line": 24,
+          "text": "import { configureModelTracing } from \"@cjhyy/code-shell-core/internal\";"
+        },
+        {
+          "line": 25,
+          "text": "import type { ClientDefaults, LLMConfig, PermissionMode } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "line": 26,
+          "text": "import { startInkRepl } from \"../../ui/index.js\";"
+        },
+        {
+          "line": 27,
+          "text": "import { runInkOnboarding } from \"../../ui/onboarding-runner.js\";"
+        },
+        {
+          "line": 28,
+          "text": "import type { AgentPresetName } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "line": 29,
+          "text": "import { getInteractiveApprovalBackend } from \"@cjhyy/code-shell-core/internal\";"
+        },
+        {
+          "line": 30,
+          "text": "import {"
+        },
+        {
+          "line": 36,
+          "text": "import { resolveMaxContextTokens } from \"./max-context-tokens.js\";"
+        },
+        {
+          "line": 37,
+          "text": "import { compileComposition } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "line": 38,
+          "text": "import { createCodingModule } from \"@cjhyy/code-shell-capability-coding/capability\";"
+        },
+        {
+          "line": 137,
+          "text": "  // resolver hasn't picked up a freshly-written connection yet."
+        },
+        {
+          "line": 148,
+          "text": "  // Temperature is a cross-model runtime knob (ClientDefaults), no longer part"
+        },
+        {
+          "line": 152,
+          "text": "  const clientDefaults: ClientDefaults = {"
+        },
+        {
+          "line": 168,
+          "text": "    clientDefaults,"
+        },
+        {
+          "line": 187,
+          "text": "    approvalBackend: getInteractiveApprovalBackend(),"
+        },
+        {
+          "line": 198,
+          "text": "    clientDefaults,"
+        },
+        {
+          "line": 210,
+          "text": "  // MCPManager: no-op holder satisfying EngineRuntime type; individual"
+        },
+        {
+          "line": 211,
+          "text": "  // session engines connect to mcpServers from their config."
+        },
+        {
+          "line": 212,
+          "text": "  // TODO(future): aggregate MCP connections across sessions at the runtime level."
+        },
+        {
+          "line": 295,
+          "text": "      runtime,"
+        },
+        {
+          "line": 299,
+          "text": "      // contract from cron-runtime — cron is unattended."
+        },
+        {
+          "line": 342,
+          "text": "          await runtime.close();"
+        },
+        {
+          "line": 344,
+          "text": "          client.close();"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "selected": [
+        {
+          "range": [
+            18,
+            26
+          ],
+          "text": "export interface EngineRuntimeOptions {\n  modelPool: ModelPool;\n  toolRegistry: ToolRegistry;\n  settings: SettingsManager;\n  mcpPool: MCPManager;\n  costTracker: CostTracker;\n  usageLedger?: UsageLedger;\n  usageStorageDir?: string;\n}"
+        },
+        {
+          "range": [
+            54,
+            60
+          ],
+          "text": "    this.costTracker = opts.costTracker;\n    this.usageLedger =\n      opts.usageLedger ??\n      new UsageLedger({\n        storageDir: opts.usageStorageDir,\n      });\n    this.costTracker.bindLedger?.(this.usageLedger);"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            18,
+            30
+          ],
+          "text": "export interface EngineRuntimeOptions {\n  modelPool: ModelPool;\n  toolRegistry: ToolRegistry;\n  settings: SettingsManager;\n  mcpPool: MCPManager;\n  costTracker: CostTracker;\n  usageLedger?: UsageLedger;\n  usageStorageDir?: string;\n}\n\n/**\n * Shared read-only resources used by all Engine instances in a worker.\n * Mutable per-session state stays on Engine itself."
+        },
+        {
+          "range": [
+            49,
+            62
+          ],
+          "text": "  constructor(opts: EngineRuntimeOptions) {\n    this.modelPool = opts.modelPool;\n    this.toolRegistry = opts.toolRegistry;\n    this.settings = opts.settings;\n    this.mcpPool = opts.mcpPool;\n    this.costTracker = opts.costTracker;\n    this.usageLedger =\n      opts.usageLedger ??\n      new UsageLedger({\n        storageDir: opts.usageStorageDir,\n      });\n    this.costTracker.bindLedger?.(this.usageLedger);\n    this.lifetime.own(() => this.modelPool.clear());\n    this.lifetime.own(() => this.toolRegistry.clear());"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 38,
+          "text": "  readonly costTracker: CostTracker;"
+        },
+        {
+          "line": 39,
+          "text": "  readonly usageLedger: UsageLedger;"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "selected": [
+        {
+          "range": [
+            21,
+            27
+          ],
+          "text": "export interface InkReplOptions {\n  client: AgentClient;\n  model: string;\n  effort: string;\n  maxTurns: number;\n  cwd: string;\n  maxContextTokens: number;"
+        },
+        {
+          "range": [
+            42,
+            42
+          ],
+          "text": "export async function startInkRepl(options: InkReplOptions): Promise<void> {"
+        },
+        {
+          "range": [
+            67,
+            79
+          ],
+          "text": "  const renderRepl = options.renderForTesting ?? render;\n  const instance: Instance = await renderRepl(\n    <ThemeProvider>\n      <App\n        client={options.client}\n        model={options.model}\n        effort={options.effort}\n        maxTurns={options.maxTurns}\n        cwd={options.cwd}\n        maxContextTokens={options.maxContextTokens}\n        sessionId={sessionId}\n        prefill={options.prefill}\n      />"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            19,
+            27
+          ],
+          "text": "import { renderDevtools } from \"../render/devtools.js\";\n\nexport interface InkReplOptions {\n  client: AgentClient;\n  model: string;\n  effort: string;\n  maxTurns: number;\n  cwd: string;\n  maxContextTokens: number;"
+        },
+        {
+          "range": [
+            42,
+            46
+          ],
+          "text": "export async function startInkRepl(options: InkReplOptions): Promise<void> {\n  // Initialize input history with session and project context\n  const sessionId = options.sessionId ?? `session-${Date.now()}`;\n  initHistory(sessionId, options.cwd);\n  applyDevSeed();"
+        },
+        {
+          "range": [
+            65,
+            81
+          ],
+          "text": "  const keepAlive = setInterval(() => {}, 2_147_483_647);\n\n  const renderRepl = options.renderForTesting ?? render;\n  const instance: Instance = await renderRepl(\n    <ThemeProvider>\n      <App\n        client={options.client}\n        model={options.model}\n        effort={options.effort}\n        maxTurns={options.maxTurns}\n        cwd={options.cwd}\n        maxContextTokens={options.maxContextTokens}\n        sessionId={sessionId}\n        prefill={options.prefill}\n      />\n    </ThemeProvider>,\n    {"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 10,
+          "text": "import { App } from \"./App.js\";"
+        },
+        {
+          "line": 35,
+          "text": "   * `await startInkRepl(...)` would be unreachable — pass it here instead."
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "selected": [
+        {
+          "range": [
+            5,
+            7
+          ],
+          "text": "import type { SlashCommand } from \"../registry.js\";\nimport { costTracker, formatUsageCost } from \"@cjhyy/code-shell-core\";\nimport { CHALK_COLORIZER } from \"../../../utils/colorizer.js\";"
+        },
+        {
+          "range": [
+            89,
+            104
+          ],
+          "text": "  {\n    name: \"/cost\",\n    description: \"Show token usage and cost (/cost stats for summary, /cost detail for breakdown)\",\n    usage: \"/cost [stats|detail]\",\n    execute: (arg, ctx) => {\n      if (costTracker.getUsageSummary()) {\n        ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));\n        return;\n      }\n      if (costTracker.getRequestCount() === 0) {\n        ctx.addStatus(\"No API requests yet.\");\n        return;\n      }\n      const t = costTracker.getTotalTokens();\n      const cost = costTracker.getEstimatedCost();\n      const requests = costTracker.getRequestCount();"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            1,
+            8
+          ],
+          "text": "/**\n * Core slash commands — migrated from App.tsx switch-case + new essentials.\n */\n\nimport type { SlashCommand } from \"../registry.js\";\nimport { costTracker, formatUsageCost } from \"@cjhyy/code-shell-core\";\nimport { CHALK_COLORIZER } from \"../../../utils/colorizer.js\";\nimport { execSync } from \"node:child_process\";"
+        },
+        {
+          "range": [
+            89,
+            132
+          ],
+          "text": "  {\n    name: \"/cost\",\n    description: \"Show token usage and cost (/cost stats for summary, /cost detail for breakdown)\",\n    usage: \"/cost [stats|detail]\",\n    execute: (arg, ctx) => {\n      if (costTracker.getUsageSummary()) {\n        ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));\n        return;\n      }\n      if (costTracker.getRequestCount() === 0) {\n        ctx.addStatus(\"No API requests yet.\");\n        return;\n      }\n      const t = costTracker.getTotalTokens();\n      const cost = costTracker.getEstimatedCost();\n      const requests = costTracker.getRequestCount();\n\n      if (arg === \"stats\" || arg === \"summary\") {\n        ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));\n      } else if (arg === \"detail\" || arg === \"usage\") {\n        const avgTokensPerReq = Math.round(t.total / requests);\n        const avgCostPerReq = (cost / requests).toFixed(4);\n        const fmt = (n: number) => n.toLocaleString();\n        ctx.addStatus(\n          [\n            \"API Usage:\",\n            `  Requests:         ${requests}`,\n            `  Total tokens:     ${fmt(t.total)}`,\n            `    Prompt:         ${fmt(t.prompt)}`,\n            `    Completion:     ${fmt(t.completion)}`,\n            `  Estimated cost:   ${cost.toFixed(4)}`,\n            `  Avg tokens/req:   ${fmt(avgTokensPerReq)}`,\n            `  Avg cost/req:     ${avgCostPerReq}`,\n            `  Model:            ${ctx.model}`,\n          ].join(\"\\n\"),\n        );\n      } else {\n        ctx.addStatus(\n          `Tokens: ${t.total} (in: ${t.prompt}, out: ${t.completion}) | ` +\n            `Cost: ${cost.toFixed(4)} | Requests: ${requests}`,\n        );\n        ctx.addStatus(\"Use /cost stats or /cost detail for more info.\");\n      }\n    },"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 199,
+          "text": "          const result = await ctx.client.query(\"models\");"
+        },
+        {
+          "line": 225,
+          "text": "        const result = (await ctx.client.configure({ sessionId: ctx.sessionId, model: key })) as {"
+        },
+        {
+          "line": 277,
+          "text": "          const result = await ctx.client.query(\"sessions\");"
+        },
+        {
+          "line": 289,
+          "text": "              \"Recent Sessions (use /resume <number> or /resume <query>):\\n\" + lines.join(\"\\n\"),"
+        },
+        {
+          "line": 301,
+          "text": "          await ctx.client.run(`/tag ${rest}`, ctx.sessionId);"
+        },
+        {
+          "line": 325,
+          "text": "        const result = await ctx.client.query(\"tools\", ctx.sessionId);"
+        },
+        {
+          "line": 433,
+          "text": "        const result = await ctx.client.query(\"compact\");"
+        },
+        {
+          "line": 457,
+          "text": "    usage: \"/resume [number|query]\","
+        },
+        {
+          "line": 468,
+          "text": "          const result = await ctx.client.query(\"sessions\");"
+        },
+        {
+          "line": 485,
+          "text": "            \"Recent sessions (use /resume <number> or /resume <query>):\\n\" + lines.join(\"\\n\"),"
+        },
+        {
+          "line": 495,
+          "text": "        const sessResult = await ctx.client.query(\"sessions\");"
+        },
+        {
+          "line": 505,
+          "text": "          // Try query matching against the first-user-message preview,"
+        },
+        {
+          "line": 507,
+          "text": "          const query = input.toLowerCase();"
+        },
+        {
+          "line": 510,
+          "text": "              (s.preview && s.preview.toLowerCase().includes(query)) ||"
+        },
+        {
+          "line": 517,
+          "text": "        const detailResult = await ctx.client.query(\"session_detail\", sessionId);"
+        },
+        {
+          "line": 637,
+          "text": "          const configResult = await ctx.client.query(\"config\", ctx.sessionId);"
+        },
+        {
+          "line": 649,
+          "text": "            const toolsResult = await ctx.client.query(\"tools\", ctx.sessionId);"
+        },
+        {
+          "line": 669,
+          "text": "          const configResult = await ctx.client.query(\"config\", ctx.sessionId);"
+        },
+        {
+          "line": 671,
+          "text": "          const toolsResult = await ctx.client.query(\"tools\", ctx.sessionId);"
+        },
+        {
+          "line": 691,
+          "text": "          const t = costTracker.getTotalTokens();"
+        },
+        {
+          "line": 694,
+          "text": "            const summary = costTracker.getUsageSummary();"
+        },
+        {
+          "line": 729,
+          "text": "        const detailResult = await ctx.client.query(\"session_detail\", ctx.sessionId);"
+        },
+        {
+          "line": 797,
+          "text": "          await ctx.client.query(\"config_set\", key, parsed);"
+        },
+        {
+          "line": 798,
+          "text": "          await ctx.client.configure({ sessionId: ctx.sessionId, reloadSettings: true });"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "selected": [
+        {
+          "range": [
+            90,
+            97
+          ],
+          "text": "export class CostTracker {\n  private ledger?: UsageLedger;\n  bindLedger(ledger: UsageLedger): void {\n    this.ledger = ledger;\n  }\n  getUsageSummary() {\n    return this.ledger?.summary();\n  }"
+        },
+        {
+          "range": [
+            159,
+            162
+          ],
+          "text": "  getRequestCount(): number {\n    if (this.ledger) return this.ledger.summary().requests;\n    return this.records.length;\n  }"
+        },
+        {
+          "range": [
+            371,
+            371
+          ],
+          "text": "export const costTracker = new CostTracker();"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            88,
+            100
+          ],
+          "text": "}\n\nexport class CostTracker {\n  private ledger?: UsageLedger;\n  bindLedger(ledger: UsageLedger): void {\n    this.ledger = ledger;\n  }\n  getUsageSummary() {\n    return this.ledger?.summary();\n  }\n  private records: UsageRecord[] = [];\n  private sessionStart = Date.now();\n  private _hasUnknownModel = false;"
+        },
+        {
+          "range": [
+            156,
+            164
+          ],
+          "text": "    return totalCost;\n  }\n\n  getRequestCount(): number {\n    if (this.ledger) return this.ledger.summary().requests;\n    return this.records.length;\n  }\n\n  getSessionDuration(): number {"
+        },
+        {
+          "range": [
+            371,
+            385
+          ],
+          "text": "export const costTracker = new CostTracker();\n\n/**\n * Wire the LLM base-class usage hook into the singleton cost tracker.\n * Called once from main.ts so every LLM call (REPL, run, arena, sub-agents)\n * records into a single tracker without each call site having to remember.\n */\nexport async function installCostTracking(): Promise<void> {\n  const { LLMClientBase } = await import(\"./llm/client-base.js\");\n  LLMClientBase.onUsage = (model, usage) => {\n    if (currentUsageOwner()) return;\n    costTracker.record(\n      model,\n      usage.promptTokens,\n      usage.completionTokens,"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 7,
+          "text": "import type { UsageLedger } from \"./cost-ledger/store.js\";"
+        },
+        {
+          "line": 8,
+          "text": "import { formatUsageCost } from \"./cost-ledger/summary.js\";"
+        },
+        {
+          "line": 9,
+          "text": "import { currentUsageOwner } from \"./cost-ledger/context.js\";"
+        },
+        {
+          "line": 127,
+          "text": "    if (this.ledger) {"
+        },
+        {
+          "line": 128,
+          "text": "      const summary = this.ledger.summary();"
+        },
+        {
+          "line": 145,
+          "text": "    if (this.ledger) return this.ledger.summary().knownEstimatedCostUsd;"
+        },
+        {
+          "line": 190,
+          "text": "    if (this.ledger) {"
+        },
+        {
+          "line": 191,
+          "text": "      const summary = this.ledger.summary();"
+        },
+        {
+          "line": 207,
+          "text": "    if (this.ledger) {"
+        },
+        {
+          "line": 208,
+          "text": "      const s = this.ledger.summary();"
+        },
+        {
+          "line": 302,
+          "text": "    if (this.ledger) {"
+        },
+        {
+          "line": 303,
+          "text": "      const summary = this.ledger.summary();"
+        },
+        {
+          "line": 332,
+          "text": "    if (this.ledger) return; // Request identities, never mutable aggregate snapshots, own restored bills."
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "selected": [
+        {
+          "range": [
+            143,
+            149
+          ],
+          "text": "interface AppProps {\n  client: AgentClient;\n  model: string;\n  effort: string;\n  maxTurns: number;\n  cwd: string;\n  maxContextTokens: number;"
+        },
+        {
+          "range": [
+            157,
+            167
+          ],
+          "text": "export function App({\n  client,\n  model: initialModel,\n  effort,\n  maxTurns,\n  cwd,\n  maxContextTokens,\n  sessionId: initialSessionId,\n  prefill,\n  queryGuard: providedQueryGuard,\n}: AppProps) {"
+        },
+        {
+          "range": [
+            355,
+            361
+          ],
+          "text": "  const { summary: sessionUsage, refresh: refreshUsage } = useSessionUsage(\n    client,\n    sessionId,\n    sidRef,\n  );\n  const totalTokens = sessionUsage?.totalTokens ?? 0;\n  const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            134,
+            149
+          ],
+          "text": "commandRegistry.register(goalCommand);\ncommandRegistry.register(loopCommand);\ncommandRegistry.registerAll(buildPluginSlashCommands());\n\n// ChatEntry types and createEntry() are in ./store.ts\nconst entry = createEntry;\n\n// ─── Props ───────────────────────────────────────────────────────\n\ninterface AppProps {\n  client: AgentClient;\n  model: string;\n  effort: string;\n  maxTurns: number;\n  cwd: string;\n  maxContextTokens: number;"
+        },
+        {
+          "range": [
+            175,
+            184
+          ],
+          "text": "  const [fullscreen, setFullscreenState] = useState<boolean>(INITIAL_FULLSCREEN_MODE);\n  const fullscreenModeValue = useMemo(\n    () => ({\n      fullscreen,\n      setFullscreen: (next: boolean) => setFullscreenState(next),\n      toggleFullscreen: () => setFullscreenState((p) => !p),\n    }),\n    [fullscreen],\n  );\n  const [input, setInput] = useState(prefill ?? \"\");"
+        },
+        {
+          "range": [
+            355,
+            361
+          ],
+          "text": "  const { summary: sessionUsage, refresh: refreshUsage } = useSessionUsage(\n    client,\n    sessionId,\n    sidRef,\n  );\n  const totalTokens = sessionUsage?.totalTokens ?? 0;\n  const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;"
+        },
+        {
+          "range": [
+            155,
+            173
+          ],
+          "text": "}\n\nexport function App({\n  client,\n  model: initialModel,\n  effort,\n  maxTurns,\n  cwd,\n  maxContextTokens,\n  sessionId: initialSessionId,\n  prefill,\n  queryGuard: providedQueryGuard,\n}: AppProps) {\n  // Perf probe: count every App body invocation. Pairs with the 1s\n  // aggregator in perf-probes.ts to expose re-render storms.\n  recordAppRender();\n\n  const { exit } = useApp();\n  // Fullscreen toggle — driven by /fullscreen at runtime. Initial value from"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 4,
+          "text": " * Uses AgentClient (protocol layer) instead of Engine directly."
+        },
+        {
+          "line": 29,
+          "text": "import { AgentClient } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "line": 30,
+          "text": "import { formatUsageCost } from \"@cjhyy/code-shell-core\";"
+        },
+        {
+          "line": 31,
+          "text": "import { useSessionUsage } from \"./hooks/useSessionUsage.js\";"
+        },
+        {
+          "line": 191,
+          "text": "  // TodoWrite replaces a complete snapshot. Keep child snapshots local to"
+        },
+        {
+          "line": 306,
+          "text": "  // Invalidates a slower goalGet hydrate whenever a stream/local control has"
+        },
+        {
+          "line": 402,
+          "text": "  /** Monotonic cancellation fence captured independently by each local run. */"
+        },
+        {
+          "line": 405,
+          "text": "  const localRunTokenRef = useRef<number | null>(null);"
+        },
+        {
+          "line": 406,
+          "text": "  /** Cancelled local requests whose late stream may still precede their response. */"
+        },
+        {
+          "line": 475,
+          "text": "    const handleApproval: Parameters<AgentClient[\"onApprovalRequest\"]>[0] = ("
+        },
+        {
+          "line": 524,
+          "text": "    const handleResolved: Parameters<AgentClient[\"onApprovalResolved\"]>[0] = (event) => {"
+        },
+        {
+          "line": 695,
+          "text": "          // A pending local Run owns its own session_started even if ESC already"
+        },
+        {
+          "line": 698,
+          "text": "          if (localRunTokenRef.current === null && queryGuard.startExternal() !== null) {"
+        },
+        {
+          "line": 1134,
+          "text": "  // store (no closure over local state), so we deliberately keep this"
+        },
+        {
+          "line": 1381,
+          "text": "        if (localRunTokenRef.current !== null) {"
+        },
+        {
+          "line": 1382,
+          "text": "          cancelledLocalRunTokensRef.current.add(localRunTokenRef.current);"
+        },
+        {
+          "line": 1447,
+          "text": "      if (localRunTokenRef.current !== null) {"
+        },
+        {
+          "line": 1448,
+          "text": "        cancelledLocalRunTokensRef.current.add(localRunTokenRef.current);"
+        },
+        {
+          "line": 1564,
+          "text": "      localRunTokenRef.current = guardToken;"
+        },
+        {
+          "line": 1628,
+          "text": "          if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;"
+        },
+        {
+          "line": 1720,
+          "text": "        if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;"
+        }
+      ]
+    }
+  ],
+  "navigationOnly": [
+    {
+      "path": "packages/core/src/protocol/chat-session-manager.ts",
+      "bytes": 29543,
+      "lines": 740,
+      "sha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "binding-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        594
+      ],
+      "displayedLineCountIncludingNav": 1,
+      "finishFilesystemSHA": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "finishEqualsInitial": true,
+      "scope": "startInkRepl filename hit is only a cleanup comment, not another UI entry/call. Actual cleanup/native mechanisms not followed."
+    }
+  ]
+}

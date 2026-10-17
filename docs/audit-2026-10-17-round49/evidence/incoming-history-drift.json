@@ -1,0 +1,17 @@
+{
+  "frozenHistoryFiles": 4492,
+  "frozenReadBaseline": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "refreshedMain": "9a2d118502fe184dc0271360f97c8fdbe06deb01",
+  "changed": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "frozenBytes": 219241,
+      "frozenSha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3",
+      "currentBytes": 231027,
+      "currentSha256": "0ae834852729a24e9eee850e42b8aa96e4619f8ffb6a3e885af6df27b10c06aa"
+    }
+  ],
+  "missing": [],
+  "scope": "After all13 packets froze and before final verification, concurrent main changed old history metadata. Original gates/ending4492 remain dated and unmodified; no original initial history was backfilled or rescanned as a new semantic read.",
+  "productRuns": 0
+}

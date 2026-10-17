@@ -1,0 +1,66 @@
+{
+  "atUTC": "2026-10-17T16:30:17.403640+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "displayedRanges": [
+        [
+          76,
+          122
+        ],
+        [
+          142,
+          198
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            76,
+            122
+          ],
+          "text": "  76 /** Options shared by both ways of entering interactive mode:\n  77  * `code-shell repl` and the command-less `code-shell` default. Keeping these\n  78  * in one builder prevents the two entry points from silently drifting apart. */\n  79 function addInteractiveOptions(cmd: Command): Command {\n  80   return cmd\n  81     .option(\"--resume <sessionId>\", \"Resume a previous session\")\n  82     .option(\"--prefill <text>\", \"Pre-fill the input box without submitting\");\n  83 }\n  84 \n  85 // \u2500\u2500\u2500 run \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  86 \n  87 addCommonOptions(\n  88   program\n  89     .command(\"run\")\n  90     .description(\n  91       \"Execute a single task (headless mode). Reads the task from stdin if omitted and piped.\",\n  92     )\n  93     .argument(\"[task]\", \"The task to execute (or pipe it via stdin)\"),\n  94 )\n  95   .option(\"--resume <sessionId>\", \"Resume a previous session\")\n  96   .option(\"--output-last-message <file>\", \"Write the final assistant message to a file\")\n  97   .option(\"--no-wait-background-agents\", \"Exit without waiting for in-flight background work\")\n  98   .option(\n  99     \"--background-wait-ms <ms>\",\n 100     \"Max ms to wait for background work to finish (default: 300000)\",\n 101     positiveIntOption(\"--background-wait-ms\"),\n 102   )\n 103   .action(async (task: string | undefined, opts) => {\n 104     const resolvedTask = await resolveTaskFromArgOrStdin(task);\n 105     if (!resolvedTask) {\n 106       console.error(\"Error: no task provided. Pass a <task> argument or pipe a prompt via stdin.\");\n 107       process.exit(2);\n 108     }\n 109     await runCommand({\n 110       task: resolvedTask,\n 111       ...resolveOpts(opts),\n 112       // Commander maps --no-wait-background-agents to waitBackgroundAgents=false.\n 113       waitBackgroundAgents: opts.waitBackgroundAgents as boolean | undefined,\n 114       backgroundWaitMs: opts.backgroundWaitMs as number | undefined,\n 115     });\n 116   });\n 117 \n 118 // \u2500\u2500\u2500 repl (default) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 119 \n 120 addInteractiveOptions(\n 121   addCommonOptions(program.command(\"repl\").description(\"Interactive REPL mode (default)\")),\n 122 ).action(async (opts) => {"
+        },
+        {
+          "range": [
+            142,
+            198
+          ],
+          "text": " 142     for (const s of sessions) {\n 143       const date = new Date(s.startedAt).toLocaleString();\n 144       const status = formatSessionStatus(s.status);\n 145       console.log(`  ${s.sessionId}  ${date}  ${status}  ${s.model}  turns:${s.turnCount}`);\n 146     }\n 147   });\n 148 \n 149 // \u2500\u2500\u2500 runs \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 150 \n 151 import { createRunsCommand } from \"./commands/runs.js\";\n 152 program.addCommand(createRunsCommand());\n 153 \n 154 // \u2500\u2500\u2500 plugin \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 155 \n 156 import { createPluginCommand } from \"./commands/plugin.js\";\n 157 program.addCommand(createPluginCommand());\n 158 \n 159 // \u2500\u2500\u2500 link \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 160 \n 161 import { createLinkCommand, isLinkStatusCommand } from \"./commands/link.js\";\n 162 program.addCommand(createLinkCommand());\n 163 \n 164 import {\n 165   createSettingsRecoveryCommand,\n 166   isSettingsRecoveryCommand,\n 167 } from \"./commands/settings-recovery.js\";\n 168 program.addCommand(createSettingsRecoveryCommand());\n 169 \n 170 // \u2500\u2500\u2500 Default: if no command, go to REPL or run \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 171 // Register root options after subcommands and keep passThroughOptions enabled:\n 172 // Commander otherwise lets root parsing/defaults interfere with subcommand\n 173 // options that use the same names (for example `run --output`). The option\n 174 // builders are safe here because registration order + pass-through preserve\n 175 // the subcommand namespace while sharing one source of truth.\n 176 \n 177 addInteractiveOptions(\n 178   addCommonOptions(program.argument(\"[task]\", \"Task to execute (or omit for REPL mode)\")),\n 179 )\n 180   .passThroughOptions()\n 181   .action(async (task: string | undefined, opts) => {\n 182     const resolved = resolveOpts(opts);\n 183     if (task) {\n 184       await runCommand({ task, ...resolved });\n 185     } else {\n 186       await replCommand({ ...resolved, prefill: opts.prefill });\n 187     }\n 188   });\n 189 \n 190 // \u2500\u2500\u2500 Helpers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 191 \n 192 function resolveOpts(opts: Record<string, unknown>) {\n 193   return {\n 194     model: opts.model as string | undefined,\n 195     provider: opts.provider as string | undefined,\n 196     preset: opts.preset as AgentPresetName | undefined,\n 197     baseUrl: opts.baseUrl as string | undefined,\n 198     apiKey: opts.apiKey as string | undefined,"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "displayedRanges": [
+        [
+          82,
+          106
+        ],
+        [
+          171,
+          185
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            82,
+            106
+          ],
+          "text": "  82 function getCanonicalName(model: string): string {\n  83   // \"anthropic/claude-opus-4-6\" \u2192 \"claude-opus-4-6\"\n  84   const slashIdx = model.lastIndexOf(\"/\");\n  85   const base = slashIdx >= 0 ? model.slice(slashIdx + 1) : model;\n  86   // Strip date suffixes like \"-20250301\"\n  87   return base.replace(/-\\d{8}$/, \"\");\n  88 }\n  89 \n  90 export class CostTracker {\n  91   private ledger?: UsageLedger;\n  92   bindLedger(ledger: UsageLedger): void {\n  93     this.ledger = ledger;\n  94   }\n  95   getUsageSummary() {\n  96     return this.ledger?.summary();\n  97   }\n  98   private records: UsageRecord[] = [];\n  99   private sessionStart = Date.now();\n 100   private _hasUnknownModel = false;\n 101 \n 102   record(\n 103     model: string,\n 104     promptTokens: number,\n 105     completionTokens: number,\n 106     isSubAgent = false,"
+        },
+        {
+          "range": [
+            171,
+            185
+          ],
+          "text": " 171     promptTokens: number,\n 172     completionTokens: number,\n 173     cacheReadTokens = 0,\n 174     cacheWriteTokens = 0,\n 175   ): number {\n 176     const { pricing: p } = lookupPricing(model);\n 177     const uncachedInput = Math.max(0, promptTokens - cacheReadTokens - cacheWriteTokens);\n 178     return (\n 179       (uncachedInput / 1_000_000) * p.input +\n 180       (completionTokens / 1_000_000) * p.output +\n 181       (cacheReadTokens / 1_000_000) * p.cacheRead +\n 182       (cacheWriteTokens / 1_000_000) * p.cacheWrite\n 183     );\n 184   }\n 185 "
+        }
+      ]
+    }
+  ],
+  "scope": "Ordinary actual CLI selection and tracker ledger binding only; no executing setup, provider or model."
+}

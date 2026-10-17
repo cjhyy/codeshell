@@ -1,0 +1,62 @@
+{
+  "exactArtifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/summary-source-excerpts.first.txt",
+      "source": "/tmp/codeshell-audit-round74-core-summary/summary-source-excerpts.first.txt",
+      "bytes": 3296,
+      "sha256": "45f11a4658236aa1bee5c3403742a6a966901bdbd1234d35239bc62fabf4f687",
+      "trailingLineNumbers": [
+        2,
+        16,
+        32,
+        72
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-excerpts.txt",
+      "source": "/tmp/codeshell-audit-round75-trace-history/source-excerpts.txt",
+      "bytes": 10026,
+      "sha256": "768b3e80df1f4b918a210e0487d17caee55f6a9dbf353fee5d90a94e6a06b061",
+      "trailingLineNumbers": [
+        7,
+        32,
+        71,
+        124,
+        132,
+        139,
+        226
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-excerpts.txt",
+      "source": "/tmp/codeshell-audit-round83-latest-messages/source-excerpts.txt",
+      "bytes": 24855,
+      "sha256": "9e1821e6a10f7ee6923ee67bb1f93a49798c0e80a06f55cded0a7527c79bf563",
+      "trailingLineNumbers": [
+        4,
+        11,
+        48,
+        94,
+        126,
+        154,
+        168,
+        320,
+        406,
+        415,
+        453,
+        467,
+        479,
+        574,
+        620
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    }
+  ],
+  "productRuns": 0,
+  "scope": "Only frozen copied provenance. All other files must pass ordinary whitespace check; full check actual exit retained."
+}

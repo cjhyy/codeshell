@@ -1,0 +1,143 @@
+{
+  "frozenUTC": "2026-10-17T16:36:02.355527+00:00",
+  "directory": "/tmp/codeshell-audit-round81-cost-command-review",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 3153,
+      "sha256": "df5dbb77df524de114eeb987b854d8dfbb990b2a2c22e125b65a8abda3fa7e70"
+    },
+    {
+      "path": "assessment.json",
+      "bytes": 1570,
+      "sha256": "890cc74f44fbf76ddbf1cb12b6ecaf5dfc0710cea5171d34109b2258cdd8765a"
+    },
+    {
+      "path": "binding-initial-pins.json",
+      "bytes": 871,
+      "sha256": "0ec8c193e0fd4517d0d334b3e63cf71c17afab2c8cafeb3fcf19a2271e5f44c7"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 497433,
+      "sha256": "cbda01c8167fb3ec3ca1fb1b17ea671fd07d396f5113d7451ab0d99d64deb6b4"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 3892,
+      "sha256": "3d750430e4f40a3706f12ed2e2b68b7917cfe4ccc93ca6b0ba28029d70903ce4"
+    },
+    {
+      "path": "entry-initial-pins.json",
+      "bytes": 541,
+      "sha256": "fbed06cbc9d83a8dcc8e5f5bfcc7bbc1b615d176ac462b263737a9bacff4f1fa"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 1102668,
+      "sha256": "0d81b149f668bfeeaeb8627b0a1448ef55fdd16a6970fc0dc78078bdaba9ee71"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3992,
+      "sha256": "3a6c6abe6de81f6aa9af1ab3e20ef2f25b65550d782bc3f4267fb36fbfe8cbde"
+    },
+    {
+      "path": "history.json",
+      "bytes": 994528,
+      "sha256": "f919b908b92ab2c49bb57a2ed3bba6760ca599cea1f9cbb83fb7393813514e65"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 2098,
+      "sha256": "299bcf034f9c4afbe96274c0f58562a09a5373f6ec1674e188aa94316574b7ba"
+    },
+    {
+      "path": "old-cause-decision.json",
+      "bytes": 1179,
+      "sha256": "17373d9c01c4537017799f92975b2b973f8e4d86227a43cf4d9bdfb49f983a60"
+    },
+    {
+      "path": "old-scope-selected.json",
+      "bytes": 25626,
+      "sha256": "2c2f761ef3657b9800fde05cbc61fe184dc1b2fe9cc52758d20736cf61387670"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4981,
+      "sha256": "21e7b094cc1aece39a37b3dc06927824ae97a8e57902583fffebab5a2fc01225"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 48788,
+      "sha256": "6669ca529e261cbf70ab35c95c76fd01a70bbf4a8ac337888486ed99f082618b"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 13784,
+      "sha256": "0bde34ff267296749553f2fcbdb4cbeb79d8bc4e7e9b07ca5b3f6bd5611a09ec"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1169,
+      "sha256": "727a37499ac1159c15183239e2662ef5a666e0c48ba5d88e2fc9abc6c351f6b9"
+    }
+  ],
+  "selfExcluded": true,
+  "fileCountExcludingSelf": 16,
+  "totalFilesIncludingSelf": 17,
+  "reportRelativeLinks": 13,
+  "role": "Directed independent counterevidence source reviewer;hypothesis known not blind;Root80package not read",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "remoteEmptySingletonHypothesisWithdrawn": true,
+    "oldCOST_R9_01CauseExcluded": true
+  },
+  "counterevidence": "ActualCLIlocalin-processserver/client;replglobalcostTracker→EngineRuntime.bindLedger;noactualsupportedremoteUIproducerestablished.PublicprovidedclientSDKscenarioexcluded.",
+  "source": {
+    "semanticFiles": 7,
+    "selected": 7,
+    "full": 0,
+    "semanticProductLines": 220,
+    "semanticTestLines": 0,
+    "navigationOnlyFiles": 1,
+    "displayedLineUnionSumIncludingNav": 570,
+    "testDeclarationsRead": 0,
+    "testsExecuted": 0,
+    "sourceInstructionPinsSame": 10,
+    "oldCauseMetadataSame": 1
+  },
+  "history": {
+    "datedFiles": 4492,
+    "md": 1442,
+    "json": 3050,
+    "strings": 1953735,
+    "scalars": 2921270,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "includedFrozen48ExcludedNumeric49Plus": true,
+    "capPerQuery": 100,
+    "matchCounts": {
+      "mainPath": 476,
+      "mainFilename": 694,
+      "mainSHA": 102,
+      "commandsPath": 198,
+      "commandsFilename": 207,
+      "commandsSHA": 9,
+      "AppPath": 2350,
+      "AppFilename": 5060,
+      "AppSHA": 528,
+      "oldCause": 1776
+    },
+    "actualScopeRowsPrinted": 16,
+    "notAllRetainedContextsSemanticallyRead": true,
+    "endingSetOrBytesDrift": 0
+  },
+  "metadataFirstFailuresOrTruncations": 0,
+  "productHelpersImportsClientQueriesConnectionsReactTimersFixturesTestsModelsAuthNativeNetworkGitExecutions": 0,
+  "realConfigsSessionsAccountsRead": 0,
+  "productWrites": 0,
+  "noBlanketCostCorrectnessOrExternalSDKImpossibilityClaim": true
+}

@@ -1,0 +1,151 @@
+{
+  "frozenUTC": "2026-10-17T16:27:55.960431+00:00",
+  "directory": "/tmp/codeshell-audit-round76-resolve-preset",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 1143,
+      "sha256": "ac80508d5998daf01eefe246a1faa20a50c2ef8fdba2839eba99968b59829e48"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1627,
+      "sha256": "d17f9e7a2306c8d1d992c55a63fcde58b525a75f7c406f7bafd19a033cea6085"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 12448,
+      "sha256": "f988cbd9bdba2995d5f65d28e89bf20446bf3ae895bfcead46fab1290407902a"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 1471,
+      "sha256": "610cebae746eb709061f5460cb78d227b789a6df269f36b5259ed594039fb07a"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 3137,
+      "sha256": "716f4343b3553d470febb10b68cbfc9093020722254644125a347a8dae262fbe"
+    },
+    {
+      "path": "final-metadata-method.py",
+      "bytes": 9235,
+      "sha256": "57e287ac118a7af177d29ef8188a2eb517e88fc7210670d5fbec3fb2bfe9cd55"
+    },
+    {
+      "path": "history-contexts.first.json",
+      "bytes": 145933,
+      "sha256": "3b85d160a8e2e51dd3b25ab4d9d8787719fc59b7843c398e85be30628f9fa595"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 195299,
+      "sha256": "e3e840a594397251eefe6ba96117a4a53d7da8c55fbb750758feef95168af029"
+    },
+    {
+      "path": "history-initial-pins.first.json",
+      "bytes": 993515,
+      "sha256": "43c1678c8b78060fa0d70965b1b6ddb2019d5fcb328faac603d51c8c527aac78"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 993515,
+      "sha256": "48b5cfefa2ff751fc3703447868901ec62466e148c298f349a6b457ce1ae6b83"
+    },
+    {
+      "path": "history-inventory.first.raw.txt",
+      "bytes": 294988,
+      "sha256": "18f348beb632a47ddd4686e8bd3486b37b15fef7b7b6b9c0727c9395255858de"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 294988,
+      "sha256": "d3ced04766c4a0b86445edac27be61e910fe4d6e6bfab3ab78a9d3d6cf784398"
+    },
+    {
+      "path": "history-method.first.py",
+      "bytes": 4533,
+      "sha256": "a715c5b54c2d6a2585ed22b667adb6f5f89144799fb565744558124615db8798"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4524,
+      "sha256": "7ecab683b8c83261f1dbd61893e9d527bf46e4a090e788a3bf990da1aa5cf5e9"
+    },
+    {
+      "path": "history-scope-clarification.json",
+      "bytes": 1366,
+      "sha256": "8fa717866c65b42a347cee97d352934743f7c9189d2004d18d057a6768ff3d2c"
+    },
+    {
+      "path": "history.first.json",
+      "bytes": 1892,
+      "sha256": "24f5616c6b09a68f648dbb66c6cf96f15e274e5a7d2cac2077728a0e728cdfda"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1887,
+      "sha256": "a338f45e71b29a35f575ff561f359b82f1a00cce8a80d64436000a5cf1418ed5"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1428,
+      "sha256": "68f08a2aa99dbb44916eecd4891e05bbb5aec53d3ce9aae255a7a2efbc7fbbe1"
+    },
+    {
+      "path": "metadata-first-diagnostic.json",
+      "bytes": 1279,
+      "sha256": "7b34e30ce7000d070e99ddaf24408f94e86cfa574275ea5b3627598239addc35"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4681,
+      "sha256": "36a9ccb5e450c9bc5edcc3baa3937e6b70b4d9afc92e1d989042b9fe22b43e5f"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 15098,
+      "sha256": "4486f109f2473d99898861d1424a30b0cf54c9923ac3b479e3935bde2770916f"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 17880,
+      "sha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 585,
+      "sha256": "db5788dd14eca9745733cb27098c3e8a5057d44b22cf5595200a9fbb98d78b48"
+    }
+  ],
+  "selfExcluded": "artifact-receipt.json",
+  "fileCountExcludingSelf": 23,
+  "totalFilesIncludingSelf": 24,
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "scope": {
+    "semanticProductLines": 155,
+    "testDeclarationLines": 22,
+    "semanticTotalLines": 177,
+    "displayedUniqueSourceLines": 373,
+    "selectedRows": 5,
+    "navigationOnlyRows": 1,
+    "hashOnlyRows": 3,
+    "newFullRows": 0,
+    "firstFullCoverageClaims": 0
+  },
+  "sourcePins": 9,
+  "sourcePinsEndingSame": true,
+  "historyDatedFiles": 4492,
+  "metadataAdaptationCorrections": 1,
+  "inactiveFirstArtifacts": 5,
+  "commandFailures": 0,
+  "consoleTruncations": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "relativeReportLinks": 11,
+  "limits": "Directed selected re-check of possibly previously read resolver, not unread frontier, first-full coverage or runtime certification."
+}

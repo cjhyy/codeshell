@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:30:42.655866+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "lines": 159,
+      "beforeRootCurrentNavigationAndBody": true
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "createdUTC": "2026-10-17T16:25:47.827235+00:00",
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "documentPinBeforeMetadataInterpretation": {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+        "bytes": 8621,
+        "sha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+        "kind": "json"
+      },
+      "documentEndingSHA": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+      "jsonPointer": "/sources/15",
+      "rawObject": {
+        "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+        "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+        "bytes": 2357,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "readScope": "full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "documentPinBeforeMetadataInterpretation": {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+        "bytes": 8621,
+        "sha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+        "kind": "json"
+      },
+      "documentEndingSHA": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+      "jsonPointer": "/sources/20",
+      "rawObject": {
+        "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+        "sha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+        "bytes": 3330,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "readScope": "full"
+      }
+    }
+  ],
+  "scope": "Canonical original sameSHA full metadata. Hook stops before body; test record supporting only, not second frontier selection. Product body0."
+}

@@ -1,0 +1,106 @@
+{
+  "capturedUTC": "2026-10-17T16:34:32.828792+00:00",
+  "sourceInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "initialSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialBytes": 206,
+      "endingSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialBytes": 17639,
+      "endingSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "initialSHA": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "initialBytes": 11626,
+      "endingSHA": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "endingBytes": 11626,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "initialSHA": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "initialBytes": 29601,
+      "endingSHA": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "endingBytes": 29601,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "initialSHA": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "initialBytes": 90976,
+      "endingSHA": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "endingBytes": 90976,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "initialSHA": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "initialBytes": 13991,
+      "endingSHA": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "endingBytes": 13991,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "initialSHA": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "initialBytes": 13259,
+      "endingSHA": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "endingBytes": 13259,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "initialSHA": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "initialBytes": 6215,
+      "endingSHA": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "endingBytes": 6215,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "initialSHA": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "initialBytes": 4514,
+      "endingSHA": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "endingBytes": 4514,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session-manager.ts",
+      "initialSHA": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "initialBytes": 29543,
+      "endingSHA": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "endingBytes": 29543,
+      "same": true
+    }
+  ],
+  "allSourceInstructionSame": true,
+  "oldCauseMetadataCheck": {
+    "path": "docs/audit-2026-10-17-round9/findings.json",
+    "initialHistoryPin": {
+      "path": "docs/audit-2026-10-17-round9/findings.json",
+      "bytes": 2024,
+      "sha256": "4f0210d1447e2c2d69d6b87eb484115e20134194eca4c01de0737e6e86abc389",
+      "kind": "json"
+    },
+    "endingSHA": "4f0210d1447e2c2d69d6b87eb484115e20134194eca4c01de0737e6e86abc389",
+    "endingBytes": 2024,
+    "same": true
+  },
+  "historyInitialCount": 4492,
+  "historyEndingFilterCount": 4492,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "historyOriginalRewritten": false,
+  "productExecution": 0,
+  "gitOperations": 0
+}

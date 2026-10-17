@@ -1,0 +1,23 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0,
+    "sameShaFullPreBodyExclusions": 2
+  },
+  "productBodyReads": 0,
+  "productImportsOrHelperCalls": 0,
+  "testsOrFixturesRun": 0,
+  "reactOrClockRuns": 0,
+  "realHistoryFilesOpened": 0,
+  "modelOrNativeOrBusinessNetworkRuns": 0,
+  "gitCalls": 0,
+  "repoScriptsRun": 0,
+  "metadataExecution": "Python standard-library local metadata/index/hash only; rg path inventory. history-method.py is this audit metadata scanner, not a repository/product script.",
+  "metadataErrors": 0,
+  "outputTruncations": 0,
+  "allObservedCommandExits": 0,
+  "initialGateMethod": "history-method.py",
+  "rangeAccounting": "source-manifest.json",
+  "ending": "ending-checks.json"
+}

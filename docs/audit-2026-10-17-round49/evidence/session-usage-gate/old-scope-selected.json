@@ -1,0 +1,54 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "jsonPointer": "/sources/15",
+      "fields": {
+        "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+        "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+        "readScope": "full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "jsonPointer": "/sources/20",
+      "fields": {
+        "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+        "sha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+        "readScope": "full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "jsonPointer": "/files/76",
+      "fields": {
+        "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+        "sha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "jsonPointer": "/files/77",
+      "fields": {
+        "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+        "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59"
+      }
+    }
+  ],
+  "count": 4,
+  "aliasesChecked": [
+    "coverage",
+    "coveragelabel",
+    "inspectionscope",
+    "rawcoveragelabel",
+    "readcoverage",
+    "readingscope",
+    "readscope",
+    "review",
+    "reviewmode",
+    "reviewscope",
+    "scope",
+    "semanticcoverage"
+  ],
+  "scope": "Canonical metadata rows inspected before product body; no positive reading inferred from unknown inventory"
+}

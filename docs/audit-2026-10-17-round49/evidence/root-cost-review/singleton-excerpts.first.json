@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:31:55.899988+00:00",
+  "path": "packages/core/src/cost-tracker.ts",
+  "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+  "displayedRanges": [
+    [
+      369,
+      372
+    ]
+  ],
+  "text": " 369 \n 370 // Singleton for the current session\n 371 export const costTracker = new CostTracker();\n 372 "
+}

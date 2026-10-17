@@ -1,0 +1,104 @@
+{
+  "atUTC": "2026-10-17T16:29:48.842427+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "displayedRanges": [
+        [
+          1,
+          78
+        ],
+        [
+          202,
+          265
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            1,
+            78
+          ],
+          "text": "   1 #!/usr/bin/env node\n   2 \n   3 /**\n   4  * code-shell \u2014 general orchestration framework with a terminal coding preset\n   5  */\n   6 \n   7 import { Command } from \"commander\";\n   8 import { positiveIntOption } from \"./parse-int-option.js\";\n   9 import { runCommand } from \"./commands/run.js\";\n  10 import { replCommand } from \"./commands/repl.js\";\n  11 import { resolveTaskFromArgOrStdin } from \"./input/read-stdin.js\";\n  12 import { setup } from \"../bootstrap/setup.js\";\n  13 import { costTracker, installCostTracking } from \"@cjhyy/code-shell-core\";\n  14 import { getCurrentVersion } from \"@cjhyy/code-shell-core/internal\";\n  15 import { CHALK_COLORIZER } from \"../utils/colorizer.js\";\n  16 import type { AgentPresetName } from \"@cjhyy/code-shell-core\";\n  17 import type { SessionStatus } from \"@cjhyy/code-shell-core\";\n  18 \n  19 function formatSessionStatus(s: SessionStatus): string {\n  20   switch (s) {\n  21     case \"completed\":\n  22       return \"done\";\n  23     case \"aborted_streaming\":\n  24     case \"aborted_tools\":\n  25       return \"aborted\";\n  26     case \"prompt_too_long\":\n  27       return \"ptl\";\n  28     case \"model_error\":\n  29     case \"image_error\":\n  30     case \"batch_incomplete\":\n  31     case \"unverified_write\":\n  32       return \"error\";\n  33     case \"goal_budget_exhausted\":\n  34       return \"budget\";\n  35     case \"stop_hook_prevented\":\n  36     case \"hook_stopped\":\n  37       return \"hook_stop\";\n  38     default:\n  39       return s;\n  40   }\n  41 }\n  42 \n  43 const program = new Command();\n  44 \n  45 program\n  46   .name(\"code-shell\")\n  47   .description(\n  48     \"Code Shell \u2014 general orchestration framework with a terminal coding assistant preset\",\n  49   )\n  50   .version(getCurrentVersion());\n  51 \n  52 // \u2500\u2500\u2500 Shared options \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  53 \n  54 function addCommonOptions(cmd: Command): Command {\n  55   return (\n  56     cmd\n  57       .option(\"-m, --model <model>\", \"Model name (e.g. anthropic/claude-opus-4-6)\")\n  58       // No default here: a hard \"openai\" default would make opts.provider always\n  59       // truthy, so the `options.provider ?? settings.model.provider` fallback in\n  60       // repl.ts/run.ts could never reach the user's configured provider. The\n  61       // \"openai\" last-resort default lives at the tail of those ?? chains.\n  62       .option(\"-p, --provider <provider>\", \"LLM provider (anthropic, openai)\")\n  63       .option(\"--preset <preset>\", \"Agent preset (general, terminal-coding)\")\n  64       .option(\"--base-url <url>\", \"LLM API base URL (e.g. https://openrouter.ai/api/v1)\")\n  65       .option(\"--api-key <key>\", \"API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)\")\n  66       .option(\n  67         \"--permission-mode <mode>\",\n  68         \"Permission mode (default, acceptEdits, bypassPermissions)\",\n  69       )\n  70       .option(\"-o, --output <format>\", \"Output format (text, json, jsonl, stream-json)\", \"text\")\n  71       .option(\"--max-turns <n>\", \"Maximum turns\", positiveIntOption(\"--max-turns\"), 100)\n  72       .option(\"--effort <level>\", \"Reasoning effort (low, medium, high, max)\", \"high\")\n  73   );\n  74 }\n  75 \n  76 /** Options shared by both ways of entering interactive mode:\n  77  * `code-shell repl` and the command-less `code-shell` default. Keeping these\n  78  * in one builder prevents the two entry points from silently drifting apart. */"
+        },
+        {
+          "range": [
+            202,
+            265
+          ],
+          "text": " 202     maxTurns: opts.maxTurns as number | undefined,\n 203     resume: opts.resume as string | undefined,\n 204     effort: opts.effort as \"low\" | \"medium\" | \"high\" | \"max\" | undefined,\n 205     outputLastMessage: opts.outputLastMessage as string | undefined,\n 206   };\n 207 }\n 208 \n 209 // \u2500\u2500\u2500 Initialization \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 210 \n 211 // PreAction hook: shared setup before any command executes.\n 212 //\n 213 // Onboarding is no longer driven from here. REPL-style commands render the\n 214 // Ink-based OnboardingPrompt themselves when no API key is configured;\n 215 // headless commands (run) check for a key in their own action and\n 216 // error out if missing. This keeps the input stack unified on Ink and\n 217 // avoids the raw-mode/Ink stdin handoff we used to have to do.\n 218 program.hook(\"preAction\", async (thisCommand, actionCommand) => {\n 219   // This diagnostic only reads connection metadata and CLI login. Shared setup\n 220   // rotates logs and writes the settings schema, neither of which it needs.\n 221   if (isLinkStatusCommand(actionCommand) || isSettingsRecoveryCommand(actionCommand)) return;\n 222   const opts = thisCommand.opts();\n 223   await setup({\n 224     cwd: process.cwd(),\n 225     permissionMode: (opts.permissionMode ??\n 226       \"acceptEdits\") as import(\"@cjhyy/code-shell-core\").PermissionMode,\n 227   });\n 228 });\n 229 \n 230 // Print cost summary on exit\n 231 process.on(\"exit\", () => {\n 232   const tokens = costTracker.getTotalTokens();\n 233   if (tokens.total > 0 || (costTracker.getUsageSummary()?.requests ?? 0) > 0) {\n 234     process.stderr.write(\"\\n\" + costTracker.formatSummary(CHALK_COLORIZER) + \"\\n\");\n 235   }\n 236 });\n 237 \n 238 // \u2500\u2500\u2500 Parse \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n 239 \n 240 /** Print an error the way a CLI should \u2014 message + stack, no JSON noise. */\n 241 function reportFatal(err: unknown): never {\n 242   process.stderr.write((err instanceof Error ? (err.stack ?? err.message) : String(err)) + \"\\n\");\n 243   process.exit(1);\n 244 }\n 245 \n 246 // Backstop for any promise that rejects outside the awaited parse chain\n 247 // (e.g. a fire-and-forget started by a command). Without this, Node prints a\n 248 // raw \"UnhandledPromiseRejection\" stack and the deliberate exit code is lost.\n 249 process.on(\"unhandledRejection\", reportFatal);\n 250 \n 251 // Funnel every LLM call through the singleton cost tracker before any\n 252 // command runs. Awaited so an early sub-agent can't fire before the hook\n 253 // is installed.\n 254 await installCostTracking();\n 255 const { installDefaultLinkProviders } = await import(\"@cjhyy/code-shell-server/links\");\n 256 installDefaultLinkProviders();\n 257 \n 258 // parseAsync (not parse) so commander awaits each async .action() handler and\n 259 // a rejection surfaces here instead of floating off as an unhandledRejection\n 260 // with a raw stack and a collapsed exit code.\n 261 try {\n 262   await program.parseAsync();\n 263 } catch (err) {\n 264   reportFatal(err);\n 265 }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "displayedRanges": [
+        [
+          41,
+          80
+        ],
+        [
+          139,
+          162
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            41,
+            80
+          ],
+          "text": "  41  *   4. MODEL_PRICING by raw name\n  42  *   5. DEFAULT_PRICING fallback\n  43  *\n  44  * Returns { pricing, source } so callers can flag unknown-model warnings\n  45  * accurately (the snapshot path counts as known even if MODEL_PRICING misses).\n  46  */\n  47 function lookupPricing(model: string): { pricing: ModelPricing; known: boolean } {\n  48   // Try OpenRouter snapshot lookup for models with vendor/ prefix\n  49   if (model.includes(\"/\")) {\n  50     const hit = findOpenRouterModel(model);\n  51     if (hit && (hit.inputPricePerMillion > 0 || hit.outputPricePerMillion > 0)) {\n  52       return openRouterPricing(hit);\n  53     }\n  54   }\n  55   // Also try OpenRouter for short names (e.g. \"deepseek-v4-flash\" \u2192 \"deepseek/deepseek-v4-flash\")\n  56   // by matching on the model part after the slash\n  57   const orHit =\n  58     findOpenRouterModel(`deepseek/${model}`) ??\n  59     findOpenRouterModel(`openai/${model}`) ??\n  60     findOpenRouterModel(`anthropic/${model}`);\n  61   if (orHit && (orHit.inputPricePerMillion > 0 || orHit.outputPricePerMillion > 0)) {\n  62     return openRouterPricing(orHit);\n  63   }\n  64   const canonical = getCanonicalName(model);\n  65   const hit = MODEL_PRICING[canonical] ?? MODEL_PRICING[model];\n  66   if (hit) return { pricing: hit, known: true };\n  67   return { pricing: DEFAULT_PRICING, known: false };\n  68 }\n  69 \n  70 export interface UsageRecord {\n  71   model: string;\n  72   promptTokens: number;\n  73   completionTokens: number;\n  74   cacheReadTokens: number;\n  75   cacheWriteTokens: number;\n  76   totalTokens: number;\n  77   timestamp: number;\n  78   isSubAgent?: boolean;\n  79 }\n  80 "
+        },
+        {
+          "range": [
+            139,
+            162
+          ],
+          "text": " 139       completion += r.completionTokens;\n 140     }\n 141     return { prompt, completion, total: prompt + completion };\n 142   }\n 143 \n 144   getEstimatedCost(): number {\n 145     if (this.ledger) return this.ledger.summary().knownEstimatedCostUsd;\n 146     let totalCost = 0;\n 147     for (const r of this.records) {\n 148       const { pricing: p } = lookupPricing(r.model);\n 149       // promptTokens includes cache tokens \u2014 subtract them to avoid double billing\n 150       const uncachedInput = Math.max(0, r.promptTokens - r.cacheReadTokens - r.cacheWriteTokens);\n 151       totalCost += (uncachedInput / 1_000_000) * p.input;\n 152       totalCost += (r.completionTokens / 1_000_000) * p.output;\n 153       totalCost += (r.cacheReadTokens / 1_000_000) * p.cacheRead;\n 154       totalCost += (r.cacheWriteTokens / 1_000_000) * p.cacheWrite;\n 155     }\n 156     return totalCost;\n 157   }\n 158 \n 159   getRequestCount(): number {\n 160     if (this.ledger) return this.ledger.summary().requests;\n 161     return this.records.length;\n 162   }"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "displayedRanges": [
+        [
+          1,
+          44
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            1,
+            44
+          ],
+          "text": "   1 import { useCallback, useEffect, useRef, useState, type RefObject } from \"react\";\n   2 import type { AgentClient, UsageSummary } from \"@cjhyy/code-shell-core\";\n   3 \n   4 function isOwnedSummary(value: unknown, sessionId: string): value is UsageSummary {\n   5   if (!value || typeof value !== \"object\" || Array.isArray(value)) return false;\n   6   const summary = value as UsageSummary;\n   7   return (\n   8     summary.version === 1 &&\n   9     summary.scope === \"session\" &&\n  10     summary.sessionId === sessionId &&\n  11     summary.includesChildren === true &&\n  12     typeof summary.partial === \"boolean\" &&\n  13     Number.isFinite(summary.knownEstimatedCostUsd) &&\n  14     summary.knownEstimatedCostUsd >= 0 &&\n  15     Number.isSafeInteger(summary.unknownCostRequests) &&\n  16     summary.unknownCostRequests >= 0 &&\n  17     Number.isSafeInteger(summary.totalTokens) &&\n  18     summary.totalTokens >= 0\n  19   );\n  20 }\n  21 \n  22 /** A response belongs to the selected Session and the latest requested snapshot. */\n  23 export function useSessionUsage(\n  24   client: Pick<AgentClient, \"query\">,\n  25   sessionId: string | undefined,\n  26   currentSessionId: RefObject<string | undefined>,\n  27 ) {\n  28   const generation = useRef(0);\n  29   const [snapshot, setSnapshot] = useState<{ sessionId: string; summary: UsageSummary }>();\n  30   const refresh = useCallback(\n  31     async (target: string | undefined) => {\n  32       const request = ++generation.current;\n  33       if (!target) {\n  34         setSnapshot(undefined);\n  35         return;\n  36       }\n  37       try {\n  38         const summary = (\n  39           await client.query(\"usage\", {\n  40             scope: \"session\",\n  41             sessionId: target,\n  42             includeChildren: true,\n  43           })\n  44         ).data;"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "displayedRanges": [
+        [
+          88,
+          104
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            88,
+            104
+          ],
+          "text": "  88 \n  89   {\n  90     name: \"/cost\",\n  91     description: \"Show token usage and cost (/cost stats for summary, /cost detail for breakdown)\",\n  92     usage: \"/cost [stats|detail]\",\n  93     execute: (arg, ctx) => {\n  94       if (costTracker.getUsageSummary()) {\n  95         ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));\n  96         return;\n  97       }\n  98       if (costTracker.getRequestCount() === 0) {\n  99         ctx.addStatus(\"No API requests yet.\");\n 100         return;\n 101       }\n 102       const t = costTracker.getTotalTokens();\n 103       const cost = costTracker.getEstimatedCost();\n 104       const requests = costTracker.getRequestCount();"
+        }
+      ]
+    }
+  ],
+  "scope": "Known /cost remote-split hypothesis targeted static source, no new unread/full claim; no credentials/network or product execution."
+}

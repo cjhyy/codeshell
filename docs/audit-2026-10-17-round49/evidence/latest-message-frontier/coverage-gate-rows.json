@@ -1,0 +1,126 @@
+{
+  "rows": [
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/4029/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16067/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16068/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4352/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4352/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4353/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lines": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json",
+      "pointer": "/files/2/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+      "pointer": "/sourceChecks/6/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "pointer": "/files/4/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": [],
+        "lineCount": 173,
+        "kind": "unread-adjacent-hook"
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "pointer": "/files/4/prepPinRow/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "pointer": "/files/5/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+      }
+    },
+    {
+      "candidate": "latest-messages",
+      "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "pointer": "/hashOnlyChecks/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    }
+  ],
+  "count": 12,
+  "interpretationRequired": true
+}

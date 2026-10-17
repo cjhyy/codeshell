@@ -1,0 +1,42 @@
+{
+  "frozenUTC": "2026-10-17T16:35:40.650746+00:00",
+  "directory": "/tmp/codeshell-audit-round82-packet-review",
+  "role": "Frozen packet metadata-only cross-check,73/76 original authorship overlap disclosed; no new independent product semantics",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 89406,
+      "sha256": "b0a0c315d4c8fe9004d93cbe4b15eb2cc0927bec12e98310870def7b82877d3b"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3907,
+      "sha256": "24af18629aeb81e6617912ab93e33c1344c8d4f90ab19e770b9e7a7025603b81"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 2,
+  "totalFilesIncludingSelf": 3,
+  "inputPackets": 9,
+  "receiptListedArtifactsChecked": 133,
+  "receiptSnapshotsHashed": 9,
+  "allInputFilesIncludingReceipts": 142,
+  "authorReportLinksChecked": 79,
+  "sourceRowsMetadataOnly": 48,
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "reviewerFailures": 0,
+  "reviewerConsoleTruncations": 0,
+  "productSourceBodyReads": 0,
+  "currentProductShaChecks": 0,
+  "productHelperFixtureTestReactNativeNetworkRuns": 0,
+  "authorMethodsExecuted": 0,
+  "gitOperations": 0,
+  "mutable80and81Accesses": 0,
+  "newUniqueSourceSemanticCoverage": 0,
+  "metadataSourceChecks": [],
+  "limits": "Root74 six non-full displays are declared-count sum only;76 old over-EOF range unchanged;78 only two canonical complete aliases, no global counts."
+}

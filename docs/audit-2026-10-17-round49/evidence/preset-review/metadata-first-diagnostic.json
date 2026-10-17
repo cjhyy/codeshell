@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T16:21:22.818489+00:00",
+  "toolChunk": "5661cf",
+  "exitCode": 0,
+  "type": "metadata adaptation mismatch, not product failure",
+  "firstObserved": "Target/fallback exact paths and SHA were correct, but name/ordinary-contract terms still belonged to prep73 because the draft literal replacements used mismatched quote/spacing.",
+  "wrongTerms": {
+    "target_path": [
+      "packages/core/src/composition/resolve-preset.ts"
+    ],
+    "target_sha": [
+      "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+    ],
+    "target_name": [
+      "model-display"
+    ],
+    "fallback_path": [
+      "packages/core/src/colorizer.ts"
+    ],
+    "fallback_sha": [
+      "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc"
+    ],
+    "fallback_name": [
+      "parse-int-option"
+    ],
+    "ordinary_contract": [
+      "model display",
+      "模型显示",
+      "parseintoption"
+    ]
+  },
+  "correction": "Preserved five first raw/script/JSON files byte-for-byte. Corrected only the active metadata query terms and rescanned; no product source body/test/helper execution.",
+  "sourceInitialPinRetained": "initial-pins.json unchanged",
+  "commandFailureCount": 0,
+  "productFailures": 0,
+  "sourceBodyReadsAtCorrection": 0
+}

@@ -1,0 +1,89 @@
+{
+  "frozenUTC": "2026-10-17T16:19:59.979447+00:00",
+  "directory": "/tmp/codeshell-audit-round73-model-display",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 762,
+      "sha256": "a2d30e1f0f4c1710e570480cf6816090ead25fa157b7f3a5f5864d172daf7971"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 13664,
+      "sha256": "6ac0f29714a550c54d8eb125cc7640e69eba03666ad42ab3a79286c82d9782ff"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 4090,
+      "sha256": "531b2fc7c5579c45215045d152cd4f6e20c344c74e97c34e833e2e848fbeabf5"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1572,
+      "sha256": "d6492a8dc3efd95116b7e27c380f3a8cf1fd109c398f3a1c5b97986b946d92f6"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 135850,
+      "sha256": "66cb4841a123d27f4d2398a8461505baae1720dffceef01067ba69c55bd09c43"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 993515,
+      "sha256": "5dda64103f1b3d9a520c957bed1f12cc8c1741acc7ad0f2467f09007226ddf45"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 294988,
+      "sha256": "a7def30453ba4d44d3ca301cd91afbbbbd7a916eaa4bf354d9cb6ea236ddde6f"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4552,
+      "sha256": "2b5cd14b7f6984497a90681302f210dd6e242ec34ce46965011195f66a99eff5"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1902,
+      "sha256": "2f08800b46dcb1da9a6c3c39e86cda39f3200bb96456e29599fe3fd5fb6470d9"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1406,
+      "sha256": "ed1d09aa89d0601f77790a3a2c2fa87d8b1850c36652697c3a34b0365aeba06f"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3639,
+      "sha256": "6974cd6e9fc3a0323efde467e4fc00ec61cd00d01b603f99d79f01ab66cc52ed"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 7841,
+      "sha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 497,
+      "sha256": "d1ef6599d912f95cfa4f3c7ad119c39f4233156e7bcfb8298a68dca6e42d585e"
+    }
+  ],
+  "selfExcluded": "artifact-receipt.json",
+  "fileCountExcludingSelf": 13,
+  "totalFilesIncludingSelf": 14,
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "oldSameSHAFullExclusions": 2,
+  "newSourceSemanticLines": 0,
+  "sourceBodyRead": 0,
+  "testDeclarationsRead": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "sourcePinsEndingSame": true,
+  "historyDatedIncluded": 4492,
+  "relativeReportLinks": 7,
+  "limitations": "Historical explicit full gate only, no new source behavior or runtime correctness review."
+}

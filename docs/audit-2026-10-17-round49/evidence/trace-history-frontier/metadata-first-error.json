@@ -1,0 +1,9 @@
+{
+  "utc": "2026-10-17T16:21:15.258297+00:00",
+  "toolChunkId": "1a2d85",
+  "observedExitCode": 1,
+  "cause": "Audit metadata inline reader imported datetime class then used datetime.datetime; own metadata mistake.",
+  "stage": "Before producer pin persistence and before any requested producer selected source display; first HTTP source bytes were read only to hash/decode/count for pin. No product executed, no source body semantically read.",
+  "repair": "Use datetime.now(timezone.utc) in metadata timestamp. Same selected read only; not a product/test retry.",
+  "raw": "metadata-first-error.txt"
+}

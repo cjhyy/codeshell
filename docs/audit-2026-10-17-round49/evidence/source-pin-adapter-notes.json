@@ -1,0 +1,126 @@
+{
+  "missingDeclaredByteCounts": [
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "instructionReads",
+      "path": "CODESHELL.md",
+      "reportedBytes": null,
+      "rootFrozenGitBytes": 17639,
+      "note": "No author byte count invented; Root independently binds Git bytes."
+    }
+  ],
+  "nonReadingGateAssertions": [
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "note": "Duplicate gate assertion has zero new product semantics and matches an explicit hash-only file row; not an additional reading/source pin."
+    },
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "note": "Duplicate gate assertion has zero new product semantics and matches an explicit hash-only file row; not an additional reading/source pin."
+    }
+  ],
+  "unboundNavigationReferences": [
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "filenameNavigation",
+      "row": "packages/core/src/engine/session-title.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "filenameNavigation",
+      "row": "packages/core/src/engine/engine.session-title.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "filenameNavigation",
+      "row": "packages/core/src/sources/context-summary.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "title-gate/source-manifest.json",
+      "collection": "filenameNavigation",
+      "row": "packages/core/src/sources/context-summary.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "navigationOnlyUnreviewed",
+      "row": "packages/core/src/model-traces/store.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "navigationOnlyUnreviewed",
+      "row": "packages/server/src/model-trace-http.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "navigationOnlyUnreviewed",
+      "row": "packages/web/src/model-trace-api.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "trace-history-frontier/source-manifest.json",
+      "collection": "navigationOnlyUnreviewed",
+      "row": "packages/desktop/src/preload/model-trace-api.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/core/src/agent/agent-definition-registry.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/core/src/agent/agent-definition.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/core/src/agent/agent-definition.skills.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/core/src/agent/agent-definition-registry.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/core/src/agent/agent-definition.sandbox-mcp.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "agent-definition-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/core/src/agent/agent-definition.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "session-usage-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "session-usage-gate/source-manifest.json",
+      "collection": "filenameOnlyNavigation",
+      "row": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    }
+  ],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows.",
+  "productRuns": 0
+}

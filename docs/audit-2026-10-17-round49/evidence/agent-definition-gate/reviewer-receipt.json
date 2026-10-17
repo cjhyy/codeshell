@@ -1,0 +1,138 @@
+{
+  "frozenUTC": "2026-10-17T16:23:42.927235+00:00",
+  "directory": "/tmp/codeshell-audit-round77-agent-definitions",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 1641,
+      "sha256": "e82d4b5f9501402c91b7f1c463b2d2bcd91374abeac7d17e5524188a16861e4b"
+    },
+    {
+      "path": "coverage-gate-detail.json",
+      "bytes": 1258,
+      "sha256": "9b66bf29e0bd232219b8d48625f163f70fd9f846fd24a255a0465f13124d236d"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 42360,
+      "sha256": "a75a58422eb1188e806c752f77a3088498eb5c4a69ab8305a6799ca8df8dcf32"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2573,
+      "sha256": "ec453db128c5d8c80a4bd33305b8d8c5e4c077cbbf3c8a0ad28da913d1ab89e3"
+    },
+    {
+      "path": "gate-decisions.json",
+      "bytes": 1576,
+      "sha256": "ba2f999ab8d9964d98038351df7fe956c91b023dca81a55cc3f0a6587daeecbd"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 372237,
+      "sha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3928,
+      "sha256": "ec080818b12f9cc6b3d48374790f93dc7921277f0cc10960776363e732669de0"
+    },
+    {
+      "path": "history.json",
+      "bytes": 994434,
+      "sha256": "35e3313beea8bd7c1a21f05f797631ebebbe4d85f431ad54bbd2436539ced52f"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1195,
+      "sha256": "be7f7b9357169f77838c02e84f4a36a2430a5080cba338c94a9abe10beccb068"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1109,
+      "sha256": "ee24a57137c0f745f06e13337d5d60a089897fdd7d487c6ffcceac5e23192342"
+    },
+    {
+      "path": "old-reviewmode-objects.json",
+      "bytes": 1412,
+      "sha256": "a11aceaeacbd66a19bd7c4fb460228ee60c1b5a3b775c89770ef278427668b23"
+    },
+    {
+      "path": "old-scope-selected.json",
+      "bytes": 130,
+      "sha256": "6eab69736095acdea419cf215a37eb9854d5db4f354702afd6991f13957fbb6b"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4285,
+      "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 2735,
+      "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 874,
+      "sha256": "06f190dc30e896571df1bec754caf0f6de25fe48c0d8742e29c57e775b4f270c"
+    }
+  ],
+  "selfExcluded": true,
+  "fileCountExcludingSelf": 15,
+  "totalFilesIncludingSelf": 16,
+  "reportRelativeLinks": 11,
+  "role": "Read-before-body canonical coverage gate; no new product source semantic read",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "sameSHAOldCompleteGateExclusions": 2
+  },
+  "originalEvidence": "R6 evidence/skills-source-manifest /files/4+5 reviewMode complete; skills-agents.md53 distinguishes complete primary modules from selected callers. No limited qualifier on these rows.",
+  "source": {
+    "semanticFiles": 0,
+    "semanticProductLines": 0,
+    "fullNewProductReads": 0,
+    "selectedNewProductReads": 0,
+    "productBodyNavDisplay": 0,
+    "hashOnlyProducts": 2,
+    "filenameOnlyNavigation": 6,
+    "testDeclarationsRead": 0,
+    "testsExecuted": 0,
+    "instructionsRepeatedHashOnly": 2,
+    "canonicalMetadataObjects": 2,
+    "oldReportMetadataLines": 53
+  },
+  "history": {
+    "datedFiles": 4492,
+    "md": 1442,
+    "json": 3050,
+    "strings": 1953735,
+    "scalars": 2921270,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "includedFrozen48ExcludedNumeric49Plus": true,
+    "matchCounts": {
+      "registryPath": 99,
+      "registrySHA": 12,
+      "registryFilename": 140,
+      "definitionPath": 113,
+      "definitionSHA": 17,
+      "definitionFilename": 154,
+      "oldCause": 1054
+    },
+    "cap": 100,
+    "notAllRetainedContextsSemanticallyRead": true,
+    "endingSetOrBytesDrift": 0
+  },
+  "sourceInstructionPinsSame": 4,
+  "canonicalMetadataPinsSame": 2,
+  "oldS_C2SkipNotReopened": true,
+  "firstReaderAliasLimitationAndDisplayTruncationPreserved": true,
+  "originalIndexModified": false,
+  "productHelperFixtureTestModelPermissionIdentityLockNativeNetworkGitExecutions": 0,
+  "realConfigsUserSessionsRead": 0,
+  "productWrites": 0,
+  "noCurrentAllBehaviorCorrectnessClaim": true
+}
