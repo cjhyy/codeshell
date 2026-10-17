@@ -1,0 +1,13 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "fixture": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.test.ts",
+  "fixtureSha256": "70c9af4f4d1e77f10e321a5b408cf2fc057284e3a345e34041ed3c112e809e1a",
+  "importsVerifiedAsSourceOnly": [
+    "../../../packages/core/src/plugins/parseMarketplaceInput.js",
+    "../../../packages/core/src/plugins/installer/paths.js",
+    "../../../packages/core/src/plugins/schemas.js",
+    "../../../packages/core/src/plugins/installer/detectFormat.js",
+    "../../../packages/core/src/plugins/installer/normalizeManifest.js"
+  ],
+  "scope": "pure parser/derive/name validator and ordinary schema; own temp format/manifest metadata; no marketplace add/clone or installer/registry/native/permissions execution"
+}

@@ -1,0 +1,45 @@
+{
+  "frozenCommit": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "confirmedFindings": 0,
+  "candidates": [
+    {
+      "id": "Q-R8-C1",
+      "status": "candidate-skipped",
+      "title": "Mobile ordinary question projection does not carry multiSelect",
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "line": 138,
+      "normalTrigger": "A Core sync or async ordinary question has multiple options and multiSelect:true, and the user answers on Mobile.",
+      "staticChain": [
+        "packages/core/src/tool-system/builtin/ask-user.ts:138",
+        "packages/core/src/protocol/server.ts:4123",
+        "packages/core/src/protocol/server.ts:4056",
+        "packages/web/src/lib/messageMappers.ts:138",
+        "packages/web/src/hooks/useRemoteApp.ts:1275",
+        "packages/desktop/src/mobile/components/ApprovalCard.tsx:115"
+      ],
+      "evidenceLimit": "Mobile fixture failed before tests at missing react-dom/client import; 0 product observations. Core callback controls prove only option forwarding at that independent boundary.",
+      "contractLimit": "AskUserOptions allows hosts to ignore additive hints. Mobile desktop-parity comment is broad; D6 capability checklist only says option buttons and free input, not explicit multiSelect support.",
+      "recovery": "Manual combined text is statically available for ordinary questions; not dynamically validated.",
+      "validation": "questions-mobile-multiselect.first.log",
+      "severity": null
+    },
+    {
+      "id": "Q-R8-C2",
+      "status": "candidate-skipped",
+      "title": "TUI Space toggle reads the rendered cursor during batched key processing",
+      "path": "packages/tui/src/ui/components/AskUserPrompt.tsx",
+      "line": 226,
+      "normalTrigger": "Down then Space arrive in one input chunk for an ordinary multi-select question.",
+      "staticChain": [
+        "packages/tui/src/render/components/App.tsx:319",
+        "packages/tui/src/ui/components/AskUserPrompt.tsx:80",
+        "packages/tui/src/ui/components/AskUserPrompt.tsx:210",
+        "packages/tui/src/ui/components/AskUserPrompt.tsx:223"
+      ],
+      "evidenceLimit": "First renderer shard failed both candidate and flushed-key control (0 pass, 2 fail, 6 assertions); no established batch-vs-control difference, no wrong-answer production claim.",
+      "validation": "questions-tui-batched-choice.first.log",
+      "severity": null
+    }
+  ],
+  "policy": "Failure preserved then direction skipped; no fixture repair/retry/alternate validation."
+}

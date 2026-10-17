@@ -1,0 +1,286 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "scope": "Selected source/dependency/contract/caller files; some callers/transitive imports inspected only in selected ranges, not full-file coverage",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 17639,
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 3079,
+      "frozenSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "currentWorkingTreeSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 709,
+      "frozenSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "currentWorkingTreeSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 6234,
+      "frozenSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "currentWorkingTreeSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 5287,
+      "frozenSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "currentWorkingTreeSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 14597,
+      "frozenSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "currentWorkingTreeSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/detectFormat.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 330,
+      "frozenSha256": "1ab6eb86e5135484edc3f7b87849c37b9403e951fab8a565d150c75385c4b52a",
+      "currentWorkingTreeSha256": "1ab6eb86e5135484edc3f7b87849c37b9403e951fab8a565d150c75385c4b52a",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/detectFormat.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 899,
+      "frozenSha256": "1a8102e7918d3cd8661441fc9206b6384df71efd2cbe12ecc7ebb487e9b5ed58",
+      "currentWorkingTreeSha256": "1a8102e7918d3cd8661441fc9206b6384df71efd2cbe12ecc7ebb487e9b5ed58",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 5106,
+      "frozenSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "currentWorkingTreeSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/schemas.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 6630,
+      "frozenSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "currentWorkingTreeSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/schemas.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 6208,
+      "frozenSha256": "fd09ed4ddf6295888505019057a14430ec8764246fdcf4d99197c7f919291928",
+      "currentWorkingTreeSha256": "fd09ed4ddf6295888505019057a14430ec8764246fdcf4d99197c7f919291928",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 3178,
+      "frozenSha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "currentWorkingTreeSha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertAgents.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 4975,
+      "frozenSha256": "7db2c48b4c59b829a22fbc3993b790d5c3a03a962b26c73a8a3a0ad920e0332f",
+      "currentWorkingTreeSha256": "7db2c48b4c59b829a22fbc3993b790d5c3a03a962b26c73a8a3a0ad920e0332f",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertAgents.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 4993,
+      "frozenSha256": "59af58a2be034c06187d12407366add3557a196610cbf4b8f9f845092c32baf1",
+      "currentWorkingTreeSha256": "59af58a2be034c06187d12407366add3557a196610cbf4b8f9f845092c32baf1",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 3286,
+      "frozenSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "currentWorkingTreeSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 4008,
+      "frozenSha256": "53fb310eb2d1c896abda400d4f8c6b6cb7e4f306ac92db5824c6a74d3e23fab2",
+      "currentWorkingTreeSha256": "53fb310eb2d1c896abda400d4f8c6b6cb7e4f306ac92db5824c6a74d3e23fab2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 11605,
+      "frozenSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "currentWorkingTreeSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.expand.test.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 2112,
+      "frozenSha256": "fefed6531d5a1ae5748181e424230c2f3a09f2f975f0fe5f28296ca6e025033d",
+      "currentWorkingTreeSha256": "fefed6531d5a1ae5748181e424230c2f3a09f2f975f0fe5f28296ca6e025033d",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 5601,
+      "frozenSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "currentWorkingTreeSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 7940,
+      "frozenSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "currentWorkingTreeSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 6280,
+      "frozenSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "currentWorkingTreeSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 994,
+      "frozenSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "currentWorkingTreeSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 7022,
+      "frozenSha256": "a83aa411008e552de1fecd7c023f3149e6f81a442f5a7b0fdfaf98b81cb6255f",
+      "currentWorkingTreeSha256": "a83aa411008e552de1fecd7c023f3149e6f81a442f5a7b0fdfaf98b81cb6255f",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginAgents.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 1682,
+      "frozenSha256": "d2588804ab79e60608f8dbc877e3c88e3dae8e1b8aec6ea02feb3def511318c8",
+      "currentWorkingTreeSha256": "d2588804ab79e60608f8dbc877e3c88e3dae8e1b8aec6ea02feb3def511318c8",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 9314,
+      "frozenSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "currentWorkingTreeSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 1329,
+      "frozenSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "currentWorkingTreeSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/skills/frontmatter.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 2157,
+      "frozenSha256": "f763ead39c22dfadfb616139f87ab2b3ec5561921b491c0123d8b2ba435af784",
+      "currentWorkingTreeSha256": "f763ead39c22dfadfb616139f87ab2b3ec5561921b491c0123d8b2ba435af784",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 6078,
+      "frozenSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "currentWorkingTreeSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 195050,
+      "frozenSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "currentWorkingTreeSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 1289,
+      "frozenSha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+      "currentWorkingTreeSha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 20113,
+      "frozenSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "currentWorkingTreeSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugin-command-service.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 2377,
+      "frozenSha256": "1bb722012388aeb59c2786ae526fd0b0c10d99db995e5fcc6fec51281bf61ac5",
+      "currentWorkingTreeSha256": "1bb722012388aeb59c2786ae526fd0b0c10d99db995e5fcc6fec51281bf61ac5",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 20169,
+      "frozenSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "currentWorkingTreeSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/automation/scheduler.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 50584,
+      "frozenSha256": "6b59290c36a81bbab5445372deb8033c67b638ea9f53ad34831e8dccfdd27c70",
+      "currentWorkingTreeSha256": "6b59290c36a81bbab5445372deb8033c67b638ea9f53ad34831e8dccfdd27c70",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 9285,
+      "frozenSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "currentWorkingTreeSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ]
+}

@@ -1,0 +1,3626 @@
+{
+  "scope": "all docs and bugs .md/.json excluding current round; JSON recursively parsed",
+  "counts": {
+    "md": 1006,
+    "json": 427,
+    "strings": 319782
+  },
+  "parseErrors": [],
+  "hits": [
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "location": "118",
+      "excerpt": "Pet bucket 解析失败时回退 `activeBucket`；Pet host 在 `packages/desktop/src/renderer/pet/PetChatHost.tsx:132-173` 没有独立 AskUser/approval UI。"
+    },
+    {
+      "path": "docs/architecture/02-tool-system.md",
+      "location": "138",
+      "excerpt": "- **Planning/coordination**: `AskUserQuestion`, `AskUserQuestionAsync`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `complete_goal`, `cancel_goal`, `AddMarketplace`, `InstallCapability`"
+    },
+    {
+      "path": "docs/architecture/02-tool-system.md",
+      "location": "142",
+      "excerpt": "`AskUserQuestion` waits for an answer. `AskUserQuestionAsync` uses the same question/options"
+    },
+    {
+      "path": "docs/architecture/02-tool-system.md",
+      "location": "150",
+      "excerpt": "The TUI lists pending questions in its footer: Ctrl+G opens one and Escape defers an"
+    },
+    {
+      "path": "docs/architecture/02-tool-system.md",
+      "location": "151",
+      "excerpt": "asynchronous question. SDK hosts can provide `askUserAsync` / `setAskUserAsync` to implement"
+    },
+    {
+      "path": "docs/architecture/04-protocol-and-sessions.md",
+      "location": "60",
+      "excerpt": "`requireExisting` by probing `Engine.sessionExistsOnDisk()`, apply a per-run model switch and plan mode, wire ask-user/browser/credential bridges for interactive engines, then enqueue the turn (`packages/core/src/protocol/server.ts:376`, `packages/core/src/protocol/server.ts:380`, `packages/core/src/protocol/server.ts:395`, `packages/core/src/protocol/server.ts:411`, `packages/core/src/protocol/server.ts:422`, `pac"
+    },
+    {
+      "path": "docs/architecture/04-protocol-and-sessions.md",
+      "location": "70",
+      "excerpt": "rotocol/server.ts:663`). `agent/cancel` aborts the named session and drains session approvals as cancelled so ask-user/browser/tool prompts do not hang after Stop (`packages/core/src/protocol/server.ts:694`, `packages/core/src/protocol/server.ts:716`, `packages/core/src/protocol/server.ts:723`, `packages/core/src/protocol/server.ts:2135`)."
+    },
+    {
+      "path": "docs/architecture/04-protocol-and-sessions.md",
+      "location": "72",
+      "excerpt": "AskUser, browser actions, and credential injection all reuse the approval-notification channel in the chat-manager path (`packages/core/src/protocol/server.ts:1837`, `packages/core/src/protocol/server.ts:1882`, `packages/core/src/protocol/server.ts:1965`). `Steer` and `Unsteer` are separate mid-run control"
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "83",
+      "excerpt": "(`packages/core/src/run/RunApprovalBackend.ts:71`). `createRunAskUserFn` gives"
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "84",
+      "excerpt": "input prompts the same suspension model and supersedes an older pending question"
+    },
+    {
+      "path": "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "location": "124",
+      "excerpt": " order is global auto-approve or per-credential `autoUseByAI`, then an in-memory `sessionId` allow set, then `askUser`; no UI means deny (`use-gate.ts:62`). Cookie materialization writes a unique temp Netscape file with 0o600 and a random UUID so concurrent calls cannot clobber each other (`use-credential-tool.ts:206`, `use-credential-tool.ts:211`); stale files are swept on startup (`use-credential-tool.ts:90`, `i"
+    },
+    {
+      "path": "docs/architecture/08-arena-and-integrations.md",
+      "location": "82",
+      "excerpt": "/src/main/mobile-remote/room-manager.ts:13`, `packages/desktop/src/main/mobile-remote/room-manager.ts:204`). `AskUserQuestion` is not treated as a yes/no permission gate: the manager parses the first question, stashes raw input, and on allow writes the answer into `updatedInput.answers` keyed by the question text (`packages/desktop/src/main/mobile-remote/room-manager.ts:34`, `packages/desktop/src/main/mobile-remot"
+    },
+    {
+      "path": "docs/architecture/09-tui.md",
+      "location": "14",
+      "excerpt": "oses the stream/run state machine; pure rendering/predicate helpers and the onboarding/model/session/provider/AskUser/input control surface are split out. Chat entries live in an external store; input combines slash completion, history, multiline paste, and Emacs-style editing. |"
+    },
+    {
+      "path": "docs/architecture/09-tui.md",
+      "location": "52",
+      "excerpt": " mode display, and entry rendering live in `ui/app-helpers.tsx`; onboarding, model/session/provider managers, AskUser/approval overlays, and input routing live in `ui/components/TuiControlSurface.tsx`. Transcript entries remain in the TUI-owned external `ChatStore`, subscribed through `useSyncExternalStore`, rather than in the removed core process singleton. Its `ChatEntry` union covers user messages, streaming/fi"
+    },
+    {
+      "path": "docs/architecture/09-tui.md",
+      "location": "58",
+      "excerpt": "Approvals and AskUser prompts share the protocol approval channel. `client.onApprovalRequest()` distinguishes `__ask_user__` from tool approvals and sets either `pendingQuestion` or `pendingApproval` (`packages/tui/src/ui/App.tsx:364`, `packages/tui/src/ui/App.tsx:370`, `packages/tui/src/ui/App.tsx:384`, `packages/tui/s"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "113",
+      "excerpt": "| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`，`packages/desktop/src/renderer/messages/AskUserMessageView.tsx:211` | 点问题选项或审批按钮继续运行 |"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "307",
+      "excerpt": "| **AskUser prompt** | agent 提问时展示选项/输入 | `packages/tui/src/ui/components/AskUserPrompt.tsx:39` | 在 TUI 内回答 agent 问题 |"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "69",
+      "excerpt": "| `__ask_user__`                                                                                                                                                                                                                                               | 渲染进程                     | 租给 Web 标签页处理                 "
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "235",
+      "excerpt": "                    \"clientRequests\": [\"dialog\",\"askUser\"], \"media\": [\"image/png\"] },"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "293",
+      "excerpt": "client/dialog.pickDirectory   client/askUser   client/approval.prompt"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "296",
+      "excerpt": "- 宿主只向在 `initialize` 里声明了该能力的客户端发；多个客户端时按租约（沿用现有 `__ask_user__` 租约逻辑）选一个，其余收到 `approval/requested` 通知。"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "316",
+      "excerpt": "- headless 宿主上，Bash 工具触发的 askUser 由 Web 标签页应答；标签页关闭后 worker 收到 `client_unavailable`。"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "591",
+      "excerpt": "answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批和已安装 Panel callback 保留；Panel 的实际 runtime 只有 yes/no confirm，AskUser 立即返回 `approved:false, failure:unavailable` 加明确不支持原因，不弹内部工具审批、不构造空回答。Core 同步返回该原因，异步仅清理 pending、不注入答案或启动续跑；Desktop/Web 真实文字问答保持。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "597",
+      "excerpt": "LL_WORKSPACE_ACCESS=host` 时安装。Desktop 主 worker 启用；serve/Panel 清除，跨会话 `send_message`、`resolve_session_run` 的异步 AskUser 与邮箱唤醒走 Core 既有磁盘回退，而不因 `workspace.switch` unsupported 失败或挂起。"
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "634",
+      "excerpt": "| v1.3 | 2026-10-15 | CC 首轮修复：Desktop 内联 Host 改 devDependency、predist 同源实体化守卫；Panel 无文字 UI 的 AskUser 明确 unavailable 并清理；Desktop unsupported approve 增唯一 RPC id；主控已补齐上轮受限验证，本轮 unsigned pack 补跑单列。 |"
+    },
+    {
+      "path": "docs/archive/architecture/02-runtime-flow.md",
+      "location": "76",
+      "excerpt": "2. Builds per-run `ToolContext`, including cwd, LLM config, model pool, tool registry, AskUser handler, sub-agent spawner, and sandbox."
+    },
+    {
+      "path": "docs/archive/architecture/02-runtime-flow.md",
+      "location": "138",
+      "excerpt": "The same route is reused for `AskUserQuestion`, using a synthetic approval-like request whose tool name is `__ask_user__`."
+    },
+    {
+      "path": "docs/archive/architecture/04-tool-system.md",
+      "location": "14",
+      "excerpt": "ext.ts`](../../src/tool-system/context.ts) | Per-Engine dependency container for cwd, LLM config, model pool, AskUser, sub-agent spawner, sandbox |"
+    },
+    {
+      "path": "docs/archive/architecture/04-tool-system.md",
+      "location": "58",
+      "excerpt": "| User and coordination | `AskUserQuestion`, `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Sleep` |"
+    },
+    {
+      "path": "docs/archive/architecture/04-tool-system.md",
+      "location": "72",
+      "excerpt": "ing tools can override the default 120s timeout. `Bash` is set to 1 hour, `Agent`/`Arena` to 30 minutes, and `AskUserQuestion` has no timeout."
+    },
+    {
+      "path": "docs/archive/architecture/06-ui-protocol-rendering.md",
+      "location": "61",
+      "excerpt": "- approval and AskUser prompts;"
+    },
+    {
+      "path": "docs/archive/architecture/06-ui-protocol-rendering.md",
+      "location": "108",
+      "excerpt": "## Approval and AskUser Flow"
+    },
+    {
+      "path": "docs/archive/architecture/06-ui-protocol-rendering.md",
+      "location": "116",
+      "excerpt": "  -> UI PermissionPrompt or AskUserPrompt"
+    },
+    {
+      "path": "docs/archive/architecture/06-ui-protocol-rendering.md",
+      "location": "122",
+      "excerpt": "`AskUserQuestion` uses the same transport shape but is rendered as a question prompt instead of a tool permission dialog."
+    },
+    {
+      "path": "docs/archive/architecture/15-current-review-and-bug-inventory.md",
+      "location": "187",
+      "excerpt": "ndows. Renderer-side local refs decide what to display. This is fragile for multi-window runs, approvals, and AskUser prompts."
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "88",
+      "excerpt": "- ToolRegistry 可以被 runtime 共享,但 Engine 每轮给 executor 注入新的 ToolContext,避免不同 session 的 cwd、askUser、model、permissions 串线。"
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "236",
+      "excerpt": "- askUser"
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "248",
+      "excerpt": "好处是并发 Engine 更安全。比如 Desktop 多标签、sub-agent、automation 同时跑时,工具不会拿到另一个 session 的 askUser 或 cwd。"
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "519",
+      "excerpt": "- approval/AskUser 的 pending 状态可以集中管理。"
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "528",
+      "excerpt": "- `EngineRunner`: 把 `RunSnapshot` 转成 Engine.run,注入 run-aware approval backend 和 askUser adapter。"
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "557",
+      "excerpt": "- 审批/AskUser/cancel 不散落在 UI 里。"
+    },
+    {
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "636",
+      "excerpt": "4. multi-session: 两个 session 并发 askUser/approval/model switch。"
+    },
+    {
+      "path": "docs/archive/arena-architecture-analysis.md",
+      "location": "497",
+      "excerpt": "  - Default enabled tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent, ToolSearch, TaskCreate, TaskList, TaskUpdate, TaskGet"
+    },
+    {
+      "path": "docs/archive/arena-architecture-analysis.md",
+      "location": "498",
+      "excerpt": "  - Default permission rules: Read/Glob/Grep/AskUserQuestion/ToolSearch/TaskCreate/TaskList/TaskUpdate/TaskGet all \"allow\""
+    },
+    {
+      "path": "docs/archive/automation/2026-06-02-permission-and-guard-survey.md",
+      "location": "62",
+      "excerpt": "用户明确要求只读时，连续 Glob/Grep/Read 会被持续注入 “make a code change / run side effect / ask user” 提示，诱导违反只读约束。"
+    },
+    {
+      "path": "docs/archive/automation/2026-06-02-permission-and-guard-survey.md",
+      "location": "69",
+      "excerpt": "- 重置：任何可变工具（Bash/Edit/Write/NotebookEdit/AskUserQuestion）触发即清零（:145-151）。"
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "546",
+      "excerpt": "| askUser 跨进程审批通道 | 干净(requestId 配对·5min 超时 backstop·cancel 显式 resolve pending+清 timer 防挂死/泄漏·per-resolver try/catch;worker 死经 agent-bridge error/exit→lifecycle 事件→preload 拒 pending 不挂 UI);36 protocol 测 |"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "188",
+      "excerpt": "   - 包括 cwd、sessionId、runtime、approvalBackend、askUser、sandbox、disabledSkills/Plugins、subAgentSpawner 等。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "303",
+      "excerpt": "- approvalBackend / askUser。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "587",
+      "excerpt": "- `RunApprovalBackend` 把 Engine 的 approval/askUser 请求转成 run waiting 状态。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "931",
+      "excerpt": "常见工具：Read/Grep/Glob/Write/Edit/Bash/TodoWrite/AskUserQuestion/MCPTool/Skill 等。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "1037",
+      "excerpt": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2130",
+      "excerpt": "| `ask-user.ts` / `AskUserQuestion` | 询问用户 | question/options | 会阻塞等待用户；headless 可能错误 |"
+    },
+    {
+      "path": "docs/archive/core-modules/engine.md",
+      "location": "88",
+      "excerpt": "  setAskUser(fn: AskUserFn | undefined): void;"
+    },
+    {
+      "path": "docs/archive/core-modules/product.md",
+      "location": "141",
+      "excerpt": "- **Base tool set is hardcoded.** Every product starts from `Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent, ToolSearch, TodoWrite`; `enableTools` adds to this set and `disableTools` removes from it. There is no way to start from an empty set."
+    },
+    {
+      "path": "docs/archive/core-modules/product.md",
+      "location": "142",
+      "excerpt": "- **Default permission rules are baked in** (`Read/Glob/Grep/AskUserQuestion/ToolSearch/TodoWrite` → `allow`). Your `adapter.permissionRules` are appended *after* these (higher priority), but the allow-list above always exists — notably `Write`/`Edit`/`Bash` are **not** auto-allowed and rely on `permissionMode` (default `\"acceptEdits\"`) or your own rules."
+    },
+    {
+      "path": "docs/archive/core-modules/run.md",
+      "location": "17",
+      "excerpt": "EngineConfig` from a snapshot, wraps Engine in an in-process AgentServer/Client, wires the run-aware approval/askUser path. Also defines the `RunExecutor` contract, `RunExecutionHandle`, and automation constants. |"
+    },
+    {
+      "path": "docs/archive/core-modules/run.md",
+      "location": "21",
+      "excerpt": "| `RunApprovalBackend.ts` | Interactive run-aware `ApprovalBackend` + `createRunAskUserFn` — suspends the run on approval/input and lets `RunManager` resolve via the handle. |"
+    },
+    {
+      "path": "docs/archive/core-modules/tool-system.md",
+      "location": "17",
+      "excerpt": "| `context.ts` | `ToolContext` interface (per-Engine runtime services injected into every tool) + `AskUserFn`, `SubAgentSpawner`, `ServiceContainer`. |"
+    },
+    {
+      "path": "docs/archive/core-modules/tool-system.md",
+      "location": "93",
+      "excerpt": "  askUser?: AskUserFn; subAgentSpawner?: SubAgentSpawner; sandbox?: SandboxBackend;"
+    },
+    {
+      "path": "docs/archive/core-modules/tool-system.md",
+      "location": "130",
+      "excerpt": "toolExecutor.setContext(this.buildToolContext()); // cwd, sandbox, askUser, planMode, disabledBuiltins, …"
+    },
+    {
+      "path": "docs/archive/core-risk-signal-index.md",
+      "location": "166",
+      "excerpt": "| `tool-system/builtin/ask-user.ts` | `exec`×2 |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "/83/file",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "/83/file",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "/208/file",
+      "excerpt": "packages/tui/src/ui/components/AskUserPrompt.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "/208/detail",
+      "excerpt": "appears three times: lines 65-68 in buildAnswer(), lines 84-87 in reviewLines(), and lines 84-87 again in the multiSelect branch. The pattern `[...selected].sort((a, b) => a - b).filter((i) => i !== inputIdx)` is repeated, making maintenance harder and increasing bug risk if one instance is modified differently."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "/269/file",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "127",
+      "excerpt": "ToolContext 包含 cwd、llmConfig、modelPool、toolRegistry、askUser、subAgentSpawner、sandbox、signal、hooks、streamCallback、planMode、permissionMode、engine host、sessionId、disabled skills/plugins/builtins、allowedMcpServers、settingsScope、shellEnv、browser/workspace/credential bridges 等，见 `packages/core/src/tool-system/context.ts:189`。`ToolRuntimeHost` 放在 tool-system 里，只列工具"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "131",
+      "excerpt": "ToolContext 替代模块级 singleton，是为了并发 Engine 实例安全：工具不能看到另一个 Engine 的 askUser handler 或 LLM 凭证，见 `packages/core/src/tool-system/context.ts:1`。`ToolRuntimeHost` 放在低层 tool-system 而不导入 concrete Engine，是为了避免重新引入 `tool-system <-> engine` 循环依赖，见 `packages/core/src/tool-system/context.ts:24`；这也对应 CODESHELL 已知债务 `core -> tool-system -> engine` 循环，见 `CODESHELL.md:69`。Executor 的 hook "
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "203",
+      "excerpt": "话 `handleRunMulti()` 校验 sessionId/task，`getOrCreate()` session，处理 `requireExisting`、per-run model、planMode，并把 askUser/browser/credential/workspace bridge 绑定到该 session engine，最后 `session.enqueueTurn()`，stream 统一转 `agent/streamEvent`，见 `packages/core/src/protocol/server.ts:394`、`packages/core/src/protocol/server.ts:424`、`packages/core/src/protocol/server.ts:440`、`packages/core/src/protocol/server.ts:463`、`packages/c"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "11",
+      "excerpt": " id 取 session，`ChatSession.pump()` 再把 `this.id` 传入 `engine.run()`，最后 `AgentServer` 用同一个 sid 包 stream envelope。AskUserQuestion 当前也按 `session.pendingApprovals` 隔离，错 session 的 approve fail-closed。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "31",
+      "excerpt": "| `agent/approvalRequest` | tool approval、AskUserQuestion、browser/credential/workspace bridge 请求客户端决策 | `packages/core/src/protocol/server.ts:1937`、`1981`、`2096`、`2152`、`2217`、`2256` | desktop preload 透传 `params`，见 `packages/desktop/src/preload/index.ts:190`；App 按 `env.sessionId` 路由，见 `packages/desktop/src/renderer/App.tsx:1787` 到 `1889` |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "32",
+      "excerpt": "| `agent/approvalResolved` | server 主动结束 pending approval/ask，例如 goal AskUser 超时 | `packages/core/src/protocol/server.ts:2017` | preload 透传，见 `packages/desktop/src/preload/index.ts:194`；App 清 inline ask / approval queue，见 `packages/desktop/src/renderer/App.tsx:1891` 到 `1917` |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "81",
+      "excerpt": "| `packages/core/src/protocol/server.ts:1981` 到 `1990` | `agent/approvalRequest`，`toolName:\"__ask_user__\"` | per-session AskUserQuestion | 写 `session.pendingApprovals`，notification 必带 sessionId |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "82",
+      "excerpt": "| `packages/core/src/protocol/server.ts:2007` 到 `2018` | `agent/approvalResolved` | goal-active AskUser 超时 | 清 pending ask，并通知客户端 dismiss stale card |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "86",
+      "excerpt": "| `packages/core/src/protocol/server.ts:2256` 到 `2264` | legacy `agent/approvalRequest` AskUser | legacy single engine askUser | 无 sessionId，走 global pending map |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "218",
+      "excerpt": "### 4.3 AskUserQuestion 跨会话串投现状"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "222",
+      "excerpt": "- `handleRunMulti()` 每次 run 都把该 session engine 的 `askUser` 设成闭包，闭包捕获 `session` 和 `sid`，见 `packages/core/src/protocol/server.ts:463` 到 `474`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "223",
+      "excerpt": "- `requestAskUserForSession()` 把 resolver 存到 `session.pendingApprovals`，并发带 `sessionId` 的 `agent/approvalRequest`，见 `packages/core/src/protocol/server.ts:1952` 到 `1990`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "225",
+      "excerpt": "- desktop inline ask_user message 保存 originating `engineSessionId`，见 `packages/desktop/src/renderer/types.ts:200` 到 `211`；回答时 `findAskUserOrigin()` 通过 requestId 找回 origin session，而不是用当前 active bucket，见 `packages/desktop/src/renderer/App.tsx:3158` 到 `3184`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "226",
+      "excerpt": "- 回归测试也锁了错 session/requestId 会被拒绝且两个 session pending 都不被解开，见 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:103` 到 `129`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "228",
+      "excerpt": "结论：以当前源码为准，AskUserQuestion 的 protocol/server 侧隔离已按 `(sessionId, requestId)` fail-closed；desktop 回答路径也保存 origin sid。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "260",
+      "excerpt": "   维护代码：`handleApprove()` chatManager branch 见 `packages/core/src/protocol/server.ts:655` 到 `689`；AskUser 存 session map，见 `packages/core/src/protocol/server.ts:1959` 到 `1983`。  "
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "261",
+      "excerpt": "   破坏现象：背景 session 的 AskUser 被 active tab 答案解开；历史串投问题复现。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "265",
+      "excerpt": "   破坏现象：AskUser/tool approval 卡悬挂到 5 分钟 timeout 或永久挂起。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "298",
+      "excerpt": "- `packages/core/src/protocol/server.ts:1937` 到 `1941`、`1981` 到 `1990`：server 会发带 `sessionId` 的 approval/AskUser notification。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "305",
+      "excerpt": "ath 会把 approvalRequest 降级成 legacy shape。SDK handler 只知道 requestId/request，不知道 originating sessionId，也收不到 goal AskUser timeout 的 `approvalResolved`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "362",
+      "excerpt": "6. session 隔离按当前代码说明：AskUserQuestion 已按 `(sessionId, requestId)` 隔离；approval replay 不是 protocol 保证，desktop 当前依赖内存队列。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "location": "114",
+      "excerpt": "以当前代码为准，工具审批 / AskUserQuestion 的 pending request 路由已经按 session 隔离："
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "location": "119",
+      "excerpt": "- `AskUserQuestion` 在 chatManager path 用 `requestAskUserForSession()`，notification 带 sessionId，resolve 存在对应 session map；cancel 会 drain pending approvals，见 `packages/core/src/protocol/server.ts:463`、`packages/core/src/protocol/server.ts:1952`、`packages/core/src/protocol/server.ts:1981`、`packages/core/src/proto"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "location": "127",
+      "excerpt": "结论：历史 AskUserQuestion 跨会话串投在 request/response 路由层已有防线；但权限“本会话一直允许/拒绝”的缓存当前实际是进程级 interactive backend 缓存。这个缺口作为 N-06 记录。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "location": "267",
+      "excerpt": "ckages/core/src/protocol/server.ts:671`；tool approval session map：`packages/core/src/protocol/server.ts:1919`；AskUser session map：`packages/core/src/protocol/server.ts:1952`。 | 一个 tab 的审批/回答解开另一个 tab 的 pending prompt。 |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "20",
+      "excerpt": "- `AgentServer`：`setInteractiveApprovalFn()`、`requestApprovalFromClient()`、`handleApprove()`、`requestAskUserForSession()`，用于对照 9ff46639 的 pending resolver 修复。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "21",
+      "excerpt": "- 现有测试：`permission.session-cache.test.ts`、`server.askuser-session-isolation.test.ts`、`server.reload-settings.test.ts`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "34",
+      "excerpt": "- `rg -n \"pendingApprovals|handleApprove|requestApprovalFromClient|requestAskUserForSession|cancelSessionApprovals|setInteractiveApprovalFn\" packages/core/src/protocol/server.ts packages/core/src/protocol/chat-session.ts packages/core/src/protocol/server.askuser-session-isolation.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "35",
+      "excerpt": "`:682`、`:693`、`:1908`、`:1920`、`:1924`、`:1952`、`:1960`、`:1981`、`:2351`；测试命中 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:107`、`:108`、`:109`、`:116`、`:128`、`:129`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "36",
+      "excerpt": "e/src/tool-system/permission.session-cache.test.ts tests/permission.test.ts packages/core/src/protocol/server.askuser-session-isolation.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "40",
+      "excerpt": "- `git show --stat --patch 9ff46639 -- packages/core/src/protocol/server.ts packages/core/src/protocol/server.askuser-session-isolation.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "41",
+      "excerpt": "  - 确认该 commit 删除了 session-tagged approve 对 legacy server map 的 fallback，并新增 `server.askuser-session-isolation.test.ts`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "166",
+      "excerpt": "- `git show --stat 9ff46639` 显示 commit 标题为 `fix(core): isolate AskUserQuestion pending resolvers per-session to stop cross-session input misdelivery`，只改了 `packages/core/src/protocol/server.ts` 和新增 `packages/core/src/protocol/server.askuser-session-isolation.test.ts`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "175",
+      "excerpt": "- `packages/core/src/protocol/server.ts:1952` 到 `packages/core/src/protocol/server.ts:1981`：`AskUserQuestion` 的 chatManager path 写入指定 session 的 `pendingApprovals` 并在 notification 中带 `sessionId`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "180",
+      "excerpt": "- `packages/core/src/protocol/server.askuser-session-isolation.test.ts:70` 的用例名是 “resolves an askUser answer only for the matching sessionId and requestId”。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "181",
+      "excerpt": "- `packages/core/src/protocol/server.askuser-session-isolation.test.ts:107` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:109` 断言 A/B 两个 session 各有 1 个 pending，server legacy map 为 0。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "182",
+      "excerpt": "- `packages/core/src/protocol/server.askuser-session-isolation.test.ts:111` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:129` 用 B 的 `sessionId` 去 resolve A 的 `requestId`，断言返回 `InvalidParams` 且 A/B pending 都还在。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "183",
+      "excerpt": "- `packages/core/src/protocol/server.askuser-session-isolation.test.ts:131` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:159` 再分别用正确 `(sessionId, requestId)` resolve B 和 A。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "location": "238",
+      "excerpt": "n 去重”，见 `packages/core/src/tool-system/permission.session-cache.test.ts:24`、`:196`；没有跨 `sessionId` 用例。`server.askuser-session-isolation.test.ts` 覆盖 pending resolver 路由，不覆盖 rule cache。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "location": "24",
+      "excerpt": " `sessionId` resolve A 的 requestId 时断言 `InvalidParams` 且 A/B pending 都还在，见 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:111` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:129`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "location": "371",
+      "excerpt": "- `server.askuser-session-isolation.test.ts` 覆盖 pending resolver 按 session 隔离，见 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:69` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:162`；它是范式参考，不覆盖 rule cache。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "location": "389",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser-session-isolation.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "location": "390",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser-chatmanager.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "location": "391",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser-timeout.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "location": "392",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser-headless.test.ts`"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "11",
+      "excerpt": "gentClient` 丢 notification envelope 的 `sessionId`，且不暴露 `approvalResolved`；普通工具审批可从 `request.sessionId` 部分绕过，但 AskUser/browser/credential/workspace 不能。 |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "27",
+      "excerpt": "- 读 server 发送/回收链路：`requestApprovalFromClient()`、`requestAskUserForSession()`、`requestBrowserActionForSession()`、`requestCredentialInjectForSession()`、`requestWorkspaceSwitchForSession()`、`handleApprove()`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "45",
+      "excerpt": "- 但 server 合成的 AskUser notification 只在 envelope 上带 `sessionId`，嵌套 `request` 没有 `sessionId` 字段：`packages/core/src/protocol/server.ts:1981`、`packages/core/src/protocol/server.ts:1982`、`packages/core/src/protocol/server.ts:1984`、`packages/core/src/protocol/server.ts:1985`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "47",
+      "excerpt": "- server 会在 goal-active AskUser timeout 时发 `approvalResolved`：`packages/core/src/protocol/server.ts:2007`、`packages/core/src/protocol/server.ts:2010`、`packages/core/src/protocol/server.ts:2017`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "52",
+      "excerpt": "确证，但范围需要收窄：原观察对 SDK approval event surface 成立，尤其是 AskUser/browser/credential/workspace 这类 server 合成请求；普通工具审批因为 `request.sessionId` 可能随嵌套 request 一起到达，SDK consumer 可以自行读取 `request.sessionId` 作为临时绕路，但这不是 `AgentClientEvents.approvalRequest` 明确承诺的 envelope 契约。`approvalResolved` 不处理为完全确证。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "location": "45",
+      "excerpt": "加 `approvalResolved` event surface，SDK 收到 `Methods.ApprovalResolved` 时带 `{ sessionId?, requestId }` emit；测试覆盖 AskUser/browser/credential/workspace 这类 request 内不一定可靠带 sessionId 的场景。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "70",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser-session-isolation.test.ts` 绿；该文件现有 `(sessionId, requestId)` 隔离范式见 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:69` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:162`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "71",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser-chatmanager.test.ts packages/core/src/protocol/server.askuser-timeout.test.ts packages/core/src/protocol/server.askuser-headless.test.ts` 绿。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "92",
+      "excerpt": "- `bun test packages/core/src/protocol/server.*.test.ts` 至少覆盖 run/goal/askuser 相关文件绿；特别关注 B2 后的 session lifecycle 不被 F-05 preflight 破坏。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "110",
+      "excerpt": "- `bun test packages/core/src/protocol/client.steer.test.ts packages/core/src/protocol/server.askuser-session-isolation.test.ts packages/core/src/protocol/server.askuser-chatmanager.test.ts` 绿。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "179",
+      "excerpt": "| `packages/core/src/protocol/server.askuser-session-isolation.test.ts` | 回归护栏 | B2/B4 | approval resolver 按 `(sessionId, requestId)` 隔离 |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "180",
+      "excerpt": "| `packages/core/src/protocol/server.askuser-chatmanager.test.ts` | 回归护栏 | B2/B4 | chatManager approval path |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "181",
+      "excerpt": "| `packages/core/src/protocol/server.askuser-timeout.test.ts` | 回归护栏 | B2 | approval timeout lifecycle |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "182",
+      "excerpt": "| `packages/core/src/protocol/server.askuser-headless.test.ts` | 回归护栏 | B2 | headless ask 行为 |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "202",
+      "excerpt": ".test.ts packages/core/src/protocol/chat-session-manager.permission.test.ts packages/core/src/protocol/server.askuser-session-isolation.test.ts`，随后跑 12 号列出的 permission/session 回归集。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "204",
+      "excerpt": "ent.approval-events.test.ts packages/core/src/protocol/client.steer.test.ts packages/core/src/protocol/server.askuser-session-isolation.test.ts`。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "213",
+      "excerpt": "ect seed、late approval、per-session promptTurn 都可能影响真实审批 | 先失败测试覆盖 allow/deny/no-session/close/late approval；跑 askuser/path-policy/credential/automation 回归 | 独立 commit/PR；若线上发现审批异常，可回滚 B2，并临时建议用户不用 session-scope remember |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "location": "260",
+      "excerpt": "阵覆盖 N-03、N-06 两个 P1 的新增验收测试和回归护栏，并包含 `turn-loop-max-turns.test.ts`、`permission.session-cache.test.ts`、`server.askuser-session-isolation.test.ts`、`streamGroups` 相关测试。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/18-fix-code-review.md",
+      "location": "48",
+      "excerpt": "- `bun test packages/core/src/protocol/server.askuser`：9 pass，0 fail"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/19-landing-status.md",
+      "location": "12",
+      "excerpt": "| P1-b | `../codeshell-n06` | `fix/n06-session-approval-cache` | N-06 权限缓存跨会话串(安全) | P1 | permission+askuser 42 pass | ✅ 18号 APPROVE+nit(已修) |"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "37",
+      "excerpt": "- Protocol server 的 `requireExisting`、askUser session 隔离/timeout、cancel approvals、background shell wakeup、reload settings、workspace bridge 有测试覆盖，说明 protocol 并非整体缺测。"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/26-bg-completion-no-wake-root-cause.md",
+      "location": "210",
+      "excerpt": "3. Reinstall the interactive bridges that `handleRunMulti` currently wires before `enqueueTurn` (`askUser`, browser bridge, credential injection, workspace bridge)."
+    },
+    {
+      "path": "docs/archive/todo/review-core-v2.md",
+      "location": "22",
+      "excerpt": "- `packages/core/src/protocol/server.ts:1885-1892` says goal AskUser arms a shared 5-minute timeout, but `:1914` uses `GOAL_ASKUSER_TIMEOUT_MS` (10 minutes). Update the comment."
+    },
+    {
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "location": "20",
+      "excerpt": "- Protocol server session isolation: ask-user approvals are scoped by `sessionId` and `requestId`, with negative coverage for mismatched session/request pairs (`packages/core/src/protocol/server.askuser-session-isolation.test.ts:69-140`). Chat sessions also cover concurrent sessions and canceling one session without aborting another (`tests/ch"
+    },
+    {
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "location": "81",
+      "excerpt": "- What is covered: ask-user approvals are scoped to matching session/request and leave the legacy server-level approval map empty (`packages/core/src/protocol/server.askuser-session-isolation.test.ts:103-129`). Chat sessions cover concurrent starts and cancel isolation (`tests/chat-session-isolation.test.ts:60-130`)."
+    },
+    {
+      "path": "docs/archive/todo/review-ui-v2.md",
+      "location": "7",
+      "excerpt": "packages/desktop/src/renderer/App.tsx:412` keeps transcript state in a ref, and `streamRouting.ts:68` returns ask-user answers so timeout handling does not overwrite resolved answers."
+    },
+    {
+      "path": "docs/audit-2026-10-16/core.md",
+      "location": "53",
+      "excerpt": "hard：`node scripts/run-bun-test-shard.mjs --timeout 30000 packages/host/src/runtime.test.ts packages/host/src/ask-user-unavailable.test.ts packages/core/src/composition/lifetime.test.ts packages/core/src/composition/activation.test.ts packages/core/src/engine/run-finalize.test.ts packages/core/src/engine/run-setup.test.ts packages/core/src/engine/turn-loop-continuation.test.ts packages/core/src/engine/turn-loop-max"
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "location": "10",
+      "excerpt": "| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "location": "13",
+      "excerpt": "| TUI | CLI run/runs/options、slash commands、permission、undo/export、renderers、query guard、输入/history、pending question | 5 个新测试；150 项 CLI/UI纯逻辑等 baseline | 完整 Ink/PTY 原生会话、全部组件渲染与快捷键 |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/638",
+      "excerpt": "packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1546",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.browser.fixture.mjs"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1547",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1548",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserReceipt.browser.fixture.mjs"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1567",
+      "excerpt": "packages/desktop/src/renderer/messages/askUserTone.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/2261",
+      "excerpt": "packages/tui/src/ui/components/AskUserPrompt.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/2305",
+      "excerpt": "packages/tui/src/ui/pending-questions.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "location": "116",
+      "excerpt": "- TUI CLI、QueryGuard/input/pending question/store，以及 coding runtime shared/root path：24 files / 150 pass / 412 expect / 0 fail/skip / Completed。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/logs/1/text",
+      "excerpt": " match the documented limit of 6 items.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/messages/AskUserMessageView.tsx\", \"line\": \"27\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Mutable Set used as React state initializer\", \"detail\": \"Line 27 initializes state with `useState<Set<number>>(() => new Set())`. While the initializer function pattern is correct, using "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/logs/2/text",
+      "excerpt": "documented limit of 6 items.\", \"pkg\": \"desktop\", \"_id\": 82}, {\"file\": \"packages/desktop/src/renderer/messages/AskUserMessageView.tsx\", \"line\": \"27\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Mutable Set used as React state initializer\", \"detail\": \"Line 27 initializes state with `useState<Set<number>>(() => new Set())`. While the initializer function pattern is correct, using "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/logs/3/text",
+      "excerpt": "hould use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code to extract and filter selected indices appears three times: lines 65-68 in buildAnswer(), lines 84-87 in reviewLi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/settings-navigation/0/text",
+      "excerpt": " match the documented limit of 6 items.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/messages/AskUserMessageView.tsx\", \"line\": \"27\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Mutable Set used as React state initializer\", \"detail\": \"Line 27 initializes state with `useState<Set<number>>(() => new Set())`. While the initializer function pattern is correct, using "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/settings-navigation/2/text",
+      "excerpt": "documented limit of 6 items.\", \"pkg\": \"desktop\", \"_id\": 82}, {\"file\": \"packages/desktop/src/renderer/messages/AskUserMessageView.tsx\", \"line\": \"27\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Mutable Set used as React state initializer\", \"detail\": \"Line 27 initializes state with `useState<Set<number>>(() => new Set())`. While the initializer function pattern is correct, using "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/settings-navigation/3/text",
+      "excerpt": "hould use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code to extract and filter selected indices appears three times: lines 65-68 in buildAnswer(), lines 84-87 in reviewLi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/sidebar-projection/8/text",
+      "excerpt": " match the documented limit of 6 items.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/messages/AskUserMessageView.tsx\", \"line\": \"27\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Mutable Set used as React state initializer\", \"detail\": \"Line 27 initializes state with `useState<Set<number>>(() => new Set())`. While the initializer function pattern is correct, using "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/sidebar-projection/10/text",
+      "excerpt": "documented limit of 6 items.\", \"pkg\": \"desktop\", \"_id\": 82}, {\"file\": \"packages/desktop/src/renderer/messages/AskUserMessageView.tsx\", \"line\": \"27\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Mutable Set used as React state initializer\", \"detail\": \"Line 27 initializes state with `useState<Set<number>>(() => new Set())`. While the initializer function pattern is correct, using "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/sidebar-projection/11/text",
+      "excerpt": "hould use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code to extract and filter selected indices appears three times: lines 65-68 in buildAnswer(), lines 84-87 in reviewLi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "location": "/markdownMatches/2/matches/0/text",
+      "excerpt": "  - Default enabled tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent, ToolSearch, TaskCreate, TaskList, TaskUpdate, TaskGet"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "location": "/markdownMatches/2/matches/1/text",
+      "excerpt": "  - Default permission rules: Read/Glob/Grep/AskUserQuestion/ToolSearch/TaskCreate/TaskList/TaskUpdate/TaskGet all \"allow\""
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "location": "/markdownMatches/3/matches/1/text",
+      "excerpt": "常见工具：Read/Grep/Glob/Write/Edit/Bash/TodoWrite/AskUserQuestion/MCPTool/Skill 等。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "location": "/markdownMatches/9/matches/0/text",
+      "excerpt": "- **Base tool set is hardcoded.** Every product starts from `Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent, ToolSearch, TodoWrite`; `enableTools` adds to this set and `disableTools` removes from it. There is no way to start from an empty set."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "location": "/markdownMatches/9/matches/1/text",
+      "excerpt": "- **Default permission rules are baked in** (`Read/Glob/Grep/AskUserQuestion/ToolSearch/TodoWrite` → `allow`). Your `adapter.permissionRules` are appended *after* these (higher priority), but the allow-list above always exists — notably `Write`/`Edit`/`Bash` are **not** auto-allowed and rely on `permissionMode` (default `\"acceptEdits\"`) or your own rules."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/cross-review-files.md",
+      "location": "23",
+      "excerpt": "Static source review supports retaining both questions, without promoting either. `classifyDiffLine` requires whitespace after the marker, while `ToolCall` comments name ordinary `git diff` output as an intended display source. The same classifier deliberately treats `+x` as plain output, so context-sensitive handling needs further design/evidence. `padToWidth` and gutter reserve use UTF-16 `.length`; the report explicitly labels its CJK example as a source-derived calculation, not measured renderer output. This reviewer did not run a width function or render the failed candidate through another route."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+      "location": "/hits/grep-glob-fallback/4/snippet",
+      "excerpt": "常见工具：Read/Grep/Glob/Write/Edit/Bash/TodoWrite/AskUserQuestion/MCPTool/Skill 等。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+      "location": "/hits/grep-glob-fallback/27/snippet",
+      "excerpt": "常见工具：Read/Grep/Glob/Write/Edit/Bash/TodoWrite/AskUserQuestion/MCPTool/Skill 等。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+      "location": "/hits/grep-glob-fallback/44/snippet",
+      "excerpt": "flash 可见工具: Read, Grep, Glob, Bash(只读), Task, AskUserQuestion, WebFetch, WebSearch, request_write_access"
+    },
+    {
+      "path": "docs/core-deep-dive/07-run-automation-goal.md",
+      "location": "31",
+      "excerpt": "**审批挂起**(图右下):`RunApprovalBackend` 在审批处挂起引擎(24h 超时),`RunManager` 经执行句柄解决;`createRunAskUserFn` 同理处理追问,带 supersede 检查。**fail-closed:hook 没接线时审批一律拒绝,绝不自动放行。**"
+    },
+    {
+      "path": "docs/core-deep-dive/09-arena-and-integrations.md",
+      "location": "44",
+      "excerpt": "预置 PATH。有两条独立参数的 spawn 路径:全自动 `DriveClaudeCode`(默认后台、bypass、`--disallowedTools Workflow`)vs CC 房间(stdio 审批回路)。AskUserQuestion 协议要求答案塞进 `updatedInput.answers`(key=问题文本,value=label)——自动放行会报\"did not answer\"。"
+    },
+    {
+      "path": "docs/core-deep-dive/10-tui-host.md",
+      "location": "32",
+      "excerpt": "s 刷一次**——LLM 一秒吐 30–200 token,合并后变成约 20 次/秒重渲。`tool_use_start` 刷缓冲并加运行条;`tool_result` 替换它;`approval_request`/`ask_user` 抬起权限/问题提示。带 `agentId` 的子 agent 文本路由到 `AgentDock` 侧栏,不进主 feed。"
+    },
+    {
+      "path": "docs/core-deep-dive/v2-05-protocol-hosts-orchestration-deep-dive.md",
+      "location": "232",
+      "excerpt": "json 会话(驱动外部 `claude`/`codex` CLI),持久在 `~/.code-shell/mobile-remote/rooms/`,经 WS 镜像到手机。房间按设备 key,不是房间累积。这里有一个 AskUserQuestion 协议坑(`room-manager.ts` 文件头注释专门讲):外部 CLI 的 AskUserQuestion 走 `can_use_tool`,但答案必须塞进 `updatedInput.answers` 这个**以问题文本为 key 的 record**——自动放行(把未回答的输入当 allow)会让 claude 报 \"The user did not answer the questions\"。"
+    },
+    {
+      "path": "docs/core-deep-dive/v2-05-protocol-hosts-orchestration-deep-dive.md",
+      "location": "342",
+      "excerpt": "11. **AskUserQuestion 自动放行**:答案要塞 `updatedInput.answers`(key=问题文本),自动 allow 会报 \"did not answer\"。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "48",
+      "excerpt": "- `QuickChatPanel` 直接复用 `ChatView`，传入 messages、busy/stop、AskUser、approval、permission、model、draft 与 attachments（`packages/desktop/src/renderer/panels/QuickChatPanel.tsx:55`、`packages/desktop/src/renderer/panels/QuickChatPanel.tsx:133`）。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "49",
+      "excerpt": "- `ChatView` 已将 `pendingApproval` / `onApprovalDecide`、`onAskUserAnswer`、composer controls、受控 draft 等作为明确 props（`packages/desktop/src/renderer/ChatView.tsx:49`、`packages/desktop/src/renderer/ChatView.tsx:94`、`packages/desktop/src/renderer/ChatView.tsx:110`、`packages/desktop/src/renderer/ChatView.tsx:129`、`packages/desktop/src/renderer/ChatView.tsx:175`）。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "52",
+      "excerpt": "- `AskUserMessageView` 的选项与自由输入也会直接提交答案（`packages/desktop/src/renderer/messages/AskUserMessageView.tsx:56`、`packages/desktop/src/renderer/messages/AskUserMessageView.tsx:70`），因此 overview pending row 同样不复用其交互，只提供“打开并处理”。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "79",
+      "excerpt": "- badge 数字**只表示已越过 15s grace、当前仍有效的 `PendingDecisionIndex.status === \"pending\"` 数量**，覆盖 tool approval 与 `AskUserQuestion`；不把 running 数混进同一个数字。grace 内的 request 已在 overview pending section 可见，但按本稿默认策略尚不进入 L0 数字。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "96",
+      "excerpt": "│ 扩展                    │ ! Session B · AskUser   18s │ [durable messages] │"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "180",
+      "excerpt": "`PendingDecisionSection` 聚合 tool approval 与 `AskUserQuestion`，每条为 navigation-only row："
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "183",
+      "excerpt": "AskUser · Session B                         已等待 18s"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "193",
+      "excerpt": "- `AskUserQuestion` 显示 question 的可信截断摘要；不在 overview 渲染选择项或输入框。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "197",
+      "excerpt": "- 打开后仍由原 session 的 `ApprovalCard` / `AskUserMessageView` 和 `window.codeshell.approve(...)` 完成决策；Pet 不构造 `ApprovalResult`。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "247",
+      "excerpt": "### 4.2 非当前 session 出现 AskUser，15 秒后提醒并跳转"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "250",
+      "excerpt": "Session B emits ApprovalRequest(toolName=\"__ask_user__\")"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "254",
+      "excerpt": "  → 若 B 已是当前 session 且 AskUser card 可见：只保留 L0，不发 L1"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "259",
+      "excerpt": "  → 原 AskUserMessageView 收集答案，原 approval route resolve"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "303",
+      "excerpt": " dock / platform badge（`packages/desktop/src/main/index.ts:3894`）；Phase 1 应把数据源换成完整 PendingDecisionIndex，才能覆盖 AskUser 与 reconnect snapshot。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "311",
+      "excerpt": "      AskUser · 已等待 15s"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "406",
+      "excerpt": "；preload 暴露 request/resolved listeners（`packages/desktop/src/preload/index.ts:600`） | 当前在线期间收 tool approval 与 AskUser | 没有跨 session read model/reconnect snapshot；resolver 不能暴露给 UI |"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "407",
+      "excerpt": "approvalQueue` | tool approval 会入队（`packages/desktop/src/renderer/App.tsx:2274`） | 当前未解决 tool approval 数与卡片 | AskUser 在同一 request handler 中先写 transcript后 return，不进入该 queue（`packages/desktop/src/renderer/App.tsx:2192`、`packages/desktop/src/renderer/App.tsx:2245`），所以 `approvalQueue.length` 不能当 Pet badge |"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "503",
+      "excerpt": "5. tool approval + AskUser 的聚合 pending list；只有“打开并处理”，无内联 approval/answer。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "526",
+      "excerpt": "| badge 从 `approvalQueue` 派生 | 漏掉 AskUser | badge 只从 PendingDecisionIndex 派生 |"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+      "location": "561",
+      "excerpt": "- [x] pending 同时覆盖 tool approval 与 `AskUserQuestion`。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "12",
+      "excerpt": "当前机器唯一的 Pet：它从可重建投影列出所有本地 work session 的状态与待决策事项，提供 durable `kind=\"pet\"` 对话，并且只把用户导航到原 session 处理 approval / `AskUserQuestion`。Sidebar 入口采用已拍板的三项交互："
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "33",
+      "excerpt": "- 当前 `pendingApprovals` 仍是 resolver-only Map（`packages/core/src/protocol/chat-session.ts:64`）。tool approval 与 AskUser 的注册分别在 `packages/core/src/protocol/server.ts:2465`、`:2520`；response、cancel、close、disconnect/route fail-closed 的现有收束入口分别在 `:1143`、`:1216`、`:1460`、`:2899` / `:2940`。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "52",
+      "excerpt": "- `PendingDecisionProjection.kind` Phase 1 只 surface `tool_approval | ask_user`。browser/credential/workspace 等内部 bridge wait 即使继续复用底层 Map，也必须标为 internal/non-surfaceable。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "108",
+      "excerpt": "s` 演进为“resolver + 只读 metadata”的结构化 entry，并新增跨 session `PendingDecisionIndex`。所有 user-visible tool approval 与 `AskUserQuestion` 都必须有 created → terminal 的完整、幂等生命周期；resolver 永不进入 snapshot/renderer。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "117",
+      "excerpt": "- `[core]` 预计新增/修改生命周期测试：`packages/core/src/protocol/server.pet-pending.test.ts`（推测）及现有 cancel/AskUser 测试"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "126",
+      "excerpt": "1. tool approval metadata 包含 `kind/title/toolName/riskLevel/createdAt/sessionId/requestId/routeGeneration`；AskUser 明确归类为 `ask_user`，不由 description 猜。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "129",
+      "excerpt": "4. AskUser 无普通 wall-clock timeout的现状保持不变；goal AskUser timeout 会终结 index，不能留幽灵 pending。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "131",
+      "excerpt": "6. snapshot 序列化不包含 resolver、question options、raw args 或完整 command；AskUser title 可信截断，tool title 使用模板。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "135",
+      "excerpt": "- 跨 session snapshot 能同时列出 tool approval + AskUser，且每条都有结构化、脱敏 metadata。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "137",
+      "excerpt": "- 原 session 的 approve/AskUser route 仍是唯一 resolver 路径，现有 permission gate 行为不变。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "257",
+      "excerpt": "4. pending row 只有“打开并处理”，没有 approve/deny/options/input；可复用 `RiskPill`，不可复用完整 `ApprovalCard` / `AskUserMessageView`。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "502",
+      "excerpt": "- 从普通 row 与 pending CTA 均能到原 session；后续回答/批准只发生在原 `ApprovalCard` / `AskUserMessageView`。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "627",
+      "excerpt": "6. dock badge 改用同一 `surfaceablePendingCount`，不再用 `approvalQueue.length`，因后者漏 AskUser。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "633",
+      "excerpt": "- L0 与 L1 共享唯一 count/policy truth；tool approval + AskUser 都覆盖。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "736",
+      "excerpt": "| 2. core `PendingDecisionIndex` | 02、03、06 | tool + AskUser；response/timeout/cancel/close/disconnect；snapshot reconcile |"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+      "location": "749",
+      "excerpt": "- [ ] `PendingDecisionIndex` 的 tool + AskUser、六类收束路径与 reconnect 对账有测试。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "149",
+      "excerpt": "| 知道什么等我决定 | `PendingDecisionIndex` | 聚合 tool approval / `AskUserQuestion` |"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "212",
+      "excerpt": "- `AskUserQuestion` 在 manager path 中也写入该 session 的 `pendingApprovals`，并用 `toolName: \"__ask_user__\"` 发送同一 approval envelope（`packages/core/src/protocol/server.ts:2505`）。普通 AskUser 不设 wall-clock timeout，Stop/cancel 才会 drain；goal mode 另有 10 分钟 timeout（`packages/core/src/protocol/server.ts:2510`、`packages/core/sr"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "213",
+      "excerpt": "- session cancel 会显式清理 AskUser、browser action 和 tool approvals，避免等待悬挂（`packages/core/src/protocol/server.ts:1210`）。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "228",
+      "excerpt": "  kind: \"ask_user\" | \"tool_approval\" | \"browser_action\" | \"credential\" | \"other\";"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "246",
+      "excerpt": "3. `toolName === \"__ask_user__\"` 归类为 `ask_user`；不要让前端从自然语言 description 猜类型。"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "298",
+      "excerpt": "现有 Quick Chat 已直接复用 `ChatView`，并具备消息、busy/stop、AskUser、approval、permission 和 model 控件（`packages/desktop/src/renderer/panels/QuickChatPanel.tsx:55`、`packages/desktop/src/renderer/panels/QuickChatPanel.tsx:133`）。因此其**对话壳与按 bucket 隔离状态**可以复用；但 Quick Chat 是 side-fork/ephemeral 产品，关闭会删除其 state/transcript，已有设计也明确 inherited history、approval 和 steer 状态彼此隔离（`do"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "541",
+      "excerpt": "- tool approval、`AskUserQuestion`、browser action、credential use 仍由原 session approval route 处理；"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "712",
+      "excerpt": "### 9.2 某 session 出现 AskUserQuestion"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "716",
+      "excerpt": "  → pending.created(kind=ask_user, requestId, generation)"
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "location": "786",
+      "excerpt": "6. pending index 覆盖 tool approval 与 `AskUserQuestion`，且 response/timeout/cancel/close/disconnect 都会收束。"
+    },
+    {
+      "path": "docs/panel-file-references.md",
+      "location": "22",
+      "excerpt": "  file for strict reconnection. A multi-selection is limited to 128 files."
+    },
+    {
+      "path": "docs/research/quickchat-lifecycle-vs-codex-side.md",
+      "location": "5",
+      "excerpt": "> stable-completed fork、隐藏继承气泡与迟到 approval/AskUser fail-closed 修复。"
+    },
+    {
+      "path": "docs/research/quickchat-lifecycle-vs-codex-side.md",
+      "location": "117",
+      "excerpt": "丢弃 | ownership claim/tombstone、fork router、renderer nonce/bucket、core close epoch 已覆盖 | 增加证明测试，不改路由与 approval/AskUser 逻辑 |"
+    },
+    {
+      "path": "docs/research/quickchat-lifecycle-vs-codex-side.md",
+      "location": "137",
+      "excerpt": "- 不改变已合并的 completed-turn snapshot、隐藏父气泡、session/bucket routing、approval/AskUser"
+    },
+    {
+      "path": "docs/research/quickchat-lifecycle-vs-codex-side.md",
+      "location": "161",
+      "excerpt": "  approval/AskUser 仍隔离。"
+    },
+    {
+      "path": "docs/research/quickchat-parent-update-propagation.md",
+      "location": "122",
+      "excerpt": "AskUser fail-closed 一致：未知 qchat generation 会被 deny，而不是回退进 active parent/child："
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "location": "21",
+      "excerpt": "- 影响：server 主入口已补上；但 lower-level manager API 直接 close 时 AskUser/browser/tool approval promise 可能悬挂，且增加未来调用方遗漏清理的概率。"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "location": "46",
+      "excerpt": "- AskUser session 隔离主路径 fail-closed：session-tagged approve 只查对应 session、不 fallback global（`server.ts:727`）✓"
+    },
+    {
+      "path": "docs/review-2026-10-12/README.md",
+      "location": "122",
+      "excerpt": "erateImage 请求：批准第一个后，第二个复用 ApprovalCard 的已决定状态，没有剩余按钮。真实 Core 的并行工具队列已经确认会同时产生这两个审批，并非人为构造的不可能状态。R13 是同类身份缺失在 AskUserMessageView 的表现，但会直接触发提交异常。"
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "location": "49",
+      "excerpt": "生产根因 `packages/server/src/mobile-remote/room-manager.ts:195-213` 的 `askUserPrompt` 只读取 `questions[0]`；`:955-967` 在回包前消费整个 request；`:982-986` 只以首题文本构造 answers，再回送包含全部 questions 的 updatedInput。`buildAskUserUpdatedInput` 本身支持多项 answers，但调用方只提供一项。"
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "location": "51",
+      "excerpt": "正常用户可达：Claude Code 发出一次 AskUserQuestion，`questions` 有两个或以上问题。Desktop `CCConversationView.tsx:775-779,794-823` 和浏览器 `DesktopControls.tsx:303-322,334-349` 都只能显示上游的单个 askUser prompt；首题答复消耗整个请求，后续题没有卡可答。自制 resident 子进程新对照实际收到 `request_id=control-1` 的终结 stdin 回包，questions 长度仍为 2，answers 只有 Language?→TypeScript；第二次同 ID 在 bridge 与 manag"
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "location": "53",
+      "excerpt": "范围限定：这是一个 control request 内的多题截断。两个独立 requestId 的问题、不同 room / session 并发是另一维度，不能据此声称串答。Core 内置 AskUserQuestion 采用单 question 参数，不走 CC questions[] 解析。Desktop 首题的 multiSelect 选项累积（`CCConversationView.tsx:777,798-830`）也不等于支持多个问题。"
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "location": "59",
+      "excerpt": "Core `packages/core/src/tool-system/builtin/ask-user.ts:83-97` 明确 AskUserQuestionAsync 显示后立即返回、可稍后回答；`packages/core/src/protocol/server.ts:4205-4217` 标记 asynchronous=true，`:4285-4289` 返回交付 receipt，要求继续不依赖答案的工作。现有 `server.askuser-async.test.ts:160-177` 验证 asking run 已结束、session.isBusy=false，但 pending question 仍存在。本轮整套测试通过，包含答案失败后保留重试、异步提交去重、排队至其它 run "
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "location": "79",
+      "excerpt": "- Late approve 若随后成功执行，则原问题已结束；不能继续套用仍 pending 的影响。Core 有默认 5 分钟工具审批超时（`server.ts:691,4141-4155`）；普通同步 AskUser 的无超时 / goal 特例是不同类型，不从工具审批扩大推断。"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-core-gates-round22.md",
+      "location": "57",
+      "excerpt": "| `protocol/server.cancel-approvals.test.ts:63` | Stop 立即 drain askUser pending，避免等 timeout | AskUser engine 替身，不是 Browser Host 动作 |"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "location": "54",
+      "excerpt": " evidence: `packages/desktop/src/renderer/ChatView.tsx:1568–1577` and `packages/desktop/src/renderer/messages/AskUserMessageView.tsx:33,106–110`."
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "location": "56",
+      "excerpt": "Two concurrent native sessions may each be waiting for a question. Directly selecting A (three-option multi-select, pick index 2) then B (one-option multi-select) keeps an unkeyed sticky AskUserMessageView mounted while message props change. Local picked retains index 2, enables submit, and submitMulti dereferences B.options[2].label. The ordinary submit async catch handles answer transport failures but cannot "
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "location": "58",
+      "excerpt": "without removing hidden index 2, and submission still throws with zero answers sent. Switching to C with **no pending question** unmounts the sticky view. Switching back to B starts with submit disabled, selecting B enables it, and exactly one answer submits. This is a blocked submit handler on that reused surface, not evidence that the whole Electron renderer crashes or restart is necessary. Confidence high (9 assertions,"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "location": "70",
+      "excerpt": "## D6 [P2] Sticky AskUser state crosses request boundaries and breaks the next question submit"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "location": "72",
+      "excerpt": "src/renderer/ChatView.tsx:1573`; unsafe retained-index dereference at `packages/desktop/src/renderer/messages/AskUserMessageView.tsx:108`."
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "location": "74",
+      "excerpt": "Trigger: A has a pending multi-select question with three options and the user selects option 3. Switch directly to B with a pending multi-select question containing one option. The unkeyed sticky AskUserMessageView reuses local picked={2} (`AskUserMessageView.tsx:33`) for B."
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "location": "9",
+      "excerpt": "生产入口有源码支持：AskUserQuestionAsync 是公开 builtin，定义 [ask-user.ts:78–87](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts:78) 说明立即返回、之后答案作为新 user message；[128](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin"
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "location": "13",
+      "excerpt": "/codeshell/packages/core/src/protocol/async-user-answer.ts:34) 在 idle/未 steer 时 enqueueTurn，clientMessageId 为 ask-user-requestId。Core ownership 和取消控制保留；fixture 断言真实 ChatSession.isBusy、runs===2 以及真实 envelope 的该 clientMessageId，且原 run 已 ACK、Host pending response 已为 0，排除了仅 HTTP/WS 旧回包尚未消费的时间窗。"
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-round18.md",
+      "location": "13",
+      "excerpt": "1. Hub 会话的一次普通任务调用 AskUserQuestionAsync，然后完成原 run。用户稍后回答原问题。正式回答入口是 `packages/web/app/HubApprovalCard.tsx:54–59` → `useHubController.tsx:599–625` → agent/approve；本轮直接发实际认证 WS agent/approve，**没有点击回答卡**，该 UI 接线只读核对（实际卡片另在 R73 专项验证，不累计本轮）。"
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-round18.md",
+      "location": "31",
+      "excerpt": "run 持续 busy；approve ACK 和 Host pendingResponseCount=0 均已实际断言。测试还核对 follow-up session_started/clientMessageId=`ask-user-<requestId>` 真正经 Core 发出，未用任意手工“伪运行”来欺骗 Host。"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "location": "18",
+      "excerpt": "## S2 [P2] CC AskUserQuestion permanently consumes multi-question prompt after one answer"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "location": "21",
+      "excerpt": "- `askUserPrompt` projects only questions[0]. The pending original request is removed before response, then `respondApproval` builds an answers record containing only the first question while passing all original questions through."
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "location": "22",
+      "excerpt": "- Trigger: one Claude Code AskUserQuestion tool request contains two or more questions. Desktop CC conversation and mobile surfaces both receive the single-question askUser shape."
+    },
+    {
+      "path": "docs/review-2026-10-12/server-routing-round17.md",
+      "location": "13",
+      "excerpt": "适用范围为启用 Hub 认证的 Headless Server，使用 `AskUserQuestionAsync` 产生的“可稍后回答”问题。不是 CLI room 审批，也不需要构造未来的异步 owner 校验。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "/118/file",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "/118/log",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/118-AskUserMessageView.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "/126/file",
+      "excerpt": "packages/desktop/src/renderer/messages/askUserTone.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "/126/log",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/126-askUserTone.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "/final/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/118/file",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/118/log",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/118-AskUserMessageView.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/118/resolvedLog",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/118-AskUserMessageView.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/118/archiveMemberBasename",
+      "excerpt": "118-AskUserMessageView.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/126/file",
+      "excerpt": "packages/desktop/src/renderer/messages/askUserTone.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/126/log",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/126-askUserTone.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/126/resolvedLog",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/126-askUserTone.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "/groups/1/rawLogs/126/archiveMemberBasename",
+      "excerpt": "126-askUserTone.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "/logs/259/file",
+      "excerpt": "packages/desktop/src/renderer/messages/AskUserMessageView.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "/logs/259/originalLog",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/118-AskUserMessageView.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "/logs/259/tarMember",
+      "excerpt": "desktop-renderer/118-AskUserMessageView.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "/logs/267/file",
+      "excerpt": "packages/desktop/src/renderer/messages/askUserTone.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "/logs/267/originalLog",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/126-askUserTone.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "/logs/267/tarMember",
+      "excerpt": "desktop-renderer/126-askUserTone.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-core-gates-round22.md",
+      "location": "55",
+      "excerpt": "| `protocol/server.cancel-approvals.test.ts:63` | Stop 立即 drain askUser pending，避免等 timeout | AskUser engine 替身，不是 Browser Host 动作 |"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/normal/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/observations/2/afterIdleStop/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "/final/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/preStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/postStop/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/0/afterEnable/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/observations/1/directSettled/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/0/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/0/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/2/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/2/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/4/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/4/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/6/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/6/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/8/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/8/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/10/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/10/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/12/tools/6",
+      "excerpt": "AskUserQuestion"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "/snapshot/providerRequests/12/tools/7",
+      "excerpt": "AskUserQuestionAsync"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "location": "/snapshot/loadedWorkspaceModules/108",
+      "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-evidence-navigation-round29/early-evidence-mapping.json",
+      "location": "/11/headingText",
+      "excerpt": "## S2 [P2] CC AskUserQuestion permanently consumes multi-question prompt after one answer"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-evidence-navigation-round29/early-evidence-mapping.json",
+      "location": "/12/headingText",
+      "excerpt": "## D6 [P2] Sticky AskUser state crosses request boundaries and breaks the next question submit"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-evidence-navigation-round29/independent-quality.final.receipts.json",
+      "location": "/earlyHeadingsChecked/11/heading",
+      "excerpt": "## S2 [P2] CC AskUserQuestion permanently consumes multi-question prompt after one answer"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-evidence-navigation-round29/independent-quality.final.receipts.json",
+      "location": "/earlyHeadingsChecked/12/heading",
+      "excerpt": "## D6 [P2] Sticky AskUser state crosses request boundaries and breaks the next question submit"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-hub-session-operations-round18/quality-audit.md",
+      "location": "9",
+      "excerpt": "生产入口有源码支持：AskUserQuestionAsync 是公开 builtin，定义 [ask-user.ts:78–87](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/ask-user.ts:78) 说明立即返回、之后答案作为新 user message；[128](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-hub-session-operations-round18/quality-audit.md",
+      "location": "13",
+      "excerpt": "/codeshell/packages/core/src/protocol/async-user-answer.ts:34) 在 idle/未 steer 时 enqueueTurn，clientMessageId 为 ask-user-requestId。Core ownership 和取消控制保留；fixture 断言真实 ChatSession.isBusy、runs===2 以及真实 envelope 的该 clientMessageId，且原 run 已 ACK、Host pending response 已为 0，排除了仅 HTTP/WS 旧回包尚未消费的时间窗。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-hub-session-operations-round18/report.md",
+      "location": "11",
+      "excerpt": "1. Hub 会话的一次普通任务调用 AskUserQuestionAsync，然后完成原 run。用户稍后回答原问题。正式回答入口是 `packages/web/app/HubApprovalCard.tsx:54–59` → `useHubController.tsx:599–625` → agent/approve；本轮直接发实际认证 WS agent/approve，**没有点击回答卡**，该 UI 接线只读核对（实际卡片另在 R73 专项验证，不累计本轮）。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-hub-session-operations-round18/report.md",
+      "location": "29",
+      "excerpt": "run 持续 busy；approve ACK 和 Host pendingResponseCount=0 均已实际断言。测试还核对 follow-up session_started/clientMessageId=`ask-user-<requestId>` 真正经 Core 发出，未用任意手工“伪运行”来欺骗 Host。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-server-routing-round17/report.md",
+      "location": "11",
+      "excerpt": "适用范围为启用 Hub 认证的 Headless Server，使用 `AskUserQuestionAsync` 产生的“可稍后回答”问题。不是 CLI room 审批，也不需要构造未来的异步 owner 校验。"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-lifecycle-round13.md",
+      "location": "14",
+      "excerpt": "触发条件：已打开 CLI 房间 A，A 的普通阻塞审批（测试使用 Read，而不是 AskUserQuestionAsync）已经在当前页面显示；用户点击“离开 CLI 会话”。`useRemoteApp.ts:1608–1622` 发 unsubscribe、清 activeRoom/历史引用和 feed，却没有清除属于 A 的审批。`DesktopApp.tsx:332–337` 把全部 `app.approvals` 计入 running，并拒绝新 send；`:481–487` 继续渲染该卡。此时标题/消息区已离开 A，仍残留 A 的卡，独立新稿无法发送。"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round1.md",
+      "location": "68",
+      "excerpt": "Trigger: agent uses AskUserQuestionAsync for an optional preference and completes its work without an answer. This is explicitly supported by Core; `server.askuser-async.test.ts:160-177` verifies the session is idle while the question remains pending, and the tool tells the model/user the answer may arrive later. Both browser"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round1.md",
+      "location": "70",
+      "excerpt": "sync-review.test.tsx`: actual useHubController stays running=true with chat.run=completed and an asynchronous pending question, rejects a next independent send, and emits no agent/run. 1 test / 5 assertions / 0 failures."
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "location": "/modules/38/productionFiles/11",
+      "excerpt": "tool-system/builtin/ask-user.ts"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-13-provider-model-flow-merge.md",
+      "location": "7",
+      "excerpt": "**Architecture:** Extract the shared 4-step flow (kind → key → fetch /v1/models → multi-select models → optional active) into `src/ui/components/ProviderModelFlow.tsx`. OnboardingPrompt becomes a thin wrapper adding welcome + Arena steps. ModelManager mounts it directly. Both pass `switchToNewModelOnFinish` to control whether the chosen model becomes active."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-13-provider-model-flow-merge.md",
+      "location": "65",
+      "excerpt": "3. **fetch+pick** — call `fetchModelList`, render list, multi-select with Space, Enter to continue. `r` re-fetches with `refresh:true`. `m` enters manual-id fallback. Empty/errored list shows a clear message and forces manual mode."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-13-provider-model-flow-merge.md",
+      "location": "250",
+      "excerpt": "3. **fetch+pick step** — call `fetchModelList`, render list, **multi-select** (Space toggles, Enter continues, must have at least 1 picked or show error). Top of pane shows cache freshness + `r` refresh + `m` manual id. If `picked.size === 0` and `Enter` pressed, show \"Pick at least one or press Esc\"."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-13-provider-model-flow-merge.md",
+      "location": "352",
+      "excerpt": "- Pool step (now in ProviderModelFlow's multi-select)"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "location": "1051",
+      "excerpt": "  !pendingQuestion &&"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "location": "1058",
+      "excerpt": "    if (pendingQuestion) return;"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "location": "1074",
+      "excerpt": "    pendingQuestion,"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "location": "1083",
+      "excerpt": "If any of `pendingApproval`, `pendingQuestion`, `modelManager`, `modelEntries`, `sessionEntries`, `showOnboarding` are named differently in your local copy of App.tsx, use the real names (they exist as state in the same component — find them by `grep -n \"useState\" src/ui/App.tsx | head -40`)."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-26-multi-session-chat-runtime.md",
+      "location": "34",
+      "excerpt": "ges/core/src/engine/engine.ts` — accept `runtime: EngineRuntime` in constructor; `permissionMode`/`planMode`/`askUser` become instance fields; `engine.ts:897 isInPlanMode()` → `this.planMode`; subagent spawn at `engine.ts:473` reuses `this.runtime`."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "location": "148",
+      "excerpt": "- [ ] Edit `packages/desktop/src/renderer/types.ts`. After the `AskUserMessage` interface (around line 117) and before the `Message` union (line 119), insert:"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "location": "188",
+      "excerpt": "  | AskUserMessage"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "location": "1562",
+      "excerpt": "  onAskUserAnswer?: (requestId: string, answer: string) => void;"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "location": "1578",
+      "excerpt": "  onAskUserAnswer,"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "location": "1604",
+      "excerpt": "  onAskUserAnswer={onAskUserAnswer}"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "5",
+      "excerpt": "ns (a) tell the model it IS the automation so it stops offering to set up automation, and (b) never block on `AskUserQuestion` (which currently suspends ~300s in headless runs)."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "7",
+      "excerpt": "pprovalBackend` override is present, and the in-process `AgentServer` constructor skips its unconditional `setAskUser` wiring when the engine is headless — so `AskUserQuestion` hits its instant headless-error branch instead of suspending."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "18",
+      "excerpt": "- Modify: `packages/core/src/engine/engine.ts` (add method near `setAskUser`, ~line 590)"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "50",
+      "excerpt": "In `packages/core/src/engine/engine.ts`, immediately after the `setAskUser` method (the block ending at the `}` on the line after `this.config.askUser = fn;`), insert:"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "54",
+      "excerpt": "   *  in-process AgentServer to decide whether to wire an interactive askUser. */"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "74",
+      "excerpt": "### Task 2: AgentServer skips askUser wiring when engine is headless (Fix B, server half)"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "76",
+      "excerpt": "The `AgentServer` constructor unconditionally calls `legacyEngine.setAskUser(...)` (`server.ts:110`), re-binding askUser to a client round-trip even when the run is unattended. Gate it on `!isHeadless()`."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "80",
+      "excerpt": "- Test: `packages/core/src/protocol/server.askuser-headless.test.ts` (create)"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "85",
+      "excerpt": "// packages/core/src/protocol/server.askuser-headless.test.ts"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "102",
+      "excerpt": "    setAskUser: function (fn: unknown) {"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "103",
+      "excerpt": "      (this as any)._askUser = fn;"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "105",
+      "excerpt": "    _askUser: undefined as unknown,"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "109",
+      "excerpt": "describe(\"AgentServer askUser wiring\", () => {"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "110",
+      "excerpt": "  it(\"does NOT wire askUser when the engine is headless\", () => {"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "113",
+      "excerpt": "    expect(engine._askUser).toBeUndefined();"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "116",
+      "excerpt": "  it(\"wires askUser when the engine is interactive\", () => {"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "119",
+      "excerpt": "    expect(typeof engine._askUser).toBe(\"function\");"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "126",
+      "excerpt": "> AgentServerOptions)`). The assertions on `engine._askUser` are what matter."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "130",
+      "excerpt": "Run: `bun test packages/core/src/protocol/server.askuser-headless.test.ts`"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "131",
+      "excerpt": "Expected: FAIL — the headless case wires askUser (so `_askUser` is a function, not undefined)."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "143",
+      "excerpt": "      this.legacyEngine.setAskUser((question, opts) => {"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "144",
+      "excerpt": "        return this.requestAskUserFromClient(question, opts);"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "157",
+      "excerpt": "      // Only wire an interactive askUser when a human is present. For"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "158",
+      "excerpt": "      // unattended (headless) runs we leave askUser undefined so"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "159",
+      "excerpt": "      // AskUserQuestion hits its headless-error branch and returns immediately"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "162",
+      "excerpt": "        this.legacyEngine.setAskUser((question, opts) => {"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "163",
+      "excerpt": "          return this.requestAskUserFromClient(question, opts);"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "171",
+      "excerpt": "Run: `bun test packages/core/src/protocol/server.askuser-headless.test.ts`"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "177",
+      "excerpt": "git add packages/core/src/protocol/server.ts packages/core/src/protocol/server.askuser-headless.test.ts"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "178",
+      "excerpt": "git commit -m \"fix(core): AgentServer skips interactive askUser for headless engines\""
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "185",
+      "excerpt": "`EngineRunner` already treats an `approvalBackend` override as the \"unattended\" signal (it leaves `askUserFn` undefined under override — `EngineRunner.ts:115-129`). Make the same condition also set `headless: true` on the built `EngineConfig`, so the in-process AgentServer (Task 2) sees a headless engine."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "228",
+      "excerpt": " *  the in-process AgentServer does not wire an interactive askUser. Exported"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "308",
+      "excerpt": "  \"AskUserQuestion will not reach anyone. You ARE the automation — do not ask \" +"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "382",
+      "excerpt": "- Fix B server half (gate setAskUser on headless) → Task 2. ✓"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-automation-unattended-no-ask.md",
+      "location": "386",
+      "excerpt": "- Out-of-scope (askUser timeout, tool-exec 300s, write tiers) — correctly untouched. ✓"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-02-automation-lightweight.md",
+      "location": "530",
+      "excerpt": "  \"AskUserQuestion will not reach anyone. You ARE the automation — do not ask \" +"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-04-beta-release-prep.md",
+      "location": "791",
+      "excerpt": "> 这几步需要人操作 GUI,用 AskUser 或交给用户跑;agent 只能列出清单。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-workspace-datasource-readonly-mvp.md",
+      "location": "1266",
+      "excerpt": "ask 13 的 scope 勾选框用它）/ `sources:pickAndUpload(cwd)`（main 内 `dialog.showOpenDialog({ properties: [\"openFile\", \"multiSelections\"] })` → `uploadFiles`，样板 :2820）/ `sources:deleteUpload(cwd, name)`。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-17-mimi-session-archival.md",
+      "location": "96",
+      "excerpt": "          kind: \"ask_user\","
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-17-mimi-session-archival.md",
+      "location": "277",
+      "excerpt": "    detail: pending.kind === \"ask_user\" ? \"需要回答\" : pending.toolName,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "8",
+      "excerpt": "把当前 3 态 `/init`(create / migrate / improve)扩成 4 态,新增 **empty** 处理真空 repo,通过升级版 `AskUserQuestion` 多选面板反问用户;顺便把 prompt 从 TS 字符串抽到 `.txt` 模板,并补上 `.codeshell/rules/` 的 opt-in scaffold。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "49",
+      "excerpt": "### 3. `AskUserQuestion` 工具升级(对齐 Claude Code)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "58",
+      "excerpt": "    multiSelect: boolean,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "64",
+      "excerpt": "UI:`AskUserPrompt.tsx` 重写,所有 question 一次性呈现,Tab 切块、方向键选项、Other 弹文本框、Esc 取消。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "70",
+      "excerpt": "LLM 用升级后的 `AskUserQuestion` 一次问 3-4 个核心问题(项目意图 / 技术栈 / 运行时形态 / 约束)→ 用 Write 写 CODESHELL.md。最多追问 1 次。未明项用 `# TODO(user): ...` 占位。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "89",
+      "excerpt": "- AskUserQuestion 的 `preview` / `annotations` 字段(Claude Code 有,我们 init 用不上)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "95",
+      "excerpt": "- **breaking change**:`AskUserQuestion` 签名变了,影响所有现有 caller(目前 ~8 处文件引用,需逐一迁移)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "107",
+      "excerpt": "- `tests/ask-user.test.ts`(更新现有)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "110",
+      "excerpt": "- `src/tool-system/builtin/ask-user.ts` — 签名升级 + callCount"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "111",
+      "excerpt": "- `src/tool-system/context.ts` — `askUser` 接口升级"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "112",
+      "excerpt": "- `src/ui/components/AskUserPrompt.tsx` — 多问题多选面板"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-13-init-redesign-design.md",
+      "location": "113",
+      "excerpt": "- `src/protocol/server.ts` — 转发新 askUser 形态"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-14-auto-ds-composite-model-design.md",
+      "location": "61",
+      "excerpt": "flash 可见工具: Read, Grep, Glob, Bash(只读), Task, AskUserQuestion, WebFetch, WebSearch, request_write_access"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-14-auto-ds-composite-model-design.md",
+      "location": "139",
+      "excerpt": "        \"Task\", \"AskUserQuestion\","
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+      "location": "320",
+      "excerpt": "  if (pendingQuestion) return;"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+      "location": "330",
+      "excerpt": "  pendingApproval, pendingQuestion, modelManager,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+      "location": "476",
+      "excerpt": "overlay states (`pendingApproval`, `pendingQuestion`, `modelManager`,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-26-multi-session-chat-runtime-design.md",
+      "location": "296",
+      "excerpt": "- `permissionMode`, `planMode`, `askUser` become instance fields (not module singletons)."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "11",
+      "excerpt": "the model called `AskUserQuestion` asking *\"需要我为你设置每天上午9:00自动生成"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "13",
+      "excerpt": "is. The `AskUserQuestion` call then **blocked for 300s** (`duration_ms: 300005`,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "26",
+      "excerpt": "### Layer B — `AskUserQuestion` can still suspend in an unattended run"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "28",
+      "excerpt": "`EngineRunner` deliberately leaves `askUserFn` **undefined** when an"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "30",
+      "excerpt": "`EngineRunner.ts:115–129`). With `askUser` undefined, `AskUserQuestion` would"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "33",
+      "excerpt": "> \"Error: AskUserQuestion is not available in headless mode. Make a reasonable"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "34",
+      "excerpt": "> assumption and proceed.\" (`tool-system/builtin/ask-user.ts:84`)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "38",
+      "excerpt": "**constructor unconditionally** re-binds askUser back to a client round-trip:"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "42",
+      "excerpt": "this.legacyEngine.setAskUser((question, opts) =>"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "43",
+      "excerpt": "  this.requestAskUserFromClient(question, opts));"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "46",
+      "excerpt": "This clobbers the intentionally-undefined askUser. The call suspends waiting for"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "47",
+      "excerpt": "a client answer that never comes (`createRunAskUserFn` has no timeout —"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "56",
+      "excerpt": "set `goal`, and tying askUser-suppression to goal mode would both (a) be a false"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "73",
+      "excerpt": "> `AskUserQuestion` will not reach anyone. You ARE the automation — do not ask"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "87",
+      "excerpt": "### Fix B — don't wire askUser to the client for headless engines"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "89",
+      "excerpt": "1. `AgentServer` constructor: gate the `setAskUser` call on the engine NOT being"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "92",
+      "excerpt": "   minimal `isHeadless()` accessor). When headless, **skip** `setAskUser`,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "93",
+      "excerpt": "   leaving `ctx.askUser` undefined so `AskUserQuestion` returns the instant"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "100",
+      "excerpt": "       this.legacyEngine.setAskUser(...);"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "106",
+      "excerpt": "   set — same condition that already nulls `askUserFn`), set"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "111",
+      "excerpt": "Net effect: in unattended runs, `AskUserQuestion` short-circuits to \"make a"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "121",
+      "excerpt": "2. **Ask user** — `requestAskUserFromClient` (`server.ts:1022`) /"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "122",
+      "excerpt": "   `onInputNeeded` (`RunApprovalBackend.ts:112`), i.e. `AskUserQuestion`."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "129",
+      "excerpt": "`server.ts:110` unconditionally re-binding askUser. Fix B closes it. After this,"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "137",
+      "excerpt": "- `packages/core/src/protocol/server.ts` — gate `setAskUser` on"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "154",
+      "excerpt": "3. **AgentServer skips askUser when headless** — construct an AgentServer over a"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "155",
+      "excerpt": "   headless legacyEngine; assert `engine.setAskUser` was NOT called (spy), so"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "156",
+      "excerpt": "   `AskUserQuestion` execution hits the headless-error branch. Non-headless"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "157",
+      "excerpt": "   engine still gets askUser wired (regression guard)."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "158",
+      "excerpt": "4. **AskUserQuestion headless branch** (characterization, may already exist) —"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "159",
+      "excerpt": "   with `ctx.askUser` undefined, returns the \"not available in headless mode\""
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-automation-unattended-no-ask-design.md",
+      "location": "164",
+      "excerpt": "- Adding a timeout to `createRunAskUserFn` (the no-timeout suspend is a real"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "location": "303",
+      "excerpt": "  (`packages/desktop/src/main/automationToolset.ts`,与 MCPTool/AskUserQuestion 同款处理)——"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "location": "39",
+      "excerpt": "- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "location": "91",
+      "excerpt": "  pathScope file/dir/tool;AskUser 选项+自由输入+optionsOnly)— 端到端协议对齐核实"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-16-browser-automation-mvp.md",
+      "location": "28",
+      "excerpt": "## 1. 跨进程桥(复用现成 askUser 模式)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-16-browser-automation-mvp.md",
+      "location": "31",
+      "excerpt": "`askUser`/审批就是 core→host→renderer→back 的请求/响应 RPC(`server.ts` `requestAskUserFromClient`)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-16-browser-automation-mvp.md",
+      "location": "119",
+      "excerpt": "- **敏感动作审批**:click/type 命中密码/支付/删除字段或按钮(password input、文本含「支付/删除/确认下单/transfer」)→ 走现有 `askUser` 强制确认。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-16-browser-automation-mvp.md",
+      "location": "132",
+      "excerpt": "5. **安全**:域名白名单 settings + 敏感动作接 askUser。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-01-local-task-center-design.md",
+      "location": "67",
+      "excerpt": "1. **等待处理**：审批、AskUser、paused/interrupted/blocked；"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-polish-results.md",
+      "location": "41",
+      "excerpt": "- AskUser 注册先于通知，立即答复及旧通知失败不会破坏新的等待。"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "location": "70",
+      "excerpt": "| 1132 | 每次创建 Issue 审批                 | link-action-tool.ts 对所有 write action 每次 askUser；账户展示细节与原设计不同，不机械勾满                             |"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "location": "71",
+      "excerpt": "| 1133 | 拒绝不发请求                        | askUser 拒绝直接 cancelled；现有测试覆盖                                                                               |"
+    },
+    {
+      "path": "docs/todo/architecture-debt.md",
+      "location": "65",
+      "excerpt": "onboarding/model/session/provider/AskUser/input 控制面移出根 App。"
+    },
+    {
+      "path": "docs/todo/core-harness-and-plugin-panels.md",
+      "location": "55",
+      "excerpt": "**修法**:新增 `harness-min` preset(Read/Write/Edit/Bash/Glob/Grep/AskUserQuestion/Agent/TodoWrite/Skill/MCP*/Memory*/Sleep/Config 一类最小集)作为 core 真默认;现 `general` 语义归产品/宿主层定义。"
+    },
+    {
+      "path": "docs/todo/engine-split-plan.md",
+      "location": "50",
+      "excerpt": "  `registerCustomTool`, `setAskUser`, `setBrowserBridge`, `enqueueSteer`,"
+    },
+    {
+      "path": "docs/todo/engine-split-plan.md",
+      "location": "374",
+      "excerpt": "- `config` values for cwd, llm, askUser, browser bridge, credential injection,"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-design.md",
+      "location": "406",
+      "excerpt": "| `AskUser` / 权限审批           | 回一条精简问题 + 一次性 token 链接，并把 route 标为 `pending` |"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-design.md",
+      "location": "468",
+      "excerpt": "  pending?: \"approval\" | \"ask-user\";"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-design.md",
+      "location": "505",
+      "excerpt": "- Session 需要审批或 `AskUser` 时，向微信发送精简问题和一个带一次性 token 的 Mobile Remote/桌面链接，并把 route 标为 `pending`；"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-design.md",
+      "location": "543",
+      "excerpt": "3. 待审批 / `AskUser` 的 `pending` 态 + 一次性 token 链接 + `/approve`、`/deny`；"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-review-2026-09-03.md",
+      "location": "89",
+      "excerpt": "  pending?: \"approval\" | \"ask-user\";"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-review-2026-09-03.md",
+      "location": "131",
+      "excerpt": "- `AskUser` / 审批出现时回一条精简问题 + 一次性 token 链接（草案 §7 已有），并把 route 标为 `pending`，下一条普通文本**不**当作回答；"
+    },
+    {
+      "path": "docs/todo/mimi-im-session-bridge-review-2026-09-03.md",
+      "location": "150",
+      "excerpt": "- **Phase 2**：外部 runtime 的持久 next-turn 队列；附件；审批/AskUser 的 pending 态与一次性 token；`context_token` 等待态；selection snapshot（如仍需要）。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "126",
+      "excerpt": "### 问题 A：AskUserQuestion 审批卡片不会自动消失"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "132",
+      "excerpt": "- `ApprovalCard` 在 `packages/desktop/src/mobile/components/ApprovalCard.tsx:23-25` 注释说明同一张卡承载普通审批、记住范围、路径范围和 AskUser；`ApprovalCard.tsx:34` 用 `approval.options?.length` 判断 AskUser；`ApprovalCard.tsx:84-140` 渲染选项按钮、自定义回答和取消按钮。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "134",
+      "excerpt": "- 普通 desktop session 的 AskUser/审批来自 worker raw line：`useRemoteApp.ts:463-487` 处理 `agent/approvalRequest`，用 `extractAskUserOptions(rq.args)` 把 `__ask_user__` 的 `options/optionsOnly` 转成 `PendingApproval`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "136",
+      "excerpt": "- CC room 的 AskUser/审批来自 typed `ccRoom.approvalRequest`：`useRemoteApp.ts:393-424`；对应协议类型在 `types.ts:157-173`。CC resolved 会在 `useRemoteApp.ts:427-431` 清卡。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "142",
+      "excerpt": "- 用户标注的是 AskUserQuestion 选项卡，最像普通 desktop session 的 `__ask_user__` 路径，不是 CC room 路径。普通 AskUser 在手机端是从 raw `agent/approvalRequest` 建卡，但手机端 `onRawLine` 只处理 `agent/approvalRequest` 和 `agent/streamEvent`，没有处理 raw `agent/approvalResolved`：见 `useRemoteApp.ts:460-527`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "143",
+      "excerpt": "- 桌面端普通 AskUser 被单独路由为聊天内联卡：`packages/desktop/src/renderer/App.tsx:1749-1808`。用户在桌面端回答时，`handleAskUserAnswer` 只调用 `window.codeshell.approve(...)` 并本地 `ask_user_answered`：`App.tsx:3084-3118`，没有像普通审批 `decideEnvelope` 那样调用 `window.codeshell.mobileRemote.notifyApprovalResolved(...)`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "144",
+      "excerpt": "- 普通审批弹卡在桌面端做了手机通知：`App.tsx:2521-2525`。bypass 自动批准也会通知手机：`App.tsx:1836-1840`。AskUser 内联回答缺这一步，所以“桌面已处理，手机还挂着”成立。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "146",
+      "excerpt": "- goal-active AskUser 的 10 分钟超时会发 raw `agent/approvalResolved`：`server.ts:1941-1968`，桌面 preload 在 `packages/desktop/src/preload/index.ts:130-135` 分发给 renderer，renderer 在 `App.tsx:1847-1870` 把内联 AskUser 标记为超时并移除 pending approval。但手机端没有处理这个 raw method，因此即使收到同一条 worker line，也不会清 `approvals`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "147",
+      "excerpt": "- 如果手机断线/后台挂起期间桌面已回答或 AskUser 已超时，当前 mobile 也没有 pending approvals hydrate/snapshot；重连后本地 `approvals` 不会按 server 当前 pending 状态对齐。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "152",
+      "excerpt": "- core 普通交互 AskUser 明确无 wall-clock timeout：`server.ts:1894-1900`；只有 goal-active AskUser 使用 10 分钟：`server.ts:147-154` 和 `server.ts:1941-1968`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "154",
+      "excerpt": "- 桌面 renderer 的普通审批卡会在 `agent/approvalResolved` 时移出 queue：`packages/desktop/src/renderer/App.tsx:1847-1870`；AskUser 内联卡也在同一 handler 中标为 `msg.ask.timedOut`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "159",
+      "excerpt": "- 最小修法 S：在 `packages/desktop/src/renderer/App.tsx` 的 `handleAskUserAnswer` 中，`window.codeshell.approve(...)` 后补一条与普通审批一致的 `window.codeshell.mobileRemote.notifyApprovalResolved({ requestId, sessionId: engineSessionId, approved: true })`。这直接修复“桌面端已回答 AskUser，手机还挂着”。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "160",
+      "excerpt": " `onRawLine` 增加 `obj.method === \"agent/approvalResolved\"` 分支，读取 `params.requestId` 后从 `approvals` 过滤掉。这样 goal AskUser 10 分钟超时的 raw resolved 即使没有 typed `approval.resolved`，手机也能清卡。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "163",
+      "excerpt": "- 不建议只给 `ApprovalCard` 自己加超时：普通交互 AskUser 在 core 里是刻意无超时的，UI 自行消失会制造“卡没了但 engine 仍在等回答”的假象；它也不能解决“桌面端已在别处应答”的跨端一致性。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "174",
+      "excerpt": "- S：补桌面 AskUser answer 的 mobile resolved 通知 + mobile raw `agent/approvalResolved` handler。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "180",
+      "excerpt": "- renderer 单测或集成测试：触发 `handleAskUserAnswer` 后断言调用 `mobileRemote.notifyApprovalResolved({ requestId, sessionId, approved:true })`。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "181",
+      "excerpt": "- mobile hook 单测：先注入一个 AskUser `agent/approvalRequest`，再注入 raw `agent/approvalResolved`，断言 `approvals` 清空。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "182",
+      "excerpt": "- main/mobile WS 集成测试：模拟桌面普通审批、桌面 AskUser 回答、goal AskUser timeout、CC room timeout，断言手机都收到 resolved 或本地 pending 被清掉。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "183",
+      "excerpt": "- 回归：手机打开 `/mobile/`，桌面端回答 AskUser；手机卡应自动消失。再测手机后台 10 分钟 goal AskUser timeout，回来后不应还显示可回答卡。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "188",
+      "excerpt": "- 在 `packages/desktop/src/renderer/App.tsx` 给 AskUser answer 补 `mobileRemote.notifyApprovalResolved` 会影响桌面 renderer 的 AskUser 回答路径，但行为只是额外通知 mobile，不应改变桌面 UI。"
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "location": "189",
+      "excerpt": "ver.ts` 让用户回答/取消/工具超时都发 `agent/approvalResolved`，会同时影响桌面 renderer，因为桌面已经订阅 `onApprovalResolved`；必须确认不会让已回答的内联 AskUser 被二次标成 timeout。"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "11",
+      "excerpt": "orkspace bridge 改宿主显式安装开关；Desktop 保持启用，serve/Panel 无 bridge 使用磁盘回退；验收跨会话 send_message、resolve_session_run 的异步 AskUser 与邮箱唤醒实际路径。"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "12",
+      "excerpt": " desktop/* 立即 -32601/unsupported；内部回环复用标准 unsupported answer，隐藏内部 ID，保留普通审批/已安装 Panel callback；无文字 UI 的 Panel AskUser 立即 unavailable；清 remote Link secret。"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "52",
+      "excerpt": "serve/Panel 清除；TCP 保持无桥接的磁盘回退。真实 AgentServer/SessionManager/SendMessageToSession/NotificationQueue 路径验证跨会话、异步 AskUser 与邮箱唤醒，付费模型执行用 fixture 替代。 |"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "53",
+      "excerpt": "t-task-host.ts` 在 session 过滤前拦 desktop/*；内部回环回 approved:true + typed failure，普通审批/已安装 Panel callback 保留；Panel AskUser 立即 typed unavailable（无文字 UI），同步给明确原因、异步清 pending 不注入答案或唤醒；内部 resolved ID 不向客户端发出，客户端不能响应私有 ID。最终 env sanitize 包括自定义 builder。 |"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "97",
+      "excerpt": "  packages/core/src/protocol/server.askuser-async.test.ts \\"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "124",
+      "excerpt": "- P1-2：纠正初版“Panel AskUser 保留”的错误描述。Panel runtime 没有文字问答 UI，立即回 typed unavailable + unsupported 原因，不经 confirm、不泄露内部 ID/toolName。真实 runtime.taskScope→confirm→approvalRespond 验证普通审批批准/拒绝仍有效，已安装 Panel callback 仍经 tools.invoke/tool-results。真实 Core 验证 sync 不得到空答案/用户拒绝、async pending 退役且不注入答案/唤醒；正常 Desktop/Web 文字回答及用户明确拒绝保持原逻辑。"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "155",
+      "excerpt": "  packages/host/src/ask-user-unavailable.test.ts \\"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "159",
+      "excerpt": "  packages/core/src/protocol/server.askuser-async.test.ts \\"
+    },
+    {
+      "path": "docs/todo/platform-first-version-plan.md",
+      "location": "160",
+      "excerpt": "  packages/core/src/protocol/server.askuser-session-isolation.test.ts \\"
+    },
+    {
+      "path": "docs/todo/platform-s0-protocol-inventory.md",
+      "location": "20",
+      "excerpt": "                           | 通知（worker → client）                  | `approval/requested`；四个 `__*_action__`（`__ask_user__` 除外）不再走此通道，改走 `host/*`（见第 3 表）  |"
+    },
+    {
+      "path": "docs/todo/platform-s0-protocol-inventory.md",
+      "location": "107",
+      "excerpt": "| `__ask_user__`          | —                                                 | 作为普通审批转给渲染进程，`packages/desktop/src/renderer/app/useHostSubscriptions.ts:734` 路由进聊天；Pet IM 路径另有 `packages/desktop/src/main/pet/pet-im-decisions.ts` | 当作普通审批广播并租约给 Web tab（`headless-server.ts` 的 `leases.add`；Web 侧 `packages/web/app/Hub"
+    },
+    {
+      "path": "docs/todo/platform-s0-protocol-inventory.md",
+      "location": "109",
+      "excerpt": "`__ask_user__` 的发起点有三处（`server.ts` 4273、4348、4813 行：同步、带选项、异步）。`__browser_action__` 另有 1121、1152 行的子 Agent 路径，`4439`、`4475` 行是主路径。"
+    },
+    {
+      "path": "docs/todo/platform-s0-quick-fixes-plan.md",
+      "location": "111",
+      "excerpt": "grep -rhoE '\"__[a-z_]+_action__\"|\"__ask_user__\"' packages/core/src --include='*.ts' | sort | uniq -c"
+    },
+    {
+      "path": "docs/todo/platform-s0-quick-fixes-plan.md",
+      "location": "150",
+      "excerpt": "credential_action__`、`__workspace_action__` 和所有 `desktop/*` 填\"serve 立即返回 unsupported\"；`__panel_action__` 和 `__ask_user__` 填\"不变\"。"
+    },
+    {
+      "path": "docs/todo/platform-s0-quick-fixes-plan.md",
+      "location": "471",
+      "excerpt": "    expect(unsupportedLoopbackCapability(\"__ask_user__\")).toBeUndefined();"
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "location": "29",
+      "excerpt": "| Web question drafts | Switching sessions while an answer was pending unmounted its form and lost the answer on failure. | Keep unresolved forms by request and hide other sessions accessibly. |"
+    },
+    {
+      "path": "docs/todo/release-ui-20261015.md",
+      "location": "150",
+      "excerpt": "- `5efea027a` (source `7b00fb28e`): native keyboard-accessible AskUser options,"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QCLIFE.md",
+      "location": "37",
+      "excerpt": "   stream/draft/busy/stop 独立；关闭/替换后的 approval 与 AskUser fail-closed。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QCLIFE.md",
+      "location": "352",
+      "excerpt": "- App quick-chat stream、父更新不传播、迟到 approval/AskUser fail-closed；"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QCLIFE.md",
+      "location": "470",
+      "excerpt": "- App stream 与迟到 approval/AskUser fail-closed。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QUICKCHAT.md",
+      "location": "71",
+      "excerpt": "- independent parent/child stream, busy, approval, AskUser, stop, claim, nonce, and late-event routing."
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QUICKCHAT.md",
+      "location": "105",
+      "excerpt": "- approval/AskUser 先按 session route 和当前 live quick-chat ref 解析。无法解析的 `qchat-*` 表示原 claim/generation 已关闭或被替换：不再回退 active bucket，不创建父聊/新快聊气泡或审批项，并 best-effort 向原 child session 发送 deny，释放仍 pending 的 core 请求。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QUICKCHAT.md",
+      "location": "111",
+      "excerpt": "- 关闭 quick chat 后迟到 tool approval 与 AskUser：红测确认旧实现串入父 bucket；修复后两者均不渲染并自动 deny，同时父 approval 仍只进入父 bucket。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QUICKCHAT.md",
+      "location": "112",
+      "excerpt": "- 替换 quick chat 后旧 child 的迟到 tool approval 与 AskUser：红测确认旧实现串入父 bucket；修复后不进入父聊或 replacement，replacement 自己的 approval/AskUser 仍正常路由。"
+    }
+  ]
+}

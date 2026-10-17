@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx"
+  ],
+  "exitCode": 1,
+  "elapsedSeconds": 1.031,
+  "firstRun": true
+}

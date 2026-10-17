@@ -1,0 +1,114 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "count": 6,
+  "priorities": {
+    "P3": 6
+  },
+  "findings": [
+    {
+      "id": "GIT-R8-01",
+      "priority": "P3",
+      "title": "带引号路径在committed/dirty摘要中重复计数",
+      "report": "root-git.md",
+      "reportLine": 5,
+      "source": "packages/coding/src/git/worktree/diff.ts",
+      "line": 61,
+      "log": "evidence/root-git-diff-quoted.first.log",
+      "evidenceLevel": "真实摘要+内存gitOutput+禁止process guard",
+      "limitations": "无真实Git/仓库/Host/UI；规范输入由官方格式支持",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": {
+        "status": "direct-finding-source-unchanged-at-reviewed-main",
+        "runtimeRetested": false
+      }
+    },
+    {
+      "id": "PLUGIN-R8-01",
+      "priority": "P3",
+      "title": "空引号命令参数消失并使后续位置左移",
+      "report": "plugins.md",
+      "reportLine": 5,
+      "source": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "line": 230,
+      "log": "evidence/plugins-command-metadata.first.log",
+      "evidenceLevel": "真实expander/copyCodexCommands+自有tmp",
+      "limitations": "引用语法合同；无upstream Codex/host/模型/安装",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": {
+        "status": "direct-finding-source-unchanged-at-reviewed-main",
+        "runtimeRetested": false
+      }
+    },
+    {
+      "id": "PLUGIN-R8-02",
+      "priority": "P3",
+      "title": "ARGUMENTS前缀抢先匹配完整命名placeholder",
+      "report": "plugins.md",
+      "reportLine": 13,
+      "source": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "line": 289,
+      "log": "evidence/plugins-command-metadata.first.log",
+      "evidenceLevel": "真实expander/converter+已命名/未知literal对照",
+      "limitations": "同根因两个表现合并；无模型提交或shell执行",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": {
+        "status": "direct-finding-source-unchanged-at-reviewed-main",
+        "runtimeRetested": false
+      }
+    },
+    {
+      "id": "PLUGIN-R8-03",
+      "priority": "P3",
+      "title": "已接受Windows marketplace路径派生非法name",
+      "report": "plugins.md",
+      "reportLine": 27,
+      "source": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "line": 86,
+      "log": "evidence/plugins-parser-metadata.first.log",
+      "evidenceLevel": "真实parser/deriver/name guard纯字符串链",
+      "limitations": "macOS纯数据；未addMarketplace/clone/Windows filesystem",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": {
+        "status": "direct-finding-source-unchanged-at-reviewed-main",
+        "runtimeRetested": false
+      }
+    },
+    {
+      "id": "WEB-R8-01",
+      "priority": "P3",
+      "title": "根项目不能匹配后代cwd",
+      "report": "web.md",
+      "reportLine": 5,
+      "source": "packages/web/src/lib/format.ts",
+      "line": 20,
+      "log": "evidence/web-display-contracts.first.log",
+      "evidenceLevel": "真实projectForCwd/groupByProject纯数据",
+      "limitations": "冻结基线确认；并行main已源级修复，未在新main重跑",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": {
+        "status": "addressed-by-concurrent-main-source-change",
+        "commit": "658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d",
+        "runtimeRetested": false
+      }
+    },
+    {
+      "id": "WEB-R8-02",
+      "priority": "P3",
+      "title": "image/jpg alias提前返回跳过客户端每图大小检查",
+      "report": "web.md",
+      "reportLine": 17,
+      "source": "packages/web/src/lib/mobileAttachments.ts",
+      "line": 78,
+      "log": "evidence/web-display-contracts.first.log",
+      "evidenceLevel": "真实normalize/prepare+自有File字节+内存upload callbacks",
+      "limitations": "仅客户端metadata不一致；无JPEG解码/真实上传/服务接受或拒绝/平台推断",
+      "status": "confirmed-at-frozen-source-baseline",
+      "currentMainSourceDisposition": {
+        "status": "direct-finding-source-unchanged-at-reviewed-main",
+        "runtimeRetested": false
+      }
+    }
+  ],
+  "concurrentMainSourceAddressed": 1,
+  "note": "Six frozen findings; one already addressed in concurrent main source, not six verified current outstanding bugs."
+}

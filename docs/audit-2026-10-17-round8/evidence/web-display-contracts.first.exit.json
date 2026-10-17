@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts"
+  ],
+  "startedAt": "2026-10-17T05:44:52.844156+00:00",
+  "finishedAt": "2026-10-17T05:44:53.144772+00:00",
+  "exitCode": 0,
+  "attempt": 1,
+  "stdoutAndStderr": "web-display-contracts.first.log"
+}

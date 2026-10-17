@@ -1,0 +1,25 @@
+{
+  "fixture": "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx",
+  "relativeImportRoot": "../../../",
+  "imports": [
+    {
+      "specifier": "../../../packages/tui/src/ui/pending-questions.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/ui/pending-questions.ts",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../tests/render-fixtures.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/tests/render-fixtures.ts",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../packages/tui/src/ui/components/AskUserPrompt.tsx",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/ui/components/AskUserPrompt.tsx",
+      "exists": true,
+      "insideRepo": true
+    }
+  ],
+  "scope": "maintained isolated PassThrough render fixture, actual AskUserPrompt, no native app/terminal/user data; deny fetch before renderer imports"
+}

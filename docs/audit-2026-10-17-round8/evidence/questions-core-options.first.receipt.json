@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round8/evidence/questions-core-options.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.145,
+  "firstRun": true
+}

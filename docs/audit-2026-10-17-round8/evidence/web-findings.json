@@ -1,0 +1,87 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "confirmed": [
+    {
+      "id": "WEB-R8-01",
+      "priority": "P3",
+      "status": "confirmed",
+      "title": "A project rooted at / loses descendant cwd ownership in the Web display projection",
+      "sourceFile": "packages/web/src/lib/format.ts",
+      "line": 20,
+      "relatedLines": [
+        12,
+        14,
+        39,
+        41,
+        62,
+        63
+      ],
+      "trigger": "Project metadata has primary or V2 secondary root /; descendant cwd /workspace; no more-specific registered root.",
+      "observed": "Exact / matches but /workspace has no owning project; groupByProject splits root and child into separate groups and child lacks projectId.",
+      "control": "Normal descendants, longest nested root, sibling exclusion, ordinary combined grouping.",
+      "contract": "projectForCwd JSDoc promises root ownership and longest prefix; existing tests cover descendants and V2 roots; ProjectStore accepts existing absolute directories without explicit filesystem-root exclusion (static only).",
+      "limits": "Actual pure production functions with ordinary in-memory metadata; no filesystem root registration or access, rendered UI, creation request, host authority, security experiment or model. Conditional P3 projection defect.",
+      "evidenceLevel": "production pure functions; guarded focused observations and normal controls; consumer wiring static only",
+      "fixture": "evidence/web-display-contracts.test.ts",
+      "log": "evidence/web-display-contracts.first.log",
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "inspectedMainDisposition": {
+        "inspectedMainDisposition": "exact source condition eliminated by parallel commit; not dynamically retested",
+        "sourceDiffObservation": "isSameOrInside uses base directly when it already ends with /; the frozen root / no longer becomes // for descendant prefix matching.",
+        "inspectedMain": "34553b747f9a5b6acafe7ad1dd21905bcfa53cac",
+        "runtimeRetestPerformed": false,
+        "parallelFixCommit": "658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d"
+      }
+    },
+    {
+      "id": "WEB-R8-02",
+      "priority": "P3",
+      "status": "confirmed",
+      "title": "Mobile image/jpg alias normalization returns an image above the per-image maximum",
+      "sourceFile": "packages/web/src/lib/mobileAttachments.ts",
+      "line": 78,
+      "relatedLines": [
+        79,
+        84,
+        88,
+        90,
+        118,
+        124,
+        145
+      ],
+      "trigger": "Selected File reports explicitly recognized image/jpg MIME, size greater than 10 MiB and at most 20 MiB.",
+      "observed": "normalizeMobileImage returns oversized JPEG without conversion/size rejection; prepareMobileAttachments forwards that size to injected beginUpload and can emit oversized descriptor with fake accepting callbacks.",
+      "control": "Small alias becomes valid inline descriptor; oversized GIF rejects before upload; existing PNG/JPEG inline/order/budget tests pass.",
+      "contract": "Client advertised 10 MiB maximum and ordinary normalization paths; actual mobile upload-begin validator/service share 10 MiB limit (static only).",
+      "limits": "Owned synthetic in-memory File bytes; MIME/size handling only, not JPEG decoding. Ticket/fetch are fake callbacks. No real upload/server/browser/device/platform or downstream rejection/timeout/data loss/security claim.",
+      "evidenceLevel": "production normalization and preparation functions; guarded focused observations and normal controls; real service limits read-only static",
+      "fixture": "evidence/web-display-contracts.test.ts",
+      "log": "evidence/web-display-contracts.first.log",
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "inspectedMainDisposition": {
+        "inspectedMainDisposition": "source unchanged from frozen base; not dynamically retested",
+        "inspectedMain": "34553b747f9a5b6acafe7ad1dd21905bcfa53cac",
+        "runtimeRetestPerformed": false
+      }
+    }
+  ],
+  "candidates": [],
+  "totals": {
+    "confirmed": 2,
+    "P2": 0,
+    "P3": 2,
+    "unconfirmedCandidates": 0,
+    "frozenConfirmed": 2,
+    "parallelSourceConditionEliminated": 1,
+    "unchangedFindingSourcesOnInspectedMain": 1
+  },
+  "historicalDuplicates": [
+    "UI-02 case-sensitive project roots lowercased",
+    "R20/S5 Hub upload admission/staging image-size inconsistency",
+    "R34 upload/disconnect lifecycle",
+    "R84 legacy history attachment projection",
+    "WEB-R5-01/02 child lifecycle and orphan reminder stripping"
+  ],
+  "dedupReceipt": "evidence/web-dedup.json",
+  "currentMainDispositionReceipt": "evidence/web-main-source-disposition.json"
+}

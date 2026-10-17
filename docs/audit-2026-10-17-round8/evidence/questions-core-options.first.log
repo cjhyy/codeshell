@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round8/evidence/questions-core-options.test.ts:
+(pass) sync choice question forwards ordinary rendering metadata and returns the user's label list [0.24ms]
+(pass) free text forwards no options and preserves an ordinary answer verbatim [0.06ms]
+(pass) async question returns the host delivery receipt and preserves the same option metadata [0.08ms]
+(pass) async question without an async host does not silently invoke the blocking handler [0.20ms]
+
+ 4 pass
+ 0 fail
+ 8 expect() calls
+Ran 4 tests across 1 file. [53.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

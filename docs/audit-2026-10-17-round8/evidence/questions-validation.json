@@ -1,0 +1,116 @@
+{
+  "frozenCommit": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "confirmedFindings": 0,
+  "candidates": 2,
+  "firstAttempts": 4,
+  "cleanShards": 2,
+  "cleanPass": 10,
+  "cleanExpectCalls": 30,
+  "failedShards": 2,
+  "failedShardCounts": {
+    "pass": 0,
+    "fail": 3,
+    "unhandledErrors": 1,
+    "expectCalls": 6
+  },
+  "policy": "First raw output and exit preserved before inspection. Failed directions skipped without repairs/retries/alternate execution. No dependencies or dist rebuild.",
+  "shards": [
+    {
+      "name": "questions-core-options",
+      "scope": "independent Core callback controls",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round8/evidence/questions-core-options.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "combinedStdoutStderr": "questions-core-options.first.log",
+      "exitReceipt": "questions-core-options.first.exit.txt",
+      "completed": true,
+      "status": "passed",
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "unhandledErrors": 0,
+        "expectCalls": 8
+      },
+      "limits": "Pure in-memory controls, no full host/UI execution"
+    },
+    {
+      "name": "questions-tui-pending-baseline",
+      "scope": "existing TUI pending data baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/tui/src/ui/pending-questions.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "combinedStdoutStderr": "questions-tui-pending-baseline.first.log",
+      "exitReceipt": "questions-tui-pending-baseline.first.exit.txt",
+      "completed": true,
+      "status": "passed",
+      "counts": {
+        "pass": 6,
+        "fail": 0,
+        "unhandledErrors": 0,
+        "expectCalls": 22
+      },
+      "limits": "Pure in-memory controls, no full host/UI execution"
+    },
+    {
+      "name": "questions-mobile-multiselect",
+      "scope": "Mobile multiselect candidate fixture",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.test.tsx"
+      ],
+      "attempt": 1,
+      "exitCode": 1,
+      "combinedStdoutStderr": "questions-mobile-multiselect.first.log",
+      "exitReceipt": "questions-mobile-multiselect.first.exit.txt",
+      "completed": false,
+      "status": "failed-direction-skipped",
+      "counts": {
+        "pass": 0,
+        "fail": 1,
+        "unhandledErrors": 1,
+        "expectCalls": 0
+      },
+      "limits": "No fixture/product body entered; react-dom/client missing"
+    },
+    {
+      "name": "questions-tui-batched-choice",
+      "scope": "TUI batched cursor candidate fixture",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.test.tsx"
+      ],
+      "attempt": 1,
+      "exitCode": 1,
+      "combinedStdoutStderr": "questions-tui-batched-choice.first.log",
+      "exitReceipt": "questions-tui-batched-choice.first.exit.txt",
+      "completed": false,
+      "status": "failed-direction-skipped",
+      "counts": {
+        "pass": 0,
+        "fail": 2,
+        "unhandledErrors": 0,
+        "expectCalls": 6
+      },
+      "limits": "Candidate phase and intended flushed-key control failed; no established chunk-specific behavior"
+    }
+  ],
+  "nonTestMetadataNote": "A broad historical search matched large JSON strings; only saved excerpt length was reduced to 600 chars, without changing matches or rerunning any fixture."
+}

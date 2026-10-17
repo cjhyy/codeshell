@@ -1,0 +1,15 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/coding/src/git/parse-log.test.ts",
+    "packages/coding/src/git/worktree/slug.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "elapsedSeconds": 0.27956199645996094,
+  "limits": "Existing pure parse-log and branch-prefix tests only; no Git product commands, repository/worktree mutation, native process, model/network or user data. A04 duplicate not rerun."
+}

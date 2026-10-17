@@ -1,0 +1,5 @@
+{
+  "frozenCommit": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "confirmedFindings": [],
+  "reason": "Independent Core and pending-question controls passed; both new UI directions remain unconfirmed after their first failed fixture."
+}
