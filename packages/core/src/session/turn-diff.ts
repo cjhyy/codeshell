@@ -134,7 +134,7 @@ function capture(path: string, remaining: number): FileState {
     if (buffer.includes(0)) return { error: "binary file" };
     let content: string;
     try {
-      content = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+      content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(buffer);
     } catch {
       return { error: "non-UTF-8 file" };
     }
