@@ -1,0 +1,33 @@
+{
+  "frozenCommit": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round6/evidence/skills-metadata.test.ts tests/agent-definition.test.ts packages/core/src/agent/agent-definition.test.ts packages/core/src/agent/agent-definition.skills.test.ts",
+  "attempt": 1,
+  "exitCode": 1,
+  "rawCombinedStdoutStderr": "skills-metadata-first.log",
+  "exitReceipt": "skills-metadata-first.exit",
+  "result": "SKIP: fixture dependency resolution failure; no repair, retry, or alternate execution",
+  "error": "Cannot find package 'yaml' from docs/audit-2026-10-17-round6/evidence/skills-metadata.test.ts",
+  "observedBunCounts": {
+    "pass": 13,
+    "fail": 1,
+    "unhandledErrors": 1,
+    "expectCalls": 26,
+    "reportedTests": 14,
+    "files": 4
+  },
+  "completedExistingTestFiles": [
+    "tests/agent-definition.test.ts",
+    "packages/core/src/agent/agent-definition.test.ts",
+    "packages/core/src/agent/agent-definition.skills.test.ts"
+  ],
+  "newFixtureDeclaredCases": 5,
+  "newFixtureCasesExecuted": 0,
+  "interpretation": "The existing pure parser files passed within a failed shard. The custom file failed at module import. Its assertions/logged observations did not run; scanner, snapshot, Skill tool, CRLF and embedded delimiter behavior were not dynamically validated.",
+  "confirmedFindings": 0,
+  "staticCandidates": 2,
+  "limits": [
+    "No source/product fixes or git mutations.",
+    "No installation/GitHub acquisition, instruction-run/native process, security/permissions/hooks/injection, real data, real models, paid APIs, or network exercises.",
+    "Old N09/C3 role-resume restriction loss was identified by dedup and not reproduced."
+  ]
+}

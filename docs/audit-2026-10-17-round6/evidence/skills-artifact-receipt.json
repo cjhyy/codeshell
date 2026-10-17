@@ -1,0 +1,48 @@
+{
+  "artifactCount": 8,
+  "confirmedFindings": 0,
+  "staticCandidatesSkipped": 2,
+  "testAttempts": 1,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-candidates-and-dedup.json",
+      "bytes": 5770,
+      "sha256": "56a73faf42b259f9b566fdccf79393cfefe9027ce33a8557a6a5614a5dd748f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+      "bytes": 321157,
+      "sha256": "b3293013b7a3e7b39f209c1d8e51b4c6700a6bebd8a66727a3a52967b674c2e2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-metadata-first.exit",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-metadata-first.log",
+      "bytes": 1820,
+      "sha256": "24b5fb12a5099f15a8e0127f01235c593ae71bf1a0139e139111dbf8d95fca09"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-metadata.test.ts",
+      "bytes": 6380,
+      "sha256": "6218e8b6e3fc91eb2fa8732ff50a36df7a1841b31522e48f59991359932a7c4a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "bytes": 9769,
+      "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-validation.json",
+      "bytes": 1739,
+      "sha256": "5e64cbf0e9448a3b12e49053489a8b14041319781864e2f51836f71caa580a90"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4"
+    }
+  ]
+}

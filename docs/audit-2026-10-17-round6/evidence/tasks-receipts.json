@@ -1,0 +1,109 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "status": "completed",
+  "confirmedFindings": 0,
+  "shardCount": 3,
+  "testCount": 13,
+  "assertionCount": 280,
+  "failureCount": 0,
+  "skipCount": 0,
+  "fixtureFailureCount": 0,
+  "retryCount": 0,
+  "parameterCoverage": {
+    "snapshotStatusSamples": 40,
+    "desktopStatusSamples": 40,
+    "enumerationsCountAsTests": 2,
+    "notAdditionalTestCount": 80
+  },
+  "shards": [
+    {
+      "label": "snapshot-contract",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.test.ts"
+      ],
+      "testFile": "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.test.ts",
+      "firstRunOnly": true,
+      "attemptCount": 1,
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.first.stdout+stderr.log",
+      "rawLogSha256": "f9da6778a374f4f3426dc37b80d8dee88e733eb3541d808255bc2aabdb3cc739",
+      "rawLogBytes": 1209,
+      "exitReceipt": "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.first.exit.txt",
+      "exitReceiptSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 7,
+      "assertions": 161,
+      "failures": 0,
+      "skipped": 0,
+      "completedMarkerPresent": true,
+      "testFileSha256": "e6033cf193da32ac7abecaa710b56579e9723946c6e6c0d483a79b89df11c258"
+    },
+    {
+      "label": "display-contract",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.test.ts"
+      ],
+      "testFile": "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.test.ts",
+      "firstRunOnly": true,
+      "attemptCount": 1,
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.first.stdout+stderr.log",
+      "rawLogSha256": "73463f31d0312d8b91f1eb0d5fccff8f99c35cf0634a7af9f663db11d8454198",
+      "rawLogBytes": 779,
+      "exitReceipt": "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.first.exit.txt",
+      "exitReceiptSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 4,
+      "assertions": 91,
+      "failures": 0,
+      "skipped": 0,
+      "completedMarkerPresent": true,
+      "testFileSha256": "e9b0fa780f1b51056567f747d3e1d776b43b4c070236c76114c5f001e03d9d58"
+    },
+    {
+      "label": "tui-owner",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/tui/src/ui/App.agent-todos.test.tsx"
+      ],
+      "testFile": "packages/tui/src/ui/App.agent-todos.test.tsx",
+      "firstRunOnly": true,
+      "attemptCount": 1,
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round6/evidence/tasks-tui-owner.first.stdout+stderr.log",
+      "rawLogSha256": "6e7e60dd5f79c750d9f4ad8becc90aca1a03f683fbb43322ed92dfa0419f7ad1",
+      "rawLogBytes": 599,
+      "exitReceipt": "docs/audit-2026-10-17-round6/evidence/tasks-tui-owner.first.exit.txt",
+      "exitReceiptSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 2,
+      "assertions": 28,
+      "failures": 0,
+      "skipped": 0,
+      "completedMarkerPresent": true,
+      "testFileSha256": "5faf7973a5dd07447e8e7b53bf8e05ac130b52020ba95ed4f1039b4fa519c4db"
+    }
+  ],
+  "sourceManifest": "tasks-source-manifest.json",
+  "dedup": "tasks-dedup.json",
+  "candidates": "tasks-candidates-and-dedup.json",
+  "findings": "tasks-findings.json",
+  "limitations": [
+    "bounded supported snapshots only, no whole-module correctness claim",
+    "Engine.run/model/provider/network/native/realexec not exercised",
+    "no real Electron/browser/transport/UI visual verification",
+    "TUI used existing fake-client Ink fixture and guarded isolation",
+    "no tests were repaired or retried",
+    "raw .log files are ignored by repository rules and require explicit preservation"
+  ],
+  "gitMutationsPerformed": false,
+  "productSourceChangesPerformed": false
+}

@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/settings/SettingsPage.search.test.tsx:
+(pass) SettingsPage responsive search > metaKey+F focuses the visible field after layout changes [24.41ms]
+(pass) SettingsPage responsive search > ctrlKey+F focuses the visible field after layout changes [5.16ms]
+(pass) SettingsPage responsive search > narrow results navigate to the selected module and clear both search fields [25.85ms]
+(pass) SettingsPage responsive search > clears an empty-result query from the narrow field and keeps its focus [12.18ms]
+(pass) SettingsPage responsive search > narrow search respects project scope restrictions [5.50ms]
+
+ 5 pass
+ 0 fail
+ 20 expect() calls
+Ran 5 tests across 1 file. [1012.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

@@ -1,0 +1,7 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "scope": "Core Task/Todo snapshot data, guard metadata and display consumers",
+  "count": 0,
+  "findings": [],
+  "interpretation": "No new confirmed counterexample in the inspected and tested contracts; not a whole-module correctness claim."
+}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/logs/LogsView.interaction.test.tsx"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 1.036,
+  "rawLog": "docs/audit-2026-10-17-round6/evidence/desktop-logs-first.log",
+  "sha256": "ebff6cdd01a6a7d75e40c2b05439cdd98d4b254d1322d3c7b0c195e59cfd2894",
+  "bytes": 1239,
+  "attempt": 1
+}

@@ -1,0 +1,86 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "artifactCount": 15,
+  "confirmedFindings": 0,
+  "testAttempts": 3,
+  "tests": 13,
+  "assertions": 280,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-candidates-and-dedup.json",
+      "bytes": 2651,
+      "sha256": "1269f5bd4127c87a0f5bb5ea16f9350475d0a1f9f81b8c3c587aee8affce5ccf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "bytes": 87896,
+      "sha256": "034f650a0dbed33521715e38e42279e616871bdbfd13a01dea1a79534e6a1057"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.first.stdout+stderr.log",
+      "bytes": 779,
+      "sha256": "73463f31d0312d8b91f1eb0d5fccff8f99c35cf0634a7af9f663db11d8454198"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-display-contract.test.ts",
+      "bytes": 4818,
+      "sha256": "e9b0fa780f1b51056567f747d3e1d776b43b4c070236c76114c5f001e03d9d58"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-findings.json",
+      "bytes": 306,
+      "sha256": "ed4b85ea070e58ee3cf97b9b4362eada125fbacc9b1876eebd5c9b9da138232a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-receipts.json",
+      "bytes": 4236,
+      "sha256": "e059447432cd4f317e9438160a5c5814edf0d2b0053cf219a021303a92df4ac9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.first.stdout+stderr.log",
+      "bytes": 1209,
+      "sha256": "f9da6778a374f4f3426dc37b80d8dee88e733eb3541d808255bc2aabdb3cc739"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-snapshot-contract.test.ts",
+      "bytes": 8102,
+      "sha256": "e6033cf193da32ac7abecaa710b56579e9723946c6e6c0d483a79b89df11c258"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "bytes": 13791,
+      "sha256": "cf7bc671fc3ab8501eb287a78ef6961d23b2f909217f09b75172c88be657b6d9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-tui-owner.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-tui-owner.first.stdout+stderr.log",
+      "bytes": 599,
+      "sha256": "6e7e60dd5f79c750d9f4ad8becc90aca1a03f683fbb43322ed92dfa0419f7ad1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/tasks.md",
+      "bytes": 6759,
+      "sha256": "2ef34a8a8b7a4a3c761f33211c74dc7279a272cc87b1662e9e4434c5c7106883"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/cross-review-tasks.md",
+      "bytes": 2977,
+      "sha256": "7d22cc7040c8a31d7051036755b7d5d3b00b59a7433d21e5b97eedd0fd4e4b71"
+    }
+  ],
+  "receiptExcludesItself": true
+}

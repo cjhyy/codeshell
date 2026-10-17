@@ -1,0 +1,35 @@
+bun test v1.3.11 (af24e281)
+
+tests/agent-definition.test.ts:
+(pass) parseAgentDefinition > parses frontmatter fields and uses body as systemPrompt [8.63ms]
+(pass) parseAgentDefinition > defaults optional fields when omitted [0.47ms]
+(pass) parseAgentDefinition > throws a clear error when name is missing [0.50ms]
+(pass) parseAgentDefinition > throws when frontmatter delimiters are absent [0.04ms]
+(pass) parseAgentDefinition > supports inline-array tools syntax [1.03ms]
+
+docs/audit-2026-10-17-round6/evidence/skills-metadata.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'yaml' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/evidence/skills-metadata.test.ts'
+-------------------------------
+
+
+packages/core/src/agent/agent-definition.test.ts:
+(pass) serializeAgentDefinition > round-trips a full definition [2.90ms]
+(pass) serializeAgentDefinition > omits unset optional fields (no model/maxTurns/tools lines) [0.70ms]
+
+packages/core/src/agent/agent-definition.skills.test.ts:
+(pass) parseAgentDefinition skills frontmatter > parses a YAML-list skills field [0.33ms]
+(pass) parseAgentDefinition skills frontmatter > parses a comma-separated skills string [0.33ms]
+(pass) parseAgentDefinition skills frontmatter > absent skills field → undefined (inherit full pool) [0.25ms]
+(pass) parseAgentDefinition skills frontmatter > empty skills list is preserved (no skills, not inherit-all) [0.18ms]
+(pass) parseAgentDefinition skills frontmatter > tools field also accepts comma-string form [0.12ms]
+(pass) parseAgentDefinition skills frontmatter > round-trips skills through serialize → parse [0.47ms]
+
+ 13 pass
+ 1 fail
+ 1 error
+ 26 expect() calls
+Ran 14 tests across 4 files. [254.00ms]
+Bun test process failed (1)

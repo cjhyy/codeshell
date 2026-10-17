@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+packages/tui/src/ui/App.agent-todos.test.tsx:
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;(pass) App sub-agent TodoWrite snapshots > routes live replacements and empty snapshots to only the selected owner [282.90ms]
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2004l[?25h]9;4;0;(pass) App sub-agent TodoWrite snapshots > clearing and resuming discard old snapshots, including reused child ids [237.83ms]
+
+ 2 pass
+ 0 fail
+ 28 expect() calls
+Ran 2 tests across 1 file. [1243.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

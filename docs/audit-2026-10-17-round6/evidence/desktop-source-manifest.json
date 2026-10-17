@@ -1,0 +1,232 @@
+{
+  "frozenCommit": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "branch": "codex/audit/task-skills-package-round6-20261017",
+  "sourceCount": 32,
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full; workflow and test isolation contract",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2"
+    },
+    {
+      "path": "packages/desktop/src/renderer/logs/LogsView.tsx",
+      "coverage": "full; bucket/filter/loading/copy/read projection",
+      "bytes": 12912,
+      "lines": 355,
+      "sha256": "4799aa28eaef52b4d59aef1cfd04b57e862401001c6ba91d4df4713c603fd21a"
+    },
+    {
+      "path": "packages/desktop/src/renderer/logs/LogsView.interaction.test.tsx",
+      "coverage": "full; executed unchanged existing owned MiniDOM fixture",
+      "bytes": 10274,
+      "lines": 229,
+      "sha256": "ae1955a48e22fbe2d1e8348a5bedb83c2ae636241090c143f2093a96de8bfe2d"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "coverage": "selected lines 1-765; pure search/scope helpers and rendered navigation callers; remaining setting bodies excluded",
+      "bytes": 35851,
+      "lines": 931,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.search.test.tsx",
+      "coverage": "full; executed unchanged existing owned MiniDOM fixture",
+      "bytes": 5772,
+      "lines": 166,
+      "sha256": "d48706c5a37e34e0b4455dc23bfd5d1ffa9154aa7a20b279adc88f9e3ff8a393"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.test.tsx",
+      "coverage": "selected lines 1-190; existing contract only; not executed",
+      "bytes": 6293,
+      "lines": 172,
+      "sha256": "338fe34455bab4384199c8990d238a607577aedee24a65c1e9459120cb23e618"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.scope.contract.test.ts",
+      "coverage": "full; existing contract only; not executed",
+      "bytes": 3421,
+      "lines": 74,
+      "sha256": "ea41541802cb5b4021cf4181d3aef6732ef2f111978539acb981484842e74b22"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "coverage": "full; static responsive navigation focus contract only",
+      "bytes": 6201,
+      "lines": 141,
+      "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "coverage": "selected lines 1-300; navigation ownership only; account/actions excluded",
+      "bytes": 10856,
+      "lines": 294,
+      "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogEditor.ts",
+      "coverage": "full; supporting pure display/editor contract only",
+      "bytes": 1918,
+      "lines": 60,
+      "sha256": "c6534a82262d07576f1f561a2e04aa3c6d0049539c6216d81ce1baf4ad24d9ed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogEditor.test.ts",
+      "coverage": "selected existing field validator contract; not executed",
+      "bytes": 1244,
+      "lines": 28,
+      "sha256": "86eceaedb6fac8f8ced0f7d255193b01068c99d24abbb6d21945a3c3499efd7f"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connFormat.ts",
+      "coverage": "full; supporting display formatter only",
+      "bytes": 279,
+      "lines": 6,
+      "sha256": "980fd1f878f2c8754f2f82bbb17d4da850a3a65f3ab0550806be3f27aad4ef20"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "coverage": "full read; audit uses catalogModelOptions only; credential logic excluded",
+      "bytes": 8807,
+      "lines": 235,
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogModelOptions.test.ts",
+      "coverage": "full; existing picker contract only; not executed",
+      "bytes": 2748,
+      "lines": 71,
+      "sha256": "b696a8d5e2316a6ad4cfc04d94d60312509f457077dd722af461a76247f3d050"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AgentsSection.tsx",
+      "coverage": "selected lines 142-159; current catalogModelOptions consumer only",
+      "bytes": 22854,
+      "lines": 569,
+      "sha256": "2cf92aaf58de56afa7f812416ee3db55b87c84b1c1a803d4d391ff73c4347dfe"
+    },
+    {
+      "path": "packages/desktop/src/renderer/sidebarSessionVisibility.ts",
+      "coverage": "full; static projection contract; attempted owned fixture failed at resolution",
+      "bytes": 2187,
+      "lines": 57,
+      "sha256": "923cedc579ad5330e73c4be5f3fe6cf0526be197f839e4091ba441f003542dda"
+    },
+    {
+      "path": "packages/desktop/src/renderer/sidebarSessionVisibility.test.ts",
+      "coverage": "full; existing contract only; not executed",
+      "bytes": 5113,
+      "lines": 134,
+      "sha256": "84f8f16e1fdb76e4eb8f036c6078b79a55a268bc407c7c03ed115581339eae90"
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "coverage": "selected lines 1-280, 980-1055, and search hits; ordinary projection callers only; auth/trust/native excluded",
+      "bytes": 58805,
+      "lines": 1629,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+      "coverage": "full; static grouping contract; attempted owned fixture failed at resolution",
+      "bytes": 526,
+      "lines": 13,
+      "sha256": "6fe04b016e79c67a3a53ad92723f2a737eafe7fb24b4f33ea7c637e7f726e2fe"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+      "coverage": "full; existing projection and keyboard contract only; not executed",
+      "bytes": 8792,
+      "lines": 238,
+      "sha256": "c6ffa6d00760010d6a067edce56c23e497c7df5488edb258bb1a194ddc22c36e"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+      "coverage": "selected lines 1-260; grouping and option identity caller; not rendered this round",
+      "bytes": 12043,
+      "lines": 321,
+      "sha256": "76035097cf49fd084e37b40af41083399abccdb9fb8001a3e794f9c0ae006606"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "coverage": "selected lines 1500-1558; catalogModelOptions consumer only; not executed",
+      "bytes": 122444,
+      "lines": 2912,
+      "sha256": "7b0cf0f7fc03881b52d14267bb25d68f84b217f2dcb3cd948bd85cac571d9c66"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "coverage": "selected modelOptions/ModelPill current caller search hits only; not executed",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+    },
+    {
+      "path": "packages/desktop/src/renderer/pages/PageRegistry.ts",
+      "coverage": "selected LogsView lazy and page render entries; not executed",
+      "bytes": 9305,
+      "lines": 276,
+      "sha256": "15be073ab0f01f9bc2b219a7f40b7543089525c290a3bff8238bceeac32c84bf"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "coverage": "selected tailLog IPC adapter lines 996-997; not executed",
+      "bytes": 86436,
+      "lines": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "coverage": "tailLog public type search hit only; not executed",
+      "bytes": 102118,
+      "lines": 2980,
+      "sha256": "5620bf480afc0c6a667be075be3deb032cade2720b5229c1bda94d1b4154f249"
+    },
+    {
+      "path": "packages/desktop/src/main/activity-history-ipc.ts",
+      "coverage": "selected lines 37-45; tailLog request shape contract only; not executed",
+      "bytes": 2795,
+      "lines": 59,
+      "sha256": "227d2a55d5194ff30233b3c0fa08e31ea9212a1228327b07a2bfc4ca453f0060"
+    },
+    {
+      "path": "packages/desktop/src/main/logs-service.ts",
+      "coverage": "full; static tail contract only; never read logs on disk",
+      "bytes": 3848,
+      "lines": 102,
+      "sha256": "fc6a359c1be2f5a1adfa803f551e94f667de72943f1a2cc1817d2daf8a130e15"
+    },
+    {
+      "path": "packages/desktop/src/renderer/test-utils/renderHook.tsx",
+      "coverage": "full shim; fixture boundary",
+      "bytes": 346,
+      "lines": 7,
+      "sha256": "7f8bc7a7d1ef965069dc7eb0612127314a8b56c7054c983211b977b8eb25f033"
+    },
+    {
+      "path": "packages/web/src/test-utils/renderHook.tsx",
+      "coverage": "selected ensureMiniDom/renderHook boundary/search hits only",
+      "bytes": 14918,
+      "lines": 526,
+      "sha256": "97c85c35b82c62e17682860e316410d3413c906522c21fba99dc0cf8c0eadec2"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "coverage": "full; authorized runner entry",
+      "bytes": 233,
+      "lines": 8,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d"
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "coverage": "selected isolation/completion search hits only",
+      "bytes": 6518,
+      "lines": 152,
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e"
+    }
+  ],
+  "note": "Hashes identify whole files; coverage field identifies actual read ranges and does not claim all hashed bytes were semantically reviewed."
+}
