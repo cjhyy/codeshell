@@ -1,0 +1,17 @@
+{
+  "atUTC": "2026-10-17T16:08:22.729797+00:00",
+  "sourcePins": 12,
+  "allSourcePinsStable": true,
+  "historyFiles": 4336,
+  "historyChanged": [],
+  "allHistoryStable": true,
+  "queryContextsActuallyRead": {
+    "elapsedRef": 1,
+    "duration": 4,
+    "elapsedBackground": 7,
+    "statusLineMetadataRows": 8
+  },
+  "broadAppCountsNotAllRead": true,
+  "allSemanticRangesWithinDisplayedRanges": true,
+  "productRuns": 0
+}

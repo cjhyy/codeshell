@@ -1,0 +1,44 @@
+{
+  "atUTC": "2026-10-17T16:06:13.328525+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "displayedRanges": [
+        [
+          1754,
+          1820
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            1754,
+            1820
+          ],
+          "text": "1754               `<system-reminder>Only the first ${toolCalls.length} of your ${response.toolCalls.length} ` +\n1755               `tool calls ran this turn (per-turn limit is ${this.config.maxToolCallsPerTurn}). ` +\n1756               `These were NOT executed and produced no result — do NOT assume they ran: ${droppedNames}. ` +\n1757               `Re-issue the ones you still need in the next turn.</system-reminder>`,\n1758           });\n1759         }\n1760 \n1761         // Tool results just pushed; recompute ctx so the bar updates *before*\n1762         // the next model round-trip — large tool outputs can move it sharply.\n1763         this.emitCtxFromMessages(messages);\n1764 \n1765         // A trusted tool marked a run boundary. reply_committed: the\n1766         // authoritative user-facing reply is recorded — another model request\n1767         // could only produce duplicate tools or stray assistant text.\n1768         // background_notification: async work was launched whose completion\n1769         // notification will wake this Session, so the run parks instead of\n1770         // asking the model for another step with no new evidence. One batch\n1771         // may pend both; the park wins so the completion finds a parked run.\n1772         const replyCommitted = this.deps.peekToolRunYield?.(\"reply_committed\") === true;\n1773         const backgroundWait = this.deps.peekToolRunYield?.(\"background_notification\") === true;\n1774         if (replyCommitted || backgroundWait) {\n1775           // Close the current model turn before a queued steer re-drives it;\n1776           // interrupt-and-redrive swaps the turn signal at this boundary.\n1777           this.finalizeModelTurn();\n1778           if (await this.consumeQueuedSteer(messages, \"finalize_backfill\")) {\n1779             // A user message arrived while the batch was executing. The\n1780             // committed reply answered the previous content only — lift the\n1781             // reply barrier so the re-driven round can answer the new message\n1782             // (the host itself rejects duplicate authoritative replies), and\n1783             // keep any background park pending across the extra round.\n1784             if (replyCommitted) this.deps.consumeToolRunYield?.(\"reply_committed\");\n1785             continue;\n1786           }\n1787           // Park before complete_goal so a single batch cannot launch\n1788           // unfinished background work and simultaneously claim the enclosing\n1789           // Goal is done.\n1790           if (backgroundWait && this.deps.consumeToolRunYield?.(\"background_notification\")) {\n1791             tlog.info(\"turn.background_notification_wait\", { cat: \"turn\" });\n1792             messages = this.redactConsumedSensitiveToolResults(messages);\n1793             return {\n1794               text: finalText,\n1795               reason: \"completed\",\n1796               messages,\n1797               completionKind: \"background_wait\",\n1798             };\n1799           }\n1800           if (replyCommitted && this.deps.consumeToolRunYield?.(\"reply_committed\")) {\n1801             tlog.info(\"turn.reply_committed_stop\", { cat: \"turn\" });\n1802             messages = this.redactConsumedSensitiveToolResults(messages);\n1803             return { text: finalText, reason: \"completed\", messages };\n1804           }\n1805         }\n1806 \n1807         // Goal mode P0: explicit completion. If the model called complete_goal,\n1808         // it has DECLARED the goal done — short-circuit to \"completed\" WITHOUT\n1809         // running the judge hook. The tool's result is already in `messages`\n1810         // above so the summary lands in the transcript. Reset the stop-block\n1811         // counter so a prior judge-driven block streak doesn't leak out. Also\n1812         // clear the PERSISTED goal so a later bare send doesn't re-inherit a goal\n1813         // the model just declared finished (the judge's onMet does this when IT\n1814         // decides; a self-report must do the same, else the goal outlives its\n1815         // completion and re-arms every follow-up turn).\n1816         const completeGoalRequested =\n1817           !!this.goalTracker &&\n1818           isSameGoalVersion(requestedGoalVersion, this.config.goal) &&\n1819           toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME);\n1820         if (completeGoalRequested) {"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "sha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "displayedRanges": [
+        [
+          160,
+          186
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            160,
+            186
+          ],
+          "text": " 160     sandbox: args.sandbox,\n 161     cwd: args.cwd,\n 162     workspace: args.workspace,\n 163     shellEnv: args.shellEnv,\n 164     // TodoWrite reads this to push task_update events independently\n 165     // of its return value, so the UI's pinned task panel refreshes\n 166     // immediately rather than after the LLM next surfaces the\n 167     // snapshot. wrappedOnStream snoops the same channel to keep\n 168     // latestTodos current for TaskGuard.\n 169     streamCallback: options?.onStream,\n 170     setCwd(nextCwd: string) {\n 171       toolCtx.cwd = nextCwd;\n 172     },\n 173     runYield: {\n 174       // Reasons accumulate independently — a batch may both commit a host\n 175       // reply and launch background work; the turn loop decides precedence.\n 176       request(reason) {\n 177         pendingRunYield.add(reason);\n 178       },\n 179       peek(reason) {\n 180         return pendingRunYield.has(reason);\n 181       },\n 182       consume(reason) {\n 183         return pendingRunYield.delete(reason);\n 184       },\n 185     },\n 186     skillAllowlist:"
+        }
+      ]
+    }
+  ],
+  "scope": "Small ordinary foreground runYield consumer control flow only; no Engine execution or claim all lifecycle mechanisms reviewed."
+}

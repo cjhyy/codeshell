@@ -1,0 +1,1650 @@
+{
+  "exactPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/203",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/789",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/176/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/361/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1610/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1610/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1612/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1612/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1613/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1613/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/2848/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3209/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/622",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "pointer": "/files/16/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/540/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/607/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/609/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/619/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/692/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/694/resolved",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "pointer": "/files/10/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    }
+  ],
+  "filename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/203",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/789",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/176/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/361/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1610/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1610/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1612/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1612/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1613/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1613/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/2848/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3209/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/622",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "pointer": "/files/16/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/540/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/607/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/609/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/619/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/692/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/694/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "pointer": "/files/10/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "pointer": "/modules/7/productionFiles/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "cost-ledger/context.ts",
+      "completeScalar": true
+    }
+  ],
+  "exactSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/176/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/176/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/176/claims/1/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/361/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/671/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/671/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/671/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "pointer": "/files/16/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "pointer": "/files/10/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/archive/architecture/16-core-overall-design-standard.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6695,
+      "context": "scoped:\n\n- `ModelPool`\n- provider catalog\n- `SettingsManager`\n- `MCPManager`\n- cost tracker\n- sandbox backend cache\n- telemetry/exporters\n\nSession-scoped:\n\n- active `Engine`\n- permission mode\n- plan mode\n- active abort controller\n- transcript state\n- pending approvals\n- pending background-agent notifications\n- context compaction state\n\nForbidden:\n\n- global permission mode\n- global plan mode\n- process-global notification queue for session-specific events\n- global current session id except as an `AsyncLocalStorage` fallback for logging\n\nBackground-agent notifications require a sessionId. The B2 transitional\n`__legacy__` bucket and the empty-string sessionId-on-the-wire fallback\nwere removed; any caller that publishes without a session is logged at\nwarn level and dropped (queue and bus both guard at runtime).\n\n### S4. Security Boundaries Fail Closed\n\nCore defaults must be conservative because every new host increases exposure.\n\nHard rules:\n\n- `acceptEdits` is not allow-all. It is an allowlist.\n- Hooks/plugins may adjust a permission decision freely **except** that they cannot promote a non-`allow` classifier decision to `allow`. They may tighten `allow → ask/deny` and they may relax `deny → ask` (a legitimate audit pattern: convert a hard deny into an interactive confirmation). The only restriction is the no-promotion-to-`allow` rule. There is no \"trusted plugin\" escape hatch — if a hook wants to ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/core-modules/logging.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6285,
+      "context": "lly\n});\n```\n\n## 注意 / Gotchas\n\n- **File routing is by `cat`, not by API.** Only `cat ∈ {ui, ink, render, stream}` lands in the `ui-ink` bucket; everything else goes to `engine`. Set `cat` via `logger.child({ cat })` or in the per-call `data`.\n- **`span()` levels are fixed:** `.begin` is `debug`, `.end` is `info`, `.fail` is `error`. The `--debug=<cat>` category filter only narrows the *debug* firehose — info/warn/error always pass.\n- **Session id has two layers.** Prefer `runWithSid`/`enterSid` (AsyncLocalStorage — concurrent parent/child Engines coexist without racing). `setCurrentSid` is only a module-global fallback for code with no ALS scope. The sid is stamped at *write* time, so a `child()` created before `Engine.run` still gets the real sid.\n- **Everything is best-effort and silent on failure.** File writes are wrapped in `try/catch {}`. Redaction happens at the write boundary — `msg` and `data` are run through `redactSecrets` before serialization, so callers don't redact by hand.\n- **`session-recorder` is dev-only.** Every `record*` function is a no-op unless local-dev is detected (`CODE_SHELL_DEV=1`, `--debug`, or running from `src/`); `CODE_SHELL_VERBOSE_LOG=0` force-disables. Don't rely on it in production. It also caps per-record blobs at 256 KB.\n- **Redaction is for logs only, never transcripts.** `sanitizeMessages`/`redactSecrets` return new values and never mutate input precisely ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/203",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+      "pointer": "/hits/addressed_old_sources/8/context",
+      "kind": "json-value-scalar",
+      "offset": 254,
+      "context": "具目录检索与统计数据开展独立查重和验证，确认 **3 项 P3**，另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/789",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/176/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/361/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 9214,
+      "context": ".json) | 空引号命令参数消失并使后续位置左移 |\n| P3 | [PLUGIN-R8-02](../audit-2026-10-17-round8/findings.json) | ARGUMENTS前缀抢先匹配完整命名placeholder |\n| P3 | [PLUGIN-R8-03](../audit-2026-10-17-round8/findings.json) | 已接受Windows marketplace路径派生非法name |\n| P3 | [WEB-R8-01](../audit-2026-10-17-round8/findings.json) | 根项目不能匹配后代cwd |\n| P3 | [WEB-R8-02](../audit-2026-10-17-round8/findings.json) | image/jpg alias提前返回跳过客户端每图大小检查 |\n| P3 | [ATT-R9-01](../audit-2026-10-17-round9/findings.json) | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| P3 | [COST-R9-01](../audit-2026-10-17-round9/findings.json) | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| P3 | [SESSION-R9-01](../audit-2026-10-17-round9/findings.json) | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| P3 | [DIAG-R10-01](../audit-2026-10-17-round10/findings.json) | DOM bounded traversal eagerly enumerates complete child collections before queue cap |\n| P3 | [PET-R10-01](../audit-2026-10-17-round10/findings.json) | 并发搜索超过默认结果上限后静默丢行 |\n| P3 | [PET-R10-02](../audit-2026-10-17-round10/findings.json) | Unicode 小写扩长后 snippet 不含命中词 |\n| P3 | [CHAT-R11-01](../audit-2026-10-17-round11/findings.json) | 通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store |\n| P3 | [DESKTOP-R12-01](../audit-2026-10-17-round12/findings.json) | 工具卡摘要截断拆开 Unicode 代理对 |\n| P3 | [PATCH-R12-01](../audit-2026-10-17-round12/findings.json) | 首个 Update chunk 省略可选 @@ 时丢失显式空白 context |\n| P3 | [TUI-R12-01](../audit-2026-10-17-round12",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/catalog-review/checks.json",
+      "pointer": "/canonicalMetadataDocuments/8/idsInOriginalOrder/1",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+      "pointer": "/findings/86/id",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1610/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1610/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1611/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1612/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1612/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1613/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1613/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/1614/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/2848/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/3209/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/622",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/671/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 338,
+      "context": "# CodeShell 第九批审查记录\n\n冻结源码：`248d091202869c07274adedf4fd50403105f1b1f`。本批从会话序列化、输入附件、工具目录检索与统计数据开展独立查重和验证，确认 **3 项 P3**，另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake executor 能复现组合，但没有“省略 executor 必须清理旧实现”的明确替换契约，当前所读生产调用又显式传 executor，所以不计为确认。附件 Windows 兼容、目录深度与 truncated 标志也仅作静态观察。\n\n**首次验证：9 个 clean guarded shards，123 pass、431 expect、0 fail、0 skipped；106 项既有 baseline + 17 项 focused observations/controls。** 所有首次合并 stdout/stderr 与退出码先保存再检查，没有失败的 Bun shard、产品修复或产品重跑。错误行为的 characterization 测试通过不代表产品已修复。查看[验证汇总](validation.json)、[正式缺陷](findings.json)、[候选与静态观察](candidates.json)、[冻结源码 SHA](source-manifest.json)、[全部材料索引](evidence-index.json)。\n\n一次 root 猜测 renderer 源文件名失败，已保留[首次工具响应转录并跳过](evidence/root-navigation-skip",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/cross-review-usage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 20,
+      "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone record 后累计 token/cost 的 API。完整 ID 的支持不是从外部服务或潜在 TODO 推断出来的。\n\n实际实现先用完整 ID 检查 known，再在 `cost-tracker.ts:115` 仅保存 canonical 名称；`:148` 累计时重新按保存的名称定价。冻结 snapshot 的 `google/gemini-4-argon` input/output 正是 2/10；direct metadata 没有 `gemini-4-argon`，短名称补全只尝试 deepseek/openai/anthropic，没有 google，最终命中默认 3/15。因此 fixture 中同样 1M/1M token 的 12→18 差异与源码一致。输入是 API 接受的非负有限整数；1M 用于单位价格算术，不是实际 provider 请求、模型长度验收或外部账单。\n\n新增 fixture 没有替换生产定价函数、改 snapshot、mock 价格或调用 snapshot override。它实际检查 estimate、record、累计 tokens、serialize 的存储模型名、formatCompact、formatSummary 和 restore。",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+      "pointer": "/assessment/confirmedNewRootCause",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01 full OpenRouter identity lost after record: no matching earlier bug found. Keyword search is bounded record evidence, not semantic proof of exhaustive novelty.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-findings.json",
+      "pointer": "/0/id",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "pointer": "/files/16/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/540/specifier",
+      "kind": "json-value-scalar",
+      "offset": 3,
+      "context": "../cost-ledger/context.js",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/540/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/607/specifier",
+      "kind": "json-value-scalar",
+      "offset": 3,
+      "context": "../cost-ledger/context.js",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/607/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/609/specifier",
+      "kind": "json-value-scalar",
+      "offset": 3,
+      "context": "../cost-ledger/context.js",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/609/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/619/specifier",
+      "kind": "json-value-scalar",
+      "offset": 3,
+      "context": "../cost-ledger/context.js",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/619/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/692/specifier",
+      "kind": "json-value-scalar",
+      "offset": 3,
+      "context": "../cost-ledger/context.js",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/692/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/694/specifier",
+      "kind": "json-value-scalar",
+      "offset": 3,
+      "context": "../cost-ledger/context.js",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/694/resolved",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/findings.json",
+      "pointer": "/findings/1/id",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "COST-R9-01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "pointer": "/files/10/path",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 193,
+      "context": "# 统计数据与独立 CostTracker 审查\n\n冻结源：`248d091202869c07274adedf4fd50403105f1b1f`。本方向 **1 项确认 P3、0 个候选**。2 个首次 guarded shard 共 **28 pass、79 expect、0 fail、0 skipped**，其中新增 5 项，既有纯数据基线 23 项。只记录，不修产品。\n\n## COST-R9-01：独立 CostTracker 记录后丢失完整模型标识，累计估价错误（P3）\n\n`packages/core/src/cost-tracker.ts:115` 把 `record(model, ...)` 的完整标识替换成 canonical 名称。后续 `getEstimatedCost()`（`:148`）再按已截断的名称查价。完整 OpenRouter `vendor/model` 名称属于明确支持的输入：本模块 `:36–46` 说明完整标识优先查 snapshot，`data/model-metadata.ts:103–105` 说明此类名称从 snapshot 定价；`CostTracker` 仍在公共 SDK `index.ts:759` 导出。\n\n[实际 fixture](evidence/root-usage-contracts.test.ts) 使用冻结仓库自带 `openrouter-models.json` 的 `google/gemini-4-argon`，不改数据、不查外部价格。该条目 input/output 为 2/10，且 canonical 名称没有 direct metadata。对 1M input + 1M output，`estimateForTokens(fullId, ...)` 返回 12；`record(fullId, ...)` 后存成 `gemini-4-argon`，查不到完整 snapshot，采用默认 3/15，累计返回 18。`formatCompact`、`formatSummary`、`serialize().estimatedCost` 同样返回 18，restore 后仍为 18。原完整标识在最初检查时属于 known，因此 summary 甚至没有 unknown-model 提示。token 数量正常。\n\n两个关键对照限定影响范围：普通 direct metadata `devstral-medium` 的 estimate 和累计都是 2；同一个完整 ID 在内存 `UsageLedger` ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 89,
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/2/normal/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "pointer": "/final/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "pointer": "/snapshot/loadedWorkspaceModules/6",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "pointer": "/modules/7/productionFiles/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "cost-ledger/context.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/todo/bug-status-core.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1361,
+      "context": "eTokens()` 仍是 `estimateMessagesTokens()*4/3`。\n- **发版 blocker 撤销。**\n\n## 2. ✅已修 — complete_goal 无 active goal 可调\n- `tool-system/builtin/index.ts:776-789` 由 `ctx.hasGoal===true` 控制 `complete_goal`/`cancel_goal` 可见性。\n- `engine/engine.ts:1728-1804` 每轮构造 `toolVisibility.hasGoal` 并过滤 `toolDefs`；`tool-system/executor.ts:153-163` runtime 再拒；`engine/turn-loop.ts:1091-1098` 只有 `goalTracker` 存在时才短路完成。\n- 结论：记忆过时，当前 HEAD 仍为已修。\n\n## 3. ✅已修 — 并发 sessionId race（正常 Engine.run 路径）\n- `logging/logger.ts:160-179` 使用 `AsyncLocalStorage`，`getCurrentSid()` 优先读 ALS，`runWithSid()` 为并发 run 提供隔离。\n- `engine/engine.ts:1520-1524` 设置 `toolCtx.sessionId` 后直接 `return runWithSid(session.state.sessionId, async () => ...)`；当前正常 run 路径不再在 `runWithSid` 前写模块级 sid fallback。\n- `rg -n \"setCurrentSid\\\\(|logger\\\\.setSid\\\\(\" packages/core/src packages/tui/src packages/desktop/src` 显示 `logger.setSid` 仍存在于 protocol client、TUI UI、state/debug 等 ALS 外 fallback 场景，但不在 `Engine.run` 并发执行体前置写入。\n- 测试覆盖：`engine/engine-sid-isolation.test.ts:79-123` 并发 `sid-a`/`sid-b` model call 各自读到正确 sid，且外层 fallback 保持 `\"outside-fallback\"`。\n\n## 4. ✅已修 — steer 只在 turn 顶部消费\n- 当前不是“只顶部”：`engine/turn-loop.ts:571-577` 在每轮顶部消费 `normal_step`；`engine/turn-loop.ts:877-879`、`:963-965`、`:1095-1098`、`:1113-1116`、`:1137-1140`、`:1223-1225` 在完成/回填/max-turns 等路径消费 `finalize_backfill`。\n- tool batch 场景下不会在每个 tool call 后插入 steer，这是为了保持 `tool_use`/`tool_result` 邻接合法；`engine/turn-loop.ts:",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/external-agent-runtime-tool-bridge-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 34240,
+      "context": "sult。\n\nCodex 启动参数只注入类似配置：\n\n```text\n-c mcp_servers.codeshell_tools.url=http://127.0.0.1:<port>/mcp\n-c mcp_servers.codeshell_tools.bearer_token_env_var=CODESHELL_CODEX_MCP_TOKEN\n```\n\n实际参数名称应以目标 Codex app-server 版本的协议为准，并做启动时 feature detection。\n\n### 11.3 Thread Context 路由\n\n共享 bridge 服务多个并发 Codex thread，必须维护：\n\n```ts\nMap<CodexThreadId, SessionToolHost>;\n```\n\n生命周期：\n\n1. Codex thread 创建或恢复成功后，注册 `threadId -> toolHost`。\n2. MCP 请求到达时，从 Codex 注入的可信 `_meta.threadId` 提取 thread。\n3. bridge 查找唯一 tool host，并通过 `AsyncLocalStorage` 或显式 context 调用工具。\n4. session 关闭时先注销映射，再关闭 thread/tool host。\n\n以下情况必须 fail closed：\n\n- 请求没有 thread ID；\n- thread 未注册；\n- 一个 batch 含多个不同 thread；\n- thread 与当前 transport 绑定不一致；\n- app-server 版本不能提供可信 thread metadata。\n\n禁止使用以下降级方式：\n\n- 采用“当前前台 session”；\n- 采用最近活跃 thread；\n- 让模型在 tool args 中传业务 session ID；\n- 只有一个 session 时静默猜测。\n\n如果目标 Codex 版本没有可信 `_meta.threadId`，该版本的 Host Tools capability 应标记为\nunsupported，而不是牺牲隔离性。\n\n#### 11.3.1 前提已实证成立（codex-cli 0.145.0）\n\n> **状态：已验证。** 复现脚本与完整记录见\n> [`docs/todo/evidence/`](evidence/README.md)。\n\nv2 曾把这条列为 Phase 3 的最大不确定性——整个共享 bridge 方案（11.2 + 11.3）都建立在\n「Codex 是否提供**可信** `_meta.threadId`」这个未验证前提上。现已用真实\n`codex-cli 0.145.0` 跑通并证伪测试，**前提成立**：\n\n**其一，`_meta` 携带的比预期更全。** 实际收到：\n\n```json\n{\n  \"threadId\": \"019fb618-…\",\n  \"x-codex-turn-metadata\": {\n    \"thread_id\": \"019fb618-…\",\n    \"turn_id\": \"019fb618-e905-…\",\n    \"workspaces\": { \"<cwd>\": { \"latest_git_commit_hash\": \"…\" } },\n ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4371,
+      "context": "okens/cache tokens、Session/模型/用途分组、scope 和覆盖说明；金额统一标示\n估算，不能冒充 provider 发票。总费用有未知部分时显示“已知估算 + N 项未知费用”。\n\n## 现有界面与协议\n\n通过现有 `agent/query` 添加有界 usage summary 查询。Session 范围沿用 Session ownership\n验证；host 汇总需要 Host 授权，Session-only 客户端不能借省略 SID 读取其他会话费用。\n协议只返回安全 summary，不返回磁盘路径、密钥或原始请求内容。\n\nTUI `/cost` 与 footer 使用 owning Session/Runtime 的 summary。Desktop 在现有活动记录、\n运行详情/用量区展示费用覆盖与跨 Session 汇总。独立 Web 当前没有运行/用量页面，此次只提供\n可复用的协议查询，未新增 Web 页面。沿用 preload/\nhost bridge 边界和 i18n，不增加侧栏、任务中心或新的业务主导航。\n\n## 实施范围与验收\n\n核心新增 `cost-ledger/{types,context,store,summary}`；调整 `cost-tracker.ts` 的兼容适配、\n`llm/client-base.ts`、LLM types/内置 provider usage 边界、model facade、run accounting、\nsession open/finalize、auxiliary/title/subagent、Session persistence 与 protocol query。\nHost 调整 stdio/TCP/TUI Runtime wiring，Desktop 使用现有 runs service/preload/RunsView/i18n，\n独立 Web 沿用现有协议客户端，不增加页面。Phase D 不混入该 PR。\n\n主要验收：\n\n1. 两个 Runtime 并发使用同 SID、同 Runtime 两个 Session 混合 main/aux/child/late title，\n   证明 leaf request、Session rollup、Runtime sum 分别隔离且不重复。\n2. 本地 fake HTTP provider 覆盖缺 usage、真正零 usage、已 billed 后解析失败、stream 失败与\n   fallback、重试收费、缓存计费；不调用付费服务。\n3. external receipt 重发、owner/内容冲突、未知价格和缺身份兼容路径。\n4. resume/restart/fork/replay/冷读/晚到 usage 恢复去重，损坏或未完成 receipt 的覆盖说明，\n   存储失败不触发多余收费重试。\n5. Session-only 协议授权、bounded query、UI unknown 展示、现有 sidebar 结构保持精简。\n6. 完整受影响回归、package release/NodeNext、12 workspace types、Desktop build，真实已\n   编译 stdio/TUI/SDK 消费者；每个结果在交付记录中区分自动测试与未执行的人",
+      "completeScalar": false
+    }
+  ]
+}

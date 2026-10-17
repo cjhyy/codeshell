@@ -1,0 +1,35 @@
+{
+  "atUTC": "2026-10-17T16:07:10.375229+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "displayedRanges": [
+        [
+          1239,
+          1266
+        ],
+        [
+          2135,
+          2148
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            1239,
+            1266
+          ],
+          "text": "1239   /**\n1240    * Whether this engine runs unattended (no interactive human). Used by the\n1241    * in-process AgentServer to decide whether to wire an interactive askUser.\n1242    */\n1243   isHeadless(): boolean {\n1244     return this.config.headless === true;\n1245   }\n1246 \n1247   /**\n1248    * A background_notification park only makes sense where the Session can be\n1249    * woken by the completion later (server refuses headless; sub-agent sessions\n1250    * are not in chatManager) \u2014 everywhere else honouring it would end the run\n1251    * early and orphan the background result. A reply_committed boundary is\n1252    * synchronous and never suppressed.\n1253    */\n1254   private suppressesRunYield(\n1255     reason: import(\"../tool-system/context.js\").ToolRunYieldReason,\n1256   ): boolean {\n1257     return (\n1258       reason === \"background_notification\" && (this.isHeadless() || this.config.isSubAgent === true)\n1259     );\n1260   }\n1261 \n1262   get permissionMode(): NonNullable<EngineConfig[\"permissionMode\"]> {\n1263     return this.permissionController.permissionMode;\n1264   }\n1265 \n1266   get planMode(): boolean {"
+        },
+        {
+          "range": [
+            2135,
+            2148
+          ],
+          "text": "2135             hasIncompleteBatch: batchAuthority?.hasIncompleteBatch,\n2136           });\n2137           finalized.runId = runId;\n2138           if (options?.clientMessageId) {\n2139             appendClientRunReceipt(session, options.clientMessageId, finalized);\n2140           }\n2141           return finalized;\n2142         }),\n2143       ),\n2144     ).catch(failClaimedRun);\n2145   }\n2146 \n2147   /**\n2148    * Terminal success path: forward to {@link finalizeRunSuccess} with the"
+        }
+      ]
+    }
+  ]
+}

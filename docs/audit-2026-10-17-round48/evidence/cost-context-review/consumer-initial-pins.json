@@ -1,0 +1,55 @@
+{
+  "capturedUTC": "2026-10-17T15:51:20.248297+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "bytes": 18650,
+      "lines": 468,
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "pinBeforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "bytes": 18125,
+      "lines": 435,
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "pinBeforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/model-request-boundary/accounting.test.ts",
+      "bytes": 3086,
+      "lines": 95,
+      "sha256": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+      "pinBeforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "lines": 92,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "pinBeforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinBeforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/model-traces/context.ts",
+      "bytes": 33874,
+      "lines": 944,
+      "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "pinBeforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "pinBeforeBodyOrLineNavigation": true
+    }
+  ],
+  "previousNavigation": "b35ba5 filenames only; no consumer body displayed before these pins"
+}

@@ -1,0 +1,14 @@
+{
+  "rootReportedContext": "c3a9ece2e6f183671b00e07322a9722fad6bda54 pending docs47 only, no own Git",
+  "purpose": "actual filesystem before full/scope/cause gate or target body",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "bytes": 7462,
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "lineCount": 227,
+      "pinUTC": "2026-10-17T15:49:51.978278+00:00",
+      "semanticRead": false
+    }
+  ]
+}

@@ -1,0 +1,476 @@
+{
+  "adapterfactory": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/59",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "locator": "/matches/21/hits/0/text",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "locator": "/matches/48/hits/0/text",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "locator": "/hits/chat-public/7/excerpt",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "locator": "/hits/chat-public/11/excerpt",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "locator": "/hits/chat-public/19/excerpt",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/proposal.json",
+      "locator": "/consideredEntryGroup/paths/4",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "locator": "/sources/24/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "locator": "/checks/24/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "locator": "/files/30/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "locator": "/priorPrepHashOnlyChecks/24/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/40/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/72/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/518/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/518/directSourcePathsInObject/0",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/519/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/519/directSourcePathsInObject/0",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/520/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/520/directSourcePathsInObject/0",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/521/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/521/directSourcePathsInObject/0",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/522/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/522/directSourcePathsInObject/0",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/380/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/380/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "locator": "/unknownPaths/375",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/380/path",
+      "valueChars": 36,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 36,
+      "text": "packages/chat/src/adapter-factory.ts",
+      "wholeValueIncluded": true
+    }
+  ],
+  "adapterfactory-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "locator": "/sources/24/frozenSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "locator": "/sources/24/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "locator": "/checks/24/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "locator": "/files/30/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "locator": "/files/30/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "locator": "/files/30/mainSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "locator": "/priorPrepHashOnlyChecks/24/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/40/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/40/claims/0/sourceSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/40/claims/1/sourceSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/72/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/520/sourceHashFields/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/521/sourceHashFields/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/521/sourceHashFields/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/521/sourceHashFields/mainSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/522/sourceHashFields/frozenSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/522/sourceHashFields/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/380/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/380/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/380/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "wholeValueIncluded": true
+    }
+  ]
+}

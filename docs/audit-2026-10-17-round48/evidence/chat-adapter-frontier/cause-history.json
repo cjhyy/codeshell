@@ -1,0 +1,752 @@
+{
+  "startedUTC": "2026-10-17T15:45:07.096018+00:00",
+  "finishedUTC": "2026-10-17T15:45:11.232305+00:00",
+  "inventoryCount": 4255,
+  "scopeInheritedFrom": "history.json",
+  "method": "Literal ASCII query terms over lowercased MD and recursive JSON string values; keys not searched; cap30; bounded snippets not semantic exhaustiveness",
+  "queries": {
+    "swc-old": {
+      "hits": 36,
+      "cap": 30,
+      "retained": 30
+    },
+    "multi-account": {
+      "hits": 13,
+      "cap": 30,
+      "retained": 13
+    },
+    "matrix-loop": {
+      "hits": 6,
+      "cap": 30,
+      "retained": 6
+    },
+    "slack-thread": {
+      "hits": 181,
+      "cap": 30,
+      "retained": 30
+    }
+  },
+  "driftFromInitial": [],
+  "parseErrors": [],
+  "hits": {
+    "swc-old": [
+      {
+        "path": "docs/audit-2026-10-16/README.md",
+        "locator": "markdown-text",
+        "valueChars": 3906,
+        "contextStart": 468,
+        "contextEnd": 1538,
+        "text": "项，不含未完成候选。\n\n| 编号 | 级别 | 问题与精确影响 | 证据详情 |\n| --- | --- | --- | --- |\n| A02 | P2 | 补丁失败回滚将被删二进制转成 UTF-8，原始字节和执行权限不能完整恢复 | [Coding](root.md) |\n| C04 | P2 | 相对 Write 的备份按 Host cwd 定位，undo 返回成功但实际工作区修改仍在 | [Core](core.md) |\n| SWC-01 | P2 | 同渠道多账号顺序改变后，持久消息恢复到另一账号 | [Chat](server-web-chat.md) |\n| SWC-02 | P2 | 去重键缺账号身份，第二个账号的合法输入被当重复成功接收 | [Chat](server-web-chat.md) |\n| SWC-03 | P2 | 小附件 I/O 失败无告警降级内存队列，接收后重启无法恢复 | [Chat，含有意 fallback 边界](server-web-chat.md) |\n| A07 | P2 | `/permissions plan` 报 live 成功，却只改 detached 引擎，当前会话仍旧模式 | [TUI / 协议](root.md) |\n| C02 | P2 | hook 改参后不再检查 Plan/MCP 最终参数策略；旧已知仍存在 | [Core](core.md) |\n| C03 | P2 | `rg --pre` / `npm audit fix` 被误分只读，Plan gate 将参数交给 handler | [Core；未执行实际命令](core.md) |\n| C01 | P2 | OpenAI SSE 缺终止证据的正常 EOF 被人为补 stop，半截回答标 completed | [Core](core.md) |\n| A05 | P2 | `/commit` 无视合法 model_error 终态，仍用非空旧正文实际提交 | [TUI](root.md) |\n| A06 | P2 | `/commit` 提示只含未暂存 diff，实际提交还包含此前已暂存内容 | [TUI](root.md) |\n| A08 | P2 | 自定义 session 存储根未返回给 `/undo`，命令读错目录、无法撤销 | [TUI](root.md) |\n| A09 | P2 | `/undo all` 只看 snapshots，忽略新建文件；普通单轮 und",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-16/findings.json",
+        "locator": "/issues/19/id",
+        "valueChars": 6,
+        "contextStart": 0,
+        "contextEnd": 6,
+        "text": "SWC-01",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/findings.json",
+        "locator": "/issues/20/id",
+        "valueChars": 6,
+        "contextStart": 0,
+        "contextEnd": 6,
+        "text": "SWC-02",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/quality.md",
+        "locator": "markdown-text",
+        "valueChars": 6288,
+        "contextStart": 0,
+        "contextEnd": 1011,
+        "text": "# 独立质量复核\n\n基线：`66ee7737a7d6203319834e601c84afe6757f801e`。范围为 [root.md](root.md) A01–A12、[desktop.md](desktop.md) D01–D03、[server-web-chat.md](server-web-chat.md) SWC-01–06，以及追加的 [core.md](core.md) C04。复核读取当前源码、已保存的最小复现和日志；本复核新增执行 **0**，没有运行测试、产品、原生工具、网络、权限或认证实验，没有读取用户数据，没有更改产品或 Git 状态。唯一写入为本文件。\n\n结论：修订后的根因均可保留，现有 P2/P3 分级与限定影响基本相称。A11 只有静态可达证据；SWC-06 是旧条件候选的动态补证，不应计作全新根因。其余条目仍须按各自替身、局部 service 或 decoder 层级交付，不能汇总为平台端到端验证或仓库全面通过。\n\n## 已发现并修订的证据问题\n\n1. **A05 初稿使用不存在的终态 `error`。** `TerminalReason` 的实际枚举是 `model_error`，见 `packages/core/src/types.ts:604–620`。初稿测试经 `any` 注入非法值，原收据只能证明命令没有检查 reason，不能证明真实错误终态的样例。协调者已改成 `model_error` 和 `prior-round output`，重新保存 [当前复现](evidence/root-git.test.ts) 与 [当前日志](evidence/root-git.log)：4 pass / 13 expect / Completed。只读核对确认当前源码和收据一致。初稿保留为 `root-git-initial.*`，不得重复计数。\n2. **A05 “半截输出”需要收窄。** `turn-loop.ts:1381–1383` 保存已完成模型轮次的 `finalText`；`:1194,1993` 可携该值返回 `model_error`；`server.ts:1851–1862`、`client.ts:166–172` 正常传回。该链支持“错误运行仍带此前轮次非空文本”，不能保证失败流本轮的半截 delta 出现在 `result.t",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-16/server-web-chat.md",
+        "locator": "markdown-text",
+        "valueChars": 9772,
+        "contextStart": 0,
+        "contextEnd": 1001,
+        "text": "# Server / Web / Chat / Link / Browser 审查记录\n\n基线：`66ee7737a7d6203319834e601c84afe6757f801e`。只记录审查与自有复现，不修改产品实现。本轮已收尾；“已验证”不代表真实平台端到端验证。\n\n## 第一轮已确认\n\n### SWC-01 [P2] 同渠道多账号排序改变后，持久消息会交给另一个账号\n\n- 位置：`packages/chat/src/chat-gateway.ts:140`（按 `channel:ordinal` 构建持久路由标识）、`:147`（按该标识恢复 adapter）；`packages/chat/src/channel.ts` 的 adapter 合约没有稳定账号标识。\n- 触发：SDK 合法配置 `[账号 A, 账号 B]`，B 收到消息，队列已经持久接收但尚未投递；重启时配置顺序变成 `[B, A]`。同渠道多账号是现有 `chat-gateway.test.ts` 明确支持的功能。\n- 预期：消息继续归属 B，或因无法确定原账号而拒绝恢复；实际：旧 `custom:1` 被解析为 A，middleware 与 `reply()` 都使用 A。\n- 影响：跨账号错误回复、读取错误账号上下文；当不同账号使用局部 target 标识时，可能投给错误对话。这里实际证明的是路由错账号，没有声称验证真实 Telegram/Slack 的可达性或数据外泄。\n- 验证：直接执行真实 `ChatGateway.run()` 与 `DeliveryQueue`，两轮真实磁盘队列，平台 adapter 为无网络回调替身。第一轮 B 持久记录 `adapterId=custom:1`，第二轮交换顺序，得到 `A:private account B content`，B 没有 send。证据：`evidence/server-chat-identity.test.ts` 第一个测试。\n- 是否已知：对旧 `docs/review-*` 按 adapter identity / ordinal / account 查重，没有找到同一问题；旧修复注释仅考虑移除“不相关渠道”导致全局索引移动，仍未绑定同渠道账号身份。\n- 建议：持久 adapter ID 绑定不可变账号身份，不使用列表位置；恢",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "locator": "/matches/14/hits/0/text",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "locator": "/matches/19/hits/0/text",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-dedup.json",
+        "locator": "/matches/4/hits/0/text",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+        "locator": "/matches/bound-known/5/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+        "locator": "/matches/bound-known/23/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+        "locator": "/matches/bound-known/29/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+        "locator": "/matches/bound-known/34/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-history.json",
+        "locator": "/hits/known_overlap/5/context",
+        "valueChars": 284,
+        "contextStart": 0,
+        "contextEnd": 284,
+        "text": "基线：`66ee7737a7d6203319834e601c84afe6757f801e`。范围为 [root.md](root.md) A01–A12、[desktop.md](desktop.md) D01–D03、[server-web-chat.md](server-web-chat.md) SWC-01–06，以及追加的 [core.md](core.md) C04。复核读取当前源码、已保存的最小复现和日志；本复核新增执行 **0**，没有运行测试、产品、原生工具、网络、权限或认证实验，没有读取用户数据，没有更改产品或 Git 状态。唯一写入为本文件。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+        "locator": "/hits/search-case-contract/0/context",
+        "valueChars": 862,
+        "contextStart": 254,
+        "contextEnd": 862,
+        "text": "ectron。 |\n| D02 / P2 | 保留 | 生产服务全局 top30 后，复现按 Popover 相同 rootId 条件筛空；源码接线准确。不是真实渲染器执行收据。 |\n| D03 / P2 | 保留 | 生产 JsonLineDecoder 的逐字节分片复现与 UTF-8 整行/ASCII/长度帧对照一致。只证明 decoder 数据完整性；没有 Chrome、socket、认证或 shutdown 动态实验。 |\n| SWC-01 / P2 | 保留 | 实际 gateway/queue，自有持久目录及无网络 adapter；同渠道 ordinal 在重排后绑定错账号。首次 maxConcurrent=0 是保留 pending 的调度控制，未验证真实平台投递。 |\n| SWC-02 / P2 | 保留 | dedupe/completed key 没有 adapterId，两个 handler 成功但只保存一条的 fixture 与源码一致。completed 分支由源码推导，不是另一个动态样例。 |\n| SWC-03 / P2 | 保留 | 1 byte 合法附件的 spool I/O 错误被吞为 memory-only，重建 queue 无记录；真实 gateway resolve 的 ACK 影响属静态接线。精确影响应为“本地队列无法恢复”，未验证服务商 ACK/重投。 ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/15/context",
+        "valueChars": 835,
+        "contextStart": 111,
+        "contextEnd": 835,
+        "text": "不执行 Git。\n\n本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。\n\n## CHD01 — [P2] Slack thread 身份没有投影，正常线程回复发到频道顶层\n\n- **精确位置**：`packages/chat/src/slack.ts:67-77` 将平台 event 投影为 ChannelMessage 时没有复制 `event.thread_ts`；`:134-136` 的普通消息 payload 只有 channel/text，未携带 thread_ts。`chat-gateway.ts:111` 的 reply 只传 message.target。建议审阅锚点 `slack.ts:69`。\n- **调用链**：Slack `events_api` 正常 message → `SlackAdapter.run/onEvent` → `ChatGateway.dispatch` → middleware `reply` → `SlackAdapter.send` → `web.chat.postMessage`。本项目 `ChannelMessage` 已有可",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/28/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/31/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/35/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/94/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/95/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/96/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "locator": "/hits/image-text-order/97/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/15/context",
+        "valueChars": 835,
+        "contextStart": 111,
+        "contextEnd": 835,
+        "text": "不执行 Git。\n\n本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。\n\n## CHD01 — [P2] Slack thread 身份没有投影，正常线程回复发到频道顶层\n\n- **精确位置**：`packages/chat/src/slack.ts:67-77` 将平台 event 投影为 ChannelMessage 时没有复制 `event.thread_ts`；`:134-136` 的普通消息 payload 只有 channel/text，未携带 thread_ts。`chat-gateway.ts:111` 的 reply 只传 message.target。建议审阅锚点 `slack.ts:69`。\n- **调用链**：Slack `events_api` 正常 message → `SlackAdapter.run/onEvent` → `ChatGateway.dispatch` → middleware `reply` → `SlackAdapter.send` → `web.chat.postMessage`。本项目 `ChannelMessage` 已有可",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/28/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/31/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/35/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/94/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/95/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/96/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "locator": "/hits/image-text-order/97/context",
+        "valueChars": 252,
+        "contextStart": 0,
+        "contextEnd": 252,
+        "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。",
+        "wholeValueIncluded": true
+      }
+    ],
+    "multi-account": [
+      {
+        "path": "bugs/2026-07-13-repo-audit.md",
+        "locator": "markdown-text",
+        "valueChars": 40889,
+        "contextStart": 28887,
+        "contextEnd": 29957,
+        "text": ".fromPartition(persist:browser:...)` 安装 deny-by-default handler；用真实 webview 权限请求做 e2e。\n\n### R-02 AgentBridge 可重绑 session→browser bucket（需复核，候选 P1/P2）\n\n- **潜在影响**：多个 renderer/窗口可把既有 session 路由到另一 bucket/partition，造成浏览器上下文错投或登录态混用。\n- **证据**：renderer run metadata 可携带 bucket：`packages/desktop/src/main/agent-run-metadata.ts:24-39`；每次 run 都无 owner/immutability 校验地 `registerSessionBucket`：`packages/desktop/src/main/agent-bridge.ts:403-418`；registry 直接覆盖 Map：`packages/desktop/src/main/browser-driver/active-guest.ts:95-104`。\n- **当前状态**：重绑行为确认；是否能跨安全主体利用取决于 renderer/multi-window 的信任边界，需结合 P1-07 一并复核。\n- **建议验证/修复**：首次绑定后 immutable，变更需 owner token/显式迁移；加双窗口抢绑测试。\n\n### R-03 未信任项目的 `externalAgents` 字段未进入危险字段列表（需复核，候选 P1）\n\n- **潜在影响**：项目可能影响外部 Codex/Claude command、args、defaultMode、trustedWorkspaces 或 auto-start 语义。\n- **证据**：schema 在 `packages/core/src/settings/schema.ts:573-597` 暴露相关字段；`packages/core/src/settings/manager.ts:174-180` 未过滤；Desktop room permission merge 在 `packages/desktop/src/main/index.ts:1155-1193` 还直接读取 raw project settings。\n- **当前状态**：字段穿透确认，但 RoomManag",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/architecture/local-link-mvp.md",
+        "locator": "markdown-text",
+        "valueChars": 9670,
+        "contextStart": 7513,
+        "contextEnd": 8583,
+        "text": "tion 补完整 input/output JSON Schema、版本、幂等和敏感输出路径。\n4. 新增 `ServerLinkExecutor`；路由按 Action capability 选择具体 `connectionId`，不只选择 runtime。\n5. GitHub App 作为第二个 `connectionMethod` 接入；Actions 和桌面卡片保持不变。\n6. 支持同一 Provider 同一 runtime 多账号，并在聊天或项目 binding 中明确选择账号。\n\n## 本地设备 OAuth 刷新（2026-10-09）\n\nGitHub App 与 GitLab 的本地设备授权保存结构化 token/expiry/client 信息，Core 的\n`executeLocalOAuthLinkAction` 在凭证所属 Host 执行刷新与 Action。Desktop worker 只发送连接 ID、\n已验证账号 ID、验证代次、action 和参数；不会得到 access/refresh token。TUI 与纯 Node Host\n通过同一 Core 执行器调用。有效且无需轮换的长效 access token 继续直接使用。\n\n访问 token 在 60 秒内过期时，实际 Action 先完成一次串行刷新；状态查询和卡片快照只读元数据，\n不连接、登录或轮换。明确的 HTTP 401 只允许 read/discovery 在刷新后重试一次；写入 Action\n仍逐次请求用户批准，发出后不自动刷新并重放。403、429 和网络错误不触发读重试。\n\n刷新前通过 CredentialStore CAS 持久写入 `linkOAuthState: refreshing`，释放文件锁后才发送\n固定 HTTPS token endpoint 请求。同一物理文件、层和凭证 ID 的轮换在进程内合并为一个 Promise；发现其他记录复制相同\nrefresh token 时，CAS 持久标为 reconnect，既不并发轮换，也不把新 token 转交其他账号绑定。\n本进程保留最多 4096 个已消费 token 摘要收据，达到上限拒绝新轮换而不淘汰旧摘要，\n因此轮换完成后才出现的副本也不能在本进程重放。该收据不跨进程共享；不同 storage 的\n未知备份副本、独立进程及被外部恢复的旧文件不能由本地执行器证明全局唯一。已发现副本\n的 reconnect 状态与原记录的旋转标记会持久保留",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "markdown-text",
+        "valueChars": 69750,
+        "contextStart": 40824,
+        "contextEnd": 41894,
+        "text": "轮特性早已补全**(2026-06-25 逐个 grep 确认宣传的 agent_type/MAX_BACKGROUND_AGENTS/subagent 生命周期事件/apiKeyRef/rejectedParams/InjectCredential/installFromArchive/disabledPluginHooks 全真接线;插件 MCP 覆盖层/本地升级卸载/Catalog+EditModelCatalog/cookie/多账号 全在)。**仅剩\"发版时定版本号\"= 你的发布决策。**\n- ~~`docs/beta-smoke-checklist.md`~~ ✅ typecheck 勘误已做 + cookie-login 冒烟项已补且标已真机验。\n\n---\n\n## 5. 🟡 优化方向(发后第一优先,非 beta 关键路径)\n\n来自旧 TODO「发后第一优先」+ 本轮审计,按价值排序:\n- 🔴 **记忆系统专项**(已拍板:先整体设计再动手)。生命周期状态机 / 完成态语义字段 / 自动提取确认流 / MEMORY.md 索引截断按需读 / 注入 token 预算。关联 `project_memory_and_dream_overview`。\n- 🟡 **at-rest 加密**(把 §2.1/§2.2 从「一行 chmod 止血」升级为 `safeStorage` 全量加密)。\n- 🟡 **会话可靠性闭环**:长断网会话级重连、崩溃后 UI 提示/一键恢复、工具超时可取消一致化、友好错误。\n- ✅ ~~**审查面板 turn 级范围**(真 bug):turn 卡片点审查应默认本 turn 范围,现落整工作区 diff。~~ **已修(2026-06-25 核查,属「标待办实已做」)**:TODO 2.3a 整条修复链已落地——`diff/reviewScope.ts`(`ReviewScope = \"turn\"|\"unstaged\"|\"staged\"|\"all\"|\"committed\"|\"branch\"`,turn 卡片打开默认 `\"turn\"` 范围)+ `ReviewPanel.turnDiff` 快照(提交后仍可看历史轮对比)。commit 链:`611c1fa4`(turn 卡片默认本轮范围)/`42e78ccd`(本轮 diff 快照)/`3f8f61fc`(最近提交·分支范围)/`62df7f58`(范围切下拉)。reviewScope.ts 注释明确\"that was th",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-16/README.md",
+        "locator": "markdown-text",
+        "valueChars": 3906,
+        "contextStart": 485,
+        "contextEnd": 1555,
+        "text": "| 级别 | 问题与精确影响 | 证据详情 |\n| --- | --- | --- | --- |\n| A02 | P2 | 补丁失败回滚将被删二进制转成 UTF-8，原始字节和执行权限不能完整恢复 | [Coding](root.md) |\n| C04 | P2 | 相对 Write 的备份按 Host cwd 定位，undo 返回成功但实际工作区修改仍在 | [Core](core.md) |\n| SWC-01 | P2 | 同渠道多账号顺序改变后，持久消息恢复到另一账号 | [Chat](server-web-chat.md) |\n| SWC-02 | P2 | 去重键缺账号身份，第二个账号的合法输入被当重复成功接收 | [Chat](server-web-chat.md) |\n| SWC-03 | P2 | 小附件 I/O 失败无告警降级内存队列，接收后重启无法恢复 | [Chat，含有意 fallback 边界](server-web-chat.md) |\n| A07 | P2 | `/permissions plan` 报 live 成功，却只改 detached 引擎，当前会话仍旧模式 | [TUI / 协议](root.md) |\n| C02 | P2 | hook 改参后不再检查 Plan/MCP 最终参数策略；旧已知仍存在 | [Core](core.md) |\n| C03 | P2 | `rg --pre` / `npm audit fix` 被误分只读，Plan gate 将参数交给 handler | [Core；未执行实际命令](core.md) |\n| C01 | P2 | OpenAI SSE 缺终止证据的正常 EOF 被人为补 stop，半截回答标 completed | [Core](core.md) |\n| A05 | P2 | `/commit` 无视合法 model_error 终态，仍用非空旧正文实际提交 | [TUI](root.md) |\n| A06 | P2 | `/commit` 提示只含未暂存 diff，实际提交还包含此前已暂存内容 | [TUI](root.md) |\n| A08 | P2 | 自定义 session 存储根未返回给 `/undo`，命令读错目录、无法撤销 | [TUI](root.md) |\n| A09 | P2 | `/undo all` 只看 snapshots，忽略新建文件；普通单轮 undo 可删除同一文件 | [TUI]",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-16/server-web-chat.md",
+        "locator": "markdown-text",
+        "valueChars": 9772,
+        "contextStart": 0,
+        "contextEnd": 1016,
+        "text": "# Server / Web / Chat / Link / Browser 审查记录\n\n基线：`66ee7737a7d6203319834e601c84afe6757f801e`。只记录审查与自有复现，不修改产品实现。本轮已收尾；“已验证”不代表真实平台端到端验证。\n\n## 第一轮已确认\n\n### SWC-01 [P2] 同渠道多账号排序改变后，持久消息会交给另一个账号\n\n- 位置：`packages/chat/src/chat-gateway.ts:140`（按 `channel:ordinal` 构建持久路由标识）、`:147`（按该标识恢复 adapter）；`packages/chat/src/channel.ts` 的 adapter 合约没有稳定账号标识。\n- 触发：SDK 合法配置 `[账号 A, 账号 B]`，B 收到消息，队列已经持久接收但尚未投递；重启时配置顺序变成 `[B, A]`。同渠道多账号是现有 `chat-gateway.test.ts` 明确支持的功能。\n- 预期：消息继续归属 B，或因无法确定原账号而拒绝恢复；实际：旧 `custom:1` 被解析为 A，middleware 与 `reply()` 都使用 A。\n- 影响：跨账号错误回复、读取错误账号上下文；当不同账号使用局部 target 标识时，可能投给错误对话。这里实际证明的是路由错账号，没有声称验证真实 Telegram/Slack 的可达性或数据外泄。\n- 验证：直接执行真实 `ChatGateway.run()` 与 `DeliveryQueue`，两轮真实磁盘队列，平台 adapter 为无网络回调替身。第一轮 B 持久记录 `adapterId=custom:1`，第二轮交换顺序，得到 `A:private account B content`，B 没有 send。证据：`evidence/server-chat-identity.test.ts` 第一个测试。\n- 是否已知：对旧 `docs/review-*` 按 adapter identity / ordinal / account 查重，没有找到同一问题；旧修复注释仅考虑移除“不相关渠道”导致全局索引移动，仍未绑定同渠道账号身份。\n- 建议：持久 adapter ID 绑定不可变账号身份，不使用列表位置；恢复时验证身份，无法匹配时明确处",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-args-review/history-contexts.json",
+        "locator": "/hits/source_path/55/context",
+        "valueChars": 1103,
+        "contextStart": 628,
+        "contextEnd": 1103,
+        "text": ":13,35-37`\n\n注意：`TODO.md` 与 `docs/todo/README.md` 对 OAuth 的“未实现”描述已经部分过期。源码里已经有 `CredentialType = token | link | cookie | oauth`、OAuth secret/status、MCP Bearer 注入、MCP 认证方式 UI 和 LinkTab 状态展示；真正未完成的是 OAuth login/refresh 服务、多账号执行绑定与 workspace 数据源模型。\n\n---\n\n## 2. open-connector 核心要点\n\n### 2.1 它是什么\n\nopen-connector 是面向 Agent/App 的开源 connector gateway。它把大量第三方服务的 catalog、Action schema、credential、OAuth、policy、执行器与运行日志收拢到一个 runtime，再通过以下入口复用：\n\n| 入口 | 用途 |\n|---|---|\n| Connector SDK | ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-args-review/history-contexts.json",
+        "locator": "/hits/source_filename/56/context",
+        "valueChars": 1064,
+        "contextStart": 589,
+        "contextEnd": 1064,
+        "text": ":13,35-37`\n\n注意：`TODO.md` 与 `docs/todo/README.md` 对 OAuth 的“未实现”描述已经部分过期。源码里已经有 `CredentialType = token | link | cookie | oauth`、OAuth secret/status、MCP Bearer 注入、MCP 认证方式 UI 和 LinkTab 状态展示；真正未完成的是 OAuth login/refresh 服务、多账号执行绑定与 workspace 数据源模型。\n\n---\n\n## 2. open-connector 核心要点\n\n### 2.1 它是什么\n\nopen-connector 是面向 Agent/App 的开源 connector gateway。它把大量第三方服务的 catalog、Action schema、credential、OAuth、policy、执行器与运行日志收拢到一个 runtime，再通过以下入口复用：\n\n| 入口 | 用途 |\n|---|---|\n| Connector SDK | ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/history-contexts.json",
+        "locator": "/hits/source_path/55/context",
+        "valueChars": 1103,
+        "contextStart": 628,
+        "contextEnd": 1103,
+        "text": ":13,35-37`\n\n注意：`TODO.md` 与 `docs/todo/README.md` 对 OAuth 的“未实现”描述已经部分过期。源码里已经有 `CredentialType = token | link | cookie | oauth`、OAuth secret/status、MCP Bearer 注入、MCP 认证方式 UI 和 LinkTab 状态展示；真正未完成的是 OAuth login/refresh 服务、多账号执行绑定与 workspace 数据源模型。\n\n---\n\n## 2. open-connector 核心要点\n\n### 2.1 它是什么\n\nopen-connector 是面向 Agent/App 的开源 connector gateway。它把大量第三方服务的 catalog、Action schema、credential、OAuth、policy、执行器与运行日志收拢到一个 runtime，再通过以下入口复用：\n\n| 入口 | 用途 |\n|---|---|\n| Connector SDK | ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/history-contexts.json",
+        "locator": "/hits/source_filename/56/context",
+        "valueChars": 1064,
+        "contextStart": 589,
+        "contextEnd": 1064,
+        "text": ":13,35-37`\n\n注意：`TODO.md` 与 `docs/todo/README.md` 对 OAuth 的“未实现”描述已经部分过期。源码里已经有 `CredentialType = token | link | cookie | oauth`、OAuth secret/status、MCP Bearer 注入、MCP 认证方式 UI 和 LinkTab 状态展示；真正未完成的是 OAuth login/refresh 服务、多账号执行绑定与 workspace 数据源模型。\n\n---\n\n## 2. open-connector 核心要点\n\n### 2.1 它是什么\n\nopen-connector 是面向 Agent/App 的开源 connector gateway。它把大量第三方服务的 catalog、Action schema、credential、OAuth、policy、执行器与运行日志收拢到一个 runtime，再通过以下入口复用：\n\n| 入口 | 用途 |\n|---|---|\n| Connector SDK | ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/README.md",
+        "locator": "markdown-text",
+        "valueChars": 11991,
+        "contextStart": 2747,
+        "contextEnd": 3817,
+        "text": "/audit-2026-10-16/findings.json) | 多根项目先全局截断，再筛当前根，使当前根匹配文件无故消失 |\n| P2 | [D03](../audit-2026-10-16/findings.json) | Chrome Native 的 JSON-lines 分片解码会静默损坏中文或 emoji |\n| P2 | [SWC-01](../audit-2026-10-16/findings.json) | 同渠道多账号排序改变后，持久消息会交给另一个账号 |\n| P2 | [SWC-02](../audit-2026-10-16/findings.json) | 不同账号的消息共用去重键，第二个账号被当作重复成功接收 |\n| P2 | [SWC-03](../audit-2026-10-16/findings.json) | 小附件 spool 发生 I/O 错误时仍返回接收成功，重启后消息消失 |\n| P2 | [SWC-04](../audit-2026-10-16/findings.json) | Matrix botUserId 可省略，正常回复会再次进入输入并触发回复回环 |\n| P2 | [SWC-05](../audit-2026-10-16/findings.json) | 一个有效 JSON 但非对象的 state.json 让整个磁盘会话目录查询失败 |\n| P2 | [CHD01](../audit-2026-10-17/findings.json) | Slack thread 身份丢失使回复落到频道顶层 |\n| P2 | [OM1](../audit-2026-10-17/findings.json) | 全局记忆 ADD 按名称覆盖项目另一条 dream |\n| P2 | [OM5](../audit-2026-10-17/findings.json) | 不同自然项目路径共用持久 memory 根 |\n| P2 | [R2-01](../audit-2026-10-17/findings.json) | Claude 项目编码碰撞导致会话归属错误 |\n| P2 | [R2-02](../audit-2026-10-17/findings.json) | Codex 列表选新 rollout，历史定位选旧文件 |\n| P2 | [R2-09](../audit-2026-10-17/findings.json) | Review 将 hunk 正文误判",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/nightly-2026-07-10/connector-capability-plan.md",
+        "locator": "markdown-text",
+        "valueChars": 30351,
+        "contextStart": 719,
+        "contextEnd": 1789,
+        "text": "t、分层且桌面端可加密的 CredentialStore、workspace capability overlay。但三者仍是平行能力，缺少把它们串起来的领域层。最核心的差距不是 transport，而是：\n\n- 没有 Provider/Action catalog 和 schema-driven connection form；\n- 没有独立于 secret 的 Connection（账号身份、granted scopes、健康状态、多账号 alias）；\n- 没有 workspace 数据源的“需求声明 → 本地授权 → 运行时解析”模型；\n- MCP server 只能按 server 开关，不能给不同 workspace 稳定绑定不同账号/资源范围；\n- OAuth 已有存储结构和展示骨架，但 login/refresh 仍未闭环；\n- 没有 connector 级 Action policy 与统一脱敏审计。\n\n建议定位是：**MCP 继续做协议面，credentials 继续做 secret 面，新建 connector 领域层做 catalog / connection / workspace binding / policy / audit。** 不建议把 open-connector 的 1,000+ provider executor 复制进 CodeShell；推荐以 adapter 接入它或其它兼容 backend。\n\n接入策略采用“两步走”：\n\n- 先用现有 MCP client 接 `POST /mcp`，零领域改造验证 catalog search/guide/execute 的产品价值；\n- 一旦进入 Workspace 多账号绑定，改用 open-connector `/v1` HTTP adapter 作为一等路径，因为 HTTP 调用可逐请求选择 named connection alias；调研基线中的 MCP `execute_action` 没有 alias 参数，MCP handler 也没有把请求 header alias 传入 ActionRunner。\n\n完整方案分 6 个阶段。可最先做的 TOP 5 是：OpenConnector MCP 冒烟、OAuth refresh 闭环、connector 领域 schema、workspace requirement/grant 分离、只读数据源 MVP。\n\n---\n\n## 1. 调研范围与证据\n\n### ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/nightly-2026-07-12/server-deployment-web-account-roadmap.md",
+        "locator": "markdown-text",
+        "valueChars": 42363,
+        "contextStart": 19542,
+        "contextEnd": 20612,
+        "text": "als.json`，`full` 合并两层（`packages/core/src/credentials/store.ts:30`、`packages/core/src/credentials/store.ts:52`、`packages/core/src/credentials/store.ts:155`）。这在一台个人电脑上成立，在 shared server 上不成立：同一 repo 的 project credential 会被多账号共同看到。\n\n目标态：\n\n- provider secret 必须是 user-owned；所谓 workspace scope 应实现为 server user store 中的 `(userId, workspaceId)` binding，不是把 secret 写进 repo。\n- 保留 `CredentialAccess`/cipher/redaction/use gate，但提供 server-owned resolver；worker 不应从宿主共享 home 猜 credential。\n- connector 文档提出的 requirement/grant 分离同样适用：repo 可以声明“需要 GitHub”，不能自行挑选某用户账号（`docs/nightly-2026-07-10/connector-capability-plan.md:320`、`docs/nightly-2026-07-10/connector-capability-plan.md:440`）。\n\n#### Memory\n\n`MemoryManager` 已允许显式 `baseDir`，并把 project memory 放在 baseDir 下的 hashed project path（`packages/core/src/session/memory.ts:149`、`packages/core/src/session/memory.ts:191`）；这很适合按用户注入。缺口是 `session-memory` 仍固定写 `userHome()/.code-shell/session-memories`（`packages/core/src/services/session-memory.ts:22`）。\n\n目标态：所有 global/project/session memory 都先落入 user root；“global”只表示“该账号跨项目”，绝不表示“该 serve",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/research/codex-auth-research-report.md",
+        "locator": "markdown-text",
+        "valueChars": 16114,
+        "contextStart": 10891,
+        "contextEnd": 11961,
+        "text": "kens](https://learn.chatgpt.com/docs/enterprise/access-tokens)（A）\n\napp-server 的身份 token 不能直接充当 WebSocket transport token；业务身份和传输层认证是不同边界。[Access tokens](https://learn.chatgpt.com/docs/enterprise/access-tokens)（A）\n\n## 7. 多账号切换\n\n截至调研截止日，Codex 没有在同一个 `CODEX_HOME` 下维护多个命名登录凭证并原生切换的稳定功能。相关 `--auth-profile` 请求仍在公开 Issue 中。[#4432 — First-class multi-account auth](https://github.com/openai/codex/issues/4432)（C）\n\n现有 `--profile` 是配置层选择，不是认证账户切换器。[Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)（A）\n\n较安全的社区做法是每个账号使用独立 `CODEX_HOME`：\n\n```bash\nCODEX_HOME=\"$HOME/.codex-work\" codex\nCODEX_HOME=\"$HOME/.codex-personal\" codex\n```\n\n这会隔离：\n\n- `auth.json`\n- Codex 配置\n- MCP 凭证\n- sessions/history/memories\n- 当前实现中的 keyring account\n\n来源：[Auth storage](https://github.com/openai/codex/blob/main/codex-rs/login/src/auth/storage.rs)（B）；[codex-profiles discussion #30852](https://github.com/openai/codex/discussions/30852)（D）\n\n社区还存在 shell alias、codex-profiles、codex-switcher 等工具。它们不是 OpenAI 官方功能；若工具需要导出或复制 `auth.json`，会增加 token 泄露、刷新分叉和供应链风险。[Switch between",
+        "wholeValueIncluded": false
+      }
+    ],
+    "matrix-loop": [
+      {
+        "path": "docs/audit-2026-10-16/README.md",
+        "locator": "markdown-text",
+        "valueChars": 3906,
+        "contextStart": 1525,
+        "contextEnd": 2595,
+        "text": "新建文件；普通单轮 undo 可删除同一文件 | [TUI](root.md) |\n| A01 | P2 | ApplyPatch 成功移动脚本后新文件丢失执行位 | [Coding](root.md) |\n| A10 | P2 | headless run 的显式模型/端点被 seed catalog 默认值覆盖；apiKey 覆盖也遗漏 | [CLI；动态/静态分账](root.md) |\n| SWC-04 | P2 | 合法省略 Matrix botUserId 时自己的回复进入输入，产生回复回环 | [Chat；内存平台替身](server-web-chat.md) |\n| SWC-05 | P2 | 单个 state.json 为 null/数字可使整个磁盘会话查询 reject | [Server](server-web-chat.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |\n\n## 验证收据\n\n新问题的聚焦测试为 **33 个不同测试**：root 12、C",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-16/findings.json",
+        "locator": "/issues/22/title",
+        "valueChars": 39,
+        "contextStart": 0,
+        "contextEnd": 39,
+        "text": "Matrix botUserId 可省略，正常回复会再次进入输入并触发回复回环",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-16/server-web-chat.md",
+        "locator": "markdown-text",
+        "valueChars": 9772,
+        "contextStart": 3434,
+        "contextEnd": 4504,
+        "text": "验：Mobile broadcast/device 输出无背压；Chat 同 target retry 越序；Telegram allowlist 前下载。它们不会计入本轮新增条目。\n- 第二轮继续：Link 授权生命周期/HTTP 边界；Web 输出恢复和 scope 切换；server uploads/session/request 生命周期；browser/CDP 兼容层。\n\n## 第二轮已确认\n\n### SWC-04 [P2] Matrix botUserId 可省略，正常回复会再次进入输入并触发回复回环\n\n- 位置：`packages/chat/src/config.ts:617` 把 botUserId 作为可选配置；`packages/chat/src/matrix.ts:163` 仅用这个可选值过滤自己，没有启动时查询 token 的真实用户 ID。\n- 触发：合法 Matrix 配置有 homeserver/token/允许的 room，但没有 botUserId，且用户 allowlist 为空（允许 room 中的成员）；用户发一条消息，bot 回复后 homeserver 在下一次 `/sync` 返回 bot 自己的 `m.room.message`。\n- 预期：自己的回复始终排除输入；实际：sender 与 undefined 不等，bot 自己的文字成为一条新消息，回复后又返回下一轮 sync。\n- 影响：出现自问自答、额外模型/工具任务与平台发送。CLI 的 per-sender rate limit 可最终阻止一个 burst，不能把它当作身份过滤；SDK 未安装 limiter 时回环可持续。未执行真实模型、计费或平台端到端循环。\n- 验证：真实 `MatrixAdapter.run()` 和 `send()`，注入严格检查 `https://fixture.invalid` 的纯内存 fetch（没有真实 HTTP）。初始 owner 消息后，正常 bot echo 两次，观察到 dispatch `[owner,bot,bot]`、send=3；设置正确 botUserId 的对照为 dispatch `[owner]`、send=1。证据：`evidence/server-chat-matrix-self.test.ts`。\n- 是否已知：旧审查只对 Matrix 静态扫读，未找到同一已确认问题。Mattermost 也有同样可选 self-ID 过滤设计，但本",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+        "locator": "/hits/tui_revoke/3/context",
+        "valueChars": 1289,
+        "contextStart": 262,
+        "contextEnd": 1289,
+        "text": "新建文件；普通单轮 undo 可删除同一文件 | [TUI](root.md) |\n| A01 | P2 | ApplyPatch 成功移动脚本后新文件丢失执行位 | [Coding](root.md) |\n| A10 | P2 | headless run 的显式模型/端点被 seed catalog 默认值覆盖；apiKey 覆盖也遗漏 | [CLI；动态/静态分账](root.md) |\n| SWC-04 | P2 | 合法省略 Matrix botUserId 时自己的回复进入输入，产生回复回环 | [Chat；内存平台替身](server-web-chat.md) |\n| SWC-05 | P2 | 单个 state.json 为 null/数字可使整个磁盘会话查询 reject | [Server](server-web-chat.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/README.md",
+        "locator": "markdown-text",
+        "valueChars": 11991,
+        "contextStart": 2998,
+        "contextEnd": 4068,
+        "text": "[SWC-02](../audit-2026-10-16/findings.json) | 不同账号的消息共用去重键，第二个账号被当作重复成功接收 |\n| P2 | [SWC-03](../audit-2026-10-16/findings.json) | 小附件 spool 发生 I/O 错误时仍返回接收成功，重启后消息消失 |\n| P2 | [SWC-04](../audit-2026-10-16/findings.json) | Matrix botUserId 可省略，正常回复会再次进入输入并触发回复回环 |\n| P2 | [SWC-05](../audit-2026-10-16/findings.json) | 一个有效 JSON 但非对象的 state.json 让整个磁盘会话目录查询失败 |\n| P2 | [CHD01](../audit-2026-10-17/findings.json) | Slack thread 身份丢失使回复落到频道顶层 |\n| P2 | [OM1](../audit-2026-10-17/findings.json) | 全局记忆 ADD 按名称覆盖项目另一条 dream |\n| P2 | [OM5](../audit-2026-10-17/findings.json) | 不同自然项目路径共用持久 memory 根 |\n| P2 | [R2-01](../audit-2026-10-17/findings.json) | Claude 项目编码碰撞导致会话归属错误 |\n| P2 | [R2-02](../audit-2026-10-17/findings.json) | Codex 列表选新 rollout，历史定位选旧文件 |\n| P2 | [R2-09](../audit-2026-10-17/findings.json) | Review 将 hunk 正文误判为文件头并丢失改动 |\n| P2 | [R2-11](../audit-2026-10-17/findings.json) | Review 未解码 Git quoted 中文路径 |\n| P2 | [S01](../audit-2026-10-17/findings.json) | Office 关系路径拼接静默遗漏 sheet/slide |\n| P2 | [S03](../audit-2026-10-17/findings.json) | ReadSource 单文件查询脱敏破坏已序列化 J",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+        "locator": "/findings/22/title",
+        "valueChars": 39,
+        "contextStart": 0,
+        "contextEnd": 39,
+        "text": "Matrix botUserId 可省略，正常回复会再次进入输入并触发回复回环",
+        "wholeValueIncluded": true
+      }
+    ],
+    "slack-thread": [
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "/matches/41/hits/1/excerpt",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "/matches/41/hits/2/excerpt",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "/matches/43/hits/1/excerpt",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "/matches/45/hits/1/excerpt",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "locator": "/matches/14/hits/1/text",
+        "valueChars": 223,
+        "contextStart": 0,
+        "contextEnd": 223,
+        "text": "- **精确位置**：`packages/chat/src/slack.ts:67-77` 将平台 event 投影为 ChannelMessage 时没有复制 `event.thread_ts`；`:134-136` 的普通消息 payload 只有 channel/text，未携带 thread_ts。`chat-gateway.ts:111` 的 reply 只传 message.target。建议审阅锚点 `slack.ts:69`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "locator": "/matches/33/hits/2/text",
+        "valueChars": 223,
+        "contextStart": 0,
+        "contextEnd": 223,
+        "text": "- **精确位置**：`packages/chat/src/slack.ts:67-77` 将平台 event 投影为 ChannelMessage 时没有复制 `event.thread_ts`；`:134-136` 的普通消息 payload 只有 channel/text，未携带 thread_ts。`chat-gateway.ts:111` 的 reply 只传 message.target。建议审阅锚点 `slack.ts:69`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "locator": "/matches/33/hits/3/text",
+        "valueChars": 212,
+        "contextStart": 0,
+        "contextEnd": 212,
+        "text": "    { \"id\": \"CHD01\", \"priority\": \"P2\", \"file\": \"packages/chat/src/slack.ts\", \"line\": 69, \"boundary\": \"actual adapter/gateway data flow and fake SDK callbacks; official Slack thread_ts semantics; no real Slack\" },",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "locator": "/matches/19/hits/1/text",
+        "valueChars": 223,
+        "contextStart": 0,
+        "contextEnd": 223,
+        "text": "- **精确位置**：`packages/chat/src/slack.ts:67-77` 将平台 event 投影为 ChannelMessage 时没有复制 `event.thread_ts`；`:134-136` 的普通消息 payload 只有 channel/text，未携带 thread_ts。`chat-gateway.ts:111` 的 reply 只传 message.target。建议审阅锚点 `slack.ts:69`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "locator": "/matches/82/hits/2/text",
+        "valueChars": 223,
+        "contextStart": 0,
+        "contextEnd": 223,
+        "text": "- **精确位置**：`packages/chat/src/slack.ts:67-77` 将平台 event 投影为 ChannelMessage 时没有复制 `event.thread_ts`；`:134-136` 的普通消息 payload 只有 channel/text，未携带 thread_ts。`chat-gateway.ts:111` 的 reply 只传 message.target。建议审阅锚点 `slack.ts:69`。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "locator": "/matches/82/hits/3/text",
+        "valueChars": 212,
+        "contextStart": 0,
+        "contextEnd": 212,
+        "text": "    { \"id\": \"CHD01\", \"priority\": \"P2\", \"file\": \"packages/chat/src/slack.ts\", \"line\": 69, \"boundary\": \"actual adapter/gateway data flow and fake SDK callbacks; official Slack thread_ts semantics; no real Slack\" },",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/109/text",
+        "valueChars": 343,
+        "contextStart": 0,
+        "contextEnd": 343,
+        "text": "结构化只读检索了旧注册表：10-16 findings 25 条、remaining-10-12 findings 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/118/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/119/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/122/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/123/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/199/text",
+        "valueChars": 343,
+        "contextStart": 0,
+        "contextEnd": 343,
+        "text": "结构化只读检索了旧注册表：10-16 findings 25 条、remaining-10-12 findings 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/249/text",
+        "valueChars": 273,
+        "contextStart": 0,
+        "contextEnd": 273,
+        "text": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "locator": "/matches/250/text",
+        "valueChars": 273,
+        "contextStart": 0,
+        "contextEnd": 273,
+        "text": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/5/text",
+        "valueChars": 273,
+        "contextStart": 0,
+        "contextEnd": 273,
+        "text": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/6/text",
+        "valueChars": 273,
+        "contextStart": 0,
+        "contextEnd": 273,
+        "text": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/9/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/10/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/13/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/14/text",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/24/text",
+        "valueChars": 343,
+        "contextStart": 0,
+        "contextEnd": 343,
+        "text": "结构化只读检索了旧注册表：10-16 findings 25 条、remaining-10-12 findings 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "locator": "/matches/attachments/26/text",
+        "valueChars": 343,
+        "contextStart": 0,
+        "contextEnd": 343,
+        "text": "结构化只读检索了旧注册表：10-16 findings 25 条、remaining-10-12 findings 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "locator": "/matches/media-kind/3/context",
+        "valueChars": 267,
+        "contextStart": 0,
+        "contextEnd": 267,
+        "text": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "locator": "/matches/media-kind/6/context",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "locator": "/matches/media-kind/7/context",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+        "locator": "/matches/media-kind/10/context",
+        "valueChars": 255,
+        "contextStart": 0,
+        "contextEnd": 255,
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。",
+        "wholeValueIncluded": true
+      }
+    ]
+  }
+}

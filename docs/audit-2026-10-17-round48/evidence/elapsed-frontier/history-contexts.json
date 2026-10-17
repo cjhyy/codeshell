@@ -1,0 +1,246 @@
+{
+  "statusline": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "locator": "markdown-text",
+      "valueChars": 41296,
+      "offset": 37705,
+      "contextStart": 37305,
+      "contextEnd": 38605,
+      "text": " | `/fullscreen` 或配置启用 |\n| **虚拟滚动消息列表** | 大 transcript 下虚拟化渲染消息 | `packages/tui/src/ui/components/VirtualMessageList.tsx:76`，`packages/tui/src/ui/hooks/useVirtualScroll.ts:142` | 长会话自动使用 |\n| **AgentDock** | 展示正在运行的子代理，限制可见数量并格式化耗时 | `packages/tui/src/ui/components/AgentDock.tsx:34`，`packages/tui/src/ui/components/AgentDock.tsx:200` | 子代理运行时自动出现 |\n| **StatusLine** | 底部状态行展示模型、权限、session、token 等 | `packages/tui/src/ui/components/StatusLine.tsx:36` | REPL 底部自动显示 |\n| **ContextUsageBar** | 上下文 token 使用进度条 | `packages/tui/src/ui/components/ContextUsageBar.tsx:13` | token 接近上限时查看 |\n| **SpinnerWithVerb / Spinner** | 运行中动词化 spinner、耗时和 token 提示 | `packages/tui/src/ui/components/SpinnerWithVerb.tsx:237`，`packages/tui/src/ui/components/Spinner.tsx:20` | agent 思考或工具运行时显示 |\n| **Banner / UpdateBanner / WelcomeTips** | 顶部启动信息、更新提示和欢迎提示 | `packages/tui/src/ui/components/Banner.tsx:42`，`packages/tui/src/ui/components/UpdateBanner.tsx:25`，`packages/tui/src/ui/components/WelcomeTips.tsx:36` | REPL 启动或更新可用时显示 |\n| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |\n| **工具调用视图** | 展示工具 start/running/result 和嵌套前缀 | `packages/tui/src/ui/components/ToolCall.tsx:42`，`packages/tu",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/2285",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3904/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused-selected.json",
+      "locator": "/rows/29/context",
+      "valueChars": 205,
+      "offset": 106,
+      "contextStart": 0,
+      "contextEnd": 205,
+      "text": "allback。\n- REPL/状态栏仍正确：`packages/tui/src/ui/App.tsx:1615-1621` 应用 model configure 返回的 `maxContextTokens`；`packages/tui/src/ui/components/StatusLine.tsx:144-153` 用 active max 算 ctx 百分比。\n- **发版 blocker 撤销。**",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+      "locator": "/hits/tui_revoke/29/context",
+      "valueChars": 205,
+      "offset": 106,
+      "contextStart": 0,
+      "contextEnd": 205,
+      "text": "allback。\n- REPL/状态栏仍正确：`packages/tui/src/ui/App.tsx:1615-1621` 应用 model configure 返回的 `maxContextTokens`；`packages/tui/src/ui/components/StatusLine.tsx:144-153` 用 active max 算 ctx 百分比。\n- **发版 blocker 撤销。**",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "locator": "/files/15/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/15674/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/15674/directSourcePathsInObject/0",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/15675/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/15675/directSourcePathsInObject/0",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/4227/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "locator": "/rankChecks/15/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/4227/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "locator": "/unknownPaths/3833",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/4228/path",
+      "valueChars": 45,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 45,
+      "text": "packages/tui/src/ui/components/StatusLine.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-14-auto-ds-composite-model-design.md",
+      "locator": "markdown-text",
+      "valueChars": 12480,
+      "offset": 8711,
+      "contextStart": 8311,
+      "contextEnd": 9611,
+      "text": "uest-write-access.ts` | **新增**：内置 escalation 触发工具 |\n| `src/prompt/composer.ts` | 支持 `systemPromptSuffix` 注入 |\n| `src/cli/cost-tracker.ts` | 记录真实底层 model（flash / pro）而非 composite key |\n\n### 5.2 需要适配（外围）\n\n| 文件 | 修改内容 |\n|---|---|\n| `src/settings/schema.ts` | `models[]` 加 `isComposite?: boolean` 标记 |\n| `src/cli/migrate-models.ts` | onboarding 时自动注入 `auto-ds` 预设条目（如果选了 DeepSeek） |\n| `src/ui/components/StatusLine.tsx` | 显示当前 tier：`[auto-ds: flash]` / `[auto-ds: pro]` / `[auto-ds → pro escalated]` |\n| `src/ui/components/ModelSelector.tsx` | composite 条目标记 \"auto-routing\" 图标 |\n| `src/llm/client-factory.ts` | 检测 composite key → 不要直接 createLLMClient，改走 orchestrator |\n\n### 5.3 不影响\n\n- `src/arena/` — arena 多模型机制独立，不冲突\n- `src/llm/model-fetcher.ts` — 仅缓存 API model list\n- `src/session/` — transcript 记录不依赖 model 字段（但建议**加一个 `tier-switched` event** 方便追溯）\n\n### 5.4 测试\n\n新增：\n\n- `tests/composite-routing.test.ts` — 路由启发式 + escalation 流程\n- `tests/composite-cost-split.test.ts` — flash/pro 分别记账\n- `tests/composite-prompt-injection.test.ts` — system prompt suffix 注入正确\n\n---\n\n## 6. 关键设计权衡\n\n### 6.1 为什么不是\"每轮先 fast 后 pro\"\n\n会让每个 turn 跑两次模型，开销翻倍。本方案是**每 turn 只跑一个 tier**，由启发式 + guardrail 决定哪个 tier，仅边界情况发生 escalation。\n\n### 6.2 为什么不用 DeepSeek-TUI 的 LLM 路由器\n\nDeepSeek-TUI 在 Ambiguous 灰区调用 flash 做 30 token 分类。这套有效但增加 ~500",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/todo/bug-status-renderer-tui.md",
+      "locator": "markdown-text",
+      "valueChars": 2671,
+      "offset": 2121,
+      "contextStart": 1721,
+      "contextEnd": 2671,
+      "text": "ui/src/cli/commands/run.ts:105-120` 用 `resolveMaxContextTokens(llmConfig, settings.context.maxTokens)` 后传给 shared cfg；`packages/tui/src/cli/commands/runs.ts:42-50` RunManager executor 也用同一 helper。\n- 测试覆盖：`packages/tui/src/cli/commands/max-context-tokens.test.ts:4-15` 验证 model connection 优先级与 fallback。\n- REPL/状态栏仍正确：`packages/tui/src/ui/App.tsx:1615-1621` 应用 model configure 返回的 `maxContextTokens`；`packages/tui/src/ui/components/StatusLine.tsx:144-153` 用 active max 算 ctx 百分比。\n- **发版 blocker 撤销。**\n\n## 7. ✅已修 — TUI /logout 只清旧字段\n- `packages/tui/src/cli/commands/builtin/extra-commands.ts:12-21` `AUTH_KEYS` 已含 legacy keys + `credentials`/`modelConnections`/`defaults`。\n- `/logout` 会清用户级、项目级、项目 local 三个文件：`packages/tui/src/cli/commands/builtin/extra-commands.ts:123-130`。\n- 测试 `packages/tui/src/cli/commands/builtin/extra-commands.test.ts:17-49` 覆盖 legacy + unified auth/model 字段被清除，`mcpServers` 保留。\n\n## 发版 blocker（本区）\n无。旧 #6 非 REPL run/runs 残留已修。\n",
+      "wholeValueIncluded": false
+    }
+  ],
+  "statusline-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3904/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "locator": "/files/15/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/15675/sourceHashFields/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/4227/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "locator": "/rankChecks/15/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/4227/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/4228/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "wholeValueIncluded": true
+    }
+  ]
+}

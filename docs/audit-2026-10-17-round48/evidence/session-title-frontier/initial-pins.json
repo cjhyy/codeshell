@@ -1,0 +1,30 @@
+{
+  "capturedUTC": "2026-10-17T15:49:55.930923+00:00",
+  "rootContext": "Root reported c3a9ece2e6f183671b00e07322a9722fad6bda54; this agent0Git",
+  "files": [
+    {
+      "path": "packages/server/src/session-titles-store.ts",
+      "bytes": 7379,
+      "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "lineCount": 189,
+      "pinUTC": "2026-10-17T15:49:55.929641+00:00",
+      "timing": "before65 product body read"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "pinUTC": "2026-10-17T15:49:55.930622+00:00",
+      "timing": "carried earlier instruction read hash; current body0"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "pinUTC": "2026-10-17T15:49:55.930919+00:00",
+      "timing": "carried earlier instruction read hash; current body0"
+    }
+  ]
+}

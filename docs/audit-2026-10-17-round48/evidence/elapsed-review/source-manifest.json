@@ -1,0 +1,822 @@
+{
+  "capturedUTC": "2026-10-17T16:02:55.741035+00:00",
+  "role": "Targeted independent source reviewer; hypothesis known, not blind.64 author report/manifest/excerpts/findings not read.",
+  "rootContextOnly": "2735100f81f4d12cbb3e610da0e3977eaf74727c external supplied; Git0",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "lines": 2318,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          22,
+          22
+        ],
+        [
+          46,
+          46
+        ],
+        [
+          73,
+          73
+        ],
+        [
+          213,
+          218
+        ],
+        [
+          389,
+          394
+        ],
+        [
+          436,
+          446
+        ],
+        [
+          1543,
+          1544
+        ],
+        [
+          1558,
+          1564
+        ],
+        [
+          1626,
+          1629
+        ],
+        [
+          1643,
+          1652
+        ],
+        [
+          1666,
+          1681
+        ],
+        [
+          1716,
+          1720
+        ],
+        [
+          1814,
+          1819
+        ],
+        [
+          1829,
+          1857
+        ],
+        [
+          2227,
+          2227
+        ],
+        [
+          2262,
+          2272
+        ],
+        [
+          2286,
+          2297
+        ]
+      ],
+      "coveredLineCount": 129,
+      "displayedLineRanges": [
+        [
+          1,
+          85
+        ],
+        [
+          200,
+          230
+        ],
+        [
+          415,
+          450
+        ],
+        [
+          1650,
+          1690
+        ],
+        [
+          387,
+          396
+        ],
+        [
+          1538,
+          1570
+        ],
+        [
+          1608,
+          1639
+        ],
+        [
+          1709,
+          1724
+        ],
+        [
+          2284,
+          2300
+        ],
+        [
+          1798,
+          1860
+        ],
+        [
+          2160,
+          2205
+        ],
+        [
+          2227,
+          2232
+        ],
+        [
+          2262,
+          2273
+        ],
+        [
+          1642,
+          1652
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        452,
+        453,
+        455,
+        456,
+        463,
+        698,
+        717,
+        1367,
+        1412,
+        1420,
+        1435,
+        1444,
+        1526,
+        1794,
+        1795
+      ],
+      "displayedLineCountIncludingNavigation": 451,
+      "scope": "Ordinary query/bg flags, only timer-ref writer and elapsed consumers, real text submit gate and props. QueryGuard boundary calls only; its internals/cancel/permission/native mechanisms excluded.",
+      "finishFilesystemSHA": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "bytes": 7462,
+      "lines": 227,
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          31,
+          33
+        ],
+        [
+          47,
+          52
+        ],
+        [
+          69,
+          75
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          93,
+          101
+        ],
+        [
+          125,
+          128
+        ],
+        [
+          167,
+          173
+        ],
+        [
+          216,
+          220
+        ]
+      ],
+      "coveredLineCount": 42,
+      "displayedLineRanges": [
+        [
+          110,
+          135
+        ],
+        [
+          155,
+          178
+        ],
+        [
+          26,
+          37
+        ],
+        [
+          47,
+          102
+        ],
+        [
+          216,
+          227
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineCountIncludingNavigation": 130,
+      "scope": "StatusLine elapsed projection, own tick source and format only. No React/timer/clock execution; perf probes/context/cost unrelated display excluded.",
+      "finishFilesystemSHA": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "lines": 445,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "pinBeforeSourceBodyAndLineNavigation": true,
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          118,
+          133
+        ],
+        [
+          148,
+          157
+        ],
+        [
+          175,
+          177
+        ],
+        [
+          360,
+          362
+        ],
+        [
+          369,
+          371
+        ],
+        [
+          374,
+          376
+        ],
+        [
+          380,
+          382
+        ],
+        [
+          387,
+          389
+        ],
+        [
+          392,
+          394
+        ],
+        [
+          445,
+          445
+        ]
+      ],
+      "coveredLineCount": 48,
+      "displayedLineRanges": [
+        [
+          113,
+          179
+        ],
+        [
+          342,
+          398
+        ],
+        [
+          445,
+          445
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        4,
+        6,
+        10,
+        15,
+        43,
+        86,
+        100,
+        102,
+        103,
+        104,
+        106,
+        220,
+        231,
+        254,
+        256,
+        260,
+        265,
+        283,
+        311,
+        315,
+        317,
+        322,
+        407,
+        408,
+        414,
+        429,
+        441
+      ],
+      "displayedLineCountIncludingNavigation": 152,
+      "scope": "Ordinary accepted register/status/observer snapshot changes only. Writer lease/generation/direction/identity guards displayed or nav but not audited or invoked.",
+      "finishFilesystemSHA": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim",
+      "additionalReadAfterPrimaryCapture": {
+        "range": [
+          445,
+          445
+        ],
+        "toolChunk": "28a7e8",
+        "capturedUTC": "2026-10-17T16:04:25.691796+00:00",
+        "timing": "Singleton export appended after its actual source display; primary capture timestamp covers earlier ranges only."
+      }
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lines": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "pinBeforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "producer-initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          447,
+          447
+        ],
+        [
+          471,
+          476
+        ],
+        [
+          487,
+          489
+        ],
+        [
+          491,
+          495
+        ],
+        [
+          499,
+          500
+        ],
+        [
+          537,
+          544
+        ],
+        [
+          575,
+          582
+        ],
+        [
+          594,
+          597
+        ],
+        [
+          711,
+          723
+        ]
+      ],
+      "coveredLineCount": 50,
+      "displayedLineRanges": [
+        [
+          443,
+          456
+        ],
+        [
+          480,
+          515
+        ],
+        [
+          549,
+          571
+        ],
+        [
+          587,
+          612
+        ],
+        [
+          687,
+          723
+        ],
+        [
+          467,
+          483
+        ],
+        [
+          525,
+          544
+        ],
+        [
+          571,
+          586
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        15,
+        16,
+        230,
+        269,
+        584,
+        595,
+        662,
+        673,
+        768,
+        846,
+        866,
+        880,
+        942,
+        947,
+        954,
+        961,
+        963,
+        1052,
+        1057,
+        1077,
+        1104,
+        1142,
+        1146,
+        1154,
+        1201,
+        1209,
+        1244,
+        1249,
+        1258,
+        1338
+      ],
+      "displayedLineCountIncludingNavigation": 212,
+      "scope": "Normal explicit detached background producer/terminal callback and runYield counterevidence. Crypto/nanoid, permission/sandbox, lease mechanism and cancellation internals not audited.",
+      "finishFilesystemSHA": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lines": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "pinBeforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "producer-initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          247,
+          247
+        ]
+      ],
+      "coveredLineCount": 1,
+      "displayedLineRanges": [
+        [
+          247,
+          247
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineCountIncludingNavigation": 1,
+      "scope": "Actual internal export linking TUI import to registry singleton.",
+      "finishFilesystemSHA": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "bytes": 13129,
+      "lines": 387,
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "beforeBodyAndNavigation": true,
+      "firstPinArtifact": "input-initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          364,
+          370
+        ]
+      ],
+      "coveredLineCount": 7,
+      "displayedLineRanges": [
+        [
+          364,
+          376
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        5,
+        59,
+        61,
+        62,
+        64,
+        98,
+        100,
+        101,
+        103,
+        357,
+        360
+      ],
+      "displayedLineCountIncludingNavigation": 24,
+      "scope": "Actual CommandInput binding: isRunning changes placeholder; disabled only dock focus. Overlay/permission mechanisms excluded.",
+      "finishFilesystemSHA": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "bytes": 8606,
+      "lines": 245,
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "beforeBodyAndNavigation": true,
+      "firstPinArtifact": "command-input-initial-pins.json",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          169,
+          175
+        ],
+        [
+          232,
+          238
+        ]
+      ],
+      "coveredLineCount": 14,
+      "displayedLineRanges": [
+        [
+          169,
+          178
+        ],
+        [
+          228,
+          242
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        25,
+        27,
+        28,
+        34,
+        43,
+        51,
+        55,
+        74,
+        75,
+        76,
+        93,
+        98,
+        101,
+        109,
+        113,
+        131,
+        158,
+        161,
+        167,
+        189,
+        192,
+        194,
+        196,
+        199,
+        210
+      ],
+      "displayedLineCountIncludingNavigation": 50,
+      "scope": "Normal text submit forwarding and enabled focus wiring only; no keyboard/UI execution.",
+      "finishFilesystemSHA": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "bytes": 710,
+      "lines": 23,
+      "sha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "pinBeforeSourceBodyAndLineNavigation": true,
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "kind": "test",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "coveredLineCount": 23,
+      "displayedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineCountIncludingNavigation": 23,
+      "scope": "Existing one cost-format test read as intent; no elapsed transition assertion or runtime coverage borrowed. No fixture import/run.",
+      "finishFilesystemSHA": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "finishEqualsInitial": true,
+      "byteCaptureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+      "byteCaptureTiming": "After actual display; initial pin before body/nav, no retroactive before-read snapshot claim"
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.test.ts",
+      "bytes": 3146,
+      "lines": 73,
+      "sha256": "a7c58ab2cca9cb07faccdb28c326fd636085dd3b049285ac28b759ebc34cdc9a",
+      "pinBeforeSourceBodyAndLineNavigation": true,
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        5,
+        8,
+        22,
+        23,
+        30,
+        36,
+        37,
+        39,
+        45,
+        55,
+        56,
+        58,
+        68
+      ],
+      "displayedLineCountIncludingNavigation": 13,
+      "finishFilesystemSHA": "a7c58ab2cca9cb07faccdb28c326fd636085dd3b049285ac28b759ebc34cdc9a",
+      "finishEqualsInitial": true,
+      "scope": "Only rg source locators before direct old-background/new-query entry was established; no helper/permission/lease/runtime implementation or test body semantic review."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.phase0.test.ts",
+      "bytes": 7628,
+      "lines": 200,
+      "sha256": "1df453525ef6edb05665798aa21fd42500d9bb810d3cc0471124d15551735a49",
+      "pinBeforeSourceBodyAndLineNavigation": true,
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        7,
+        14,
+        39,
+        109,
+        152,
+        189,
+        197
+      ],
+      "displayedLineCountIncludingNavigation": 7,
+      "finishFilesystemSHA": "1df453525ef6edb05665798aa21fd42500d9bb810d3cc0471124d15551735a49",
+      "finishEqualsInitial": true,
+      "scope": "Only rg source locators before direct old-background/new-query entry was established; no helper/permission/lease/runtime implementation or test body semantic review."
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "yield-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        87,
+        161,
+        188,
+        190,
+        229,
+        273,
+        321,
+        536,
+        695,
+        732,
+        991,
+        1100,
+        1240,
+        1433,
+        1440,
+        1441,
+        1442,
+        1615,
+        1768,
+        1773,
+        1778,
+        1784,
+        1790,
+        1791,
+        1800,
+        1833,
+        1871,
+        1909,
+        2011,
+        2236,
+        2240,
+        2256,
+        2258,
+        2259,
+        2260,
+        2293,
+        2313,
+        2316,
+        2320,
+        2322
+      ],
+      "displayedLineCountIncludingNavigation": 40,
+      "finishFilesystemSHA": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishEqualsInitial": true,
+      "scope": "Only rg source locators before direct old-background/new-query entry was established; no helper/permission/lease/runtime implementation or test body semantic review."
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "bytes": 25457,
+      "lines": 586,
+      "sha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "yield-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        173,
+        182
+      ],
+      "displayedLineCountIncludingNavigation": 2,
+      "finishFilesystemSHA": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "finishEqualsInitial": true,
+      "scope": "Only rg source locators before direct old-background/new-query entry was established; no helper/permission/lease/runtime implementation or test body semantic review."
+    },
+    {
+      "path": "packages/core/src/engine/engine.run-yield.test.ts",
+      "bytes": 18017,
+      "lines": 481,
+      "sha256": "2cb70de149c320d86774a66e863bd2e7dd1614372d647f835d8a475e050d2395",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "yield-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        46,
+        71,
+        186,
+        459
+      ],
+      "displayedLineCountIncludingNavigation": 4,
+      "finishFilesystemSHA": "2cb70de149c320d86774a66e863bd2e7dd1614372d647f835d8a475e050d2395",
+      "finishEqualsInitial": true,
+      "scope": "Only rg source locators before direct old-background/new-query entry was established; no helper/permission/lease/runtime implementation or test body semantic review."
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json"
+    }
+  ],
+  "instructionReadStatus": "Previously read, unchanged hash recheck only; not repeated semantic reading",
+  "semanticFileCount": 8,
+  "semanticLines": 314,
+  "semanticProductLines": 291,
+  "semanticTestLines": 23,
+  "fullCount": 1,
+  "selectedCount": 7,
+  "displayedUniqueLinesPerFileSumIncludingNav": 1109,
+  "productExecution": 0,
+  "Git": 0
+}

@@ -1,0 +1,7 @@
+2276:        waitForBackgroundAgentChange: (s, sig) => this.waitForBackgroundAgentChange(s, sig),
+2277:        waitForBackgroundAgentChangeOrTimeout: (s, ms) =>
+2278:          this.waitForBackgroundAgentChangeOrTimeout(s, ms),
+4804:   * change. The caller re-checks `hasRunningForSession` after each wake, so a
+4818:  private waitForBackgroundAgentChange(
+4841:   * Like waitForBackgroundAgentChange but with no abort signal and a hard
+4847:  private waitForBackgroundAgentChangeOrTimeout(

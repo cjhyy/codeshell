@@ -1,0 +1,95 @@
+{
+  "createdUTC": "2026-10-17T15:47:05.451871+00:00",
+  "files": [
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "purpose": "Metadata snapshot after exact original reading; no extra semantic read",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 114,
+          "text": "import type { IncomingMessage, ServerResponse } from \"node:http\";\nimport {\n  BUILTIN_CHANNEL_CAPABILITIES,\n  isWebhookChannelAdapter,\n  type ChannelAdapter,\n  type ChannelCapabilities,\n  type ChannelMessageHandler,\n  type ChatCommandDefinition,\n  type OutgoingMessage,\n  type WebhookChannelAdapter,\n} from \"./channel.js\";\nimport type { ConfiguredChannel } from \"./config.js\";\n\ntype ChannelName = ConfiguredChannel[\"channel\"];\n\nexport type ChannelAdapterModuleLoader = (channel: ChannelName) => Promise<unknown>;\n\nexport interface ChannelAdapterFactoryOptions {\n  discordCommands?: readonly ChatCommandDefinition[];\n  /**\n   * Advanced module-resolution seam for custom hosts and tests. The default\n   * loader dynamically imports only the selected channel module.\n   */\n  moduleLoader?: ChannelAdapterModuleLoader;\n}\n\nconst WEBHOOK_PATHS: Partial<Record<ChannelName, string>> = {\n  line: \"/webhooks/line\",\n  whatsapp: \"/webhooks/whatsapp\",\n  teams: \"/webhooks/teams\",\n};\n\nconst ADAPTER_DEPENDENCY_HINTS: Partial<Record<ChannelName, string>> = {\n  discord: \"discord.js\",\n  slack: \"@slack/socket-mode and @slack/web-api\",\n  lark: \"@larksuiteoapi/node-sdk\",\n  dingtalk: \"dingtalk-stream\",\n  wecom: \"@wecom/aibot-node-sdk\",\n  mattermost: \"ws\",\n  teams: \"botbuilder\",\n};\n\nexport class ChannelAdapterLoadError extends Error {\n  readonly code = \"CHAT_ADAPTER_LOAD_FAILED\";\n\n  constructor(\n    readonly channel: ChannelName,\n    cause: unknown,\n  ) {\n    const dependency = ADAPTER_DEPENDENCY_HINTS[channel];\n    const recovery = dependency\n      ? `The default @cjhyy/code-shell-chat installation includes ${dependency}; reinstall the package or add the missing dependency.`\n      : \"Reinstall @cjhyy/code-shell-chat if its adapter files are incomplete.\";\n    const detail =\n      cause instanceof Error && cause.message.trim() ? ` Cause: ${cause.message.trim()}` : \"\";\n    super(`Failed to load chat adapter \"${channel}\". ${recovery}${detail}`, { cause });\n    this.name = \"ChannelAdapterLoadError\";\n  }\n}\n\n/**\n * Load and construct exactly one configured adapter. CLI and host applications\n * should prefer this entry so constructor/configuration failures happen during\n * startup instead of on the first message.\n */\nexport async function createChannelAdapterAsync(\n  config: ConfiguredChannel,\n  options: ChannelAdapterFactoryOptions = {},\n): Promise<ChannelAdapter> {\n  const loaded = await loadChannelAdapterModule(config.channel, options.moduleLoader);\n  return instantiateChannelAdapter(config, loaded, options);\n}\n\n/**\n * Backwards-compatible synchronous entry. It returns a lightweight proxy and\n * loads only the selected adapter on the first run/send/webhook operation.\n * New hosts should prefer createChannelAdapterAsync().\n */\nexport function createChannelAdapter(\n  config: ConfiguredChannel,\n  options: ChannelAdapterFactoryOptions = {},\n): ChannelAdapter {\n  const load = () => createChannelAdapterAsync(config, options);\n  const webhookPath = WEBHOOK_PATHS[config.channel];\n  return webhookPath\n    ? new LazyWebhookChannelAdapter(config.channel, webhookPath, load)\n    : new LazyChannelAdapter(config.channel, load);\n}\n\nasync function loadChannelAdapterModule(\n  channel: ChannelName,\n  moduleLoader: ChannelAdapterModuleLoader = loadDefaultChannelAdapterModule,\n): Promise<unknown> {\n  try {\n    return await moduleLoader(channel);\n  } catch (error) {\n    if (error instanceof ChannelAdapterLoadError) throw error;\n    throw new ChannelAdapterLoadError(channel, error);\n  }\n}\n\nasync function loadDefaultChannelAdapterModule(channel: ChannelName): Promise<object> {\n  switch (channel) {\n    case \"telegram\":\n      return import(\"./telegram.js\");\n    case \"discord\":\n      return import(\"./discord.js\");\n    case \"slack\":\n      return import(\"./slack.js\");\n    case \"lark\":\n      return import(\"./lark.js\");\n    case \"dingtalk\":\n      return import(\"./dingtalk.js\");\n    case \"wecom\":\n"
+        },
+        {
+          "start": 121,
+          "end": 130,
+          "text": "    case \"matrix\":\n      return import(\"./matrix.js\");\n    case \"mattermost\":\n      return import(\"./mattermost.js\");\n    case \"line\":\n      return import(\"./line.js\");\n    case \"whatsapp\":\n      return import(\"./whatsapp.js\");\n    case \"teams\":\n      return import(\"./teams.js\");\n"
+        },
+        {
+          "start": 134,
+          "end": 190,
+          "text": "function instantiateChannelAdapter(\n  config: ConfiguredChannel,\n  loaded: unknown,\n  options: ChannelAdapterFactoryOptions,\n): ChannelAdapter {\n  switch (config.channel) {\n    case \"telegram\": {\n      const TelegramAdapter = readModuleExport<typeof import(\"./telegram.js\").TelegramAdapter>(\n        loaded,\n        config.channel,\n        \"TelegramAdapter\",\n      );\n      return new TelegramAdapter(config, {\n        log: (message) => console.error(`[chat] ${message}`),\n      });\n    }\n    case \"discord\": {\n      const DiscordAdapter = readModuleExport<typeof import(\"./discord.js\").DiscordAdapter>(\n        loaded,\n        config.channel,\n        \"DiscordAdapter\",\n      );\n      return new DiscordAdapter(config, { commands: options.discordCommands });\n    }\n    case \"slack\": {\n      const SlackAdapter = readModuleExport<typeof import(\"./slack.js\").SlackAdapter>(\n        loaded,\n        config.channel,\n        \"SlackAdapter\",\n      );\n      return new SlackAdapter(config);\n    }\n    case \"lark\": {\n      const LarkAdapter = readModuleExport<typeof import(\"./lark.js\").LarkAdapter>(\n        loaded,\n        config.channel,\n        \"LarkAdapter\",\n      );\n      return new LarkAdapter(config);\n    }\n    case \"dingtalk\": {\n      const DingTalkAdapter = readModuleExport<typeof import(\"./dingtalk.js\").DingTalkAdapter>(\n        loaded,\n        config.channel,\n        \"DingTalkAdapter\",\n      );\n      return new DingTalkAdapter(config);\n    }\n    case \"wecom\": {\n      const WeComAdapter = readModuleExport<typeof import(\"./wecom.js\").WeComAdapter>(\n        loaded,\n        config.channel,\n        \"WeComAdapter\",\n      );\n      return new WeComAdapter(config);\n    }\n    case \"wechat\": {\n"
+        },
+        {
+          "start": 210,
+          "end": 281,
+          "text": "    case \"matrix\": {\n      const MatrixAdapter = readModuleExport<typeof import(\"./matrix.js\").MatrixAdapter>(\n        loaded,\n        config.channel,\n        \"MatrixAdapter\",\n      );\n      return new MatrixAdapter(config);\n    }\n    case \"mattermost\": {\n      const MattermostAdapter = readModuleExport<\n        typeof import(\"./mattermost.js\").MattermostAdapter\n      >(loaded, config.channel, \"MattermostAdapter\");\n      return new MattermostAdapter(config);\n    }\n    case \"line\": {\n      const LineAdapter = readModuleExport<typeof import(\"./line.js\").LineAdapter>(\n        loaded,\n        config.channel,\n        \"LineAdapter\",\n      );\n      return new LineAdapter(config);\n    }\n    case \"whatsapp\": {\n      const WhatsAppAdapter = readModuleExport<typeof import(\"./whatsapp.js\").WhatsAppAdapter>(\n        loaded,\n        config.channel,\n        \"WhatsAppAdapter\",\n      );\n      return new WhatsAppAdapter(config);\n    }\n    case \"teams\": {\n      const TeamsAdapter = readModuleExport<typeof import(\"./teams.js\").TeamsAdapter>(\n        loaded,\n        config.channel,\n        \"TeamsAdapter\",\n      );\n      return new TeamsAdapter(config);\n    }\n  }\n}\n\nfunction readModuleExport<T>(loaded: unknown, channel: ChannelName, exportName: string): T {\n  const value =\n    loaded && typeof loaded === \"object\"\n      ? (loaded as Readonly<Record<string, unknown>>)[exportName]\n      : undefined;\n  if (typeof value !== \"function\") {\n    throw new Error(`Chat adapter module \"${channel}\" does not export ${exportName}`);\n  }\n  return value as T;\n}\n\nclass LazyChannelAdapter implements ChannelAdapter {\n  private adapterPromise?: Promise<ChannelAdapter>;\n  readonly capabilities: ChannelCapabilities;\n  readonly supportsOutgoingAttachments: boolean;\n\n  constructor(\n    readonly channel: string,\n    private readonly loader: () => Promise<ChannelAdapter>,\n  ) {\n    this.capabilities =\n      BUILTIN_CHANNEL_CAPABILITIES[channel as keyof typeof BUILTIN_CHANNEL_CAPABILITIES];\n    this.supportsOutgoingAttachments = this.capabilities.outbound.attachments.length > 0;\n  }\n\n  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {\n    const adapter = await this.load();\n    return adapter.run(handler, signal);\n  }\n\n  async send(target: string, message: OutgoingMessage): Promise<void> {\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "purpose": "Metadata snapshot after exact original reading; no extra semantic read",
+      "ranges": [
+        {
+          "start": 20,
+          "end": 36,
+          "text": "export interface TelegramGatewayConfig extends AllowlistConfig {\n  channel: \"telegram\";\n  botToken: string;\n  apiBaseUrl: string;\n}\n\nexport interface DiscordGatewayConfig extends AllowlistConfig {\n  channel: \"discord\";\n  botToken: string;\n}\n\nexport interface SlackGatewayConfig extends AllowlistConfig {\n  channel: \"slack\";\n  botToken: string;\n  appToken: string;\n}\n\n"
+        },
+        {
+          "start": 108,
+          "end": 120,
+          "text": "export type ConfiguredChannel =\n  | TelegramGatewayConfig\n  | DiscordGatewayConfig\n  | SlackGatewayConfig\n  | LarkGatewayConfig\n  | DingTalkGatewayConfig\n  | WeComGatewayConfig\n  | WechatGatewayConfig\n  | MatrixGatewayConfig\n  | MattermostGatewayConfig\n  | LineGatewayConfig\n  | WhatsAppGatewayConfig\n  | TeamsGatewayConfig;\n"
+        },
+        {
+          "start": 136,
+          "end": 139,
+          "text": "export interface GatewayConfig {\n  channels: ConfiguredChannel[];\n  desktop: DesktopGatewayConfig;\n  webhook: WebhookGatewayConfig;\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "purpose": "Metadata snapshot after exact original reading; no extra semantic read",
+      "ranges": [
+        {
+          "start": 68,
+          "end": 80,
+          "text": "  const lease = acquireGatewayInstanceLock(config.runtime.lockPath, \"code-shell-chat CLI\");\n  const shutdown = new AbortController();\n  const stop = () => shutdown.abort();\n  process.once(\"SIGINT\", stop);\n  process.once(\"SIGTERM\", stop);\n  try {\n    const desktop = new DesktopControlClient(config.desktop);\n    const adapters = await Promise.all(\n      config.channels.map((channel) =>\n        createChannelAdapterAsync(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),\n      ),\n    );\n    const gateway = new ChatGateway({\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "purpose": "Metadata snapshot after exact original reading; no extra semantic read",
+      "ranges": [
+        {
+          "start": 8,
+          "end": 14,
+          "text": "export interface SlackAdapterConfig {\n  botToken: string;\n  appToken: string;\n}\n\nexport class SlackAdapter implements ChannelAdapter {\n  readonly channel = \"slack\";\n"
+        },
+        {
+          "start": 22,
+          "end": 22,
+          "text": "  constructor(config: SlackAdapterConfig, fetchFn: typeof fetch = fetch) {\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "purpose": "Metadata snapshot after exact original reading; no extra semantic read",
+      "ranges": [
+        {
+          "start": 141,
+          "end": 154,
+          "text": "export interface ChannelAdapter {\n  readonly channel: string;\n  readonly capabilities?: ChannelCapabilities;\n  /**\n   * True only when one visible platform request atomically publishes both the\n   * text and every attachment. Retry coordinators default to separate sends;\n   * optimistic combination would duplicate accepted text after a media error.\n   */\n  readonly combinesTextAndAttachmentsAtomically?: boolean;\n  /** @deprecated Use capabilities.outbound.attachments or supportsOutgoingAttachment(). */\n  readonly supportsOutgoingAttachments?: boolean;\n  run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void>;\n  send(target: string, message: OutgoingMessage): Promise<void>;\n}\n"
+        }
+      ]
+    }
+  ]
+}

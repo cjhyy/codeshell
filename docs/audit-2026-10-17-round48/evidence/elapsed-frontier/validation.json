@@ -1,0 +1,22 @@
+{
+  "productExecutions": 0,
+  "productImports": 0,
+  "productHelperCalls": 0,
+  "testsRun": 0,
+  "fixturesRun": 0,
+  "reactInkTTYRendererRuns": 0,
+  "timerExperiments": 0,
+  "realProcessesOrTasks": 0,
+  "nativeOrNetworkCalls": 0,
+  "gitCalls": 0,
+  "metadataOnlyTools": "rg file/navigation searches; Python stdlib reads/hashes/JSON/scalar text indexing and artifact writing; no product code loaded.",
+  "recordedMetadataErrors": 0,
+  "metadataOutputTruncation": {
+    "count": 1,
+    "exitCode": 0,
+    "diagnostic": "history-selected.first-output-diagnostic.json",
+    "repair": "Exact saved selected background-elapsed/index24 window reprinted; original selected JSON preserved, no history rescan."
+  },
+  "endingCheck": "ending-checks.json",
+  "allCommandsWithObservedCompletionExit": "0; no test pass implied by any command success."
+}

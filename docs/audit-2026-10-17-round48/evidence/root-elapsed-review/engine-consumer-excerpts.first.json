@@ -1,0 +1,36 @@
+{
+  "atUTC": "2026-10-17T16:06:38.892485+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "displayedRanges": [
+        [
+          2087,
+          2135
+        ],
+        [
+          2235,
+          2287
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            2087,
+            2135
+          ],
+          "text": "2087           }\n2088 \n2089           let result: Awaited<ReturnType<typeof turnLoop.run>>;\n2090           let firstGoalTermination: GoalTerminationReason | undefined;\n2091           try {\n2092             ({ result, firstGoalTermination } = await this.runTurnLoopWithHeadlessDrain({\n2093               turnLoop,\n2094               messages,\n2095               applyGoalTermination,\n2096               session,\n2097               options,\n2098             }));\n2099           } finally {\n2100             // Run-scoped: drop the GoalStopHook so a later goal-less send on this\n2101             // long-lived engine doesn't keep blocking stops.\n2102             await this.activeRunScope?.dispose();\n2103             this.activeGoalRegistration = undefined;\n2104             if (this.activeGoalHook === goalHookHandler) {\n2105               this.activeGoalHook = null;\n2106               this.activeGoalHookAttached = false;\n2107               this.activeRuntimeGoal = null;\n2108               this.activePersistedRunGoal = null;\n2109             }\n2110             if (this.activeTurnLoop === turnLoop) {\n2111               this.activeTurnLoop = null;\n2112               this.activeProfileMaxTurns = undefined;\n2113             }\n2114             if (this.activeRunSession === session) this.activeRunSession = null;\n2115           }\n2116           const finalized = await this.finalizeRun({\n2117             session,\n2118             result,\n2119             firstGoalTermination,\n2120             turnCount: turnLoop.currentTurn,\n2121             getRunUsage,\n2122             usageBaseline,\n2123             userContextMsg,\n2124             dynamicContextMsg,\n2125             options,\n2126             cwd,\n2127             llmClient,\n2128             auxSummaryClient,\n2129             recordExternalBilledUsage,\n2130             accounting,\n2131             profile,\n2132             getProfileReportedResults: () => profileReportedResults,\n2133             hasUnverifiedWrites: () =>\n2134               toolCtx.operations!.controller.ledger.sealForFinalization(session.state.sessionId),\n2135             hasIncompleteBatch: batchAuthority?.hasIncompleteBatch,"
+        },
+        {
+          "range": [
+            2235,
+            2287
+          ],
+          "text": "2235   private async runTurnLoopWithHeadlessDrain(args: {\n2236     turnLoop: TurnLoop;\n2237     messages: Message[];\n2238     applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;\n2239     session: SessionBundle;\n2240     options: EngineRunOptions | undefined;\n2241   }): Promise<{\n2242     result: Awaited<ReturnType<TurnLoop[\"run\"]>>;\n2243     firstGoalTermination: GoalTerminationReason | undefined;\n2244   }> {\n2245     const { turnLoop, messages, applyGoalTermination, session, options } = args;\n2246 \n2247     let result = await turnLoop.run(messages);\n2248     let firstGoalTermination: GoalTerminationReason | undefined = result.goalTermination;\n2249     applyGoalTermination(result.goalTermination, result.goalTerminationRound);\n2250 \n2251     // \u2500\u2500 Headless: drain background sub-agents before resolving \u2500\u2500\u2500\u2500\u2500\u2500\u2500\n2252     // Unified background-work model (2026-06-17): the engine NO LONGER parks\n2253     // every run waiting on background work. Background work (sub-agents,\n2254     // video polls, shells) ends the turn, yields, and is picked up later by\n2255     // the server's notification-wakeup path (maybeWakeIdleSession). The\n2256     // INTERACTIVE path relies on that wakeup + a run-boundary re-check.\n2257     //\n2258     // HEADLESS is the exception: a one-shot `engine.run` whose caller takes\n2259     // `result.text` as THE answer (automation / SDK) has no later turn to\n2260     // pick up a wakeup \u2014 so it must wait, before resolving, until its own\n2261     // background SUB-AGENTS finish and summarize. Only sub-agents (their\n2262     // summary IS part of this run's result), NOT shells (a dev server never\n2263     // exits \u2192 would hang headless forever) and NOT video (a long render the\n2264     // one-shot run shouldn't block on). This replaces the old for(;;) park\n2265     // (s-mpvf4rsj-bb6e4639 invariant) for the headless case only.\n2266     const sid = session.state.sessionId;\n2267     const isTopLevel = this.config.isSubAgent !== true;\n2268     if (isTopLevel && this.isHeadless()) {\n2269       result = await drainHeadlessBackgroundAgents({\n2270         sid,\n2271         session,\n2272         signal: options?.signal,\n2273         initialResult: result,\n2274         runTurnLoop: (msgs) => turnLoop.run(msgs),\n2275         applyGoalTermination,\n2276         waitForBackgroundAgentChange: (s, sig) => this.waitForBackgroundAgentChange(s, sig),\n2277         waitForBackgroundAgentChangeOrTimeout: (s, ms) =>\n2278           this.waitForBackgroundAgentChangeOrTimeout(s, ms),\n2279         getFirstGoalTermination: () => firstGoalTermination,\n2280         setFirstGoalTermination: (t) => {\n2281           firstGoalTermination = t;\n2282         },\n2283       });\n2284     }\n2285 \n2286     return { result, firstGoalTermination };\n2287   }"
+        }
+      ]
+    }
+  ],
+  "scope": "Ordinary foreground return versus explicit headless drain gate only; no lifecycle helper executed."
+}

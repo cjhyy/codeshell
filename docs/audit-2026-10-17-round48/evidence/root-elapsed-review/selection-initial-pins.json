@@ -1,0 +1,21 @@
+{
+  "atUTC": "2026-10-17T15:56:40.323579+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lines": 2318,
+      "beforeRootCurrentTargetBodyRead": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "bytes": 7462,
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "lines": 227,
+      "beforeRootCurrentTargetBodyRead": true
+    }
+  ],
+  "rootKnownBaseline": "2735100f81f4d12cbb3e610da0e3977eaf74727c",
+  "role": "Known64 elapsed hypothesis verification, not blind and not a first-ever/unread frontier claim"
+}

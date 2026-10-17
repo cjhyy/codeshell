@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T16:00:21.088611+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "bytes": 8606,
+      "lines": 245,
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "beforeBodyAndNavigation": true
+    }
+  ]
+}

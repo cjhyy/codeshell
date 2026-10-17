@@ -1,0 +1,27 @@
+{
+  "role": "independent ordinary source reviewer",
+  "productsExecuted": 0,
+  "productImportsHelpersFixturesTests": 0,
+  "AsyncLocalStorageExamplesExecuted": 0,
+  "providersOrServersStarted": 0,
+  "realAccountsBillsConfigRead": 0,
+  "cryptoOrNativeIdentityPermissionsExperiments": 0,
+  "network": 0,
+  "gitOperations": 0,
+  "productWrites": 0,
+  "sourceInstructionsPinsSame": true,
+  "historicalDatedSetAndBytesSame": true,
+  "semanticFileCount": 7,
+  "semanticLines": 329,
+  "displayedUniqueLinesIncludingNavigation": 523,
+  "testDeclarationsReadAsIntent": 2,
+  "testsExecuted": 0,
+  "metadataScan": "own standard-library history metadata only, no product import; first capture toolb6d589 session7920 thenad180c exit0",
+  "metadataErrorsOrTruncations": [],
+  "limitations": [
+    "No Node/SDK propagation or scheduling semantics independently run or externally verified.",
+    "UsageLedger implementation/persist/lock/pricing/crypto and owner identity lineage not followed.",
+    "Only complete disabled-billing declaration and selected accounting-failure declaration used as static intent; adjacent native localhost/retry/identity declarations only displayed/navigation.",
+    "No previous dynamic log or test pass borrowed."
+  ]
+}

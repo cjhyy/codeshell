@@ -1,0 +1,19 @@
+{
+  "path": "packages/core/src/index.internal.ts",
+  "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+  "displayedRanges": [
+    [
+      241,
+      250
+    ]
+  ],
+  "excerpts": [
+    {
+      "range": [
+        241,
+        250
+      ],
+      "text": " 241   type WritePolicy,\n 242   runWriteJobInWorktree,\n 243   type WriteJobGitOps,\n 244   type RunWriteJobInput,\n 245   type RunWriteJobResult,\n 246 } from \"./automation/index.js\";\n 247 export { asyncAgentRegistry, type AsyncAgentEntry } from \"./tool-system/builtin/agent-registry.js\";\n 248 export {\n 249   backgroundShellManager,\n 250   BackgroundShellManager,"
+    }
+  ]
+}

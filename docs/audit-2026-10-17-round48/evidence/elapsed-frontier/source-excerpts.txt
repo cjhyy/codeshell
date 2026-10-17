@@ -1,0 +1,664 @@
+packages/tui/src/ui/components/StatusLine.tsx
+   1 /**
+   2  * StatusLine — compact bottom status bar matching Claude Code's style.
+   3  *
+   4  * Layout: [running indicator] model · context bar % · $cost
+   5  *
+   6  * Manages its own 1s interval so the parent App doesn't re-render.
+   7  */
+   8 import React, { useState, useEffect, useRef, type MutableRefObject } from "react";
+   9 import { Box, Text } from "../../render/index.js";
+  10 import { logger } from "@cjhyy/code-shell-core";
+  11 import { recordUIEvent } from "@cjhyy/code-shell-core/internal";
+  12 import { PERF_ENABLED } from "../perf-probes.js";
+  13 
+  14 // UI-scoped — routes to ui-ink-*.log.
+  15 const uiLog = logger.child({ cat: "ui" });
+  16 
+  17 interface StatusLineProps {
+  18   model: string;
+  19   effort: string;
+  20   tokens: number;
+  21   cost?: string;
+  22   sessionId?: string;
+  23   /**
+  24    * Authoritative live context size. The engine emits `usage_update` at every
+  25    * message-array mutation (post-tool-result, post-compact, post-LLM), so this
+  26    * tracks the real prompt token count without UI-side accumulation.
+  27    */
+  28   baseContextTokens?: number;
+  29   maxContextTokens?: number;
+  30   gitBranch?: string;
+  31   isRunning?: boolean;
+  32   streamingTokensRef?: MutableRefObject<number>;
+  33   runStartRef?: MutableRefObject<number>;
+  34 }
+  35 
+  36 export function StatusLine({
+  37   model,
+  38   effort,
+  39   tokens,
+  40   cost,
+  41   sessionId,
+  42   baseContextTokens,
+  43   maxContextTokens,
+  44   gitBranch,
+  45   isRunning,
+  46   streamingTokensRef,
+  47   runStartRef,
+  48 }: StatusLineProps) {
+  49   const modelShort = shortModel(model);
+  50 
+  51   // Own 1s interval — only this component re-renders, not App
+  52   const [tick, setTick] = useState(0);
+  53   // Perf probe refs: track interval fires vs renders to detect when the
+  54   // setInterval has died (or is firing but ink is dropping the repaint).
+  55   const lastTickAtRef = useRef<number>(performance.now());
+  56   const lastRenderAtRef = useRef<number>(performance.now());
+  57   const tickFiredCountRef = useRef<number>(0);
+  58   const renderCountRef = useRef<number>(0);
+  59 
+  60   useEffect(() => {
+  61     if (PERF_ENABLED) {
+  62       uiLog.info("debug.statusline.mount", { isRunning: !!isRunning });
+  63     }
+  64     return () => {
+  65       if (PERF_ENABLED) uiLog.info("debug.statusline.unmount", {});
+  66     };
+  67   }, []);
+  68 
+  69   useEffect(() => {
+  70     if (!isRunning) {
+  71       setTick(0);
+  72       if (PERF_ENABLED) {
+  73         uiLog.info("debug.statusline.interval", { action: "skip_not_running" });
+  74       }
+  75       return;
+  76     }
+  77     if (PERF_ENABLED) {
+  78       uiLog.info("debug.statusline.interval", { action: "start" });
+  79     }
+  80     const timer = setInterval(() => {
+  81       const now = performance.now();
+  82       const sinceLast = now - lastTickAtRef.current;
+  83       lastTickAtRef.current = now;
+  84       tickFiredCountRef.current++;
+  85       if (PERF_ENABLED) {
+  86         // Log every fire — only ~1Hz so volume is fine.
+  87         uiLog.info("debug.statusline.tick_fire", {
+  88           n: tickFiredCountRef.current,
+  89           sinceLast_ms: Math.round(sinceLast),
+  90           drift_ms: Math.round(sinceLast - 1000),
+  91         });
+  92       }
+  93       setTick((t) => t + 1);
+  94     }, 1000);
+  95     return () => {
+  96       if (PERF_ENABLED) {
+  97         uiLog.info("debug.statusline.interval", { action: "clear" });
+  98       }
+  99       clearInterval(timer);
+ 100     };
+ 101   }, [isRunning]);
+ 102   void tick;
+ 103 
+ 104   // Render heartbeat — proves whether React is actually re-rendering this
+ 105   // component. If tick_fire keeps firing but render_beat stops, React is
+ 106   // batching us out. If render_beat fires but the screen looks frozen, ink
+ 107   // is dropping the patch.
+ 108   if (PERF_ENABLED && isRunning) {
+ 109     const now = performance.now();
+ 110     const sinceLastRender = now - lastRenderAtRef.current;
+ 111     lastRenderAtRef.current = now;
+ 112     renderCountRef.current++;
+ 113     // Only log every 5th render to avoid drowning during streams; pair with
+ 114     // tick_fire which is 1Hz to triangulate.
+ 115     if (renderCountRef.current % 5 === 0) {
+ 116       uiLog.info("debug.statusline.render_beat", {
+ 117         n: renderCountRef.current,
+ 118         sinceLast_ms: Math.round(sinceLastRender),
+ 119         tickState: tick,
+ 120         tickFires: tickFiredCountRef.current,
+ 121       });
+ 122     }
+ 123   }
+ 124 
+ 125   const elapsed =
+ 126     isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;
+ 127   // Probe: surface the raw inputs to elapsed so we can tell if runStartRef
+ 128   // was reset mid-turn (would explain a "frozen" looking timer).
+ 129   if (PERF_ENABLED && isRunning && renderCountRef.current % 10 === 0) {
+ 130     uiLog.info("debug.statusline.elapsed_inputs", {
+ 131       elapsed_s: elapsed,
+ 132       runStartRef: runStartRef?.current ?? 0,
+ 133       ageOfRunStart_ms: runStartRef ? Date.now() - runStartRef.current : 0,
+ 134     });
+ 135   }
+ 136   const streamingTokens = isRunning && streamingTokensRef ? streamingTokensRef.current : 0;
+ 137   void streamingTokens;
+ 138 
+ 139   // ctx bar reflects what the engine has actually built: usage_update events
+ 140   // are emitted after every mutation (tool result append, compact, LLM resp),
+ 141   // so this is the same number the context manager will use to decide on
+ 142   // compaction. No UI-side adders — those caused 750k phantom readings.
+ 143   const ctxPct =
+ 144     maxContextTokens && maxContextTokens > 0
+ 145       ? Math.min(((baseContextTokens ?? 0) / maxContextTokens) * 100, 100)
+ 146       : 0;
+ 147 
+ 148   useEffect(() => {
+ 149     const payload = {
+ 150       baseContextTokens: baseContextTokens ?? 0,
+ 151       maxContextTokens: maxContextTokens ?? 0,
+ 152       pct: Math.round(ctxPct),
+ 153     };
+ 154     uiLog.info("debug.ctx.render", payload);
+ 155     recordUIEvent(sessionId, "ui.ctx.render", payload);
+ 156   }, [baseContextTokens, maxContextTokens, ctxPct, sessionId]);
+ 157   const ctxColor = ctxPct > 80 ? "ansi:red" : ctxPct > 60 ? "ansi:yellow" : "ansi:green";
+ 158 
+ 159   // Context mini-bar (8 chars)
+ 160   const barWidth = 8;
+ 161   const filled = Math.round((ctxPct / 100) * barWidth);
+ 162   const ctxBar = "█".repeat(filled) + "░".repeat(barWidth - filled);
+ 163 
+ 164   return (
+ 165     <Box>
+ 166       {/* Running indicator */}
+ 167       {isRunning && (
+ 168         <>
+ 169           <Text color="ansi:cyan">{"● "}</Text>
+ 170           <Text color="ansi:cyan">{formatElapsed(elapsed)}</Text>
+ 171           {streamingTokens > 0 && <Text dim> {formatNumber(streamingTokens)} tok</Text>}
+ 172           <Text dim> │ </Text>
+ 173         </>
+ 174       )}
+ 175 
+ 176       {/* Model — alt+m switches; only show hint when terminal has room */}
+ 177       <Text dim>{modelShort}</Text>
+ 178       {(process.stdout.columns ?? 80) >= 100 && <Text dim>{" (alt+m)"}</Text>}
+ 179 
+ 180       {/* Context bar */}
+ 181       <Text dim> │ </Text>
+ 182       <Text color={ctxColor}>{ctxBar}</Text>
+ 183       <Text dim> {ctxPct.toFixed(0)}% ctx</Text>
+ 184 
+ 185       {/* Cost */}
+ 186       {cost && (
+ 187         <>
+ 188           <Text dim> │ </Text>
+ 189           <Text color="ansi:green">{cost}</Text>
+ 190         </>
+ 191       )}
+ 192 
+ 193       {/* Git branch */}
+ 194       {gitBranch && (
+ 195         <>
+ 196           <Text dim> │ </Text>
+ 197           <Text color="ansi:magenta">{gitBranch}</Text>
+ 198         </>
+ 199       )}
+ 200     </Box>
+ 201   );
+ 202 }
+ 203 
+ 204 function shortModel(model: string): string {
+ 205   const name = model.split("/").pop() ?? model;
+ 206   // Keep it readable but compact
+ 207   return name
+ 208     .replace("claude-opus-4-6", "opus")
+ 209     .replace("claude-sonnet-4-6", "sonnet")
+ 210     .replace("claude-haiku-4-5", "haiku")
+ 211     .replace("claude-", "")
+ 212     .replace("gpt-4o", "4o")
+ 213     .replace("gpt-4", "gpt4");
+ 214 }
+ 215 
+ 216 function formatElapsed(seconds: number): string {
+ 217   if (seconds < 60) return `${seconds}s`;
+ 218   const m = Math.floor(seconds / 60);
+ 219   const s = seconds % 60;
+ 220   return `${m}m${s.toString().padStart(2, "0")}s`;
+ 221 }
+ 222 
+ 223 function formatNumber(n: number): string {
+ 224   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+ 225   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+ 226   return String(n);
+ 227 }
+
+packages/tui/src/ui/App.tsx [340,365]
+340:         activeGoalRef.current = goal?.objective ?? null;
+341:         activeGoalIdRef.current = goal?.goalId ?? null;
+342:         activeGoalRevisionRef.current = goal?.revision ?? null;
+343:         activeGoalPausedRef.current = goal?.paused === true;
+344:         activeGoalLegacyRef.current =
+345:           !!goal && (goal.goalId === undefined || goal.revision === undefined);
+346:       })
+347:       .catch((error) => {
+348:         uiLog.warn("goal hydrate failed", {
+349:           sessionId: hydrateSessionId,
+350:           error: formatCommandError(error),
+351:         });
+352:       });
+353:   }, [client, sessionId]);
+354:   const [showBanner, setShowBanner] = useState(true);
+355:   const { summary: sessionUsage, refresh: refreshUsage } = useSessionUsage(
+356:     client,
+357:     sessionId,
+358:     sidRef,
+359:   );
+360:   const totalTokens = sessionUsage?.totalTokens ?? 0;
+361:   const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;
+362:   const [contextTokens, setContextTokens] = useState(0);
+363:   const [currentEffort, setCurrentEffort] = useState(effort);
+364:   const [permMode, setPermMode] = useState<TuiPermissionMode>("normal");
+365:   const [pendingApproval, setPendingApproval] = useState<{
+
+packages/tui/src/ui/App.tsx [385,398]
+385:   // The flow re-fetches the manager state on finish so the list updates
+386:   // without closing the manager.
+387:   const [wizard, setWizard] = useState<"flow" | null>(null);
+388: 
+389:   // Track live streamed token count in a ref — no App-level re-render per tick.
+390:   // Provider emits tokens per text delta (real cl100k_base count, not chars/4).
+391:   // StatusLine reads this ref directly via its own internal interval.
+392:   const streamingTokensRef = useRef(0);
+393:   const runStartRef = useRef(0);
+394:   const [streamMode, setStreamMode] = useState<"responding" | "tool-use" | "thinking">("thinking");
+395:   const [thinkingContent, setThinkingContent] = useState<string | null>(null);
+396:   // Optimistic-cancel guard — set true on ESC so the in-flight `await
+397:   // client.run()` resolution (which can arrive 1–7s later, after the LLM
+398:   // SDK tears down its socket) does NOT push a duplicate "aborted" /
+
+packages/tui/src/ui/App.tsx [428,447]
+428:   // the bottom when the user dismisses the "N new messages" pill or
+429:   // submits a new turn.
+430:   const listRef = useRef<VirtualMessageListHandle | null>(null);
+431:   const onScrollToBottom = useCallback(() => {
+432:     clearUnseen();
+433:     listRef.current?.scrollToBottom();
+434:   }, [clearUnseen]);
+435: 
+436:   useEffect(() => {
+437:     if (isRunning) {
+438:       runStartRef.current = Date.now();
+439:     }
+440:     uiLog.info("debug.app.isRunning_change", {
+441:       isRunning,
+442:       isQueryActive,
+443:       hasRunningBgAgents,
+444:       runStartRef: runStartRef.current,
+445:     });
+446:   }, [isRunning, isQueryActive, hasRunningBgAgents]);
+447: 
+
+packages/tui/src/ui/App.tsx [728,748]
+728:           // markers; don't add per-sub-agent thinking rows to the main feed.
+729:           if (agentId !== undefined) break;
+730:           if (flushTimerRef.current) {
+731:             clearTimeout(flushTimerRef.current);
+732:             flushTimerRef.current = null;
+733:           }
+734:           flushTextBuffer();
+735:           streamAttemptRef.current.begin(event.messageId, chatStore.getEntries());
+736:           setStreamMode("thinking");
+737:           setThinkingContent(null);
+738:           clearThinkingBuffer();
+739:           // Reset the spinner's "alive" counter at the top of each LLM call.
+740:           // Tracks output of the current call only; ctx size is the bar's job.
+741:           streamingTokensRef.current = 0;
+742:           chatStore.update((prev) => {
+743:             const filtered = prev
+744:               .filter((e) => !(e.type === "thinking" && e.agentId === agentId))
+745:               .map((e) =>
+746:                 e.type === "assistant_text" && e.streaming && e.agentId === agentId
+747:                   ? { ...e, streaming: false }
+748:                   : e,
+
+packages/tui/src/ui/App.tsx [793,810]
+793:             const now = Date.now();
+794:             if (now - last > 1000) {
+795:               subAgentDeltaSampleRef.current = now;
+796:               uiLog.debug("debug.ui.text_delta_dropped", { agentId });
+797:             }
+798:             break;
+799:           }
+800:           setStreamMode("responding");
+801:           const existing = textBufferRef.current.get(agentId) ?? "";
+802:           textBufferRef.current.set(agentId, existing + event.text);
+803:           streamingTokensRef.current += event.tokens ?? 0;
+804:           if (!flushTimerRef.current) {
+805:             flushScheduledAtRef.current = Date.now();
+806:             flushTimerRef.current = setTimeout(flushTextBuffer, 50);
+807:             // Flicker probe: count text-delta arrivals into the flush window
+808:             // so we can spot whether a runaway stream is jamming the
+809:             // renderer with high-rate setStates. Opt-in only: this path is
+810:             // hot during normal streaming.
+
+packages/tui/src/ui/App.tsx [2278,2300]
+2278:           <Text color="ansi:yellow">{`${deferredQuestionCount} 个问题待回答 · Ctrl+G 打开回答`}</Text>
+2279:         </Box>
+2280:       )}
+2281: 
+2282:       <Box wrap="truncate">
+2283:         <ModeIndicator mode={permMode} />
+2284:         {screen === "transcript" && <Text color="ansi:magenta">{" TRANSCRIPT "}</Text>}
+2285:         <Box flexGrow={1} />
+2286:         <StatusLine
+2287:           model={model}
+2288:           effort={currentEffort}
+2289:           tokens={totalTokens}
+2290:           cost={totalCost}
+2291:           sessionId={sessionId}
+2292:           baseContextTokens={contextTokens}
+2293:           maxContextTokens={activeMaxContextTokens}
+2294:           isRunning={isRunning}
+2295:           streamingTokensRef={streamingTokensRef}
+2296:           runStartRef={runStartRef}
+2297:         />
+2298:       </Box>
+2299: 
+2300:       {/* Dock at the very bottom — below StatusLine. Renders null when
+
+packages/tui/src/ui/components/StatusLine.test.tsx [1,23]
+1: import { expect, test } from "bun:test";
+2: import React from "react";
+3: import { StatusLine } from "./StatusLine.js";
+4: import { flush, mount, plainText } from "../../../../../tests/render-fixtures.js";
+5: 
+6: test("terminal footer retains unknown and partial cost evidence instead of formatting it as zero", async () => {
+7:   const harness = mount(
+8:     <StatusLine
+9:       model="gpt-4o"
+10:       effort="high"
+11:       tokens={120}
+12:       cost="~$0.000000 + 2 unknown (partial)"
+13:     />,
+14:   );
+15:   try {
+16:     await flush();
+17:     expect(plainText(harness)).toContain("2 unknown");
+18:     expect(plainText(harness)).toContain("partial");
+19:     expect(plainText(harness)).not.toContain("$0.00 │");
+20:   } finally {
+21:     harness.unmount();
+22:   }
+23: });
+
+packages/tui/src/ui/App.tsx [211,219]
+211: 
+212:   const queryGuard = useRef(providedQueryGuard ?? new QueryGuard()).current;
+213:   const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);
+214:   const hasRunningBgAgents = useSyncExternalStore(
+215:     asyncAgentRegistry.subscribe,
+216:     asyncAgentRegistry.hasRunning,
+217:   );
+218:   const isRunning = isQueryActive || hasRunningBgAgents;
+219: 
+
+packages/tui/src/ui/App.tsx [290,295]
+290:     [clearTaskSnapshots],
+291:   );
+292:   const [model, setModel] = useState(initialModel);
+293:   const [activeMaxContextTokens, setActiveMaxContextTokens] = useState(maxContextTokens);
+294:   const pendingContextRef = useRef<string | null>(null);
+295:   // Image attachments staged by the `/image` command, drained on next
+
+packages/tui/src/ui/App.tsx [698,715]
+698:           if (localRunTokenRef.current === null && queryGuard.startExternal() !== null) {
+699:             cancelledRef.current = false;
+700:           }
+701:           // Engine only sends promptTokens > 0 on the first turn of a sid
+702:           // (cold start / cross-process resume). On subsequent turns it sends
+703:           // 0 to avoid clobbering the accurate value we already have from the
+704:           // previous turn's usage_update.
+705:           if (event.promptTokens > 0) {
+706:             uiLog.info("debug.ctx.set", { from: "session_started", value: event.promptTokens });
+707:             recordUIEvent(event.sessionId, "ui.ctx.set", {
+708:               from: "session_started",
+709:               value: event.promptTokens,
+710:             });
+711:             setContextTokens(event.promptTokens);
+712:           }
+713:           break;
+714: 
+715:         case "turn_complete":
+
+packages/tui/src/ui/App.tsx [1058,1085]
+1058:           const text = `── context compacted (${ev.strategy}, ${formatTokens(ev.before)} → ${formatTokens(ev.after)}, -${pct}%) ──`;
+1059:           chatStore.update((prev) => [
+1060:             ...prev,
+1061:             entry({ type: "system", subtype: "compact_boundary", text }),
+1062:           ]);
+1063:           // Reset the displayed base so the live ctx bar reflects the new (smaller) prompt.
+1064:           uiLog.info("debug.ctx.set", { from: "context_compact", value: ev.after });
+1065:           recordUIEvent(sidRef.current, "ui.ctx.set", { from: "context_compact", value: ev.after });
+1066:           setContextTokens(ev.after);
+1067:           break;
+1068:         }
+1069: 
+1070:         case "usage_update": {
+1071:           // Engine emits this after every messages-array mutation, so the
+1072:           // ctx bar always reflects the real (next-prompt) size — including
+1073:           // after tool_result append, post-compaction, and LLM response.
+1074:           uiLog.info("debug.ctx.usage_update", { promptTokens: event.promptTokens });
+1075:           recordUIEvent(sidRef.current, "ui.ctx.usage_update", {
+1076:             promptTokens: event.promptTokens,
+1077:           });
+1078:           if (event.promptTokens > 0 && event.promptTokensSource !== "session_cumulative") {
+1079:             setContextTokens(event.promptTokens);
+1080:           }
+1081:           break;
+1082:         }
+1083: 
+1084:         case "error": {
+1085:           // ESC took us through the optimistic-cancel path; suppress the
+
+packages/tui/src/ui/App.tsx [1659,1691]
+1659:         }
+1660: 
+1661:         if (!streamPresentationFinalized) {
+1662:           finalizeStreamPresentation();
+1663:           streamPresentationFinalized = true;
+1664:         }
+1665: 
+1666:         setSessionId(result.sessionId);
+1667:         await refreshUsage(result.sessionId);
+1668: 
+1669:         const elapsed = Date.now() - runStartRef.current;
+1670:         const parts: string[] = [formatDuration(elapsed)];
+1671:         if (result.usage && result.usage.totalTokens > 0) {
+1672:           parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);
+1673:           if (result.usage.cacheReadTokens) {
+1674:             parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);
+1675:           }
+1676:         }
+1677: 
+1678:         chatStore.update((prev) => [
+1679:           ...prev,
+1680:           entry({ type: "system", subtype: "turn_duration", text: parts.join(" · ") }),
+1681:         ]);
+1682: 
+1683:         if (result.reason !== "completed") {
+1684:           chatStore.update((prev) => [
+1685:             ...prev,
+1686:             entry({ type: "status", reason: friendlyReason(result.reason) }),
+1687:           ]);
+1688:         }
+1689:       } catch (err) {
+1690:         if (goal && stagedGoalEpoch !== null) {
+1691:           const goalSessionId = sidRef.current ?? sessionId;
+
+packages/core/src/tool-system/builtin/agent-registry.ts [119,135]
+119: 
+120:   subscribe = (cb: () => void): (() => void) => {
+121:     this.listeners.add(cb);
+122:     return () => {
+123:       this.listeners.delete(cb);
+124:     };
+125:   };
+126: 
+127:   getSnapshot = (): AsyncAgentEntry[] => {
+128:     return this.snapshot;
+129:   };
+130: 
+131:   hasRunning = (): boolean => {
+132:     return this.snapshot.some((e) => e.status === "running" || e.status === "cancelling");
+133:   };
+134: 
+135:   /** True if any background agent spawned by `sessionId` is still running.
+
+packages/core/src/tool-system/builtin/agent-registry.ts [148,158]
+148:   private notify(): void {
+149:     this.snapshot = [...this.agents.values()];
+150:     for (const cb of this.listeners) {
+151:       try {
+152:         cb();
+153:       } catch {
+154:         // isolate per-listener errors
+155:       }
+156:     }
+157:   }
+158: 
+
+packages/core/src/tool-system/builtin/agent.ts [226,236]
+226:     "matches — use Read/Grep/Glob directly instead; spawning an agent wastes a turn.\n\n" +
+227:     "Parallel fan-out is the EXCEPTION: only launch several agents in one message when " +
+228:     "the work truly splits into independent pieces with no shared state. Prefer one " +
+229:     "well-scoped delegation over a swarm.\n\n" +
+230:     "You can optionally run an agent in the background using the run_in_background " +
+231:     "parameter. When it runs in the background, you will be automatically notified when " +
+232:     "it completes — do NOT sleep, poll, or proactively check on its progress. Continue " +
+233:     "with other work or respond to the user instead. " +
+234:     "Even a synchronous agent that runs longer than ~2 minutes is automatically moved to " +
+235:     "the background and notifies you on completion the same way — so a long delegation never " +
+236:     "stalls you; just continue or end your turn when told it has moved to the background.",
+
+packages/core/src/tool-system/builtin/agent.ts [269,276]
+269:       run_in_background: {
+270:         type: "boolean",
+271:         description:
+272:           "Set to true to run this agent in the background. " +
+273:           "You will be notified automatically when it completes — do NOT sleep, poll, " +
+274:           "or proactively check on its progress. Use AgentCancel(agent_id) to stop it. " +
+275:           "The agent runs in this process; restarting loses its state. " +
+276:           "Default: false (synchronous wait).",
+
+packages/core/src/tool-system/builtin/agent.ts [487,493]
+487:     asyncAgentRegistry.register({
+488:       agentId,
+489:       name,
+490:       agentType: overrides.resolvedType,
+491:       continuation,
+492:       description,
+493:       // Tag with the spawning session so the parent Engine.run waits only on
+
+packages/tui/src/ui/App.tsx [1532,1548]
+1532:   const submitToEngine = useCallback(
+1533:     async (
+1534:       message: string,
+1535:       opts: {
+1536:         asInjection: boolean;
+1537:         chatSummary?: string;
+1538:         goal?: string;
+1539:         displayText?: string;
+1540:         disableGoal?: boolean;
+1541:       },
+1542:     ): Promise<boolean> => {
+1543:       const guardToken = queryGuard.reserve();
+1544:       if (guardToken === null) return false;
+1545:       const runCancellationEpoch = cancellationEpochRef.current;
+1546:       const runWasCancelled = () => cancellationEpochRef.current !== runCancellationEpoch;
+1547:       streamingTokensRef.current = 0;
+1548:       if (
+
+packages/tui/src/ui/App.tsx [1558,1565]
+1558:       const abortController = new AbortController();
+1559:       if (!queryGuard.tryStart(abortController, guardToken)) {
+1560:         // Race-safety check — should be unreachable since reserve just succeeded
+1561:         queryGuard.cancelReservation(guardToken);
+1562:         return false;
+1563:       }
+1564:       localRunTokenRef.current = guardToken;
+1565: 
+
+packages/tui/src/ui/App.tsx [1617,1653]
+1617:             const closeIdx = lines.findIndex((l) => l.trim() === "</codeshell-image>");
+1618:             return closeIdx >= 0 ? lines.slice(0, closeIdx + 1).join("\n") : b;
+1619:           });
+1620:           engineMessage = engineMessage
+1621:             ? `${engineMessage}\n\n${blocks.join("\n")}`
+1622:             : blocks.join("\n");
+1623:           pendingImagesRef.current = [];
+1624:         }
+1625: 
+1626:         const handleTransportResponse = () => {
+1627:           const released = queryGuard.endLocalResponse(guardToken);
+1628:           if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;
+1629:           cancelledLocalRunTokensRef.current.delete(guardToken);
+1630:           if (
+1631:             cancelledLocalRunTokensRef.current.size === 0 &&
+1632:             !cancelledExternalRunPendingRef.current
+1633:           ) {
+1634:             cancelledRef.current = false;
+1635:           }
+1636:           // Finalize this run synchronously before the transport can parse a
+1637:           // queued external turn's early stream events from the same chunk.
+1638:           if (released && !runWasCancelled() && !streamPresentationFinalized) {
+1639:             finalizeStreamPresentation();
+1640:             streamPresentationFinalized = true;
+1641:           }
+1642:         };
+1643:         const result = await client.run(
+1644:           {
+1645:             task: engineMessage,
+1646:             sessionId: sessionId ?? "",
+1647:             ...(goal ? { goal } : {}),
+1648:             ...(opts.disableGoal ? { disableGoal: true } : {}),
+1649:           },
+1650:           undefined,
+1651:           handleTransportResponse,
+1652:         );
+1653: 
+
+packages/tui/src/ui/App.tsx [1717,1723]
+1717:         // end() is idempotent — safe to call even if forceEnd already released
+1718:         // the guard (ESC/Ctrl+C path).
+1719:         queryGuard.end(guardToken);
+1720:         if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;
+1721:         cancelledLocalRunTokensRef.current.delete(guardToken);
+1722:         if (
+1723:           cancelledLocalRunTokensRef.current.size === 0 &&
+
+packages/core/src/tool-system/builtin/agent-registry.ts [360,370]
+360:     e.status = status;
+361:     e.finishedAt = Date.now();
+362:     e.finishedFadeAt = e.finishedAt + 30_000;
+363:     this.closedDirectionIntake.add(agentId);
+364:     this.writerLeases.delete(lease.childSessionId);
+365:     if (e.sessionId) notificationQueue.clearProgress(e.sessionId, agentId, lease.runtimeGeneration);
+366:     notificationQueue.clearDirections(lease.childSessionId, lease.runtimeGeneration);
+367:     e.liveControl = undefined;
+368:     e.writerLease = undefined;
+369:     e.progress = undefined;
+370:     this.notify();
+
+packages/core/src/tool-system/builtin/agent.ts [704,720]
+704:           agentId,
+705:           name,
+706:           description,
+707:           error: err.message,
+708:         });
+709:       });
+710: 
+711:     // Mark the foreground completion as waiting for this child's notification.
+712:     // The Engine consumes the marker only after the whole tool batch finishes,
+713:     // and suppresses it for headless/sub-agent runs that cannot be woken later.
+714:     ctx.runYield?.request("background_notification");
+715:     return [
+716:       `Async agent launched successfully.`,
+717:       `agent_id: ${agentId} (internal — do not show to user)`,
+718:       `description: ${description}`,
+719:       ``,
+720:       `The agent is working in the background. You will be notified automatically when it completes.`,

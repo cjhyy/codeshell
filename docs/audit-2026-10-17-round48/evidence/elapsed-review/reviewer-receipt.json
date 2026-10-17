@@ -1,0 +1,152 @@
+{
+  "frozenUTC": "2026-10-17T16:06:43.447882+00:00",
+  "directory": "/tmp/codeshell-audit-round67-elapsed-review",
+  "role": "Targeted independent source reviewer, not blind;Root hypothesis provided.64/Root66mutable inputs never read.",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 3378,
+      "sha256": "77fbe7deea69ef5bb863c62a6cc6b4ed2d5cc69a0a60ba7bf0cc017b660170da"
+    },
+    {
+      "path": "assessment.json",
+      "bytes": 2513,
+      "sha256": "aad5feb2a769b29e64140c417469b9d6c12ea0f63eb3673f6d0bb2717d14e248"
+    },
+    {
+      "path": "command-input-initial-pins.json",
+      "bytes": 314,
+      "sha256": "8ee458c2c14a2842387d4b2f22eb1a0d11da65d948660b55c4e4a5663a57f1f4"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1211,
+      "sha256": "0ed756f5ff10e9fb6371c98fbfccda56c990281ce88aa2adea555d44c8a7f353"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 94337,
+      "sha256": "b310a3d58d6d37ce47295cb0aabed3704b1d5301e3f245bd5dfffc043576a9b8"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 5204,
+      "sha256": "6d80071271a180c33cb7e1d53a1127cc4dd0b3f7d2f1d54c28c1dd98c19193dc"
+    },
+    {
+      "path": "history-cause-selected.json",
+      "bytes": 20993,
+      "sha256": "54fc43606bcf28fb9a5498ad5c89567ab60c389f6f631d935d8b4bda726ec0b0"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 255777,
+      "sha256": "1816499d8ae539b3b111ebcf82a679139505da69774522502df01982ca10687a"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3900,
+      "sha256": "d72bc0491f20ab0560e175d13fa83ed8f1164799c85708a17e5e14568d3f4e7e"
+    },
+    {
+      "path": "history.json",
+      "bytes": 957980,
+      "sha256": "8f4f5894a3c1e8f679171f82417c2cc50bcbf8f4f147994c9bd5395527a5e460"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 981,
+      "sha256": "fc9fa18469d26cc33608c438af80192ae8dda75f24354604d669abcd672e8646"
+    },
+    {
+      "path": "input-initial-pins.json",
+      "bytes": 320,
+      "sha256": "379914e748416e5d4b44550af52d13ddb8ac347d2cb4a7796a2d09ed9823d1b1"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 489,
+      "sha256": "fcc81ee363e2396b386f4c274e08ef3d12af9ee8d7dcf6142abdb86375f6d51e"
+    },
+    {
+      "path": "producer-initial-pins.json",
+      "bytes": 559,
+      "sha256": "efe57d0965e7180d2599268410a3f7da1efaac77278fda9116916517198ec661"
+    },
+    {
+      "path": "review.md",
+      "bytes": 6657,
+      "sha256": "4775eb1434f16445ceee18558c6472ab1b185c96076757009eb129ff7d9400f3"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 72660,
+      "sha256": "159988af6d2c9573e150dee9a77e74fcd3f45fd1ec9e71dad3cc3c36afad1d36"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 20337,
+      "sha256": "8695a3f101a94f20810ffb927d923dc9e4074a049ee14b173bf3c1177361e613"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1187,
+      "sha256": "332ab25767ca3f70da5a57dabc361d8a8af495c56e060d11cbc21408d4863803"
+    },
+    {
+      "path": "yield-initial-pins.json",
+      "bytes": 797,
+      "sha256": "384ddae53f6b512a33de1db44b07467cbbebdeff7d99b2f317abafff521d2efe"
+    }
+  ],
+  "selfExcluded": true,
+  "fileCountExcludingSelf": 19,
+  "totalFilesIncludingSelf": 20,
+  "reportRelativeLinks": 10,
+  "assessment": "SingleP3staticconditionaldataflowdefect opinion;finalclassification/IDbyRoot",
+  "noOwnFindingID": true,
+  "normalInputEntryProved": true,
+  "lifecycleOrderRunYieldBeforeBGWaitNotReadBy67": true,
+  "requiredBeforeFormal": "Rootsourceconfirmationthatoldbgcanremainwhenpriorforegroundreturned;engine consumption locators reported. No runtime confirmation claimed.",
+  "source": {
+    "semanticFiles": 8,
+    "fullExistingTestFiles": 1,
+    "selected": 7,
+    "semanticLines": 314,
+    "product": 291,
+    "test": 23,
+    "navigationOnlyFiles": 5,
+    "displayedLinesPerFileUnionSum": 1109,
+    "sourceInstructionPinsSame": 15
+  },
+  "history": {
+    "datedFiles": 4336,
+    "md": 1429,
+    "json": 2907,
+    "strings": 1834940,
+    "scalars": 2753459,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "includedFrozen47Excluded48and61to67": true,
+    "capPerQuery": 100,
+    "matchCounts": {
+      "AppPath": 507,
+      "AppSHA": 101,
+      "StatusLinePath": 16,
+      "StatusLineSHA": 7,
+      "cause": 33
+    },
+    "retained": {
+      "AppPath": 100,
+      "AppSHA": 100,
+      "StatusLinePath": 16,
+      "StatusLineSHA": 7,
+      "cause": 33
+    },
+    "endingSetOrBytesDrift": 0
+  },
+  "firstMetadataDisplayTruncationPreserved": true,
+  "productReactClockTimersRegistryHelpersFixturesTestsProviderNativeNetworkGitRuns": 0,
+  "productWrites": 0,
+  "noActualFramesOrDurationObserved": true
+}

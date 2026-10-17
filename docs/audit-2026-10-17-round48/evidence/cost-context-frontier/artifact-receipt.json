@@ -1,0 +1,111 @@
+{
+  "capturedUTC": "2026-10-17T15:47:58.038568+00:00",
+  "scope": "Final prep61 author artifacts, receipt itself excluded to avoid recursion; only exact assigned directory written.",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 1130,
+      "sha256": "b535031c8fdc3b52923b7379acd53f634f87ffe17d292a599d0f7f24038239b9"
+    },
+    {
+      "path": "build-final-metadata.py",
+      "bytes": 8885,
+      "sha256": "7c9d0c43b8aeab914fa3f3d22a0adfb7b1c682939574f0ed57c0034befed23ba"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1595,
+      "sha256": "bcb2185069a6c571e2d7287a5b8aa310b747babb7851a1588b4d6bc7274f7e28"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 2256,
+      "sha256": "40ff5fb249a2be6c341a9a295b4e5b39a4ef13dda4ec51b1ba566c21fd838893"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2810,
+      "sha256": "7efe8d97513a8435bcb1a86cb6932a9282d95bd1e9c66e2fe0009c74119fef42"
+    },
+    {
+      "path": "history-cause-selected.json",
+      "bytes": 4498,
+      "sha256": "a00cb4a0c11db597619f42a56582b3a4df355326315d06fae504348840cf8176"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 175813,
+      "sha256": "14574dac2563870ac46c58852aa974b8ea01e00555c288d19126d11fbf9cb0bd"
+    },
+    {
+      "path": "history-cost-causes.json",
+      "bytes": 36043,
+      "sha256": "40e604d8f353e2a1a1c05c7e5c855eb2527fadc3afe677b4ee66cba0658f8ec5"
+    },
+    {
+      "path": "history-gate-selected.json",
+      "bytes": 5306,
+      "sha256": "b9678255677fc413efb5b264b18e45c0b272c49b5f6a8d3c46c54b4a880f1853"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 938472,
+      "sha256": "efffe00bfd4c1bacc89f7f86e5c89d8ffceacbc66a6009c9c4517efd5f152833"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 276922,
+      "sha256": "4670d47d2ff7c86f0e3feaf46d5874fa8638a4267e42c19c65599ba6bc20181e"
+    },
+    {
+      "path": "history.json",
+      "bytes": 939744,
+      "sha256": "e487885bd3b283f1b4e64b7ab4a220e5fadd73ae09799a279cd320ea3e2a9f21"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1046,
+      "sha256": "e7532c19b400bdd606c7ab17cfb0363036ac2e1f163f3d774f7909be176373b4"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 670,
+      "sha256": "b21b411f9b2a09ad63eb994ea8d804010fd2858f15cef4b2657bb492eacd0dea"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5560,
+      "sha256": "cb5f020594f1be5b2a545f9708c6ad7e0e95d4a6c883a83ad223dad1afa86126"
+    },
+    {
+      "path": "scan-cost-causes.py",
+      "bytes": 2413,
+      "sha256": "4b93e2bbd7591fa350141545efbfa3884da7d0c7fb9667134e93b92e5c87873f"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5560,
+      "sha256": "b0266d61e433687e95ce0bd2d6fb8a55996ab96320b7f611e5fa37bfbe2587f3"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 16838,
+      "sha256": "ed0cf88de030bf6b05ff5c1cfb6f9605e3933d1349f888c3f286882042e93e3f"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 17666,
+      "sha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 542,
+      "sha256": "8041c29162b1e9e8b6d36961dd243166c7d8a1dc680c41990a3adf98e68d0fc6"
+    }
+  ],
+  "artifactCountExcludingReceipt": 20,
+  "totalFilesIncludingReceipt": 21,
+  "sourcePins": 8,
+  "productRuns": 0,
+  "gitCommands": 0
+}

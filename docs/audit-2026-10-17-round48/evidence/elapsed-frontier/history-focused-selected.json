@@ -1,0 +1,160 @@
+{
+  "rows": [
+    {
+      "query": "runstart",
+      "index": 0,
+      "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "locator": "markdown-text",
+      "valueChars": 41393,
+      "contextStart": 28570,
+      "contextEnd": 29920,
+      "text": "\"tool_running\")\n            .map((e) =>\n              e.type === \"assistant_text\" && e.streaming ? { ...e, streaming: false } : e,\n            ),\n        );\n\n        setSessionId(result.sessionId);\n        setTotalTokens(costTracker.getTotalTokens().total);\n        setTotalCost(costTracker.getEstimatedCost());\n\n        const elapsed = Date.now() - runStartRef.current;\n        const turnCost = result.usage\n          ? costTracker.estimateForTokens(\n              model,\n              result.usage.promptTokens,\n              result.usage.completionTokens,\n            )\n          : 0;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n          }\n        }\n        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);\n        chatStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);\n\n        if (result.reason !== \"completed\") {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"status\", reason: friendlyReason(result.reason) }),\n          ]);\n  ",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "status-elapsed",
+      "index": 0,
+      "path": "docs/architecture/11-feature-inventory.md",
+      "locator": "markdown-text",
+      "valueChars": 41296,
+      "contextStart": 37308,
+      "contextEnd": 38658,
+      "text": "`/fullscreen` 或配置启用 |\n| **虚拟滚动消息列表** | 大 transcript 下虚拟化渲染消息 | `packages/tui/src/ui/components/VirtualMessageList.tsx:76`，`packages/tui/src/ui/hooks/useVirtualScroll.ts:142` | 长会话自动使用 |\n| **AgentDock** | 展示正在运行的子代理，限制可见数量并格式化耗时 | `packages/tui/src/ui/components/AgentDock.tsx:34`，`packages/tui/src/ui/components/AgentDock.tsx:200` | 子代理运行时自动出现 |\n| **StatusLine** | 底部状态行展示模型、权限、session、token 等 | `packages/tui/src/ui/components/StatusLine.tsx:36` | REPL 底部自动显示 |\n| **ContextUsageBar** | 上下文 token 使用进度条 | `packages/tui/src/ui/components/ContextUsageBar.tsx:13` | token 接近上限时查看 |\n| **SpinnerWithVerb / Spinner** | 运行中动词化 spinner、耗时和 token 提示 | `packages/tui/src/ui/components/SpinnerWithVerb.tsx:237`，`packages/tui/src/ui/components/Spinner.tsx:20` | agent 思考或工具运行时显示 |\n| **Banner / UpdateBanner / WelcomeTips** | 顶部启动信息、更新提示和欢迎提示 | `packages/tui/src/ui/components/Banner.tsx:42`，`packages/tui/src/ui/components/UpdateBanner.tsx:25`，`packages/tui/src/ui/components/WelcomeTips.tsx:36` | REPL 启动或更新可用时显示 |\n| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |\n| **工具调用视图** | 展示工具 start/running/result 和嵌套前缀 | `packages/tui/src/ui/components/ToolCall.tsx:42`，`packages/tui/src/ui/components/ToolCall.tsx:98`，`packages/tui/sr",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "status-elapsed",
+      "index": 1,
+      "path": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "locator": "markdown-text",
+      "valueChars": 36068,
+      "contextStart": 31405,
+      "contextEnd": 32755,
+      "text": " is at `App.tsx:1321-1324`:\n\n```tsx\nconst bottomContent = (\n  <Box flexDirection=\"column\" marginTop={0}>\n    <AgentDock viewMode={viewMode} />\n    <Text dim>{separator}</Text>\n    ...rest of bottom content...\n  </Box>\n);\n```\n\n- [ ] **Step 2: Move `<AgentDock>` to the end and pass `focusedIndex`**\n\nModify the JSX so the dock comes *last*, after the StatusLine `<Box>` (which is the current bottom of the stack — `App.tsx:1570-1586`):\n\n```tsx\nconst bottomContent = (\n  <Box flexDirection=\"column\" marginTop={0}>\n    <Text dim>{separator}</Text>\n\n    {screen === \"transcript\" ? (\n      // ...existing transcript-mode footer/onboarding/...\n    ) : (\n      // ...existing CommandInput etc...\n    )}\n\n    <Text dim>{separator}</Text>\n\n    <Box wrap=\"truncate\">\n      <ModeIndicator mode={permMode} />\n      {screen === \"transcript\" && <Text color=\"ansi:magenta\">{\" TRANSCRIPT \"}</Text>}\n      <Box flexGrow={1} />\n      <StatusLine .../>\n    </Box>\n\n    {/* Dock at the very bottom — below StatusLine. Renders null when\n        no running or recently-finished agents. */}\n    <AgentDock viewMode={viewMode} focusedIndex={dockFocusIdx} />\n  </Box>\n);\n```\n\nConcretely the edit is two-part:\n\n1. Delete the existing `<AgentDock viewMode={viewMode} />` near the top of `bottomContent` (it was the first child, before the separator).\n2. Add `<AgentDock viewMod",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "status-elapsed",
+      "index": 2,
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "locator": "markdown-text",
+      "valueChars": 17949,
+      "contextStart": 1538,
+      "contextEnd": 2888,
+      "text": "(`CODESHELL_FULLSCREEN=0`, content streams into terminal scrollback) — must work. This is an explicit user requirement and constrains pulse animation choices below.\n\n## 2. Goals (for this revision only)\n\n1. Dock is vertical, one row per running-or-recently-finished sub-agent.\n2. Dock sits at the **bottom of the UI** — below the InputBox, below the StatusLine. Last thing on the screen.\n3. Row format: `[cursor]● [name]   …pad…   [elapsed]`. No tool name, no extra metadata.\n4. Elapsed renders compactly: `23s`, `4m 23s`, `1h 4m 23s`.\n5. Keyboard:\n   - InputBox empty + dock has rows → `↓` moves focus into dock (row 0).\n   - Dock focused → `↑/↓` cycle rows; pressing `↑` on row 0 returns focus to input.\n   - Dock focused → `Enter` opens that agent's transcript (`viewMode = { kind: 'agent', agentId }`).\n   - Dock focused → `Esc` returns focus to input (does not cancel a running query).\n   - `viewMode.kind === 'agent'` → `Esc` returns to main.\n6. Remove `Ctrl-0..5` shortcuts. `↑/↓ + Enter` is the only way to switch.\n7. Finished / failed / cancelled agents linger in the dock for 30 s, then fade out.\n8. Works in both `fullscreen` and `flow` modes without per-mode forks beyond the existing `FullscreenLayout` split.\n\n## 3. Non-Goals (for this revision)\n\n- The full `AgentCallRow` main-thread summary row (parent spec `§6.1`) — out of scope her",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 21,
+      "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "locator": "markdown-text",
+      "valueChars": 67183,
+      "contextStart": 49491,
+      "contextEnd": 50841,
+      "text": "ry } from \"../../tool-system/builtin/agent-registry.js\";\n\nconst MAX_VISIBLE = 5;\n\nexport function AgentDock(): React.ReactElement | null {\n  const agents = useSyncExternalStore(\n    asyncAgentRegistry.subscribe,\n    asyncAgentRegistry.getSnapshot,\n  );\n  const running = agents.filter((a) => a.status === \"running\");\n\n  // 1 Hz local tick to refresh elapsed-time text. Only runs while there are\n  // running agents — keeps idle frame writes at zero. forceUpdate via useState\n  // is scoped to AgentDock's reconciler subtree; the rest of the app does not\n  // re-render.\n  const [, tick] = useState(0);\n  useEffect(() => {\n    if (running.length === 0) return;\n    const id = setInterval(() => tick((n) => n + 1), 1000);\n    return () => clearInterval(id);\n  }, [running.length === 0]);\n\n  if (running.length === 0) return null;\n\n  const visible = running.slice(0, MAX_VISIBLE);\n  const overflow = running.length - visible.length;\n  const now = Date.now();\n\n  return (\n    <Box flexDirection=\"row\" gap={1} paddingX={1}>\n      <Text dim>agents:</Text>\n      {visible.map((a, i) => {\n        const elapsedSec = Math.floor((now - a.startedAt) / 1000);\n        return (\n          <Text key={a.agentId} color=\"ansi:cyan\">\n            [{i + 1}] {a.description} {elapsedSec}s\n          </Text>\n        );\n      })}\n      {overflow > 0 && <Text dim>+{overflow",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 22,
+      "path": "docs/superpowers/plans/2026-05-18-subagent-dock-followups.md",
+      "locator": "markdown-text",
+      "valueChars": 40585,
+      "contextStart": 10654,
+      "contextEnd": 12004,
+      "text": "d}>\n        {focused ? \">\" : \" \"}\n      </Text>\n      <Text color=\"ansi:magenta\">{\" ◆ \"}</Text>\n      <Text\n        color={focused ? \"ansi:cyanBright\" : active ? \"ansi:magenta\" : undefined}\n        bold={focused}\n      >\n        main\n      </Text>\n    </Box>\n  );\n}\n```\n\nThis row has no `marginTop` (it sits directly under the `agents` label) and no elapsed time.\n\n- [ ] **Step 4: Render `MainDockRow` inside `AgentDock`**\n\nIn the `AgentDock` component's return, find the existing structure:\n\n```tsx\nreturn (\n  <Box flexDirection=\"column\" paddingX={1}>\n    <Text dim>agents</Text>\n    {rows.map((a, i) => (\n      <AgentDockRow ... />\n    ))}\n    {overflow > 0 && <Text dim>{`... +${overflow} more`}</Text>}\n  </Box>\n);\n```\n\nInsert `<MainDockRow>` between the `<Text dim>agents</Text>` label and the agent rows. Keep the agent-row mapping unchanged for now (the keyboard rebase happens in Task 5):\n\n```tsx\nreturn (\n  <Box flexDirection=\"column\" paddingX={1}>\n    <Text dim>agents</Text>\n    <MainDockRow\n      focused={false}\n      active={viewMode.kind === \"main\"}\n    />\n    {rows.map((a, i) => (\n      <AgentDockRow\n        key={a.agentId}\n        entry={a}\n        focused={focusedIndex === i}\n        active={viewMode.kind === \"agent\" && viewMode.agentId === a.agentId}\n        now={now}\n      />\n    ))}\n    {overflow > 0 && <Text dim>{`... +${o",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 23,
+      "path": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "locator": "markdown-text",
+      "valueChars": 36068,
+      "contextStart": 5379,
+      "contextEnd": 6729,
+      "text": "agent-dock.test.tsx` (replace existing cases)\n\n- [ ] **Step 1: Replace `tests/ui/agent-dock.test.tsx` with the new shape's tests**\n\nWrite the file (overwrites the current 75 lines):\n\n```tsx\nimport { test, expect } from \"bun:test\";\nimport React from \"react\";\nimport { mount, plainText, flush } from \"../render-fixtures\";\nimport {\n  AgentDock,\n  formatElapsed,\n  getVisibleAgents,\n} from \"../../src/ui/components/AgentDock.js\";\nimport { asyncAgentRegistry } from \"../../src/tool-system/builtin/agent-registry.js\";\n\nfunction reset() {\n  asyncAgentRegistry.reset();\n}\n\nconst VIEW_MAIN = { kind: \"main\" as const };\n\ntest(\"no agents → dock renders nothing\", async () => {\n  reset();\n  const h = mount(\n    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),\n  );\n  await flush();\n  const out = plainText(h);\n  expect(out).not.toContain(\"agents\");\n  h.unmount();\n});\n\ntest(\"one running agent → row shows name and elapsed, no tool name\", async () => {\n  reset();\n  asyncAgentRegistry.register({\n    agentId: \"abc\",\n    description: \"review module\",\n    status: \"running\",\n    startedAt: Date.now() - 5_000,\n    abort: () => {},\n  });\n  const h = mount(\n    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),\n    { columns: 80 },\n  );\n  await flush();\n  const out = plainText(h);\n  expect(out).toContain(\"rev",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 24,
+      "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "locator": "markdown-text",
+      "valueChars": 41393,
+      "contextStart": 28547,
+      "contextEnd": 29897,
+      "text": "hinking\" && e.type !== \"tool_running\")\n            .map((e) =>\n              e.type === \"assistant_text\" && e.streaming ? { ...e, streaming: false } : e,\n            ),\n        );\n\n        setSessionId(result.sessionId);\n        setTotalTokens(costTracker.getTotalTokens().total);\n        setTotalCost(costTracker.getEstimatedCost());\n\n        const elapsed = Date.now() - runStartRef.current;\n        const turnCost = result.usage\n          ? costTracker.estimateForTokens(\n              model,\n              result.usage.promptTokens,\n              result.usage.completionTokens,\n            )\n          : 0;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n          }\n        }\n        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);\n        chatStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);\n\n        if (result.reason !== \"completed\") {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"status\", reason: friendlyReason(result.reaso",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 26,
+      "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+      "locator": "markdown-text",
+      "valueChars": 26154,
+      "contextStart": 19418,
+      "contextEnd": 20768,
+      "text": "  <Text key={a.agentId} color=\"ansi:cyan\">\n          [{i + 1}] {a.description} {Math.floor((Date.now() - a.startedAt) / 1000)}s\n        </Text>\n      ))}\n      {running.length > 5 && <Text dim>... +{running.length - 5} more</Text>}\n    </Box>\n  );\n}\n```\n\nMounted in `FullscreenLayout`'s `bottom` slot, above the input box.\n\n### 9.4 1 Hz Local Timer\n\nElapsed text doesn't auto-refresh. A 1 Hz `setInterval` triggers a **local** `forceUpdate`, scoped to the dock only — does not re-render the app tree:\n\n```tsx\nconst [, tick] = useState(0);\nuseEffect(() => {\n  if (running.length === 0) return;\n  const id = setInterval(() => tick((n) => n + 1), 1000);\n  return () => clearInterval(id);\n}, [running.length > 0]);\n```\n\n### 9.5 Ctrl-Digit View Switching\n\n`Ctrl+1..Ctrl+5` switches the main scroll area between:\n\n- `viewMode = \"main\"` — chatStore main transcript\n- `viewMode = { kind: \"agent\", id: <agentId> }` — agent's own transcript\n\nThis **requires** each background agent to maintain its own transcript. `AsyncAgentEntry` gains:\n\n```ts\ninterface AsyncAgentEntry {\n  // existing fields ...\n  transcript: ChatEntry[]; // append-only, written by subAgentSpawner stream callback\n}\n```\n\n`subAgentSpawner.spawn(...)` writes a copy of its stream events into `entry.transcript` in parallel with the existing final-string return. Existing `AgentBlock` renderi",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 27,
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "locator": "markdown-text",
+      "valueChars": 15893,
+      "contextStart": 7373,
+      "contextEnd": 8723,
+      "text": "e no longer mounted as children of the main `VirtualMessageList` for sub-agent content.\n\n## 6. UI Components\n\n### 6.1 `AgentCallRow` (new, rendered in main `VirtualMessageList`)\n\nOne row per `agent_call` ChatEntry.\n\n```\nRunning:\n  ⏺ general-purpose · Read /foo.ts · 14m\n    │              │   │              │\n    │              │   │              └ elapsed (1 Hz)\n    │              │   └ latestToolName (truncated to fit)\n    │              └ entry.name\n    └ ● cyan pulsing (1 Hz opacity)\n\nCompleted (expanded=false, default):\n  ⏺ general-purpose · ✓ completed · 14m 23s\n                                          ▶ press Enter to expand result\n\nCompleted (expanded=true):\n  ⏺ general-purpose · ✓ completed · 14m 23s\n  ┌─ result ────────────────────────────────┐\n  │ <result text wrapped to viewport width> │\n  └─────────────────────────────────────────┘\n\nFailed (expanded=false):\n  ⏺ general-purpose · ✗ error · 02m 11s     ▶ expand\nFailed (expanded=true):\n  ⏺ general-purpose · ✗ error · 02m 11s\n  ┌─ error ─────────────────────────────────┐\n  │ <error text>                            │\n  └─────────────────────────────────────────┘\n```\n\n`Enter` while a main-store `agent_call` row is the keyboard cursor target toggles `expanded`. (The keyboard cursor target is the existing message-row selection driven by `selectedEntryId`.)\n\n`⏺` is `●` when ",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "background-elapsed",
+      "index": 28,
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "locator": "markdown-text",
+      "valueChars": 17949,
+      "contextStart": 734,
+      "contextEnd": 2084,
+      "text": "escribes.\n2. Arrow keys are never routed to the dock. `CommandInput.tsx:88-100` unconditionally claims `↑/↓` for input history, so the user has no way to focus the dock with the keyboard.\n3. The dock is placed above the input (parent spec `§6.2`) — the user wants it at the very bottom of the UI instead.\n4. Each row currently shows `[n] description elapsed` on one line. The user does not want the `latestToolName` field from `§6.1`. The row should be `name … elapsed` only.\n5. `Ctrl-0..5` was implemented as the switching mechanism even though parent spec `§3` removed it. The revision drops it for real.\n6. The 30 s linger of completed agents (parent spec `§2.7`) was never implemented; the dock disappears the instant `status !== 'running'`.\n\nBoth render modes — `fullscreen` (alt-screen) and `flow` (`CODESHELL_FULLSCREEN=0`, content streams into terminal scrollback) — must work. This is an explicit user requirement and constrains pulse animation choices below.\n\n## 2. Goals (for this revision only)\n\n1. Dock is vertical, one row per running-or-recently-finished sub-agent.\n2. Dock sits at the **bottom of the UI** — below the InputBox, below the StatusLine. Last thing on the screen.\n3. Row format: `[cursor]● [name]   …pad…   [elapsed]`. No tool name, no extra metadata.\n4. Elapsed renders compactly: `23s`, `4m 23s`, `1h 4m 23s`.\n5. Keyboar",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "cost-model",
+      "index": 2,
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "locator": "markdown-text",
+      "valueChars": 69750,
+      "contextStart": 10616,
+      "contextEnd": 11966,
+      "text": "选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。\n> - **bug-scan 第一批(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 \"ask\" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。\n>\n> **续(G)打包 CLI 运行时冒烟(实跑 tui dist,非单测)**:`code-shell --version`→`0.5.0-rc.2`·`--help`/`run --help` 子命令(run/repl/sessions/arena/runs)全注册与 README 一致·**`run \"say hi\"` 完成一轮真 LLM 对话**(默认 gpt-5.5,cost summary,干净退出,无崩——确认打包 CLI 端到端引擎链路正常 + dist 含本会话 core 改动无回归)·`sessions` 列真实磁盘会话(transcript-reader/FileRunStore.list 对真实语料健壮,顺验了我改的两处)。**B 节 headless 已实测;剩 A 节交互真机 + push 待你。**\n>\n> ---\n>\n> **(以下为前半段 A/B/C,做到第 6 commit",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "cost-model",
+      "index": 3,
+      "path": "docs/archive/core-complete-review.md",
+      "locator": "markdown-text",
+      "valueChars": 96025,
+      "contextStart": 22386,
+      "contextEnd": 23736,
+      "text": " / stop reason\n\n- `stream-watchdog.ts`：stream idle timeout watchdog，默认配置可通过 env 启用。\n- `retry.ts`：判断错误是否 retryable。\n- `stop-reason.ts`：stop reason 标准化。\n- `clamp-max-tokens.ts`：根据模型 cap clamp max tokens。\n- `strip-vision.ts`：非 vision 模型历史 image block 处理。\n\n### 8.9 usage/cost 链路\n\nProvider 拿到 usage 后：\n\n1. 调 `recordUsage()`。\n2. `LLMClientBase.onUsage` 被 `cost-tracker.ts` 安装后，会把 usage 送到 `CostTracker.record()`。\n3. `ModelFacade` 同时会更新 `state.ts` 中的全局 token counters：\n   - total input/output\n   - per-model usage\n   - cache read/write\n   - API duration\n\n风险：\n\n- `CostTracker.reset()` 不重置 `_hasUnknownModel`，遇到 unknown model 后 reset 仍可能显示 unknown warning。\n- `state.resetCostState()` 不清 `_modelUsage`，可能导致 total 已归零但 per-model usage 仍有旧数据。\n- `state.setCostStateForRestore()` 只恢复 total input/output，不恢复 per-model/cache/requestCount。\n\n## 9. Tool System 模块：Registry、Executor、Permission、MCP、Guards\n\n`src/tool-system/**` 是工具系统。它把 LLM 发出的 tool call 转成真实执行，并在执行前后插入 schema 校验、hook、guard、权限审批、sandbox、日志等。\n\n### 9.1 ToolRegistry\n\n`registry.ts` 管工具定义和 executor。\n\n构造时：\n\n- 根据 preset/config 选择 builtin tools。\n- 调 `registerBuiltins()` 注册内置工具。\n- 后续可注册 custom tools。\n- MCPManager 也会把 MCP tools 注册进同一个 registry。\n\n`executeTool()` 负责：\n\n- 查找工具。\n- 创建/级联 AbortController。\n- 处理 timeout。\n- 注入 ToolContext。\n- 调用工具实际 executor。\n\n### 9.2 内置工具\n\n`tool-system/builtin/index.ts` 定义 `BUILTIN_",
+      "wholeValueIncluded": false
+    },
+    {
+      "query": "cost-model",
+      "index": 25,
+      "path": "docs/audit-2026-10-17-round9/evidence/cross-review-usage.md",
+      "locator": "markdown-text",
+      "valueChars": 2440,
+      "contextStart": 0,
+      "contextEnd": 1215,
+      "text": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone record 后累计 token/cost 的 API。完整 ID 的支持不是从外部服务或潜在 TODO 推断出来的。\n\n实际实现先用完整 ID 检查 known，再在 `cost-tracker.ts:115` 仅保存 canonical 名称；`:148` 累计时重新按保存的名称定价。冻结 snapshot 的 `google/gemini-4-argon` input/output 正是 2/10；direct metadata 没有 `gemini-4-argon`，短名称补全只尝试 deepseek/openai/anthropic，没有 google，最终命中默认 3/15。因此 fixture 中同样 1M/1M token 的 12→18 差异与源码一致。输入是 API 接受的非负有限整数；1M 用于单位价格算术，不是实际 provider 请求、模型长度验收或外部账单。\n\n新增 fixture 没有替换生产定价函数、改 snapshot、mock 价格或调用 snapshot override。它实际检查 estimate、record、累计 tokens、serialize 的存储模型名、formatCompact、formatSummary 和 restore。首次日志证明 3 个 cost characterization/control tests 与 2 个 token-budget tests 都完成。错误金额被断言为当前行为，所以 pass 不意味着产品修复；报告已明确说明。\n\n## SDK 范围与运行时控制\n\ndirect metadata 的 devstral-medium 对照累计和 estimate 均为 2。真实内存 UsageLedger 对照在绑定后忽略 tracker 自有 records 的累计，再 begin/settle/finish 一个完整 ID receipt，返回 12 和 1 r",
+      "wholeValueIncluded": false
+    }
+  ],
+  "count": 14,
+  "scope": "Only these bounded windows displayed/read, not entire original values or every retained context."
+}

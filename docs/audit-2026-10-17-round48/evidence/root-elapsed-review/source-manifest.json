@@ -1,0 +1,350 @@
+{
+  "baseline": "2735100f81f4d12cbb3e610da0e3977eaf74727c",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lines": 2318,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          212,
+          218
+        ],
+        [
+          436,
+          446
+        ],
+        [
+          1543,
+          1544
+        ],
+        [
+          1559,
+          1560
+        ],
+        [
+          1643,
+          1652
+        ],
+        [
+          1669,
+          1681
+        ],
+        [
+          1716,
+          1719
+        ],
+        [
+          1814,
+          1817
+        ],
+        [
+          1829,
+          1849
+        ],
+        [
+          2264,
+          2269
+        ],
+        [
+          2294,
+          2296
+        ]
+      ],
+      "semanticLines": 83,
+      "displayedLineCount": 266,
+      "initialPinArtifact": "selection-initial-pins.json",
+      "initialCurrentVerificationSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "bytes": 7462,
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "lines": 227,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          31,
+          33
+        ],
+        [
+          51,
+          52
+        ],
+        [
+          69,
+          101
+        ],
+        [
+          125,
+          128
+        ],
+        [
+          167,
+          171
+        ]
+      ],
+      "semanticLines": 47,
+      "displayedLineCount": 162,
+      "initialPinArtifact": "selection-initial-pins.json",
+      "initialCurrentVerificationSha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "lines": 445,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          131,
+          133
+        ],
+        [
+          148,
+          157
+        ],
+        [
+          176,
+          177
+        ],
+        [
+          360,
+          362
+        ],
+        [
+          370,
+          371
+        ]
+      ],
+      "semanticLines": 20,
+      "displayedLineCount": 59,
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialCurrentVerificationSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lines": 1571,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          471,
+          476
+        ],
+        [
+          487,
+          500
+        ],
+        [
+          537,
+          540
+        ],
+        [
+          576,
+          582
+        ],
+        [
+          594,
+          597
+        ],
+        [
+          711,
+          716
+        ]
+      ],
+      "semanticLines": 41,
+      "displayedLineCount": 79,
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialCurrentVerificationSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "bytes": 13129,
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "lines": 387,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          353,
+          370
+        ]
+      ],
+      "semanticLines": 18,
+      "displayedLineCount": 57,
+      "initialPinArtifact": "input-producer-initial-pins.json",
+      "initialCurrentVerificationSha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "bytes": 8606,
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "lines": 245,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          150,
+          176
+        ],
+        [
+          232,
+          237
+        ]
+      ],
+      "semanticLines": 33,
+      "displayedLineCount": 61,
+      "initialPinArtifact": "input-producer-initial-pins.json",
+      "initialCurrentVerificationSha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "lines": 536,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          247,
+          247
+        ]
+      ],
+      "semanticLines": 1,
+      "displayedLineCount": 10,
+      "initialPinArtifact": "internal-export-initial-pin.json",
+      "initialCurrentVerificationSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lines": 2412,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1765,
+          1799
+        ]
+      ],
+      "semanticLines": 35,
+      "displayedLineCount": 67,
+      "initialPinArtifact": "yield-consumer-initial-pins.json",
+      "initialCurrentVerificationSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "bytes": 25457,
+      "sha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "lines": 586,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          173,
+          185
+        ]
+      ],
+      "semanticLines": 13,
+      "displayedLineCount": 27,
+      "initialPinArtifact": "yield-consumer-initial-pins.json",
+      "initialCurrentVerificationSha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lines": 5082,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1239,
+          1260
+        ],
+        [
+          2092,
+          2098
+        ],
+        [
+          2116,
+          2119
+        ],
+        [
+          2141,
+          2141
+        ],
+        [
+          2245,
+          2249
+        ],
+        [
+          2251,
+          2269
+        ],
+        [
+          2284,
+          2287
+        ]
+      ],
+      "semanticLines": 62,
+      "displayedLineCount": 143,
+      "initialPinArtifact": "engine-consumer-initial-pin.json",
+      "initialCurrentVerificationSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "firstEverSemanticReadPin": null,
+      "purpose": "Known elapsed hypothesis control/data-flow verification only; adjacent displayed authority/lease/permission/goal/usage/native mechanisms are not certified.",
+      "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+    }
+  ],
+  "instructionsCarryForward": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Instruction reading carried forward; Root reread CODESHELL during continuation. No invented before-first-read instruction pin."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Instruction reading carried forward; Root reread CODESHELL during continuation. No invented before-first-read instruction pin."
+    }
+  ],
+  "counts": {
+    "selectedProductFiles": 10,
+    "fullProductFiles": 0,
+    "semanticProductLines": 353,
+    "displayedProductLines": 931,
+    "testDeclarationLines": 0,
+    "productRuns": 0
+  },
+  "timing": "Pins precede this targeted current verification body, not first-ever source contact; App prior navigation/old reading known. Missing guessed internal.ts was a metadata locator, never opened/executed."
+}

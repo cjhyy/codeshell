@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:04:41.705061+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "lines": 536,
+      "beforeRootCurrentBody": true
+    }
+  ]
+}

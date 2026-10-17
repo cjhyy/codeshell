@@ -1,0 +1,138 @@
+{
+  "createdUTC": "2026-10-17T15:55:38.578997+00:00",
+  "sourceRangeChecks": [
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    },
+    {
+      "path": "packages/core/src/model-request-boundary/accounting.test.ts",
+      "rangeBounds": true,
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "selectedInsideDisplayed": true,
+      "coverageNotFull": true,
+      "firstFinishSHAMatch": true
+    }
+  ],
+  "manifestCounts": {
+    "selectedFiles": 7,
+    "fullFiles": 0,
+    "semanticLines": 329,
+    "semanticProductLines": 295,
+    "semanticTestLines": 34,
+    "displayUnionLines": 523,
+    "navigationOnlyFiles": 1
+  },
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "coverage-gate-objects.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "gate-decision.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "consumer-initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "inside": true
+    }
+  ],
+  "allLinksValid": true,
+  "rootNotificationOnly": "2735100f81f4d12cbb3e610da0e3977eaf74727c docs47-only supplied after ownending; no Git verification or original4255history rewrite",
+  "author61Read": false,
+  "productsExecuted": 0
+}
