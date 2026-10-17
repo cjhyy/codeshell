@@ -8,20 +8,19 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI25, failed overall. Web and Linux pass their audited
-scopes. macOS observes three Pet IPC operations, then fails its startup custody
-gate after a process-metadata query timeout; Main exits normally but descendant
-settlement remains unknown and HOME is retained. Windows passes original 83/12
-and separate new Review drafts three/one, then its NSIS installer exits
-`0xC0000005` before installed UI, replacement or uninstall. The new uninstaller
-hook is not natively validated. See the
-[CI25 actual record](#ci25--actual-platform-results-and-installation-failure).
-CI24's distinct empty-directory uninstall failure and its original evidence remain
-in the [CI24 record](#ci24--actual-platform-results-and-empty-uninstall-directory).
-A separate CI26 product candidate has passed combined local gates; its runtime
-validation remains pending. See the [CI26 preparation](#ci26--goal-extension-callback-local-preparation).
+The latest completed run, CI26, failed overall. Web, macOS and Linux pass their
+stated audited scopes. Windows completes 60 original operations/10 Main launches
+and separate new Review drafts three/one, then fails packaged UI launch at step 34:
+zero UI operations and actual Main 1928's abnormal `0xC0000005` exit. Its updater,
+early native-evidence upload and NSIS lifecycle are not reached. The private HOME
+is retained; the cause remains unknown. See the
+[CI26 actual record](#ci26--actual-platform-results-and-windows-packaged-launch-failure).
+CI25's different macOS query-timeout and Windows installer failures remain in the
+[CI25 record](#ci25--actual-platform-results-and-installation-failure). The NSIS
+uninstaller hook remains without successful native lifecycle validation.
 
-CI14 remains the latest fully passing matrix. The
+CI14 remains the latest fully passing matrix in its earlier, narrower scope,
+before expanded NSIS acceptance. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
 and earlier CI15 native failures remain separate source-bound evidence. CI17's
 Windows installer phase/cause and missing Windows receipts remain unverified;
@@ -2547,7 +2546,8 @@ Normal browser exits, observed birth custody, late ledgers and successful HOME
 cleanup pass their source-bound predicates, without an OS-wide confinement claim.
 
 macOS passes original 83 operations/12 Main launches, separate new Review drafts
-three/one and DMG installed/reinstalled UI 13+13 across two detached readonly mounts.
+three/one and DMG installed/reinstalled UI 13+13 across two attachments: one writable
+construction stage and one final readonly verification; both are detached.
 Linux passes original 83/12 and separate new drafts three/one. Actual AppImage Main
 9262 and runtime 9258 both exit normally; ten manifest GETs cover checks/retries,
 with zero asset downloads, Worker, model or nativeStorage calls. Enabled sandbox,
@@ -2876,3 +2876,111 @@ CI25's macOS process-query timeout or Windows Setup exit. Their original budgets
 gates and unknowns are retained. No local native, browser, installer, PowerShell,
 process query or provider is run for this candidate; the discovery-incident
 consequences remain unknown.
+
+## CI26 — actual platform results and Windows packaged launch failure
+
+[Run 39054487947](https://github.com/cjhyy/codeshell/actions/runs/39054487947),
+attempt 1 / push, binds source `ab3b801f00d18ceabe824c099c3bd4824bae32c3`.
+The run fails overall. Web, macOS and Linux pass only the audited scopes below;
+Windows fails the packaged UI step before its updater and installer lifecycle.
+Final API and independent peer binding confirm three successful jobs and the failed
+Windows job at this exact source. CI14's earlier green matrix had a narrower scope,
+before expanded NSIS acceptance.
+
+Web passes 31 actual behaviors: ServiceWorker 11, authentication four, child eight
+and annotations eight. Attachment nine/45 and pure lifecycle Node 64 pass separately.
+The old-reducer control retains two passing cases and six expected failures, with
+private HOME/profile checked retained. Six complete send/cancel payload arrays
+match the final settled Host RPC rows, each count one. The five observed birth maps
+contain 9/21/10/10/10 processes and settle to zero with normal browser exits, empty
+signal-request ledgers and the required late-ledger/HOME/profile gates. The 57
+canonical public files pass ZIP CRC, 28 exact workflow patterns, 106 source hashes
+plus 13 offline provenance pins and 33 PNG chunk CRCs. Two actual CJK/narrow PNGs
+are viewed. No Desktop Bun count is added to Web's 31 behavior checks.
+Web `ci-39054487947-web-independent-20261018/ci-39054487947-web-independent-audit.json`
+has SHA-256 `0f8a4ff3d7ed688f7881a5e6d63c9c513527836096468a4ecc4f4b0dcfcec596`;
+`download-and-audit-freeze.json` has SHA-256
+`8c13e9de878294f70b6632a251799a6b73b76512064ce4fb2688a458de06ac33`.
+
+macOS passes original 83 operations/12 Main launches and separate new Review drafts
+three/one. DMG installed/reinstalled UI 13+13 uses two additional normal Mains.
+Its two attachments are one writable construction stage and one final readonly
+verification, both detached. All fifteen Main exit, observed-incarnation custody
+and private-HOME gates pass. The new draft Main 44870 exits `0/null`, with 14
+observed incarnations settled to zero, five actual prepare IPCs and three accepted
+seeds. All four metadata readers finish their first execution with exit zero;
+116+55+41 predicates overlap and are not added to native operations. The 144 public
+files pass CRC and 163 finite patterns; 49 PNG CRC records and nine Root actual
+views remain distinct. Three further independently viewed narrow/CJK images are
+readable; full draft equality comes from JSON rather than a partly visible input.
+Mac `ci-39054487947-mac-independent-20261018/verified-summary.json` has SHA-256
+`ebc0f45307c9c1525303592f64c351fa92a9248c06df2198708f64569fdc902c`;
+`independent-web-final-key-peer.json` has SHA-256
+`2d1a5c48c676640f55a4c7c4e1043561e8b423f92fada0559ebdbaa0cc30146e`.
+An independent key comparison first mistook a CRC-success Boolean for the count
+49; its retained correction checks that Boolean and the 49-entry PNG list
+separately, without rerunning the four original readers or any native operation.
+
+Linux passes original 83/12 and separate new drafts three/one, including the actual
+AppImage runtime, enabled sandbox, first-instruction guards, ten owned manifest
+GETs and the source/cache full-permission and byte-identity gates. Source-to-extraction
+normalization deltas stay explicit rather than being described as absent. Required
+inner HOMEs are removed; outer launcher scratch retention is intentional. Packaged
+UI Main 8761 exits `0/null`, with sixteen observed incarnations settled to zero.
+Its three owned-descendant SIGTERM requests target 8879, 8767 and 8766. The ledger
+is not empty; source/identity cross-binding does not prove every fresh snapshot,
+signal delivery, every descendant's normal exit or OS-wide process coverage.
+Linux `ci-39054487947-linux-panel-independent-20261018/verified-summary.json`
+has SHA-256 `e7eaf2b1f2ecf5dfea0a938ee0ee01e665e437c96fdec03300e8aa417b676bf4`.
+
+Windows passes only the first 60 original operations across ten Main launches,
+plus the separate new Review drafts three/one. Step 34, actual packaged UI,
+fails with zero completed UI operations and actual Main 1928 exiting
+`3221225477/null` (`0xC0000005`). Updater, the early native-evidence upload and NSIS
+are not reached. A suppressed taskkill attempt and empty observed signal-request
+ledger are recorded without asserting a causal relationship to the abnormal exit.
+The recorded Main incarnation, parent 1772, has full birth
+`2026-10-17T17:45:00.5206260Z`; its observed one-process custody settles to zero,
+but that does not substitute for the required normal exit. Both the inner HOME and
+outer launcher scratch remain retained. Two first-JS guard rows belong to this one
+Main, with seven probes; there is no returned packaged identity or rendered UI.
+The SDK's fixed launch-wait error alone does not locate the native fault point.
+Its two debugger-attached observations belong to the SDK's two-inspector-client
+design and are not themselves a defect. SDK call-log arrival is not a kernel event
+timeline, so its cleanup intent and the abnormal native exit are not assigned a
+causal order. No installer success, OS restoration or cause fix is inferred.
+
+Windows artifact 12108988217 contains 103 finite public files, all CRC-checked,
+with ZIP SHA-256 `78dc1e8769fce922e218280b5b5155543b2a5d7d7b0ab0d9f60766714ed5d8ae`.
+Its `ci-39054487947-windows-independent-20261018/verified-failed-summary.json` has
+SHA-256 `833354ba635d1393179bbcfd5f346c81cde2e52ce6ddd9f2b3c4b168f996d930`.
+The independent `independent-panel-packaged-launch-failure-peer.json` has SHA-256
+`4fb17ef0303f12ea22a819c8b88548cb64f956510f4b298d3aebf9a10d4ec5ff`:
+68 key metadata checks confirm the partial/failed scope, not a passing launch.
+Recorded package integrity remains unchanged, but raw package/generated private
+bundle bytes are not uploaded and are not independently rehashed from Git source.
+Retained offline source/upload-locator/generated-bundle metadata corrections change
+no raw evidence, source, launch gate, retry or native result.
+
+Actual platform Bun results are 428 tests across 31 files, with 3,525 expectations
+on macOS, 3,522 on Linux and 3,516 on Windows. The eleven MessageStream SSR cases are
+included in those 428, not added again or called native goal-button interactions.
+No dedicated goal-extension click or Core goal mutation is validated here. Earlier
+CI25 query/Setup failures, revoked custody, inode drift and discovery-incident
+consequences remain unexplained; this run does not retrospectively repair them.
+
+One historical wording correction is limited to the CI24 Mac paragraph above.
+Its retained raw DMG receipt has one writable construction attachment and one
+final readonly verification attachment, both detached. The clarification
+`ci24-root-dmg-attachment-wording-clarification-20261018.json` has SHA-256
+`a40c63fccdb23367ba5ec8b0504fe166d05a7dbe1ddc1710b3cc33c327e4562c`.
+CI24 raw ZIP `aa333be14c3fb7c71f9586a561cec1afe42991066b8cb962a36c9b265837979b`
+and its original proofs are unchanged. Other historical mount wording is not
+batch-corrected without its own raw verification.
+
+Root's terminal `ci26-final-matrix-binding-20261018.json` has SHA-256
+`03f67fb98a3c5c36ecb4a98cd78f94473d005b8591d93bdf3ca856dc9cdbfe13`.
+It rehashes eighteen source-bound proof references. Final API records bind all four
+jobs and their artifact digests. These are overlapping provenance checks, not
+additional tests or native operations. The run remains failed; no publication or
+full current release acceptance is established.
