@@ -1,0 +1,40 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "rg",
+        "--files",
+        "packages/desktop/src/main",
+        "--glob",
+        "*sessions-service*",
+        "--glob",
+        "*transcript*"
+      ],
+      "exitCode": 0,
+      "stdout": "packages/desktop/src/main/session-transcript-ipc.test.ts\npackages/desktop/src/main/transcript-reader.test.ts\npackages/desktop/src/main/session-transcript-cache.test.ts\npackages/desktop/src/main/session-transcript-cache.ts\npackages/desktop/src/main/transcript-reader.ts\npackages/desktop/src/main/session-transcript-ipc.ts\npackages/desktop/src/main/cc-room/transcript-recovery.test.ts\npackages/desktop/src/main/cc-room/transcript-checkpoints.ts\npackages/desktop/src/main/cc-room/transcript-subscriptions.test.ts\npackages/desktop/src/main/cc-room/transcript-subscriptions.ts\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rg",
+        "-n",
+        "getSessionTranscript|buildSessionHistory|session.history",
+        "packages/desktop/src/main/mobile-remote/handle-client-event.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "2:  buildSessionHistory,\n19:import { getSessionTranscript } from \"../transcript-reader.js\";\n547:  if (event.type === \"session.history\") {\n557:      const events = await buildSessionHistory(event.sessionId, getSessionTranscript);\n558:      reply({ type: \"session.history.ok\", sessionId: event.sessionId, events });\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rg",
+        "-n",
+        "getSessionTranscript|transcriptToFoldItems",
+        "packages/desktop/src/main/sessions-service.ts"
+      ],
+      "exitCode": 2,
+      "stdout": "",
+      "stderr": "rg: packages/desktop/src/main/sessions-service.ts: IO error for operation on packages/desktop/src/main/sessions-service.ts: No such file or directory (os error 2)\n"
+    }
+  ]
+}

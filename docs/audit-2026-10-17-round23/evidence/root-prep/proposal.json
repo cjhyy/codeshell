@@ -1,0 +1,79 @@
+{
+  "status": "no suitable fresh dynamic direction in examined leaf inventory",
+  "readHead": "7e5570210d7e9336cbe9d6a90ed375832e7e3329",
+  "completionHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "frozenComparisonBase": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "dynamicProductAttempts": 0,
+  "tests": 0,
+  "gitWrites": 0,
+  "round22Writes": 0,
+  "inventory": "utils-inventory.txt",
+  "history": "history.json",
+  "sourceManifest": "source-manifest.json",
+  "historySummary": {
+    "totals": {
+      "files": 2301,
+      "markdown": 1213,
+      "json": 1088,
+      "stringLeaves": 335488,
+      "scalarLeaves": 472088,
+      "parseErrors": 0
+    },
+    "matchCounts": {
+      "memory-sort": 41,
+      "core-format": 109,
+      "json-extraction": 112
+    },
+    "retainedContextCap": 60,
+    "limitations": "All docs/bugs MD and recursively parsed JSON scalar values searched, including in-progress round22. Read-time inventory, capped contexts and numeric/key-title noise do not establish semantic exhaustion."
+  },
+  "excluded": [
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "runtimeImports": [],
+      "typeOnlyImports": [
+        "./session-memory.js"
+      ],
+      "realCaller": "packages/core/src/services/session-memory.ts:130",
+      "readRange": "full helper and existing test; caller selected108-133",
+      "prior": "docs/audit-2026-10-17/operations-memory.md:29 OM3 and first failed ops-memory-data-round1 suite",
+      "reason": "Known timezone-string sorting finding; first dynamic group failed, so no repair/retry/alternate entry. Existing tests do not justify repeating old direction.",
+      "fixtureBoundary": "None proposed; keep skipped direction skipped."
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "runtimeImports": [
+        "./intl.js"
+      ],
+      "readRange": "full static",
+      "prior": "docs/audit-2026-10-17-round14/utils.md",
+      "reason": "formatDuration existing6 controls already run; formatResetTime/relative style clue already recorded without ordinary consumer contract. Do not force unused-API outputs into new findings.",
+      "fixtureBoundary": "None proposed; no clock replacement or new test."
+    },
+    {
+      "path": "packages/core/src/utils/json.ts",
+      "runtimeImports": [],
+      "readRange": "full static",
+      "prior": "docs/archive/review-2026-05-30/backlog_confirmed.json:extractJSONArray and prior JSON summary failure direction",
+      "reason": "Old balanced-array/fence mechanism and known failed summary repair direction; no new independent ordinary producer selected.",
+      "fixtureBoundary": "None proposed; no extraction/summary recovery."
+    },
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "runtimeImports": [],
+      "readRange": "full static",
+      "reason": "Unicode-related functions excluded by task; locale/timezone cache is environment dependent, no independent safe new contract shown."
+    },
+    {
+      "path": "packages/core/src/engine/turn-state.ts",
+      "runtimeImports": [],
+      "readRange": "full static",
+      "reason": "initialTurnState would only mirror a small implementation literal; newTurnId is identity/randomness and excluded."
+    }
+  ],
+  "otherExclusions": [
+    "utils exec/locks/native filesystem, environment/home/provider metadata and output-journal repair authority were not selected for dynamic work.",
+    "Unused round14 cache/semver/toolDisplay fixture and all prior failed/Unicode/sliceAnsi/parseDocument/auth/custody/identity/security/watchdog directions remain excluded."
+  ],
+  "recommendation": "Do not allocate a dynamic lane from this inspected inventory. Re-select a different actual leaf only after a new ordinary caller/contract and historical exclusion check; no defect inferred here."
+}

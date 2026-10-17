@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "python3",
+    "docs/audit-2026-10-17-round23/evidence/room-data-dedup.py"
+  ],
+  "exitCode": 0,
+  "raw": "evidence/room-data-dedup-first.txt",
+  "sha256": "c89d801cb699cec82e862ab763f2d6880636c29861cb97c5d04dc5e1c203abb3",
+  "bytes": 1378,
+  "productAttempts": 0
+}

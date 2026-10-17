@@ -1,0 +1,27 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "head": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "sourceChecks": 9,
+  "sourcesMatchFrozen": true,
+  "leafRuntimeImports": [],
+  "fixtureImports": [
+    "bun:test",
+    "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/automation/cron-expr.ts"
+  ],
+  "fixtureSha256": "b8d1ba0e2060ef22f6a5f1b439adcc66c4eab5eca4ec263efce911491c9fec11",
+  "builtinTimeUse": "Fixed Date.UTC values and actual Intl.DateTimeFormat(\"en-US\",{timeZone:\"UTC\"}); no Date.now, timer or platform zone dependence.",
+  "nextTimeBounds": "Five calls: four find the next minute, one finds the second minute. No more than six candidate minute evaluations total.",
+  "existingSuiteUnexecuted": [
+    "cron-expr.test.ts",
+    "parse-schedule.test.ts",
+    "scheduler-cron-expr.test.ts"
+  ],
+  "priorIssueExclusions": [
+    "TIME1 malformed field suffix truncation",
+    "TIME2 confirmation timezone text",
+    "May30 interval malformed fallback/zero interval",
+    "Declared approximately2year search ceiling",
+    "Old failed automation/cron-runtime.ts nonexistent metadata path remains skipped"
+  ],
+  "runtimeAttemptsBeforeFirst": 0
+}

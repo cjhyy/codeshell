@@ -1,0 +1,44 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "stdout": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "exitCode": 0,
+      "stdout": "codex/audit/product-cron-room-parsers-round23-20261017\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exitCode": 0,
+      "stdout": "?? docs/audit-2026-10-17-round23/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rg",
+        "--files",
+        "packages/server/src/mobile-remote"
+      ],
+      "exitCode": 0,
+      "stdout": "packages/server/src/mobile-remote/mobile-chat-turn.ts\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.ts\npackages/server/src/mobile-remote/access-passcode.test.ts\npackages/server/src/mobile-remote/remote-host-manager.ts\npackages/server/src/mobile-remote/room-manager.test.ts\npackages/server/src/mobile-remote/trusted-device-store.ts\npackages/server/src/mobile-remote/mobile-chat-turn.test.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.test.ts\npackages/server/src/mobile-remote/mobile-limits.ts\npackages/server/src/mobile-remote/resident-agent.test.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackages/server/src/mobile-remote/resident-agent.ts\npackages/server/src/mobile-remote/remote-host-manager.native.test.ts\npackages/server/src/mobile-remote/pending-approvals.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/room-manager.append-scaling.test.ts\npackages/server/src/mobile-remote/room-manager.ts\npackages/server/src/mobile-remote/mobile-attachments.test.ts\npackages/server/src/mobile-remote/trusted-device-store.test.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/types.ts\npackages/server/src/mobile-remote/cloudflared-binary.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\npackages/server/src/mobile-remote/mobile-static.test.ts\npackages/server/src/mobile-remote/room-manager.rejected-send.test.ts\npackages/server/src/mobile-remote/room-model-tracing.test.ts\npackages/server/src/mobile-remote/pending-approvals.test.ts\npackages/server/src/mobile-remote/room-model-tracing.ts\npackages/server/src/mobile-remote/mobile-static.ts\npackages/server/src/mobile-remote/remote-host-manager.test.ts\npackages/server/src/mobile-remote/cloudflared-binary.test.ts\npackages/server/src/mobile-remote/upload-revocation.native.test.ts\npackages/server/src/mobile-remote/mobile-upload-service.ts\npackages/server/src/mobile-remote/access-passcode.ts\npackages/server/src/mobile-remote/viewer-identity.test.ts\npackages/server/src/mobile-remote/pairing.ts\npackages/server/src/mobile-remote/mobile-attachments.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.ts\npackages/server/src/mobile-remote/mobile-upload-service.test.ts\npackages/server/src/mobile-remote/tunnel-manager.test.ts\npackages/server/src/mobile-remote/path-bins.ts\n",
+      "stderr": ""
+    }
+  ]
+}

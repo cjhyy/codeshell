@@ -1,0 +1,20 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "productReruns": 0,
+  "notes": [
+    {
+      "kind": "guessed source navigation failure",
+      "argv": [
+        "rg",
+        "-n",
+        "getSessionTranscript|transcriptToFoldItems",
+        "packages/desktop/src/main/sessions-service.ts"
+      ],
+      "exitCode": 2,
+      "firstResponse": "rg: packages/desktop/src/main/sessions-service.ts: IO error for operation on packages/desktop/src/main/sessions-service.ts: No such file or directory (os error 2)",
+      "evidence": "evidence/room-data-transcript-navigation.json",
+      "handling": "Guessed file direction skipped without retry. Earlier successful inventory and actual handler import independently identify transcript-reader; only static selected reading, no product validation or recovery of guessed source."
+    }
+  ],
+  "testFailures": 0
+}

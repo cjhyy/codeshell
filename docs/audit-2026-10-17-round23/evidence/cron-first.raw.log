@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round23/evidence/cron-focused.test.ts:
+(pass) round23 actual cron expression short ordinary controls > unions duplicate and overlapping supported list/range parts [3.19ms]
+(pass) round23 actual cron expression short ordinary controls > recognizes ordinary field whitespace and combines lists with stepped ranges [0.10ms]
+(pass) round23 actual cron expression short ordinary controls > rounds a sub-minute UTC reference to the next whole minute [9.10ms]
+(pass) round23 actual cron expression short ordinary controls > finds the next minute in a supported combined minute list [0.40ms]
+(pass) round23 actual cron expression short ordinary controls > finds midnight across a UTC day boundary in the next minute [0.01ms]
+(pass) round23 actual cron expression short ordinary controls > finds a January first trigger immediately across the UTC year boundary [0.04ms]
+(pass) round23 actual cron expression short ordinary controls > keeps explicit full day ranges restricted even though the sets equal wildcards [0.30ms]
+
+ 7 pass
+ 0 fail
+ 19 expect() calls
+Ran 7 tests across 1 file. [165.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

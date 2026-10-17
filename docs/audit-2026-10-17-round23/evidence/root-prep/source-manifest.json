@@ -1,0 +1,97 @@
+{
+  "frozenBase": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "currentHeadAtCompletion": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "sources": [
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "scope": "full exploratory static",
+      "note": "No runtime imports; Unicode segmenters excluded from next dynamic proposal.",
+      "frozenSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentMatchesFrozen": true,
+      "bytes": 2824
+    },
+    {
+      "path": "packages/core/src/utils/json.ts",
+      "scope": "full exploratory static",
+      "note": "No runtime imports; old extraction findings and known summary failure exclude recovery.",
+      "frozenSha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+      "currentSha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+      "currentMatchesFrozen": true,
+      "bytes": 2558
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "scope": "full exploratory static",
+      "note": "Runtime import ./intl.js; old formatDuration baseline covered; no new ordinary reset/style consumer evidence.",
+      "frozenSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentMatchesFrozen": true,
+      "bytes": 9304
+    },
+    {
+      "path": "packages/core/src/utils/envUtils.ts",
+      "scope": "full exploratory static",
+      "note": "Runtime os/path and ../data/model-metadata.js imports; environment/home/provider metadata coupled and excluded.",
+      "frozenSha256": "9c21d839fbaf03af782597eb3720f3b644eed7080d038ef33878b57fa9170798",
+      "currentSha256": "9c21d839fbaf03af782597eb3720f3b644eed7080d038ef33878b57fa9170798",
+      "currentMatchesFrozen": true,
+      "bytes": 4009
+    },
+    {
+      "path": "packages/core/src/utils/cwd-normalize.ts",
+      "scope": "full exploratory static",
+      "note": "Runtime node:fs/node:path, realpath/stat; native filesystem direction excluded.",
+      "frozenSha256": "f7dbeb74f60c4d3c7381c7787ba34a32239efb89fd25c49f766951be324eaabe",
+      "currentSha256": "f7dbeb74f60c4d3c7381c7787ba34a32239efb89fd25c49f766951be324eaabe",
+      "currentMatchesFrozen": true,
+      "bytes": 475
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "scope": "full exploratory static",
+      "note": "Only type-only import ./session-memory.js, but old OM3 with failed first group prevents dynamic recovery.",
+      "frozenSha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "currentSha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "currentMatchesFrozen": true,
+      "bytes": 523
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "scope": "full static existing tests; unexecuted",
+      "note": "Two tests; not run or counted as new coverage.",
+      "frozenSha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "currentSha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "currentMatchesFrozen": true,
+      "bytes": 1229
+    },
+    {
+      "path": "packages/core/src/services/session-memory.ts",
+      "scope": "selected25,108-133 static",
+      "note": "Real sort caller line130; no module import, no storage/model execution.",
+      "frozenSha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "currentSha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "currentMatchesFrozen": true,
+      "bytes": 7686
+    },
+    {
+      "path": "packages/core/src/engine/turn-state.ts",
+      "scope": "full exploratory static",
+      "note": "Only type import; initialTurnState mirrors a trivial literal, newTurnId includes Date/random identity and is excluded.",
+      "frozenSha256": "ac7e234070b197f3ffe7e1c667b158eeb54077a91f9a5ecd13e0553dec0617d4",
+      "currentSha256": "ac7e234070b197f3ffe7e1c667b158eeb54077a91f9a5ecd13e0553dec0617d4",
+      "currentMatchesFrozen": true,
+      "bytes": 805
+    },
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "scope": "incidental full static source during inventory; no semantic review",
+      "note": "node:crypto plus type-only head/storage imports; repair authority/identity/security contract excluded, no candidate or test recommendation.",
+      "frozenSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentMatchesFrozen": true,
+      "bytes": 16266
+    }
+  ],
+  "note": "Read-time pins only; HEAD advanced externally during round22 integration. No product import/test, no Git write, and no round22 write in this preparation."
+}

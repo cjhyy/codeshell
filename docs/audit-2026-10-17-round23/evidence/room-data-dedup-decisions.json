@@ -1,0 +1,51 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "historyRead": [
+    {
+      "path": "docs/audit-2026-10-17-round3/root.md",
+      "coverage": "full historical report static read",
+      "bytes": 8674,
+      "sha256": "7f27dcf971ff16bb796054646621f9d02f5e0f7ba824b8d47c1e263e59e74c9c",
+      "lineCount": 55
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/bytes.md",
+      "coverage": "full historical report static read",
+      "bytes": 5677,
+      "sha256": "afeaf33d0adcb75d3f266f2922ee967867d05b4bea3275bd48eab50fb0a1df01",
+      "lineCount": 32
+    },
+    {
+      "path": "docs/review-2026-10-12/legacy-history-round24.md",
+      "coverage": "full historical report static read",
+      "bytes": 8850,
+      "sha256": "f6d718b8ffbc74b33c86c69f4091171bd4d8659ff709af57fb200a65ad0384b0",
+      "lineCount": 42
+    }
+  ],
+  "decisions": [
+    {
+      "family": "Codex file_change/MCP/null and previous baseline",
+      "prior": "docs/audit-2026-10-17-round3/root.md:5-31,45",
+      "decision": "Already recorded R3-01/02/03; no reproduction, baseline rerun or new count. null is not established as ordinary Codex output; no primitive experiments."
+    },
+    {
+      "family": "Codex UTF16 summary truncation and grammar",
+      "prior": "docs/audit-2026-10-17-round14/bytes.md:20",
+      "decision": "Prior known truncation family excluded. Old0.142.4 comment/tag evidence does not establish current CLI format; no new wire-shape validation or claim. Whole existing parser suite unexecuted, including approval case."
+    },
+    {
+      "family": "Mobile metadata and old legacy projection",
+      "prior": "docs/audit-2026-10-17-round3/root.md:51; docs/review-2026-10-12/legacy-history-round24.md:3-21",
+      "decision": "R84 attachment/model-prompt projection and prior injected/clientMessageId/timestamp/anchor observations remain old, not retested or newly ranked. New controls only plain text/stream DTO and callback boundary."
+    },
+    {
+      "family": "mapper wrong ID / output fallback",
+      "decision": "No mapper, renderer, fallback or room storage test; old mechanisms excluded."
+    }
+  ],
+  "limits": "Bounded keyword contexts and selected report reads, no semantic exhaustion claim."
+}

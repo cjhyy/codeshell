@@ -1,0 +1,20 @@
+{
+  "frozenHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round23/evidence/room-data-mobile-history.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "attempt": 1,
+  "exitCode": 0,
+  "elapsedSeconds": 0.237,
+  "raw": "evidence/room-data-first.raw.log",
+  "rawBytes": 1024,
+  "rawSha256": "ef82f0429bdd43e631ccc958dd6b57e138e61d90317be663bcb5ba8e96c1fc0b",
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "productReruns": 0
+}

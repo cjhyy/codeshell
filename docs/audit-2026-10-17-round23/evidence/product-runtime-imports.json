@@ -1,0 +1,90 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "kind": "Manual literal import boundary inventory; no import graph or runtime execution",
+  "modules": [
+    {
+      "path": "packages/core/src/product/define.ts",
+      "runtimeImports": [
+        "../run/Evaluator.js (CompositeEvaluator, NoopEvaluator)",
+        "../run/RunManager.js",
+        "../run/FileRunStore.js",
+        "node:path",
+        "node:os"
+      ],
+      "typeOnlyImports": [
+        "../types.js",
+        "../preset/index.js",
+        "../composition/types.js",
+        "./types.js"
+      ],
+      "executed": false
+    },
+    {
+      "path": "packages/core/src/product/types.ts",
+      "runtimeImports": [],
+      "typeOnlyImports": [
+        "../types.js (two declarations)",
+        "../run/Evaluator.js",
+        "../engine/types.js"
+      ],
+      "executed": false
+    },
+    {
+      "path": "packages/core/src/product/index.ts",
+      "runtimeExports": [
+        "./define.js"
+      ],
+      "typeOnlyExports": [
+        "./types.js"
+      ],
+      "executed": false
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "runtimeImports": [
+        "nanoid",
+        "../logging/logger.js",
+        "./RunQueue.js",
+        "./EngineRunner.js",
+        "./CheckpointWriter.js",
+        "./ArtifactTracker.js",
+        "./RunLock.js",
+        "./Heartbeat.js",
+        "./Evaluator.js",
+        "./ids.js",
+        "./types.js (VALID_TRANSITIONS)",
+        "../composition/compiler.js"
+      ],
+      "note": "Numerous type-only imports not transitive-loaded; actual manager construction excluded.",
+      "executed": false
+    },
+    {
+      "path": "packages/core/src/run/EngineRunner.ts",
+      "runtimeImports": [
+        "../engine/engine.js",
+        "./RunApprovalBackend.js",
+        "../protocol/helpers.js"
+      ],
+      "executed": false
+    },
+    {
+      "path": "packages/core/src/run/factory.ts",
+      "runtimeImports": [
+        "node:path",
+        "node:os",
+        "./RunManager.js",
+        "./FileRunStore.js"
+      ],
+      "executed": false
+    },
+    {
+      "path": "packages/core/src/run/Evaluator.ts",
+      "runtimeImports": [],
+      "typeOnlyImports": [
+        "./types.js"
+      ],
+      "executed": false
+    }
+  ],
+  "conclusion": "defineProduct is not a pure safe leaf: importing/constructing the real manager/store/Engine dependency graph was not attempted. No proposed capture stubs, no fixture written, no product runtime."
+}

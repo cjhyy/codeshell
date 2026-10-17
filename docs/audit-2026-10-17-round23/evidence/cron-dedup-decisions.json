@@ -1,0 +1,42 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "decisions": [
+    {
+      "mechanism": "Extra cron range/step suffix silently ignored",
+      "prior": "docs/audit-2026-10-17/scheduling-data.md:14 TIME1",
+      "result": "Old formal bug excluded; full current leaf bytes match old frozen source. Source status only, no old reproduction."
+    },
+    {
+      "mechanism": "Declared approximately2year nextCronTime window",
+      "prior": "docs/audit-2026-10-17/scheduling-data.md:43",
+      "result": "Explicit capability boundary already recorded, not a new bug. No long scan executed."
+    },
+    {
+      "mechanism": "Interval malformed fallback/zero intervals",
+      "prior": "docs/archive/review-2026-05-30/findings.json:$[34] and docs/archive/beta-prep-audit-2026-06-23.md:43",
+      "result": "Old interval mechanism outside actual leaf and not rerun; parseSchedule source-only."
+    },
+    {
+      "mechanism": "DST/leap/dayfield OR",
+      "prior": "docs/audit-2026-10-17/scheduling-data.md:36-39",
+      "result": "Existing broad baseline previously covered these; no broad existing suite/long search/DST rerun. Short focused legal combination controls are limited ordinary corroboration, no new issue."
+    },
+    {
+      "mechanism": "Single-value step a/n internal comment",
+      "source": "packages/core/src/automation/cron-expr.ts:59",
+      "result": "File header public grammar does not enumerate a/n; no ordinary supported contract or consumer established. No manufactured invalid input experiment or new candidate."
+    },
+    {
+      "mechanism": "Old automation/cron-runtime.ts missing path",
+      "prior": "docs/audit-2026-10-17/scheduling-data.md:9",
+      "result": "Remains skipped; no alternative runtime/runner import or execution."
+    }
+  ],
+  "limits": [
+    "All recursive JSON scalar values searched; keys not scalar values.",
+    "Exact192/192 contexts; broadmechanism556/300 contexts with OR ordinary-word noise; no semantic exhaustion claim."
+  ]
+}

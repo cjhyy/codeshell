@@ -1,0 +1,73 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "guardedRuns": [
+    {
+      "frozenHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round23/evidence/room-data-mobile-history.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.237,
+      "raw": "evidence/room-data-first.raw.log",
+      "rawBytes": 1024,
+      "rawSha256": "ef82f0429bdd43e631ccc958dd6b57e138e61d90317be663bcb5ba8e96c1fc0b",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "pass": 6,
+      "expect": 13,
+      "fail": 0,
+      "errors": 0,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 6,
+      "completedGuard": true,
+      "actualProductionLeafCalls": true,
+      "manualMirroredConsumer": false
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 6,
+    "expect": 13,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 0,
+    "focusedTests": 6,
+    "productRetryCount": 0
+  },
+  "actualScope": [
+    "Actual mobile-history buildSessionHistory with owned callbacks and JSON objects only.",
+    "Four plain projection/reference/readonly controls and two owned deferred/reject boundary controls; no timer or real reader concurrency."
+  ],
+  "staticOnly": [
+    "Codex parse/extract and complete existing16-case suite; zero Codex test/runtime attempts.",
+    "Selected Codex stdout consumer, Desktop builder handler and actual transcript reader producer.",
+    "Desktop RoomManager/viewer/storage test full read solely to exclude runtime."
+  ],
+  "excluded": [
+    "OldR3 file_change/MCP/null and15-test baseline, oldR84 legacy/attachment/metadata projection, oldUnicode/slice/fallback/mapper mechanisms not rerun.",
+    "No current CLI grammar contract established from comment or historical tag; no new wire-shape defect claim.",
+    "No CodexCLI/process/SDK/model/network/account/roomstore/identity/permission/security/custody/realFS/native/PTY/timer/import of mixed suites.",
+    "No shared deps/dist build, full suite/lint/typecheck or E2E."
+  ],
+  "firstRunHandling": "Raw combined stdout/stderr, then exit/hash persisted before inspection. First exit0/Completed; no failure shard, fixture repair, retries or alternate validation.",
+  "metadataOnlyReceipts": [
+    "evidence/room-data-dedup-first.exit.json"
+  ],
+  "limitations": [
+    "Owned callback rejection and deferred ordering do not prove ordinary real-reader failures or concurrent sessions.",
+    "Passing plain leaf controls do not establish complete legacy recovery, protocol or renderer behavior."
+  ]
+}
