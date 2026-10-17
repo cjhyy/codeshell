@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "totalLines": 1033,
+      "pinTimeUTC": "2026-10-17T12:38:04.373887+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "totalLines": 242,
+      "pinTimeUTC": "2026-10-17T12:38:04.374767+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/stickToBottom.ts",
+      "bytes": 12523,
+      "sha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+      "totalLines": 329,
+      "pinTimeUTC": "2026-10-17T12:38:04.375048+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchors.ts",
+      "bytes": 9002,
+      "sha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+      "totalLines": 228,
+      "pinTimeUTC": "2026-10-17T12:38:04.375347+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "bytes": 29720,
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "totalLines": 334,
+      "pinTimeUTC": "2026-10-17T12:38:04.375999+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "totalLines": 667,
+      "pinTimeUTC": "2026-10-17T12:38:04.376549+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "bytes": 129321,
+      "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+      "totalLines": 3430,
+      "pinTimeUTC": "2026-10-17T12:38:04.377178+00:00",
+      "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts"
+    }
+  ]
+}

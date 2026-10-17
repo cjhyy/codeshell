@@ -1,0 +1,29 @@
+{
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "excludedPriorCauses": [
+    {
+      "cause": "programmatic-scroll S2 race / follow pause and rearm design",
+      "evidence": [
+        "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:97",
+        "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:628–630,645–649"
+      ],
+      "reason": "Prior described direction; current helper/test/hook explicitly address guards. No new ordinary producer/consumer violation established and no DOM execution."
+    },
+    {
+      "cause": "browser popout anchor operations mutate active rather than origin bucket",
+      "evidence": [
+        "docs/archive/todo/review-desktop-2026-07-08.md:69–75",
+        "docs/archive/todo/review-master-2026-07-08.md:67"
+      ],
+      "reason": "Explicit old issue; current usePanelBuckets963–982 shares active-ref callback shape, but this prep does not re-prove old end-to-end behavior, assign ID, or add related count."
+    }
+  ],
+  "negativeScope": "Helper list transformations and transition/result DTOs plus exact selected consumers. No whole-anchor-system, whole-scroll-UI, origin identity/authority, native/browser or full repository no-bug claim."
+}

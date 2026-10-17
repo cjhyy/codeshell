@@ -1,0 +1,11 @@
+{
+  "issue": "Root draft hardcoded refreshed main as the frozen baseline while actual end-refresh advanced main.",
+  "firstDrafts": [
+    "README.first.md",
+    "evidence/review-aggregate.first.md"
+  ],
+  "correction": "Separate frozen41d from refreshed cecd; inventory13 incoming paths and28 unchanged selected sources. Preserve dated history and post-refresh release drift.",
+  "commandFailure": false,
+  "diagnosticExitCode": null,
+  "productReruns": 0
+}

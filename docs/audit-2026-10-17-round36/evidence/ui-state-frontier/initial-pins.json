@@ -1,0 +1,46 @@
+{
+  "capturedUTC": "2026-10-17T12:38:53.117739+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "parentReportedFrozenRound33": "40d79ff2190a98aa31067eb07006099c2726b21a",
+  "formalBaseline": null,
+  "prepOnly": true,
+  "historyExclusions": [
+    "audit-2026-10-17-round34",
+    "audit-2026-10-17-round35",
+    "audit-2026-10-17-round36"
+  ],
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "lineCount": 78,
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "timing": "before direct source semantic read",
+      "coverage": "hash-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.ts",
+      "bytes": 3442,
+      "lineCount": 100,
+      "sha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "timing": "before direct source semantic read",
+      "coverage": "hash-only"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "timing": "before direct source semantic read",
+      "coverage": "hash-only"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "timing": "before direct source semantic read",
+      "coverage": "hash-only"
+    }
+  ]
+}

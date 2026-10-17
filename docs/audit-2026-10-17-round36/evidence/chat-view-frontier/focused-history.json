@@ -1,0 +1,376 @@
+{
+  "readAtUTC": "2026-10-17T12:39:26.257379+00:00",
+  "basedOnInventoryCanonicalSha256": "0534950d949663e1eb0ac730c6c1ddf357b902a5281b5965bd674649682acf07",
+  "searchedFiles": 3137,
+  "patterns": {
+    "real-helper-symbols": "nextFollowState|showJumpButton|clearAnchorBuckets|browserAnchorsOf|addAnchorTo|removeAnchorFrom|updateAnchorCommentIn|anchorsIn\\(",
+    "known-follow-cause": "(?:programmatic.{0,80}(?:scroll|race)|S2.{0,80}(?:scroll|race|滚动)|(?:跟随|scroll|follow).{0,80}(?:stale|race|暂停|programmatic|发一次|一次就))",
+    "known-bucket-cause": "(?:anchor|锚点).{0,100}(?:draft|_none_|bucket|串|草稿)|(?:bucket|draft).{0,80}(?:anchor|锚点)"
+  },
+  "matchCounts": {
+    "real-helper-symbols": 3,
+    "known-follow-cause": 29,
+    "known-bucket-cause": 38
+  },
+  "contextCap": null,
+  "hits": {
+    "real-helper-symbols": [
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "384",
+        "excerpt": "+ 派生: showJumpButton = (state === Paused) && !isNearBottom(threshold)"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "472",
+        "excerpt": "- 显隐:`showJumpButton = !atBottom`(不在底就显示,不要求同时 Paused —— 更符合直觉:"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "648",
+        "excerpt": "`nextFollowState(prev, {kind:'scroll'|'send'|'jumpClick'|'sessionSwitch', distance, threshold, lastProgrammaticTop})`,"
+      }
+    ],
+    "known-follow-cause": [
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "location": "97",
+        "excerpt": "- 为什么需要：todo 背景记录了两个交互目标：流式时自动跟随，用户上滑时暂停，回到底部/点跳底/发新消息恢复（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`）。当前实现用纯 follow reducer 处理 programmatic scroll race，原因是 renderer 测试没有 jsdom，滚动状态机必须能单测（`packages/desktop/src/renderer/chat/followState.ts:1`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:645`）。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "location": "97",
+        "excerpt": "：todo 背景记录了两个交互目标：流式时自动跟随，用户上滑时暂停，回到底部/点跳底/发新消息恢复（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`）。当前实现用纯 follow reducer 处理 programmatic scroll race，原因是 renderer 测试没有 jsdom，滚动状态机必须能单测（`packages/desktop/src/renderer/chat/followState.ts:1`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:645`）。"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "12",
+        "excerpt": "> (2) 发送消息后列表应自动跳底、流式时自动向下跟随;只有用户主动上滑时才暂停跟随,"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "202",
+        "excerpt": "  stuck 则平滑跟随;用户主动上滑暂停;回底/点跳底/发新消息恢复;出现跳底按钮当且"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "407",
+        "excerpt": "  //   —— 程序 scrollTop=scrollHeight 也会触发 scroll 事件;用一个 isProgrammatic 标志"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "430",
+        "excerpt": "  `isProgrammaticRef` 在 `scrollToBottomNow()` 前后置位,或改用比较目标位置的方式。"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "468",
+        "excerpt": "- **需要**。这是用户上滑读历史后回到当前的显式亲和物,也是流式跟随被暂停时的可见反馈。"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "485",
+        "excerpt": "     `stickRef` 高频 / `atBottom`&`following` state;加 `isProgrammaticRef` 防误判;"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "551",
+        "excerpt": "- 滚动:发消息后必跳底看到自己输入;流式时贴底跟随不闪;上滑 > 32px 暂停 + 跳底按钮"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "576",
+        "excerpt": "- **误判用户滚动**:程序贴底触发 scroll 事件被当成用户上滑 → 需 `isProgrammaticRef`"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "628",
+        "excerpt": "`scrollTop=scrollHeight` 触发的 scroll 事件是**异步**的,同步置位/清除 `isProgrammaticRef`"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "630",
+        "excerpt": "若 `Math.abs(scrollTop - lastProgrammaticTop) < 2` 或刚请求过贴底且在阈值内,则忽略该事件。"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "646",
+        "excerpt": "`renderToStaticMarkup` 下 effect/点击/IPC 不跑,问题 B 全靠手动验(尤其 S2 的 async race"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "location": "648",
+        "excerpt": "`nextFollowState(prev, {kind:'scroll'|'send'|'jumpClick'|'sessionSwitch', distance, threshold, lastProgrammaticTop})`,"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "location": "$[\"matches\"][1][\"hits\"][12][\"text\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "location": "$[\"matches\"][34][\"hits\"][12][\"text\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$[\"matches\"][2][\"hits\"][12][\"text\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$[\"matches\"][83][\"hits\"][12][\"text\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-dedup.json",
+        "location": "$[\"matches\"][0][\"hits\"][0][\"text\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-dedup.json",
+        "location": "$[\"matches\"][11][\"hits\"][0][\"text\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+        "location": "$[\"hits\"][48][\"text\"]",
+        "excerpt": "读取期间持有来源 root 与运行目录的句柄，逐次复核 dev/ino 与 realpath；文件通过不跟随链接的有界 inode 读取，读取前后验证 inode、大小与修改时间，最后重读原快照并核对身份和项目绑定。快照限 8 MiB，trace 取最多 8 MiB 的尾窗且丢弃不完整 JSONL 行；解析损坏、缺输入、窗口截断、最多 200 个事件或 50 个内容块的裁切均作为缺失/截断事实保留。每块最多 32 KiB UTF-8，整个 bundle 最多 2 MiB。正在变化的文件要求重新预览，不把读取竞争静默当完整证据。交错的其他提交文本不返回，steerId 本身不证明属于所选回执，无法精确归属的纠正和工具事件省略并注明缺失。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/selected-history.json",
+        "location": "$[1][\"excerpt\"]",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence.\n\n**chat — remaining limits:** SDK/network protocol replacement is only dynamic for Telegram, Slack and DingTalk above. No real Discord/Lark/WeCom/Matrix/Mattermost/LINE/WhatsApp/Teams/iLink account, webhook credentials, QR login, platform retries, service install or Desktop auto-launch occurr"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "$[\"contexts\"][\"worktreeFileOpen\"][26][\"context\"]",
+        "excerpt": "iew 时重点核这条。\n- **误判用户滚动**:程序贴底触发 scroll 事件被当成用户上滑 → 需 `isProgrammaticRef`\n  防护(§6.2),否则出现\"跟随一下就自己停\"。\n- **两处丢 `cwd`** 修复后,`AgentMessageView` 若确实无 workspace 上下文,保持相对图降级\n  为链接的现有语义,别硬塞错误 `cwd`。\n\n**回滚**\n- 阶段 1(滚动)与阶段 2(流式 Markdown)物理解耦,可各自回滚。\n- 流式富渲染带 `streamingRichRender` feature flag(默认 true);出问题**关 flag 即回到\n  今天的纯 `<pre>` 行为**,无需 revert 代码。\n- `StreamingMarkdown` 的 `done`/空态语义与今天逐字等价,阶段 0 重构本身零行为变更,\n  是安全的回滚锚点。\n- git 层面:按记忆 `feedback_git_commit_on_main`,此为功能改动 → 走 wo"
+      },
+      {
+        "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+        "location": "28",
+        "excerpt": "olicy-verified resolved path 传给 handler；handler open/write 前复核父目录 realpath；symlink 写入用 `lstat`/`O_NOFOLLOW`；补 race/symlink 回归。"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+        "location": "213",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+        "location": "213",
+        "excerpt": "econnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+        "location": "135",
+        "excerpt": "| `bench/render-wheel.bench.ts` | Programmatically scroll the 10k transcript via `scrollBy` | frames-per-step ms |"
+      },
+      {
+        "path": "docs/todo/optimization-lab-p1b-evidence-trial-2026-10-09.md",
+        "location": "9",
+        "excerpt": "读取期间持有来源 root 与运行目录的句柄，逐次复核 dev/ino 与 realpath；文件通过不跟随链接的有界 inode 读取，读取前后验证 inode、大小与修改时间，最后重读原快照并核对身份和项目绑定。快照限 8 MiB，trace 取最多 8 MiB 的尾窗且丢弃不完整 JSONL 行；解析损坏、缺输入、窗口截断、最多 200 个事件或 50 个内容块的裁切均作为缺失/截断事实保留。每块最多 32 KiB UTF-8，整个 bundle 最多 2 MiB。正在变化的文件要求重新预览，不把读取竞争静默当完整证据。交错的其他提交文本不返回，steerId 本身不证明属于所选回执，无法精确归属的纠正和工具事件省略并注明缺失。"
+      },
+      {
+        "path": "docs/todo/release-ui-20261015.md",
+        "location": "261",
+        "excerpt": "  headless-Chrome scrolling issue: error list client97/scroll128 can scroll programmatically yet"
+      }
+    ],
+    "known-bucket-cause": [
+      {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "23",
+        "excerpt": "- 忙碌时的「引导」按钮直接 `encodeAttachmentsForWire(draft.trim(), attachments)`，没有 anchor，也没有结构化附件参数，见 `packages/desktop/src/renderer/ChatView.tsx:1366` 到 `packages/desktop/src/renderer/ChatView.tsx:1377`。"
+      },
+      {
+        "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+        "location": "69",
+        "excerpt": "### packages/desktop/src/renderer/App.tsx:2917 - browser popout anchor operations mutate the currently active bucket, not the popout's origin bucket"
+      },
+      {
+        "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+        "location": "71",
+        "excerpt": "nly popout webContents id to parent window id (`index.ts:1347-1371`) and forwards add/remove/update anchor messages without bucket/session metadata (`index.ts:2522-2527`, `index.ts:2552-2568`). The parent renderer handles those messages by mutating `activeAnchorBucketRef.current` (`App.tsx:2917-2935`). Opening the popout also sends only the current URL (`BrowserPanel.tsx:253-256`; `index.ts:2500-2503`)."
+      },
+      {
+        "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+        "location": "71",
+        "excerpt": "ts:2522-2527`, `index.ts:2552-2568`). The parent renderer handles those messages by mutating `activeAnchorBucketRef.current` (`App.tsx:2917-2935`). Opening the popout also sends only the current URL (`BrowserPanel.tsx:253-256`; `index.ts:2500-2503`)."
+      },
+      {
+        "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+        "location": "75",
+        "excerpt": "bucket/partition/session in `browser:popout` and store it in `popoutParents` metadata. Forward that bucket with anchor add/remove/update events and mutate that bucket in `App.tsx` instead of `activeAnchorBucketRef.current`."
+      },
+      {
+        "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+        "location": "75",
+        "excerpt": " `popoutParents` metadata. Forward that bucket with anchor add/remove/update events and mutate that bucket in `App.tsx` instead of `activeAnchorBucketRef.current`."
+      },
+      {
+        "path": "docs/archive/todo/review-master-2026-07-08.md",
+        "location": "67",
+        "excerpt": "| 🟡 | Browser popout anchors mutate active bucket | `packages/desktop/src/renderer/App.tsx:2917` | Popout anchor add/remove/update events carry no origin bucket and use `activeAnchorBucketRef.current`. | Store and forward source bucket/session with popout metadata and mutate that bucket. | `review-desktop-2026-07-08.md` |"
+      },
+      {
+        "path": "docs/archive/todo/review-master-2026-07-08.md",
+        "location": "67",
+        "excerpt": "Browser popout anchors mutate active bucket | `packages/desktop/src/renderer/App.tsx:2917` | Popout anchor add/remove/update events carry no origin bucket and use `activeAnchorBucketRef.current`. | Store and forward source bucket/session with popout metadata and mutate that bucket. | `review-desktop-2026-07-08.md` |"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1390]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"diff_parser\"][41][\"snippet\"]",
+        "excerpt": "定位。\n- [ ] 首切片只读 flag 下没有任何远端写入口。\n\n## P6 — 行内评论与 review 提交\n\n**Files:**\n- Modify: `UnifiedDiffViewer`（draft anchor seam）\n- Create: `pull-request-service.ts`, IPC/preload API\n- Test: locator、确认、幂等、partial failure\n\n- [ ] 在 diff 行上创建/编辑/删除本地 draft。\n- [ ] 提交前重新读取 head SHA、account、permission，并使旧确认失效。\n- [ ] 预览 `COMMENT | APPROVE | REQUEST_CHANGES` 与所有评论正文。\n- [ ] 一"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"steering_queue\"][8][\"context\"]",
+        "excerpt": "pp.tsx:379` 到 `packages/desktop/src/renderer/App.tsx:392`。\n- 忙碌时的「引导」按钮直接 `encodeAttachmentsForWire(draft.trim(), attachments)`，没有 anchor，也没有结构化附件参数，见 `packages/desktop/src/renderer/ChatView.tsx:1366` 到 `packages/desktop/src/renderer/ChatView.tsx:1377`。\n\n### 1.2 已确证：`@` 文件搜索和路径插入\n\n- file-search-service 的职责就是 composer `@` mention 文件搜索，注释说明优先 `git ls-files`，fallback 递归 `fs.readdir`，见 `packages/desktop/src/main/file-search-se"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"steering_queue\"][43][\"context\"]",
+        "excerpt": "pp.tsx:379` 到 `packages/desktop/src/renderer/App.tsx:392`。\n- 忙碌时的「引导」按钮直接 `encodeAttachmentsForWire(draft.trim(), attachments)`，没有 anchor，也没有结构化附件参数，见 `packages/desktop/src/renderer/ChatView.t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][142][\"excerpt\"]",
+        "excerpt": "| panel/quick-chat/anchor/dock | `:3057-3805` | `usePanelBuckets`、`useAnchors`、`useAppShortcuts` | 中；必须保持 hidden-but-mounted webview/PTY 语义 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "$[\"rankedCandidates\"][125][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2546][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2547][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/stop-dedup.json",
+        "location": "$[\"hits\"][\"stop-priority\"][48][\"excerpt\"]",
+        "excerpt": "`queuedInput.ts`、`stopRouting.ts`、`chat/anchorBuckets.ts`、`panels/PanelArea.tsx` 都已有纯逻辑和测试。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$[\"hits\"][\"target_paths\"][1][\"snippet\"]",
+        "excerpt": "pp.tsx:379` 到 `packages/desktop/src/renderer/App.tsx:392`。\n- 忙碌时的「引导」按钮直接 `encodeAttachmentsForWire(draft.trim(), attachments)`，没有 anchor，也没有结构化附件参数，见 `packages/desktop/src/renderer/ChatView.t"
+      },
+      {
+        "path": "docs/nightly-2026-07-10/naming-consolidation-plan.md",
+        "location": "23",
+        "excerpt": "| `bucket` / `repoKey` | renderer transcript、stream routing、override maps、panel state、browser anchors | renderer runtime/persistence 路由 key：`${repoId ?? NO_REPO_KEY}::${sessionId ?? \"_none_\"}`；旧 repoId 是 key segment | 这是持久化/运行态协议，不是用户概念。改名可以改函数名，不能改字节形状 | `bucketKey` 注释要求 byte-identical：`packages/desktop/src/renderer/transcripts.ts:98`; sessionIndex/transcript localStorage key 使用 repoKey：`packages/desktop/src/renderer/transcripts.ts:10`; override maps keyed by bucketKey：`packages/desktop/src/renderer/transcripts.ts:174`; panel state keyed by bucket：`packages/desktop/src/renderer/tra"
+      },
+      {
+        "path": "docs/nightly-2026-07-10/naming-consolidation-plan.md",
+        "location": "23",
+        "excerpt": "de maps keyed by bucketKey：`packages/desktop/src/renderer/transcripts.ts:174`; panel state keyed by bucket：`packages/desktop/src/renderer/transcripts.ts:237`; browser anchors 用同一 bucketKey：`packages/desktop/src/renderer/chat/anchorBuckets.ts:1`; stream routing 使用 bucket：`packages/desktop/src/renderer/streamRouting.ts:5` |"
+      },
+      {
+        "path": "docs/nightly-2026-07-10/naming-consolidation-plan.md",
+        "location": "23",
+        "excerpt": "panel state keyed by bucket：`packages/desktop/src/renderer/transcripts.ts:237`; browser anchors 用同一 bucketKey：`packages/desktop/src/renderer/chat/anchorBuckets.ts:1`; stream routing 使用 bucket：`packages/desktop/src/renderer/streamRouting.ts:5` |"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[63][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[63][\"log\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/063-anchorBuckets.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][63][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][63][\"log\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/063-anchorBuckets.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][63][\"resolvedLog\"]",
+        "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/063-anchorBuckets.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][63][\"archiveMemberBasename\"]",
+        "excerpt": "063-anchorBuckets.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][204][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][204][\"originalLog\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/063-anchorBuckets.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][204][\"tarMember\"]",
+        "excerpt": "desktop-renderer/063-anchorBuckets.test.ts.log"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-09-01-github-pr-workflow.md",
+        "location": "70",
+        "excerpt": "- Modify: `UnifiedDiffViewer`（draft anchor seam）"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-06-12-browser-marker-unified-design.md",
+        "location": "40",
+        "excerpt": "- `anchors: Anchor[]` → `anchorsByBucket: Record<bucketKey, Anchor[]>`(同 `permissionOverrides` 套路)。"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-06-12-browser-marker-unified-design.md",
+        "location": "75",
+        "excerpt": "markerEcho 纯函数单测(URL 过滤/注入脚本/重放时机/回退)· anchors bucket 流转单测 · main hub 协议单测 · 真机双窗口互通走查。"
+      },
+      {
+        "path": "docs/todo/arch-debt-p1p2-plan.md",
+        "location": "204",
+        "excerpt": "| panel/quick-chat/anchor/dock | `:3057-3805` | `usePanelBuckets`、`useAnchors`、`useAppShortcuts` | 中；必须保持 hidden-but-mounted webview/PTY 语义 |"
+      },
+      {
+        "path": "docs/todo/arch-debt-p1p2-plan.md",
+        "location": "209",
+        "excerpt": "`queuedInput.ts`、`stopRouting.ts`、`chat/anchorBuckets.ts`、`panels/PanelArea.tsx` 都已有纯逻辑和测试。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+        "location": "44",
+        "excerpt": "（`packages/desktop/src/renderer/streamRouting.ts:1-49`）、anchor buckets 和 prompt history 使用。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+        "location": "344",
+        "excerpt": "- `packages/desktop/src/renderer/chat/anchorBuckets.ts`"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+        "location": "430",
+        "excerpt": "3. `permissionOverrides`/`promptHistory`/`anchorBuckets`：只改标识符后序列化完全一致。"
+      }
+    ]
+  },
+  "currentDriftFromFirstInventory": [],
+  "method": "same first inventory list; all MD lines and recursive JSON value scalars; no product invoked"
+}

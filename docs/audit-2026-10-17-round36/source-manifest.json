@@ -1,0 +1,562 @@
+{
+  "baseline": "41d7d62bd39f141228146106383648017b5a8fb4",
+  "mainHead": "cecd79dc876da244bf7dd3277774e82d3d3866db",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "bytes": 29720,
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "currentBytes": 29720,
+      "currentSha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "mainBytes": 29720,
+      "mainSha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "currentBytes": 38155,
+      "currentSha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "mainBytes": 38155,
+      "mainSha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+      "bytes": 12291,
+      "sha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+      "currentBytes": 12291,
+      "currentSha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+      "mainBytes": 12291,
+      "mainSha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+      "bytes": 3880,
+      "sha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "currentBytes": 3880,
+      "currentSha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "mainBytes": 3880,
+      "mainSha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+      "bytes": 6585,
+      "sha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "currentBytes": 6585,
+      "currentSha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "mainBytes": 6585,
+      "mainSha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentBytes": 122863,
+      "currentSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "mainBytes": 122863,
+      "mainSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "currentBytes": 106169,
+      "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "mainBytes": 106169,
+      "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "currentBytes": 37921,
+      "currentSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "mainBytes": 37921,
+      "mainSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "currentBytes": 10859,
+      "currentSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "mainBytes": 10859,
+      "mainSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "currentBytes": 40459,
+      "currentSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "mainBytes": 40459,
+      "mainSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts",
+      "bytes": 3028,
+      "sha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+      "currentBytes": 3028,
+      "currentSha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+      "mainBytes": 3028,
+      "mainSha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.ts",
+      "bytes": 2961,
+      "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+      "currentBytes": 2961,
+      "currentSha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+      "mainBytes": 2961,
+      "mainSha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchors.ts",
+      "bytes": 9002,
+      "sha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+      "currentBytes": 9002,
+      "currentSha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+      "mainBytes": 9002,
+      "mainSha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/followState.test.ts",
+      "bytes": 3713,
+      "sha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+      "currentBytes": 3713,
+      "currentSha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+      "mainBytes": 3713,
+      "mainSha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/followState.ts",
+      "bytes": 3454,
+      "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+      "currentBytes": 3454,
+      "currentSha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+      "mainBytes": 3454,
+      "mainSha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/stickToBottom.ts",
+      "bytes": 12523,
+      "sha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+      "currentBytes": 12523,
+      "currentSha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+      "mainBytes": 12523,
+      "mainSha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/main.tsx",
+      "bytes": 3173,
+      "sha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "currentBytes": 3173,
+      "currentSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "mainBytes": 3173,
+      "mainSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolOutputBlock.tsx",
+      "bytes": 3954,
+      "sha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "currentBytes": 3954,
+      "currentSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "mainBytes": 3954,
+      "mainSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "currentBytes": 7842,
+      "currentSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "mainBytes": 7842,
+      "mainSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.interaction.test.tsx",
+      "bytes": 10787,
+      "sha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "currentBytes": 10787,
+      "currentSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "mainBytes": 10787,
+      "mainSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.tsx",
+      "bytes": 8260,
+      "sha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "currentBytes": 8260,
+      "currentSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "mainBytes": 8260,
+      "mainSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "currentBytes": 2385,
+      "currentSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "mainBytes": 2385,
+      "mainSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "bytes": 4827,
+      "sha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "currentBytes": 4827,
+      "currentSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "mainBytes": 4827,
+      "mainSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "bytes": 1816,
+      "sha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "currentBytes": 1816,
+      "currentSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "mainBytes": 1816,
+      "mainSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.test.ts",
+      "bytes": 6103,
+      "sha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "currentBytes": 6103,
+      "currentSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "mainBytes": 6103,
+      "mainSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.ts",
+      "bytes": 3442,
+      "sha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "currentBytes": 3442,
+      "currentSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "mainBytes": 3442,
+      "mainSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.ts",
+      "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts",
+      "sha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/followState.ts",
+      "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/followState.test.ts",
+      "sha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/stickToBottom.ts",
+      "sha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/chat/anchors.ts",
+      "sha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "coverage": "selected-history",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "coverage": "selected-history",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+      "sha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+      "coverage": "selected-history",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/toastState.ts",
+      "sha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/toastState.test.ts",
+      "sha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.tsx",
+      "sha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+      "sha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "sha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "sha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.interaction.test.tsx",
+      "sha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/tool-cards/ToolOutputBlock.tsx",
+      "sha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/main.tsx",
+      "sha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "hashOnlyChecks": [
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction-carry-forward",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "chat-view-frontier/source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction-carry-forward",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "ui-state-frontier/source-manifest.json",
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+      "sha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "navigationChecks": [],
+  "instructionChecks": [],
+  "changedFromFrozenPaths": [],
+  "note": "Original prep parent40d is preserved; formal baseline41d binds same source bytes. Attached navigation snippets are not additional full source coverage. Same-version review does not establish historical novelty or complete packages."
+}

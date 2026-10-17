@@ -1,0 +1,421 @@
+{
+  "capturedUTC": "2026-10-17T12:41:31.326880+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentReportedFrozenRound33": "40d79ff2190a98aa31067eb07006099c2726b21a",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.ts",
+      "bytes": 3442,
+      "lineCount": 100,
+      "sha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          100
+        ]
+      ],
+      "coveredLineCount": 100,
+      "initialSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "finishSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "initialSemanticReadSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "firstPinTiming": "before direct source semantic read",
+      "pinArtifact": "initial-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.test.ts",
+      "bytes": 6103,
+      "lineCount": 162,
+      "sha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          162
+        ]
+      ],
+      "coveredLineCount": 162,
+      "initialSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "finishSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "initialSemanticReadSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "firstPinTiming": "before direct source read; filename inventory only preceded pin",
+      "pinArtifact": "consumer-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.tsx",
+      "bytes": 8260,
+      "lineCount": 249,
+      "sha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          249
+        ]
+      ],
+      "coveredLineCount": 249,
+      "initialSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "finishSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "initialSemanticReadSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "firstPinTiming": "before direct source read; filename inventory only preceded pin",
+      "pinArtifact": "consumer-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+      "bytes": 3880,
+      "lineCount": 17,
+      "sha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "coveredLineCount": 17,
+      "initialSha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "finishSha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "initialSemanticReadSha256": null,
+      "firstPinTiming": "before direct full/selected read; history scanner contexts preceded prior-report pin",
+      "pinArtifact": "consumer-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "bytes": 1816,
+      "lineCount": 48,
+      "sha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          48
+        ]
+      ],
+      "coveredLineCount": 48,
+      "initialSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "finishSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "initialSemanticReadSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "firstPinTiming": "before direct source semantic read; filename-only inventory preceded pin",
+      "pinArtifact": "additional-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "bytes": 4827,
+      "lineCount": 140,
+      "sha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          140
+        ]
+      ],
+      "coveredLineCount": 140,
+      "initialSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "finishSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "initialSemanticReadSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "firstPinTiming": "before direct source semantic read; filename-only inventory preceded pin",
+      "pinArtifact": "additional-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.interaction.test.tsx",
+      "bytes": 10787,
+      "lineCount": 297,
+      "sha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          230,
+          257
+        ],
+        [
+          278,
+          297
+        ]
+      ],
+      "coveredLineCount": 48,
+      "initialSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "finishSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "initialSemanticReadSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "firstPinTiming": "before direct source semantic read; filename-only inventory preceded pin",
+      "pinArtifact": "additional-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "lineCount": 193,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          108
+        ],
+        [
+          150,
+          193
+        ]
+      ],
+      "coveredLineCount": 152,
+      "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+      "pinArtifact": "display-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolOutputBlock.tsx",
+      "bytes": 3954,
+      "lineCount": 102,
+      "sha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          57
+        ]
+      ],
+      "coveredLineCount": 57,
+      "initialSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "finishSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "initialSemanticReadSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+      "pinArtifact": "display-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/main.tsx",
+      "bytes": 3173,
+      "lineCount": 89,
+      "sha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          69,
+          89
+        ]
+      ],
+      "coveredLineCount": 21,
+      "initialSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "finishSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "initialSemanticReadSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "firstPinTiming": "before source content lookup/read; filename-only locator preceded pin",
+      "pinArtifact": "display-pins.json",
+      "runtimeExecuted": false,
+      "gitCompared": false
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "lineCount": 78,
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "initial-pins.json",
+      "reason": "sameSHA Round28 full gate; no new source semantic read"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "initial-pins.json",
+      "reason": "instruction SHA unchanged; earlier conversation reading not recounted"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "initial-pins.json",
+      "reason": "instruction SHA unchanged; earlier conversation reading not recounted"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+      "bytes": 6585,
+      "lineCount": 166,
+      "sha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "consumer-pins.json",
+      "reason": "historical metadata coverage-row inspection only; no new product-source reading"
+    }
+  ],
+  "counts": {
+    "semanticFiles": 10,
+    "productAndTestFiles": 9,
+    "productLines": 627,
+    "testDeclarationLines": 350,
+    "productAndTestLines": 977,
+    "oldReportLines": 17,
+    "totalSemanticLines": 994,
+    "hashOnlyFiles": 4,
+    "pins": 14
+  },
+  "timingLimits": [
+    "Product pins predate direct source content lookups/read; filename-only inventories preceded pins.",
+    "Prior Round28 report had history-scanner excerpts before its dedicated pin; initialSemanticReadSha256 remains null.",
+    "Ranges are direct semantic reading; extra rg locator snippets are navigation, not a full-read claim.",
+    "Selected excerpts were metadata-snapshotted after semantic reading with SHA equality, not counted as a second reading."
+  ],
+  "history": {
+    "artifact": "history.json",
+    "snapshotStartedUTC": "2026-10-17T12:39:03.114366+00:00",
+    "snapshotCompletedUTC": "2026-10-17T12:39:12.248115+00:00",
+    "excluded": [
+      "docs/audit-2026-10-17-round34/",
+      "docs/audit-2026-10-17-round35/",
+      "docs/audit-2026-10-17-round36/"
+    ],
+    "includesFrozen32And33": true,
+    "inventoryCount": 3137,
+    "stats": {
+      "markdownFiles": 1321,
+      "jsonFiles": 1816,
+      "stringLeaves": 718308,
+      "scalarLeaves": 1064468
+    },
+    "archives": {
+      "exactArchiveOrUnderscoreArchiveComponents": 169,
+      "literalArchiveComponent": 162,
+      "substringArchive": 174
+    },
+    "supplement": "history-supplement.json",
+    "finishAllInventoryUnchanged": true,
+    "finishUTC": "2026-10-17T12:41:31.326880+00:00"
+  },
+  "sourcePinsFinish": [
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "initialSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "finishSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.ts",
+      "bytes": 3442,
+      "initialSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "finishSha256": "27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48",
+      "unchanged": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.test.ts",
+      "bytes": 6103,
+      "initialSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "finishSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.tsx",
+      "bytes": 8260,
+      "initialSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "finishSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+      "bytes": 3880,
+      "initialSha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "finishSha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+      "bytes": 6585,
+      "initialSha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "finishSha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "bytes": 1816,
+      "initialSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "finishSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "bytes": 4827,
+      "initialSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "finishSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.interaction.test.tsx",
+      "bytes": 10787,
+      "initialSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "finishSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "initialSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "finishSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolOutputBlock.tsx",
+      "bytes": 3954,
+      "initialSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "finishSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/main.tsx",
+      "bytes": 3173,
+      "initialSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "finishSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "unchanged": true
+    }
+  ],
+  "productsExecuted": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0,
+  "limits": "Finite static scope only. No React/browser/DOM/timer/Promise-language fixture/helper/product execution, storage/clipboard/session navigation invocation, network/native/model/auth/permission/custody/identity experiment. Root handles later Git binding."
+}

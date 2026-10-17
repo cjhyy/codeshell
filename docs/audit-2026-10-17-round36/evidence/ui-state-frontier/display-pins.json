@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T12:39:50.845510+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "lineCount": 193,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "initialSemanticReadSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "timing": "before source content lookup/read; filename-only locator preceded pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolOutputBlock.tsx",
+      "bytes": 3954,
+      "lineCount": 102,
+      "sha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "initialSemanticReadSha256": "33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275",
+      "timing": "before source content lookup/read; filename-only locator preceded pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/main.tsx",
+      "bytes": 3173,
+      "lineCount": 89,
+      "sha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "initialSemanticReadSha256": "1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc",
+      "timing": "before source content lookup/read; filename-only locator preceded pin"
+    }
+  ]
+}

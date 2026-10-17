@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "totalLines": 2622,
+      "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+      "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "totalLines": 2924,
+      "pinTimeUTC": "2026-10-17T12:40:52.180728+00:00",
+      "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked"
+    }
+  ]
+}

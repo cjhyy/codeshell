@@ -1,0 +1,11 @@
+{
+  "baseline": "41d7d62bd39f141228146106383648017b5a8fb4",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static ordinary bucket/follow and toast data state only; no React, installer, browser, CLI, helper/language fixture or test execution."
+}
