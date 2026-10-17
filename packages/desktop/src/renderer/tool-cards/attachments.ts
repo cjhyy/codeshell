@@ -69,12 +69,12 @@ export function detectAttachments(
   const name = toolName.toLowerCase();
   const found: Attachment[] = [];
   const seen = new Set<string>();
-  const push = (p: string, requireDir = false): void => {
-    const value = p.trim();
+  const push = (p: string, requireDir = false, exact = false): void => {
+    const value = exact ? p : p.trim();
     // Strip prose punctuation without retrying a suffix regex at every offset
     // of a long punctuation run that is followed by a non-punctuation byte.
     let end = value.length;
-    while (end > 0 && ".,;:!?".includes(value[end - 1]!)) end--;
+    if (!exact) while (end > 0 && ".,;:!?".includes(value[end - 1]!)) end--;
     const trimmed = value.slice(0, end);
     if (!trimmed || seen.has(trimmed)) return;
     // Prose-scraped paths must carry a directory (absolute `/`, `./`/`../`,
@@ -89,7 +89,9 @@ export function detectAttachments(
     found.push({ path: trimmed, kind });
   };
 
-  // (1) Args-derived: Write / write_file / GenerateImage's output.
+  // (1) A Write result has one target supplied in structured args. Preserve
+  // its literal spelling; scraping the same prose can invent a second suffix
+  // when a directory contains spaces.
   if (args) {
     try {
       const obj = JSON.parse(args) as Record<string, unknown>;
@@ -100,12 +102,32 @@ export function detectAttachments(
         // truthy and doesn't start with "error".
         if (typeof obj.file_path === "string") {
           const lc = (result ?? "").toLowerCase();
-          if (!lc.startsWith("error")) push(obj.file_path);
+          if (!lc.startsWith("error")) {
+            push(obj.file_path, false, true);
+            return found;
+          }
         }
       }
     } catch {
       // ignore — fall through to result scraping
     }
+  }
+
+  // GenerateImage's production formatter ends with its complete absolute
+  // output path. It has no quoting layer, so keep the tail literal rather than
+  // tokenizing whitespace, punctuation or native separators. Multiple field
+  // delimiters are ambiguous (model or cwd may contain one): retain the result
+  // text instead of manufacturing a clickable path from a suffix.
+  const generatedPrefix = "Generated image with ";
+  if (name === "generateimage" && result?.startsWith(generatedPrefix)) {
+    const delimiter = ", saved to ";
+    const at = result.indexOf(delimiter, generatedPrefix.length);
+    if (at <= generatedPrefix.length || result.indexOf(delimiter, at + delimiter.length) !== -1)
+      return found;
+    const path = result.slice(at + delimiter.length);
+    if (path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("\\\\"))
+      push(path, false, true);
+    return found;
   }
 
   // (2) Result-text scraping: pull every path-shaped token. Most

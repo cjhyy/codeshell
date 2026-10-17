@@ -40,6 +40,18 @@ assert.ok(
 if (evidenceArgs.length) await mkdir(evidence, { mode: 0o700 });
 const isolated = await makeIsolatedElectronHome("codeshell-panel-operation-cycles-");
 const projectPath = join(isolated.home, "operation-project");
+const generatedPath = join(
+  projectPath,
+  "generated workspace with spaces",
+  ".code-shell",
+  "generated_images",
+  "1782-owned.png",
+);
+const generatedResult = `Generated image with openai (owned-model), saved to ${generatedPath}`;
+const ownedImage = await readFile(join(appDir, "../../assets/codeshell-dog-icon.png"));
+assert.ok(ownedImage.length <= 1024 * 1024, "Owned PNG fixture must remain bounded");
+assert.equal(ownedImage.subarray(1, 4).toString(), "PNG");
+const imageSize = { width: ownedImage.readUInt32BE(16), height: ownedImage.readUInt32BE(20) };
 const secondaryPath = join(isolated.home, "secondary-folder");
 const sessionId = "panel-operation-session";
 const title = "Panel operation conversation";
@@ -124,6 +136,8 @@ async function navigate(url, expectedTitle) {
 }
 async function seed() {
   await mkdir(join(projectPath, "nested"), { recursive: true });
+  await mkdir(dirname(generatedPath), { recursive: true });
+  await writeFile(generatedPath, ownedImage, { mode: 0o600 });
   await mkdir(secondaryPath, { recursive: true });
   await writeFile(join(secondaryPath, "secondary.txt"), "secondary folder actual content\n");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
@@ -234,6 +248,22 @@ try {
         type: "message",
         data: { role: "user", content: title, clientMessageId: `${sessionId}-input` },
       },
+      {
+        type: "message",
+        data: {
+          role: "assistant",
+          content: [{ type: "tool_use", id: "owned-image", name: "GenerateImage", input: {} }],
+        },
+      },
+      {
+        type: "tool_use",
+        data: { toolName: "GenerateImage", toolCallId: "owned-image", args: {} },
+      },
+      {
+        type: "tool_result",
+        data: { toolName: "GenerateImage", toolCallId: "owned-image", result: generatedResult },
+      },
+      { type: "message", data: { role: "assistant", content: "Owned image fixture completed." } },
     ]
       .map((event, index) =>
         JSON.stringify({
@@ -265,6 +295,66 @@ try {
   await win.getByRole("button", { name: title, exact: true }).click();
   await dismissTrust();
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
+  // Production history replay and real Main image IPC render this owned PNG.
+  // GenerateImage/provider execution and OS-default opening are not invoked.
+  const imageProcess = win.locator(
+    '[data-message-kind="process"][data-tool-names~="GenerateImage"]',
+  );
+  const processHeading = imageProcess.locator(".cs-process-heading");
+  if ((await processHeading.getAttribute("aria-expanded")) === "false")
+    await processHeading.click();
+  const imageCard = imageProcess.locator("[data-tool-card]").filter({
+    has: win.getByText("GenerateImage", { exact: true }),
+  });
+  const imageHeading = imageCard.locator("[data-tool-heading]");
+  if ((await imageHeading.getAttribute("aria-expanded")) === "false") await imageHeading.click();
+  const thumbnail = imageCard.locator("button[title] img");
+  await thumbnail.waitFor({ state: "visible" });
+  await thumbnail.evaluate((node) => node.decode());
+  const imageProof = await thumbnail.evaluate((node) => ({
+    width: node.naturalWidth,
+    height: node.naturalHeight,
+    source: node.currentSrc,
+    path: node.closest("button").title,
+  }));
+  assert.equal(imageProof.path, generatedPath);
+  assert.equal(imageProof.width, imageSize.width);
+  assert.equal(imageProof.height, imageSize.height);
+  assert.ok(imageProof.source.startsWith("data:image/png;base64,"));
+  assert.ok(imageProof.source.length <= 2 * 1024 * 1024);
+  assert.deepEqual(Buffer.from(imageProof.source.split(",")[1], "base64"), ownedImage);
+  assert.equal(
+    await imageCard
+      .locator("button[title]")
+      .filter({ has: win.locator("img") })
+      .count(),
+    1,
+  );
+  report.generatedImage = {
+    path: generatedPath,
+    bytes: ownedImage.length,
+    width: imageProof.width,
+    height: imageProof.height,
+    boundary:
+      "Owned PNG and seeded production-format tool history; real replay/renderer/Main image IPC and decoding, no provider/Engine/OS open",
+  };
+  await win.screenshot({ path: join(evidence, "generated-image-complete-path.png") });
+  report.cases.push(
+    "Generated image history preserves the complete space-containing native path and decodes exact owned PNG bytes",
+  );
+  await imageHeading.click();
+  assert.equal(await imageCard.locator("img").count(), 0);
+  await imageHeading.click();
+  await imageCard.locator("button[title] img").evaluate((node) => node.decode());
+  assert.equal(
+    await imageCard.locator("button[title] img").evaluate((node) => node.closest("button").title),
+    generatedPath,
+  );
+  report.cases.push(
+    "Generated image details collapse and reopen without inventing a residual attachment path",
+  );
+  await imageHeading.click();
+  await processHeading.click();
   const composer = win.locator('textarea[aria-autocomplete="list"]:visible');
   for (const [query, name, path, content] of [
     ["报告", "报告.md", join(projectPath, "报告.md"), "owned Unicode mention content\n"],
