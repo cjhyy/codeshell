@@ -1,0 +1,90 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "hashAlgorithm": "SHA-256 of frozen git show blob bytes; gitBlob included separately",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "gitBlob": "50671f6297598a14ad4710b61ab103747fa7676a",
+      "currentEqualsFrozen": true,
+      "lineCount": 217
+    },
+    {
+      "path": "packages/core/src/sources/documents/parse.ts",
+      "frozenSha256": "2e8e5f386c02dbacc1e1405df44cfd86aa3aa1e760755a220adf6947507239c1",
+      "gitBlob": "0a305e3593ee62481fd2a371e85a049e7902d5d3",
+      "currentEqualsFrozen": true,
+      "lineCount": 406
+    },
+    {
+      "path": "packages/core/src/sources/documents/parser-entry.ts",
+      "frozenSha256": "68a85042dcab6c7827a385134a0d338c48273ff75c1479f3461012ddc32823eb",
+      "gitBlob": "a6741947fe3a5476daf34f8edd268a3e49fab46a",
+      "currentEqualsFrozen": true,
+      "lineCount": 114
+    },
+    {
+      "path": "packages/core/src/sources/documents/types.ts",
+      "frozenSha256": "dee628d9308d5abf5f240a3651cf933d216ca03e94fa3cb8e6367da5b2c73a91",
+      "gitBlob": "1bcc7933402ef58a0be7629194a1d6afd9e973f6",
+      "currentEqualsFrozen": true,
+      "lineCount": 36
+    },
+    {
+      "path": "packages/core/src/sources/documents/parse.test.ts",
+      "frozenSha256": "ccd7490dcced800e72dd8a62495e47ab42a7c877a9d7e7b3aeb9e90c2a39a671",
+      "gitBlob": "15d84c363fff93f9966c55c80e09262ee08cc47e",
+      "currentEqualsFrozen": true,
+      "lineCount": 162
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "frozenSha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "gitBlob": "b4bb39ffc463664ceccbf456b8fd835b164265b8",
+      "currentEqualsFrozen": true,
+      "lineCount": 36
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.test.ts",
+      "frozenSha256": "63f3c12f5e55b09d777ce1319379537289d1a8482f69b63af5ae6d405d64b7cb",
+      "gitBlob": "f5ccfd0d3fc132de6a998da820a1e0c202a09230",
+      "currentEqualsFrozen": true,
+      "lineCount": 136
+    },
+    {
+      "path": "packages/core/src/sources/resolve.ts",
+      "frozenSha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "gitBlob": "09827acd6014d889e3c9a53711dff4196c9802d1",
+      "currentEqualsFrozen": true,
+      "lineCount": 138
+    },
+    {
+      "path": "packages/core/src/sources/truncate-utf8.ts",
+      "frozenSha256": "e629ad3519955acece1b79a1b413c4fd8358676fadf6d3478739b8ae1bcf3e3e",
+      "gitBlob": "ddb5a999da98ca26ea8bd8e5b533baa5dd76cba3",
+      "currentEqualsFrozen": true,
+      "lineCount": 25
+    },
+    {
+      "path": "packages/core/src/sources/documents/index-store.ts",
+      "frozenSha256": "0d1024c87ad28b989afc71f1e529cb7e21e96d53b529a4ff1c2ca7b9545fa111",
+      "gitBlob": "4fc8afb29ef0e172a6bdd868c9310d5aea0dd75e",
+      "currentEqualsFrozen": true,
+      "lineCount": 248
+    },
+    {
+      "path": "tests/fixtures/upload-documents.mjs",
+      "frozenSha256": "9b5fb99b29009bd393d21086943ff8977605fd5e9e9840c5f5f55d74ec84210b",
+      "gitBlob": "83961948dc0ac896ccf7ad527325d1ac9b05348a",
+      "currentEqualsFrozen": true,
+      "lineCount": 77
+    },
+    {
+      "path": "docs/todo/workspace-upload-document-index-delivery.md",
+      "frozenSha256": "dc759b46d580179a282d55b4f523cb15f9463bca095684e6a7c801d1cec6e0c2",
+      "gitBlob": "6cace0328da090ad897ce55ec0f8a421ce864a46",
+      "currentEqualsFrozen": true,
+      "lineCount": 73
+    }
+  ]
+}

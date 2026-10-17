@@ -1,0 +1,13 @@
+{
+  "baseline": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "count": 1,
+  "observations": [
+    {
+      "id": "C-SET-02",
+      "origin": "docs/audit-2026-10-17-round4/settings.md",
+      "status": "old static candidate excluded, not dynamically revalidated",
+      "topic": "generic gap/future version stamp"
+    }
+  ],
+  "note": "Old round4 settings candidate excluded; no dynamic revalidation."
+}

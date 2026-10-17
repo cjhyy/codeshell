@@ -1,0 +1,56 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "candidates": [
+    {
+      "id": "MIG-R15-C1",
+      "title": "Source .git normalization edge observations",
+      "severity": null,
+      "status": "observed-pure-candidate-contract-incomplete",
+      "sources": [
+        {
+          "path": "packages/core/src/plugins/installer/parseSource.ts",
+          "lines": [
+            123,
+            124,
+            125,
+            182,
+            187
+          ]
+        },
+        {
+          "path": "packages/core/src/plugins/gitOps.ts",
+          "lines": [
+            206,
+            207
+          ]
+        }
+      ],
+      "observations": [
+        "HTTPS .git/ source preserves inferredName notes.git; no trailing slash control gives notes",
+        "github:owned/notes.git appends .git again; suffix-free shorthand control gives one .git"
+      ],
+      "actualFunction": "parseSource",
+      "fixture": "evidence/migration-source-pure.test.ts",
+      "rawLog": "evidence/migration-source-pure.first.log",
+      "exit": "evidence/migration-source-pure.first.exit.json",
+      "producerStaticOnly": "CLI plugin install forwards user source and consumes inferredName when --name absent",
+      "missingEvidence": "Current supported-input contract/normal application producer for these two boundary forms; no remote or clone validation",
+      "limits": [
+        "No Git command",
+        "No clone",
+        "No install",
+        "No CLI execution",
+        "No remote existence claim",
+        "No security or credential experiment"
+      ]
+    }
+  ],
+  "related": [
+    {
+      "id": "C-SET-02",
+      "origin": "docs/audit-2026-10-17-round4/settings.md",
+      "status": "old static candidate excluded, not dynamically revalidated",
+      "topic": "generic gap/future version stamp"
+    }
+  ]
+}

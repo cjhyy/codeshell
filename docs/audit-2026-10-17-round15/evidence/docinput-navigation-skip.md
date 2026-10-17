@@ -1,0 +1,5 @@
+# First navigation observation (metadata only)
+
+The first inventory command included `docs/bugs` alongside `packages/core/src/sources` and `docs`. Its first tool output reported `rg: docs/bugs: No such file or directory (os error 2)`; the shell pipeline returned 0 because its final Python consumer succeeded. This does not prove the absent directory was read and is not a product/test failure. The guessed `docs/bugs` path is skipped. A separate repository-wide `rg --files -g '*.md' -g '*.json'` inventory identifies real `docs/` and `bugs/` history for deduplication. No runtime test was run or repaired.
+
+A later optional lookup guessed `docs/audit-2026-10-17-round14/evidence/web-receipt.json`; its first tool response reported `sed: docs/audit-2026-10-17-round14/evidence/web-receipt.json: No such file or directory`, while the following valid web.md read made the combined shell exit 0. The guessed receipt lookup was skipped. A later path inventory was metadata only and was not followed by a replacement receipt read. Neither observation is a Bun or product failure.

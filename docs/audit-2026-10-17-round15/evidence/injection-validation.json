@@ -1,0 +1,73 @@
+{
+  "frozenBase": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "formalCount": 0,
+  "candidateCount": 2,
+  "relatedCount": 0,
+  "runs": [
+    {
+      "name": "injection-cache-queue",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/engine/injected-context-cache.test.ts",
+        "packages/core/src/engine/steer-queue.test.ts",
+        "docs/audit-2026-10-17-round15/evidence/injection-cache-queue.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round15/evidence/injection-cache-queue.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round15/evidence/injection-cache-queue.first.exit.json",
+      "exitCode": 0,
+      "firstOnly": true,
+      "attempts": 1,
+      "reruns": 0,
+      "passCount": 15,
+      "failCount": 0,
+      "expectCount": 39,
+      "skipped": 0,
+      "completed": true,
+      "status": "clean-first-run"
+    },
+    {
+      "name": "injection-image-grammar",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "tests/parse-task.test.ts",
+        "docs/audit-2026-10-17-round15/evidence/injection-image-grammar.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round15/evidence/injection-image-grammar.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round15/evidence/injection-image-grammar.first.exit.json",
+      "exitCode": 0,
+      "firstOnly": true,
+      "attempts": 1,
+      "reruns": 0,
+      "passCount": 20,
+      "failCount": 0,
+      "expectCount": 58,
+      "skipped": 0,
+      "completed": true,
+      "status": "clean-first-run"
+    }
+  ],
+  "cleanTotals": {
+    "groups": 2,
+    "passCount": 35,
+    "expectCount": 97,
+    "failCount": 0,
+    "skipped": 0,
+    "existingTests": 24,
+    "focusedTests": 11
+  },
+  "failedFirstTotals": {
+    "groups": 0
+  },
+  "limits": [
+    "Actual pure helper/parser calls only; no Engine, TurnLoop, protocol dispatch, filesystem image reads, compression or provider requests.",
+    "Default id generation expression is mirrored in owned fixture after static source inspection; actual Engine branch is not executed.",
+    "Invalid-order XML is a hand-built grammar case, not proven output of a normal encoder.",
+    "No product fixes, build, full suite, typecheck, lint, UI, native app, network, paid models or user data."
+  ]
+}

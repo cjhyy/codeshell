@@ -1,0 +1,32 @@
+bun test v1.3.11 (af24e281)
+
+tests/parse-task.test.ts:
+(pass) parseTaskWithImages > empty string → no images, empty text
+(pass) parseTaskWithImages > plain text → passes through untouched [0.37ms]
+(pass) parseTaskWithImages > text with the literal substring `<codeshell-image>` but no full block throws [2.23ms]
+(pass) parseTaskWithImages > one image, no surrounding text [1.48ms]
+(pass) parseTaskWithImages > text + one trailing image (the canonical desktop encoder shape) [0.04ms]
+(pass) parseTaskWithImages > two images, mixed with text, preserve order [0.03ms]
+(pass) parseTaskWithImages > HTML-escaped attribute round-trips back to the original name [0.06ms]
+(pass) parseTaskWithImages > parses staged attachment metadata attrs [0.19ms]
+(pass) parseTaskWithImages > legacy image block without metadata attrs is unchanged [0.44ms]
+(pass) parseTaskWithImages > malformed: opening tag with no closing tag throws [0.02ms]
+(pass) parseTaskWithImages > malformed: body is not a data URL throws [0.15ms]
+(pass) parseTaskWithImages > malformed: empty base64 payload throws [0.02ms]
+(pass) parseTaskWithImages > base64 with embedded whitespace is normalized to a single contiguous string [0.02ms]
+(pass) parseTaskWithImages > mismatched opening-tag mime vs data-url mime → opening-tag wins [0.04ms]
+
+docs/audit-2026-10-17-round15/evidence/injection-image-grammar.test.ts:
+(pass) round15 inline-image grammar characterization > plain text without reserved image marker remains byte-for-byte unchanged
+(pass) round15 inline-image grammar characterization > valid source-order images and escaped metadata round-trip in the actual parser [0.23ms]
+(pass) round15 inline-image grammar characterization > controls: true unbalanced tags and an invalid body are rejected [0.03ms]
+IMAGE-R15-C1 {"input":"</codeshell-image><codeshell-image mime=\"image/png\">data:image/png;base64,YQ==","output":{"text":"</codeshell-image><codeshell-image mime=\"image/png\">data:image/png;base64,YQ==","images":[],"hasImages":false},"normalEncoderProducerEstablished":false}
+(pass) round15 inline-image grammar characterization > candidate: reversed but equally numerous tags silently return no images [0.12ms]
+(pass) round15 inline-image grammar characterization > same candidate: a valid block plus reversed pair leaves unparsed image marker text
+(pass) round15 inline-image grammar characterization > ordinary literal opener is explicitly rejected by the existing reserved-marker policy [0.02ms]
+
+ 20 pass
+ 0 fail
+ 58 expect() calls
+Ran 20 tests across 2 files. [68.00ms]
+Completed Bun shard: 20 tests, 0 skipped; 0 failures.
