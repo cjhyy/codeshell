@@ -21,9 +21,11 @@ const { build } = require("esbuild");
 const { chromium } = require("playwright");
 const { WebSocketServer, WebSocket } = require("ws");
 const args = process.argv.slice(2);
+const headed = args.at(-1) === "--headed";
+if (headed) args.pop();
 assert.ok(
   args.length === 0 || (args.length === 2 && args[0] === "--evidence-dir" && args[1]),
-  "Expected no arguments or --evidence-dir <fresh-directory-outside-checkout>",
+  "Expected [--evidence-dir <fresh-directory-outside-checkout>] [--headed]",
 );
 let output;
 if (args.length) {
@@ -399,7 +401,7 @@ try {
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({
-    headless: true,
+    headless: !headed,
     executablePath:
       process.env.CODESHELL_TEST_CHROMIUM ||
       (process.platform === "darwin"
