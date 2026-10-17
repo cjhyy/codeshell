@@ -23,6 +23,48 @@ describe("StreamingMarkdown — empty / done", () => {
 });
 
 describe("StreamingMarkdown — streaming rich render (stage 2)", () => {
+  test("a completed code fence keeps its internal blank line while the tail streams", () => {
+    const html = renderToStaticMarkup(
+      <StreamingMarkdown
+        text={"```js\nconst a = 1;\n\nconst b = 2;\n```\n\nstill typing"}
+        done={false}
+      />,
+    );
+    expect(html).toContain('<code class="language-js">const a = 1;\n\nconst b = 2;\n</code>');
+    expect(html.match(/<code[ >]/g)).toHaveLength(1);
+    expect(html).toContain("still typing");
+    expect(html).not.toContain("```");
+  });
+
+  test("tilde fences preserve Unicode, empty lines and escaped HTML in one streaming code block", () => {
+    const html = renderToStaticMarkup(
+      <StreamingMarkdown
+        text={"~~~text\n第一行😀\n\n<script>owned</script>\n~~~\n\n尾部仍在输入"}
+        done={false}
+      />,
+    );
+    expect(html).toContain(
+      '<code class="language-text">第一行😀\n\n&lt;script&gt;owned&lt;/script&gt;\n</code>',
+    );
+    expect(html.match(/<code[ >]/g)).toHaveLength(1);
+    expect(html).toContain("尾部仍在输入");
+    expect(html).not.toContain("<script>");
+  });
+
+  test("CRLF code fences stay intact when closed and remain plain source while open", () => {
+    const code = "```js\r\nfirst\r\n\r\nsecond\r\n```";
+    const closed = renderToStaticMarkup(
+      <StreamingMarkdown text={`${code}\r\n\r\ntail`} done={false} />,
+    );
+    expect(closed).toContain('<code class="language-js">first\r\n\r\nsecond\n</code>');
+    expect(closed.match(/<code[ >]/g)).toHaveLength(1);
+    const open = renderToStaticMarkup(
+      <StreamingMarkdown text={"Intro\r\n\r\n```js\r\nfirst\r\n\r\nsecond"} done={false} />,
+    );
+    expect(open).not.toContain("<code");
+    expect(open).toContain("```js\r\nfirst\r\n\r\nsecond");
+  });
+
   test("stable prefix (blank-line-closed) renders as markdown structure", () => {
     const html = renderToStaticMarkup(
       <StreamingMarkdown text={"# Title\n\nstill typing the tail"} done={false} />,
@@ -61,9 +103,7 @@ describe("StreamingMarkdown — streaming rich render (stage 2)", () => {
   });
 
   test("single unfinished paragraph → all source (no premature commit)", () => {
-    const html = renderToStaticMarkup(
-      <StreamingMarkdown text={"a heading maybe"} done={false} />,
-    );
+    const html = renderToStaticMarkup(<StreamingMarkdown text={"a heading maybe"} done={false} />);
     // No blank line yet → nothing stable → shown as source.
     expect(html).toContain("<pre");
     expect(html).toContain("a heading maybe");
