@@ -358,6 +358,7 @@ export interface MessagesReducerState {
   singleTurnCacheReadTokens: number;
   singleTurnCacheCreationTokens: number;
   /** Whole-session monotonic prompt-cache totals. */
+  cacheUsageVersion?: 1;
   cumulativePromptTokens: number;
   cumulativeCacheReadTokens: number;
   cumulativeCacheCreationTokens: number;
@@ -431,6 +432,30 @@ export const INITIAL_STATE: MessagesReducerState = {
   turnEpoch: 0,
   activeGoal: null,
 };
+
+/** Old snapshots include auxiliary usage; never merge those totals into main-call counts. */
+export function mergeCumulativeCacheUsage(left: MessagesReducerState, right: MessagesReducerState) {
+  const sameScope = left.cacheUsageVersion === right.cacheUsageVersion;
+  const primary = left.cacheUsageVersion === 1 ? left : right;
+  const prompt = sameScope
+    ? Math.max(left.cumulativePromptTokens, right.cumulativePromptTokens)
+    : primary.cumulativePromptTokens;
+  const read = sameScope
+    ? Math.max(left.cumulativeCacheReadTokens, right.cumulativeCacheReadTokens)
+    : primary.cumulativeCacheReadTokens;
+  const creation = sameScope
+    ? Math.max(left.cumulativeCacheCreationTokens, right.cumulativeCacheCreationTokens)
+    : primary.cumulativeCacheCreationTokens;
+  return {
+    cacheUsageVersion: primary.cacheUsageVersion,
+    cumulativePromptTokens: prompt,
+    cumulativeCacheReadTokens: read,
+    cumulativeCacheCreationTokens: creation,
+    sessionPromptTokens: prompt,
+    sessionCacheReadTokens: read,
+    sessionCacheCreationTokens: creation,
+  };
+}
 
 let _counter = 0;
 function freshId(prefix: string): string {
@@ -940,21 +965,7 @@ export function applyStreamEvent(
     agentMessageIndex: Object.fromEntries(
       messages.flatMap((message, index) => (message.kind === "agent" ? [[message.id, index]] : [])),
     ),
-    cumulativePromptTokens: Math.max(state.cumulativePromptTokens, next.cumulativePromptTokens),
-    cumulativeCacheReadTokens: Math.max(
-      state.cumulativeCacheReadTokens,
-      next.cumulativeCacheReadTokens,
-    ),
-    cumulativeCacheCreationTokens: Math.max(
-      state.cumulativeCacheCreationTokens,
-      next.cumulativeCacheCreationTokens,
-    ),
-    sessionPromptTokens: Math.max(state.sessionPromptTokens, next.sessionPromptTokens),
-    sessionCacheReadTokens: Math.max(state.sessionCacheReadTokens, next.sessionCacheReadTokens),
-    sessionCacheCreationTokens: Math.max(
-      state.sessionCacheCreationTokens,
-      next.sessionCacheCreationTokens,
-    ),
+    ...mergeCumulativeCacheUsage(state, next),
   };
 }
 
@@ -1680,6 +1691,7 @@ function applyStreamEventToTurn(
     }
 
     case "usage_update": {
+      const acceptsCacheUsage = state.cacheUsageVersion !== 1 || event.cacheUsageVersion === 1;
       // Fields update independently and additively — a single event can carry
       // any combination of them. The turn-loop's per-response emit carries the
       // context reading + single-turn cache + cumulative cache all at once, so
@@ -1699,10 +1711,24 @@ function applyStreamEventToTurn(
       const hasLivePromptReading = Number.isFinite(event.promptTokens) && event.promptTokens > 0;
       return {
         ...state,
+        ...(event.cacheUsageVersion === 1 && state.cacheUsageVersion !== 1
+          ? {
+              singleTurnPromptTokens: 0,
+              singleTurnCacheReadTokens: 0,
+              singleTurnCacheCreationTokens: 0,
+              cumulativePromptTokens: 0,
+              cumulativeCacheReadTokens: 0,
+              cumulativeCacheCreationTokens: 0,
+              sessionPromptTokens: 0,
+              sessionCacheReadTokens: 0,
+              sessionCacheCreationTokens: 0,
+            }
+          : {}),
         ...(isCumulativeHeartbeat || !hasLivePromptReading
           ? {}
           : { promptTokens: event.promptTokens }),
-        ...(hasSingleTurn
+        ...(acceptsCacheUsage && event.cacheUsageVersion === 1 ? { cacheUsageVersion: 1 } : {}),
+        ...(hasSingleTurn && acceptsCacheUsage
           ? {
               singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,
               singleTurnCacheReadTokens:
@@ -1711,7 +1737,7 @@ function applyStreamEventToTurn(
                 event.singleTurnCacheCreationTokens ?? event.cacheCreationTokens ?? 0,
             }
           : {}),
-        ...(hasCumulative
+        ...(hasCumulative && acceptsCacheUsage
           ? (() => {
               const cumulativePromptTokens =
                 event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;

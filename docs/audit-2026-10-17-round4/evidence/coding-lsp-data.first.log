@@ -1,0 +1,17 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round4/evidence/coding-lsp-data.test.ts:
+(pass) coding round4 ordinary LSP data > root URI conversion already round-trips encoded filesystem names [1.92ms]
+(pass) coding round4 ordinary LSP data > ordinary ASCII definition output and relative request paths are correct [1.67ms]
+(pass) coding round4 ordinary LSP data > definition output leaves the returned file URI percent encoded [1.78ms]
+(pass) coding round4 ordinary LSP data > reference output has the same encoding defect while ASCII references work [1.19ms]
+(pass) coding round4 ordinary LSP data > flat SymbolInformation and empty symbol responses are handled [1.34ms]
+(pass) coding round4 ordinary LSP data > diagnostics preserve severity, 1-based position, source and clean response [2.94ms]
+(pass) coding round4 ordinary LSP data > diagnostic display cap reports omitted records without losing total [1.95ms]
+(pass) coding round4 ordinary LSP data > second diagnostic read reopens version 1 instead of updating an open document [3.14ms]
+
+ 8 pass
+ 0 fail
+ 32 expect() calls
+Ran 8 tests across 1 file. [110.00ms]
+Completed Bun shard: 8 tests, 0 skipped; 0 failures.

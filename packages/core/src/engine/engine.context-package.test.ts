@@ -296,7 +296,7 @@ describe("Engine.summarizeContextPackage", () => {
       readFileSync(join(dir, "sessions", "usage-source", "state.json"), "utf-8"),
     );
     expect(state.status).toBe("completed");
-    expect(state.cumulativePromptTokens).toBe(20);
+    expect(state.cumulativePromptTokens).toBe(0);
     expect(state.tokenUsage).toEqual({
       promptTokens: 20,
       completionTokens: 1500,
@@ -328,6 +328,6 @@ describe("Engine.summarizeContextPackage", () => {
       readFileSync(join(dir, "sessions", "empty-usage-source", "state.json"), "utf-8"),
     );
     expect(state.tokenUsage.totalTokens).toBe(1520);
-    expect(state.cumulativePromptTokens).toBe(20);
+    expect(state.cumulativePromptTokens).toBe(0);
   });
 });

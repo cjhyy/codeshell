@@ -45,6 +45,34 @@ function usageBetweenUsers(state: MessagesReducerState, name: string) {
 }
 
 describe("stream run ownership", () => {
+  test("late legacy usage cannot restore mixed auxiliary cache totals", () => {
+    let state = start(user(INITIAL_STATE, "a"), "a");
+    state = event(state, "a", {
+      type: "usage_update",
+      cacheUsageVersion: 1,
+      promptTokens: 1000,
+      singleTurnPromptTokens: 1000,
+      singleTurnCacheReadTokens: 800,
+      cumulativePromptTokens: 1000,
+      cumulativeCacheReadTokens: 800,
+    });
+    state = event(state, "a", {
+      type: "usage_update",
+      promptTokens: 0,
+      singleTurnPromptTokens: 1500,
+      singleTurnCacheReadTokens: 900,
+      cumulativePromptTokens: 1500,
+      cumulativeCacheReadTokens: 900,
+    });
+    expect(state).toMatchObject({
+      cacheUsageVersion: 1,
+      singleTurnPromptTokens: 1000,
+      singleTurnCacheReadTokens: 800,
+      cumulativePromptTokens: 1000,
+      cumulativeCacheReadTokens: 800,
+    });
+  });
+
   test("the footer uses whole-run snapshots across model steps without adding them twice", () => {
     let state = start(user(INITIAL_STATE, "a"), "a");
     state = usage(state, "a", 1000, 800);

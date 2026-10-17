@@ -55,6 +55,50 @@ describe("Preset task schema routing", () => {
     expect(route("请先整理资料再回答").matchedRuleIds).toEqual(["chinese"]);
   });
 
+  test("ignores markup tag names and attributes without dropping body text", () => {
+    for (const text of [
+      "<alpha>unmatched</alpha>",
+      '<message intent="alpha" beta=second first>unmatched</message>',
+      '<message intent="alpha > beta">unmatched</message>',
+      "<message intent='alpha > beta' /> unmatched",
+      "<ＡＬＰＨＡ data-intent=ＢＥＴＡ>unmatched</ＡＬＰＨＡ>",
+    ]) {
+      expect(route(text).reason).toBe("no_match");
+    }
+    expect(route("<message>alpha <b>beta</b> second</message>").matchedRuleIds).toEqual([
+      "beta",
+      "alpha",
+    ]);
+    expect(route("<message>请先整理资料再回答</message>").matchedRuleIds).toEqual(["chinese"]);
+    expect(route("before <b /> alpha after").matchedRuleIds).toEqual(["alpha"]);
+    expect(route("al<b />pha").reason).toBe("no_match");
+  });
+
+  test("retains intent in ordinary comparison text", () => {
+    for (const text of ["value < alpha > threshold", "alpha < 3", "2 < alpha", "< alpha >"]) {
+      expect(route(text).matchedRuleIds).toEqual(["alpha"]);
+    }
+  });
+
+  test("background reminder wrappers do not imply an automation task", () => {
+    const automationPolicy = policy({
+      rules: [{ id: "automation", terms: ["reminder", "定时"], toolNames: ["Tool14"] }],
+    });
+    const taskText = "<system-reminder>Background task completed successfully.</system-reminder>";
+    expect(route(taskText, { policy: automationPolicy }).reason).toBe("no_match");
+    expect(
+      route('<message kind="reminder">Background task completed.</message>', {
+        policy: automationPolicy,
+      }).reason,
+    ).toBe("no_match");
+    for (const body of ["Create a reminder tomorrow", "请定时提醒我"]) {
+      expect(
+        route(`<system-reminder>${body}</system-reminder>`, { policy: automationPolicy })
+          .matchedRuleIds,
+      ).toEqual(["automation"]);
+    }
+  });
+
   test("repeated occurrences and normalized duplicate terms do not inflate score", () => {
     const result = route("alpha alpha alpha beta second", {
       policy: policy({

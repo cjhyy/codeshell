@@ -8,6 +8,7 @@
  * group. disk empty (brand-new front-end session not yet on disk) → use local.
  */
 import type { AskUserMessage, MessagesReducerState } from "../types";
+import { mergeCumulativeCacheUsage } from "../types";
 import { mergeTranscripts, mergeTranscriptCursor } from "./mergeTranscripts";
 
 export function chooseHydrateBase(
@@ -144,21 +145,14 @@ export function mergeHistoryIntoLive(
     streamRuns,
     sessionId: live.sessionId ?? history.sessionId,
     promptTokens: live.promptTokens || history.promptTokens,
-    cumulativePromptTokens: Math.max(history.cumulativePromptTokens, live.cumulativePromptTokens),
-    cumulativeCacheReadTokens: Math.max(
-      history.cumulativeCacheReadTokens,
-      live.cumulativeCacheReadTokens,
-    ),
-    cumulativeCacheCreationTokens: Math.max(
-      history.cumulativeCacheCreationTokens,
-      live.cumulativeCacheCreationTokens,
-    ),
-    sessionPromptTokens: Math.max(history.sessionPromptTokens, live.sessionPromptTokens),
-    sessionCacheReadTokens: Math.max(history.sessionCacheReadTokens, live.sessionCacheReadTokens),
-    sessionCacheCreationTokens: Math.max(
-      history.sessionCacheCreationTokens,
-      live.sessionCacheCreationTokens,
-    ),
+    ...mergeCumulativeCacheUsage(history, live),
+    ...(history.cacheUsageVersion === 1 && live.cacheUsageVersion !== 1
+      ? {
+          singleTurnPromptTokens: history.singleTurnPromptTokens,
+          singleTurnCacheReadTokens: history.singleTurnCacheReadTokens,
+          singleTurnCacheCreationTokens: history.singleTurnCacheCreationTokens,
+        }
+      : {}),
     turnEpoch: Math.max(history.turnEpoch, live.turnEpoch),
     ...mergeTranscriptCursor(history, live),
   };

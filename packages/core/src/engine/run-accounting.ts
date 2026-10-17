@@ -22,6 +22,8 @@ export interface RunUsageAccounting {
   recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
   recordExternalBilledUsage: (usage: TokenUsage) => CumulativeUsageCounters;
   getExternalRunUsage: () => TokenUsage;
+  /** Foreground responses only, independent of billed auxiliary/model usage. */
+  getRunCacheUsage: () => TokenUsage;
   /** goal 预算耗尽后主模型调用需要短路(见 wireRunModelFacade)。 */
   hasGoalBudgetTermination: () => boolean;
   markRunAccountingFinalized: () => void;
@@ -44,19 +46,21 @@ export function createRunUsageAccounting(args: {
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
   };
+  let runCacheUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
   let runAccountingFinalized = false;
   Object.assign(
     session.state,
     normalizeCumulativeUsageCounters(session.state, session.state.tokenUsage),
   );
   const recordCumulativeUsage = (usage: TokenUsage): CumulativeUsageCounters => {
+    runCacheUsage = addTokenUsage(runCacheUsage, usage);
     const next = addCumulativeUsage(session.state, usage);
     Object.assign(session.state, next);
     return next;
   };
   const recordExternalBilledUsage = (usage: TokenUsage): CumulativeUsageCounters => {
     externalRunUsage = addTokenUsage(externalRunUsage, usage);
-    const cumulative = recordCumulativeUsage(usage);
+    const cumulative = normalizeCumulativeUsageCounters(session.state);
     autoCompactionGoalTermination = recordGoalJudgeUsage(usage);
     if (runAccountingFinalized) {
       try {
@@ -75,6 +79,7 @@ export function createRunUsageAccounting(args: {
     recordCumulativeUsage,
     recordExternalBilledUsage,
     getExternalRunUsage: () => externalRunUsage,
+    getRunCacheUsage: () => ({ ...runCacheUsage }),
     hasGoalBudgetTermination: () => Boolean(autoCompactionGoalTermination),
     markRunAccountingFinalized: () => {
       runAccountingFinalized = true;

@@ -6,7 +6,13 @@
  * `new Engine(` allowlist and RunEnvironmentResolver own them).
  */
 import { recordModelTraceEvent } from "../model-traces/context.js";
-import type { MCPServerConfig, PermissionMode, TaskInfo, ToolDefinition } from "../types.js";
+import type {
+  MCPServerConfig,
+  PermissionMode,
+  SessionToolSelection,
+  TaskInfo,
+  ToolDefinition,
+} from "../types.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { BuiltinToolExposure, BuiltinToolGuard } from "../tool-system/builtin/index.js";
@@ -27,7 +33,7 @@ import type { CapabilityOverride } from "../settings/schema.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import type { PermissionController } from "./permission-controller.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
-import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { normalizeSessionToolSelection, RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
 
@@ -51,15 +57,29 @@ export function initializeRunToolSurface(
   toolCtx: ToolContext,
   initialToolNames: readonly string[] | undefined,
   assembleCatalog: () => ToolDefinition[],
-  routing?: { taskText: string; policy?: TaskToolRoutingPolicy },
+  routing?: {
+    taskText: string;
+    policy?: TaskToolRoutingPolicy;
+    injected?: boolean;
+    selection?: unknown;
+    onSelectionChanged?: (selection: SessionToolSelection) => void;
+  },
 ): ToolDefinition[] {
   const catalog = assembleCatalog();
-  const routed = routeInitialTools({
-    initialToolNames,
-    eligibleToolNames: catalog.map((tool) => tool.name),
-    taskText: routing?.taskText ?? "",
-    policy: routing?.policy,
-  });
+  const selection = normalizeSessionToolSelection(routing?.selection);
+  const routed = routing?.injected
+    ? {
+        // A host continuation carries results, not a new tool-routing intent.
+        initialToolNames: selection && initialToolNames !== undefined ? [] : initialToolNames,
+        reason: "no_match" as const,
+        matchedRuleIds: [],
+      }
+    : routeInitialTools({
+        initialToolNames,
+        eligibleToolNames: catalog.map((tool) => tool.name),
+        taskText: routing?.taskText ?? "",
+        policy: routing?.policy,
+      });
   if (routed.reason === "matched") {
     logger.info("tool.surface.routed", {
       cat: "tool",
@@ -72,14 +92,18 @@ export function initializeRunToolSurface(
   }
   const surface = new RunToolSurface(
     catalog.some((tool) => tool.name === "ToolSearch") ? routed.initialToolNames : undefined,
+    { selection, onSelectionChanged: routing?.onSelectionChanged },
   );
   toolCtx.runToolSurface = surface;
   surface.updateCatalog(catalog);
+  routing?.onSelectionChanged?.(surface.getSelection());
   toolCtx.refreshRunToolEligibility = () => surface.updateCatalog(assembleCatalog());
   let previousNames: string[] | undefined;
   toolCtx.refreshRunTools = () => {
     toolCtx.refreshRunToolEligibility!();
     const snapshot = surface.snapshot();
+    // Goal/domain state rebases may replace the live Session since selection changed.
+    routing?.onSelectionChanged?.(surface.getSelection());
     const names = snapshot.map((tool) => tool.name);
     toolCtx.modelToolNames = new Set(names);
     if (JSON.stringify(names) !== JSON.stringify(previousNames)) {

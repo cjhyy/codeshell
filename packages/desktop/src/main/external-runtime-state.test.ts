@@ -334,11 +334,16 @@ describe("external runtime durable state", () => {
       "codex",
     );
     second.beginTurn({ text: "second" });
-    second.onEvent({
+    const published = second.onEvent({
       type: "usage_update",
       promptTokens: 5,
       cumulativePromptTokens: 5,
       promptTokensSource: "provider_usage",
+    });
+    expect(published).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 105,
+      singleTurnPromptTokens: 5,
     });
     second.onEvent({ type: "turn_complete", reason: "completed" });
 
@@ -553,7 +558,7 @@ test("provider usage merges with latest auxiliary accounting and preserves domai
     summary: "latest summary",
     costState: { marker: "latest" },
     tokenUsage: { promptTokens: 40, completionTokens: 6, totalTokens: 46 },
-    cumulativePromptTokens: 40,
+    cumulativePromptTokens: 10,
   });
 });
 
@@ -573,7 +578,10 @@ test("owned run CAS recomputes its delta after an actual competing durable updat
     return { cumulativePromptTokens: (state.cumulativePromptTokens ?? 0) + 10 };
   });
   expect(reads).toBe(2);
-  expect(manager.readSessionState("run-cas")?.cumulativePromptTokens).toBe(40);
+  expect(manager.readSessionState("run-cas")).toMatchObject({
+    cumulativePromptTokens: 10,
+    tokenUsage: { promptTokens: 30, totalTokens: 32 },
+  });
   expect(() =>
     manager.updateSessionRunState("run-cas", "old-run", () => ({ title: "stale" })),
   ).toThrow(/identity conflict/);
@@ -679,7 +687,8 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
   resumed.onEvent({ type: "turn_complete", reason: "completed" });
   expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
     tokenUsage: { promptTokens: 150, completionTokens: 15, totalTokens: 165 },
-    cumulativePromptTokens: 150,
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 120,
   });
   resumed.beginTurn({ text: "live next" });
   resumed.onEvent({
@@ -692,7 +701,8 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
   resumed.onEvent({ type: "turn_complete", reason: "completed" });
   expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
     tokenUsage: { promptTokens: 155, completionTokens: 16, totalTokens: 171 },
-    cumulativePromptTokens: 155,
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 125,
   });
 });
 

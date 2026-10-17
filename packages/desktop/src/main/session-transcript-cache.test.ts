@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionTranscriptCache } from "./session-transcript-cache";
+import { SessionManager } from "@cjhyy/code-shell-core";
 
 const fixtures: string[] = [];
 const key = { projectKey: "investment.project", sessionId: "codex.session.1" };
@@ -14,7 +15,12 @@ function fixture() {
   return {
     directory,
     legacyDirectory,
-    cache: new SessionTranscriptCache({ directory, legacyDirectory }),
+    sessionsDirectory: join(root, "sessions"),
+    cache: new SessionTranscriptCache({
+      directory,
+      legacyDirectory,
+      sessionsDirectory: join(root, "sessions"),
+    }),
   };
 }
 function message(id: string, kind = "assistant", text = id) {
@@ -31,6 +37,84 @@ afterEach(() => {
 });
 
 describe("SessionTranscriptCache", () => {
+  test("projects main-call history from the exact session without rewriting its output", async () => {
+    const { cache, sessionsDirectory } = fixture();
+    const manager = new SessionManager(sessionsDirectory);
+    const bundle = manager.create("/tmp/project", "fixture-model", "fixture", "engine-cache");
+    manager.updateSessionState("engine-cache", {
+      cacheUsageVersion: undefined,
+      cumulativePromptTokens: 1500,
+      cumulativeCacheReadTokens: 800,
+      tokenUsage: { promptTokens: 1500, completionTokens: 20, totalTokens: 1520 },
+      costState: {
+        version: 1,
+        kind: "usage-ledger",
+        summary: {
+          version: 1,
+          scope: "session",
+          includesChildren: false,
+          partial: false,
+          unknownUsageRequests: 0,
+          invalidReceipts: 0,
+          persistenceErrors: 0,
+          byPurpose: [
+            { purpose: "main", promptTokens: 1000, cacheReadTokens: 800, cacheCreationTokens: 0 },
+            {
+              purpose: "aux_summary",
+              promptTokens: 500,
+              cacheReadTokens: 0,
+              cacheCreationTokens: 0,
+            },
+          ],
+        },
+      },
+    });
+    const before = manager.readSessionState(bundle.state.sessionId);
+    await cache.write({
+      ...key,
+      value: state(undefined, {
+        sessionId: "engine-cache",
+        cumulativePromptTokens: 1500,
+        cumulativeCacheReadTokens: 800,
+        singleTurnPromptTokens: 1500,
+      }),
+    });
+    expect(JSON.parse((await cache.read(key)).value!)).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 1000,
+      cumulativeCacheReadTokens: 800,
+      singleTurnPromptTokens: 0,
+    });
+    expect(manager.readSessionState("engine-cache")).toEqual(before);
+  });
+
+  test("a slow legacy renderer cannot overwrite the main-call cache scope", async () => {
+    const { cache } = fixture();
+    await cache.write({
+      ...key,
+      value: state(undefined, {
+        cacheUsageVersion: 1,
+        cumulativePromptTokens: 1000,
+        cumulativeCacheReadTokens: 800,
+        singleTurnPromptTokens: 1000,
+      }),
+    });
+    await cache.write({
+      ...key,
+      value: state(undefined, {
+        cumulativePromptTokens: 1500,
+        cumulativeCacheReadTokens: 900,
+        singleTurnPromptTokens: 1500,
+      }),
+    });
+    expect(JSON.parse((await cache.read(key)).value!)).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 1000,
+      cumulativeCacheReadTokens: 800,
+      singleTurnPromptTokens: 1000,
+    });
+  });
+
   test("backs up original legacy JSON once and never overwrites a newer projection", async () => {
     const { directory, legacyDirectory, cache } = fixture();
     const original = `  ${state([message("a"), message("b")])}\n`;

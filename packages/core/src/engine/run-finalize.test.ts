@@ -72,6 +72,7 @@ describe("finalizeRunSuccess", () => {
         },
         firstGoalTermination: undefined,
         turnCount: 1,
+        getRunCacheUsage: () => ({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
         getRunUsage: () => ({
           records: [],
           totalPromptTokens: 0,
@@ -148,12 +149,23 @@ describe("finalizeRunSuccess", () => {
           state: {
             sessionId: "usage-settlement",
             tokenUsage: { promptTokens: 9000, completionTokens: 900, totalTokens: 9900 },
+            cacheUsageVersion: 1,
+            cumulativePromptTokens: 8000,
+            cumulativeCacheReadTokens: 4000,
+            cumulativeCacheCreationTokens: 0,
           },
           transcript: { flushFailed: () => false, getEvents: () => [] },
         } as never,
         result: { text: "done", reason, messages: [] },
         firstGoalTermination: undefined,
         turnCount: 3,
+        getRunCacheUsage: () => ({
+          promptTokens: 3000,
+          completionTokens: 100,
+          totalTokens: 3100,
+          cacheReadTokens: 2550,
+          cacheCreationTokens: 120,
+        }),
         getRunUsage: () => ({
           records: [],
           totalPromptTokens: 3400,
@@ -192,16 +204,17 @@ describe("finalizeRunSuccess", () => {
         expect.objectContaining({
           type: "usage_update",
           promptTokensSource: "session_cumulative",
-          cumulativePromptTokens: 12400,
-          cumulativeCacheReadTokens: 2550,
-          cumulativeCacheCreationTokens: 120,
+          cumulativePromptTokens: 8000,
+          cumulativeCacheReadTokens: 4000,
+          cumulativeCacheCreationTokens: 0,
         }),
         {
           type: "usage_update",
           promptTokens: 0,
-          singleTurnPromptTokens: result.usage.promptTokens,
-          singleTurnCacheReadTokens: result.usage.cacheReadTokens,
-          singleTurnCacheCreationTokens: result.usage.cacheCreationTokens,
+          cacheUsageVersion: 1,
+          singleTurnPromptTokens: 3000,
+          singleTurnCacheReadTokens: 2550,
+          singleTurnCacheCreationTokens: 120,
         },
         { type: "turn_complete", reason, text: "done" },
       ]);
@@ -234,6 +247,7 @@ describe("finalizeRunSuccess", () => {
       },
       firstGoalTermination: undefined,
       turnCount: 1,
+      getRunCacheUsage: () => ({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       getRunUsage: () => ({
         records: [],
         totalPromptTokens: 0,

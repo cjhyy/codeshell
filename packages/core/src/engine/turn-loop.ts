@@ -868,6 +868,7 @@ export class TurnLoop {
       ...(usage.cacheCreationTokens !== undefined
         ? { cacheCreationTokens: usage.cacheCreationTokens }
         : {}),
+      cacheUsageVersion: 1,
       singleTurnPromptTokens: this.currentRunUsage.promptTokens,
       singleTurnCacheReadTokens: this.currentRunUsage.cacheReadTokens ?? 0,
       singleTurnCacheCreationTokens: this.currentRunUsage.cacheCreationTokens ?? 0,
