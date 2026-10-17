@@ -24,6 +24,7 @@ import { performance } from "node:perf_hooks";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.mjs";
+import { createNsisCheckpointDiagnostics } from "./windows-nsis-checkpoint-diagnostics.mjs";
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
 import {
@@ -258,7 +259,15 @@ export async function runNsisOwnedProcess({
   } catch (error) {
     operation.status = "failed";
     operation.failure = safeError(error);
-    checkpoint("process-first-error", { label }); // Durable before any cleanup await.
+    checkpoint("process-first-error", { label }, () => ({
+      error: operation.failure,
+      status: operation.status,
+      child: operation.child,
+      cachedExit: { code: child?.exitCode ?? null, signal: child?.signalCode ?? null },
+      result: operation.result,
+      logs: operation.logs,
+      stderr: tails.stderr,
+    })); // Observed data only; provider evaluation is inside the mirror's nonthrowing boundary.
     if (monitor) {
       checkpoint("process-cleanup-start", { label });
       try {
@@ -354,6 +363,8 @@ export async function runWindowsNsisAcceptance(args) {
     if (!report.recordingFailures.includes(message) && report.recordingFailures.length < 8)
       report.recordingFailures.push(message);
   };
+  const checkpointDiagnostics = createNsisCheckpointDiagnostics({ recordingFailure });
+  report.checkpointMirror = checkpointDiagnostics.receipt;
   const save = () => {
     try {
       writeFileSync(join(root, "receipt.json.tmp"), JSON.stringify(report, null, 2) + "\n", {
@@ -366,16 +377,17 @@ export async function runWindowsNsisAcceptance(args) {
       return false;
     }
   };
-  const checkpoint = (kind, details = {}) => {
+  const checkpoint = (kind, details = {}, diagnostic) => {
+    let event;
     try {
-      const line =
-        JSON.stringify({
-          sequence: ++seq,
-          elapsedMs: performance.now() - started,
-          phase: report.phase,
-          kind,
-          ...details,
-        }) + "\n";
+      event = {
+        sequence: ++seq,
+        elapsedMs: performance.now() - started,
+        phase: report.phase,
+        kind,
+        ...details,
+      };
+      const line = JSON.stringify(event) + "\n";
       const bytes = Buffer.byteLength(line);
       if (seq > MAX_EVENTS || journalBytes + bytes > MAX_JOURNAL) throw Error("Journal cap");
       // No error stack/env/request contents; these fixed events are advisory only.
@@ -384,6 +396,7 @@ export async function runWindowsNsisAcceptance(args) {
     } catch {
       recordingFailure("Journal recording failed/truncated");
     }
+    checkpointDiagnostics.checkpoint(event, diagnostic);
     save();
   };
   process.once("exit", (code) => {
@@ -756,7 +769,7 @@ export async function runWindowsNsisAcceptance(args) {
     report.failures.push(report.firstError);
     // Synchronous first error before other observations; no compensating
     // installer/registry/delete action is attempted after a failed stage.
-    checkpoint("first-error");
+    checkpoint("first-error", {}, { error: report.firstError });
     process.exitCode = 1;
   } finally {
     report.finished = new Date().toISOString();

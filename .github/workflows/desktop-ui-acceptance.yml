@@ -239,13 +239,19 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       - name: Review first-error and cleanup observation contracts
         timeout-minutes: 2
         run: |
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/review-operation-diagnostics.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/review-diagnostic-contracts.log"
+
+      - name: Review draft response and session contracts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/review-draft-response-gate.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/review-draft-contracts.log"
 
       - name: verify local package authority and output ownership
         run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
@@ -269,6 +275,18 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/tool-cards/FileToolCard.byte-count.test.tsx 2>&1 | tee "$ACCEPTANCE_ROOT/write-card-byte-count.log"
+
+      - name: completed CRLF and progress output regressions
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/runtime/output-clean.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/output-clean.log"
+
+      - name: concurrent file Review aggregation regressions
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts packages/desktop/src/renderer/types.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/review-file-aggregation.log"
 
       - name: materialize production workspace packages
         timeout-minutes: 5
@@ -355,6 +373,16 @@ jobs:
             node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-review-diff-path-operations.mjs --evidence-dir "$ACCEPTANCE_ROOT/review" 2>&1 | tee "$ACCEPTANCE_ROOT/review.log"
           fi
 
+      - name: actual Review drafts, scope changes and session isolation
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-review-draft-operations.mjs --evidence-dir "$ACCEPTANCE_ROOT/review-drafts" 2>&1 | tee "$ACCEPTANCE_ROOT/review-draft-operations.log"
+          else
+            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-review-draft-operations.mjs --evidence-dir "$ACCEPTANCE_ROOT/review-drafts" 2>&1 | tee "$ACCEPTANCE_ROOT/review-draft-operations.log"
+          fi
+
       - name: actual file mentions, Git, browser guests, and PTY operations
         timeout-minutes: 8
         run: |
@@ -429,6 +457,106 @@ jobs:
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-macos-dmg-install.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --output "$ACCEPTANCE_ROOT/dmg" 2>&1 | tee "$ACCEPTANCE_ROOT/dmg.log"
 
+      # Preserve already-completed Windows native evidence before the installer.
+      - name: retain Windows native evidence before NSIS
+        if: runner.os == 'Windows'
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-ui-native-before-nsis-${{ matrix.artifact }}
+          path: |
+            ${{ env.ACCEPTANCE_ROOT }}/package/build-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/package/electron-builder.local.json
+            ${{ env.ACCEPTANCE_ROOT }}/package/build.log
+            ${{ env.ACCEPTANCE_ROOT }}/process-metadata/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/startup.log
+            ${{ env.ACCEPTANCE_ROOT }}/write-card-byte-count.log
+            ${{ env.ACCEPTANCE_ROOT }}/output-clean.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-file-aggregation.log
+            ${{ env.ACCEPTANCE_ROOT }}/startup/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/startup/cycle-*.json
+            ${{ env.ACCEPTANCE_ROOT }}/startup/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/startup/main-*.log
+            ${{ env.ACCEPTANCE_ROOT }}/startup/startup-renderer-loads.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/startup-denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/startup/real-keyring-bootstrap.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-ipc.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/owned-git-0.diff
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/owned-git-1.diff
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-staged.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-scope-fence.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-session-fence.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/failure.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/review/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/review/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/review/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/owned-git.diff
+            ${{ env.ACCEPTANCE_ROOT }}/review/main.*.log
+            ${{ env.ACCEPTANCE_ROOT }}/review/denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/panels.log
+            ${{ env.ACCEPTANCE_ROOT }}/panels/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/panels/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/panels/body.txt
+            ${{ env.ACCEPTANCE_ROOT }}/panels/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/panels/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/panels/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/panels/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/composer.log
+            ${{ env.ACCEPTANCE_ROOT }}/composer/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/composer/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/memory.log
+            ${{ env.ACCEPTANCE_ROOT }}/memory/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/memory/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/memory/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/memory/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/memory/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/memory/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/memory/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences.log
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/operations.json
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/main-*.log
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
+            ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/operations.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/launcher-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/launcher.*.log
+            ${{ env.ACCEPTANCE_ROOT }}/updater.log
+            ${{ env.ACCEPTANCE_ROOT }}/updater/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/updater/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/operations.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/launcher-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/launcher.*.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis-contracts.log
+          if-no-files-found: error
+          retention-days: 7
+
       - name: production Windows NSIS installation, replacement and uninstall
         if: runner.os == 'Windows'
         timeout-minutes: 40
@@ -451,6 +579,8 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/startup.log
             ${{ env.ACCEPTANCE_ROOT }}/linux-fonts-*.json
             ${{ env.ACCEPTANCE_ROOT }}/write-card-byte-count.log
+            ${{ env.ACCEPTANCE_ROOT }}/output-clean.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-file-aggregation.log
             ${{ env.ACCEPTANCE_ROOT }}/startup/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/cycle-*.json
             ${{ env.ACCEPTANCE_ROOT }}/startup/*.png
@@ -463,6 +593,24 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/startup/real-keyring-bootstrap.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/review.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-ipc.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/owned-git-0.diff
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/owned-git-1.diff
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-staged.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-scope-fence.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/review-draft-session-fence.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/failure.png
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/denied-attempts.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/review-drafts/network-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/review/*.png
             ${{ env.ACCEPTANCE_ROOT }}/review/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/review/diagnostics.json
