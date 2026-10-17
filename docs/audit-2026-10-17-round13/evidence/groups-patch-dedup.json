@@ -1,0 +1,262 @@
+{
+  "scope": "all docs/bugs MD and parsed JSON excluding round13",
+  "fileCount": 1716,
+  "pattern": "(ApplyPatch|apply.?patch|文件[变更摘要]|Files.?Changed|fileChange|聚合).{0,130}(delet|renam|Move to|删除|重命名|丢|缺|遗漏|漏|\\+\\+\\+|---)|(?:delet|renam|Move to|删除|重命名|遗漏|漏).{0,130}(ApplyPatch|apply.?patch|Files.?Changed|文件摘要|聚合)|syntheticSnippetDiff|parseApplyPatch|\\*\\*\\* Delete File|\\*\\*\\* Move to",
+  "hits": [
+    {
+      "path": "docs/architecture/02-tool-system.md",
+      "line": 122,
+      "text": "- `ApplyPatch` parses hunks leniently and checks add/update/delete paths plus move destinations (`executor.ts:617`)."
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "line": 1037,
+      "text": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/audit-2026-10-16/README.md",
+      "line": 24,
+      "text": "| A01 | P2 | ApplyPatch 成功移动脚本后新文件丢失执行位 | [Coding](root.md) |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "jsonPath": "$.issues[0].title",
+      "text": "[P2] ApplyPatch 成功重命名后丢失脚本执行权限"
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "line": 5,
+      "text": "## A01 [P2] ApplyPatch 成功重命名后丢失脚本执行权限"
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "line": 115,
+      "text": "- 重跑 coding Git/ApplyPatch、Arena、Optimization Lab 现有测试：42 files / 253 pass / 664 expect / 0 fail/skip / Completed。通过既有测试不代表全部分支正确；本报告新复现覆盖此前遗漏的场景。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "line": 71,
+      "text": "### R2-08 [P3] Codex apply_patch 重命名的变更文件列表遗漏新路径"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "line": 73,
+      "text": "- 位置：`packages/coding/src/cc-orchestrator/external-agent-changes.ts:117-125`（关键正则在 `:121`）仅匹配 Update/Add/Delete File，不匹配 `*** Move to:`。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "line": 74,
+      "text": "- 触发：普通 freeform apply_patch 更新 `src/old.ts` 并 Move to `src/new.ts`。预期变更归属至少包含新文件，保留旧路径也合理；实际只返回旧路径。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "line": 76,
+      "text": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "line": 5,
+      "text": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[1].excerpt",
+      "text": "- **影响**：ApplyPatch add 创建的文件不能被 turn undo 删除。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[41].excerpt",
+      "text": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[44].excerpt",
+      "text": "### R2-08 [P3] Codex apply_patch 重命名的变更文件列表遗漏新路径"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[45].excerpt",
+      "text": "- 触发：普通 freeform apply_patch 更新 `src/old.ts` 并 Move to `src/new.ts`。预期变更归属至少包含新文件，保留旧路径也合理；实际只返回旧路径。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[46].excerpt",
+      "text": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[57].excerpt",
+      "text": "[P2] ApplyPatch 成功重命名后丢失脚本执行权限"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[61].excerpt",
+      "text": "| A01 | P2 | ApplyPatch 成功移动脚本后新文件丢失执行位 | [Coding](root.md) |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[62].excerpt",
+      "text": "## A01 [P2] ApplyPatch 成功重命名后丢失脚本执行权限"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[66].excerpt",
+      "text": "- 重跑 coding Git/ApplyPatch、Arena、Optimization Lab 现有测试：42 files / 253 pass / 664 expect / 0 fail/skip / Completed。通过既有测试不代表全部分支正确；本报告新复现覆盖此前遗漏的场景。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[73].excerpt",
+      "text": "根 LICENSE 是 MIT ✓。ApplyPatch 源目录有 Codex NOTICE + Apache license + attribution，但发布包不带（B1）。Yoga/browser-use/Claude Code restored-src 有来源标注但缺随包归属（M3）。发 public 前必须统一审计。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "jsonPath": "$.hits[125].excerpt",
+      "text": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-note.md",
+      "line": 7,
+      "text": "新增范围内的 ApplyPatch 命中是架构、工具路径、undo、routing 和历史说明；没有发现与合法、带 marker 的首空白 context 被 outer parser 丢弃相同的记录。旧 May 30 unmarked blank acceptance 的完整对象已读过，触发条件与分支不同。关键词加有限上下文仍有语义查重限制。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[1].excerpt",
+      "text": "- **影响**：ApplyPatch add 创建的文件不能被 turn undo 删除。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[47].excerpt",
+      "text": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[64].excerpt",
+      "text": "[P2] ApplyPatch 成功重命名后丢失脚本执行权限"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[68].excerpt",
+      "text": "| A01 | P2 | ApplyPatch 成功移动脚本后新文件丢失执行位 | [Coding](root.md) |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[69].excerpt",
+      "text": "## A01 [P2] ApplyPatch 成功重命名后丢失脚本执行权限"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[73].excerpt",
+      "text": "- 重跑 coding Git/ApplyPatch、Arena、Optimization Lab 现有测试：42 files / 253 pass / 664 expect / 0 fail/skip / Completed。通过既有测试不代表全部分支正确；本报告新复现覆盖此前遗漏的场景。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[75].excerpt",
+      "text": "- `ApplyPatch` parses hunks leniently and checks add/update/delete paths plus move destinations (`executor.ts:617`)."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[88].excerpt",
+      "text": "- 补 **ApplyPatch** 的 auto-backup(现仅 Write/Edit 有,ApplyPatch 同样改文件却没快照,会让 `/undo` 漏掉补丁式修改)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[92].excerpt",
+      "text": "- 复用 ApplyPatch 已有的路径解析(`apply-patch/` 下 applier 能列出 target 文件);若解析接口不便复用,退而求其次在 hook 里轻量扫补丁头的 `*** Update File:` / `--- a/...` 行。实现期定具体接口,spec 不锁死解析手段,只锁\"ApplyPatch 改前也要快照\"这个契约。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[128].excerpt",
+      "text": "### R2-08 [P3] Codex apply_patch 重命名的变更文件列表遗漏新路径"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[129].excerpt",
+      "text": "- 触发：普通 freeform apply_patch 更新 `src/old.ts` 并 Move to `src/new.ts`。预期变更归属至少包含新文件，保留旧路径也合理；实际只返回旧路径。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[130].excerpt",
+      "text": "- 生产接线：`packages/coding/src/tools/drive-agent.ts:784` 读取后交由 `normalizeChangedFiles` 规范化；该函数只 resolve/relative/去重，不补遗漏的 destination。本仓 `tools/apply-patch/index.ts:36` 明确列出 Move to 重命名语法，parser.ts:12、30 也识别该语法。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[158].excerpt",
+      "text": "根 LICENSE 是 MIT ✓。ApplyPatch 源目录有 Codex NOTICE + Apache license + attribution，但发布包不带（B1）。Yoga/browser-use/Claude Code restored-src 有来源标注但缺随包归属（M3）。发 public 前必须统一审计。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "jsonPath": "$.hits[229].excerpt",
+      "text": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/quality-root.md",
+      "line": 24,
+      "text": "所有原始日志按首次guarded运行保存。CDP的stdout/stderr分开保存，聚合计数按每一对作为一个shard；不得漏掉stderr中的Bun统计。其他日志是合并stdout/stderr。成功总计按完整Completed门禁计算，Lab第二轮provider registry实例不一致失败独立保存，未进入fakeLLM，候选不计确认。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+      "jsonPath": "$.hits[172].text",
+      "text": "[普通空白会话](../../packages/desktop/src/renderer/App.tsx:315)也在engineSessionId为空时[隐藏Review](../../packages/desktop/src/renderer/panels/useReviewAvailability.ts:140)；[既有Session的authority合同](../../packages/desktop/src/renderer/sessionUiAuthority.ts:56)不继承renderer bucket权限。[迁移设计](../../docs/todo/multi-folder-local-project-plan.md:187) / [普通fork首run规则](../../docs/todo/multi-folder-local-project-plan.md:217)明确首次run才合法回读/补绑。缺少首send前必须聚合全部根的合同，所以不列R86/P3；不声称永久丢项目、错cwd或运行失败。后续合法send的[Main resolver](../../packages/desktop/src/main/agent-run-metadata.ts:118)和[Core补绑](../../packages/core/src/engine/run-session-open.ts:88)是静态正常恢复链，不是本轮已运行或建议用户付费修复的路径。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+      "jsonPath": "$.hits[51].excerpt",
+      "text": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-04-tui-cdp-config.md",
+      "line": 45,
+      "text": "根 LICENSE 是 MIT ✓。ApplyPatch 源目录有 Codex NOTICE + Apache license + attribution，但发布包不带（B1）。Yoga/browser-use/Claude Code restored-src 有来源标注但缺随包归属（M3）。发 public 前必须统一审计。"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-continuation-round26.md",
+      "line": 9,
+      "text": "[普通空白会话](../../packages/desktop/src/renderer/App.tsx:315)也在engineSessionId为空时[隐藏Review](../../packages/desktop/src/renderer/panels/useReviewAvailability.ts:140)；[既有Session的authority合同](../../packages/desktop/src/renderer/sessionUiAuthority.ts:56)不继承renderer bucket权限。[迁移设计](../../docs/todo/multi-folder-local-project-plan.md:187) / [普通fork首run规则](../../docs/todo/multi-folder-local-project-plan.md:217)明确首次run才合法回读/补绑。缺少首send前必须聚合全部根的合同，所以不列R86/P3；不声称永久丢项目、错cwd或运行失败。后续合法send的[Main resolver](../../packages/desktop/src/main/agent-run-metadata.ts:118)和[Core补绑](../../packages/core/src/engine/run-session-open.ts:88)是静态正常恢复链，不是本轮已运行或建议用户付费修复的路径。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-session-continuation-round26/PLAN.md",
+      "line": 7,
+      "text": "健康本地项目由 A（primary、非 Git 文件夹）与 B（secondary、Git 仓库）组成，source 是已绑定项目 A 的普通 Desktop 会话。用户通过 MessageStream 的上下文选择生成摘要新会话；摘要成功后 App 把合法 target 注册进原 UI 项目并选中。在 target 第一条普通 follow-up 发送前打开 Review，target 的持久化 state.project 缺失，Main 把它作为 legacy 单根 A，Review 不发现 B，availability=false，普通 Review 入口隐藏。若 A/B 都是 Git，则更窄可描述为只聚合 A、遗漏 B；首 fixture 只选 A 非 Git/B Git，避免多个效果。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+      "line": 1017,
+      "text": "/* ----- Files-changed summary card (per-turn Codex-style) ----- */"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-31-notification-loop-reliability-roadmap.md",
+      "line": 286,
+      "text": "依赖关系：**必须在阶段一之后**（否则收件箱聚合的是一个会丢事件的源头）。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-undo-single-step-design.md",
+      "line": 21,
+      "text": "- 补 **ApplyPatch** 的 auto-backup(现仅 Write/Edit 有,ApplyPatch 同样改文件却没快照,会让 `/undo` 漏掉补丁式修改)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-undo-single-step-design.md",
+      "line": 58,
+      "text": "- 复用 ApplyPatch 已有的路径解析(`apply-patch/` 下 applier 能列出 target 文件);若解析接口不便复用,退而求其次在 hook 里轻量扫补丁头的 `*** Update File:` / `--- a/...` 行。实现期定具体接口,spec 不锁死解析手段,只锁\"ApplyPatch 改前也要快照\"这个契约。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-24-manual-catalog-editor-design.md",
+      "line": 124,
+      "text": "- **刷新**:保存/删除后重新 `getModelCatalog` + `getCatalogOrigins`;监听 `codeshell:files-changed`(和连接页一致)。"
+    },
+    {
+      "path": "docs/todo/optimization-lab-p1b-evidence-trial-2026-10-09.md",
+      "line": 9,
+      "text": "读取期间持有来源 root 与运行目录的句柄，逐次复核 dev/ino 与 realpath；文件通过不跟随链接的有界 inode 读取，读取前后验证 inode、大小与修改时间，最后重读原快照并核对身份和项目绑定。快照限 8 MiB，trace 取最多 8 MiB 的尾窗且丢弃不完整 JSONL 行；解析损坏、缺输入、窗口截断、最多 200 个事件或 50 个内容块的裁切均作为缺失/截断事实保留。每块最多 32 KiB UTF-8，整个 bundle 最多 2 MiB。正在变化的文件要求重新预览，不把读取竞争静默当完整证据。交错的其他提交文本不返回，steerId 本身不证明属于所选回执，无法精确归属的纠正和工具事件省略并注明缺失。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/driveagent-jump-to-cli-session.md",
+      "line": 5,
+      "text": "DriveAgent 的后台任务记录已经拥有定位外部 CLI 会话所需的数据，但 UI 聚合层在组装 `BackgroundWorkEntry` 时把这些数据丢掉了。"
+    },
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "line": 250,
+      "text": "- **影响**：ApplyPatch add 创建的文件不能被 turn undo 删除。"
+    }
+  ]
+}

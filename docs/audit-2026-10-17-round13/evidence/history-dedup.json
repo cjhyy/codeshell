@@ -1,0 +1,893 @@
+{
+  "scope": "All .md/.json recursively under docs and bugs, including archive/_archive; current round13 excluded; JSON parsed into recursive scalar leaves",
+  "counts": {
+    "md": 1075,
+    "json": 641,
+    "json_leaves": 240534
+  },
+  "files": 1716,
+  "parse_errors": [],
+  "patterns": {
+    "history": "input-history|removeLastFromHistory|clearPendingHistoryEntries|createHistoryNavigator|getProjectHistory|_flushScheduled|_skippedTimestamps",
+    "model-display": "model-display|modelTags|fmtTokens",
+    "history-semantics": "input.{0,30}history|command.{0,30}history|history.{0,30}(?:queue|current.session|navigator|pending|priority|nextTick)|(?:输入|命令).{0,10}历史|(?:current.session|nextTick).{0,40}histor|_pendingEntries|_lastAddedEntry"
+  },
+  "hits": [
+    {
+      "path": "docs/architecture/09-tui.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "14",
+          "text": "| REPL state & input | `ui/App.tsx`, `ui/app-helpers.tsx`, `ui/components/TuiControlSurface.tsx`, `ui/store.ts`, `ui/components/{CommandInput,TextInput}.tsx`, `ui/input-history.ts` | `App` composes the stream/run state machine; pure rendering/predicate helpers and the onboarding/model/session/provider/AskUser/input control surface are split out. Chat entries live in an external store; input combines slash completion, history, multiline paste, and Emacs-style editing. |"
+        }
+      ]
+    },
+    {
+      "path": "docs/architecture/09-tui.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "14",
+          "text": "| REPL state & input | `ui/App.tsx`, `ui/app-helpers.tsx`, `ui/components/TuiControlSurface.tsx`, `ui/store.ts`, `ui/components/{CommandInput,TextInput}.tsx`, `ui/input-history.ts` | `App` composes the stream/run state machine; pure rendering/predicate helpers and the onboarding/model/session/provider/AskUser/input control surface are split out. Chat entries live in an external store; input combines slash completion, history, multiline paste, and Emacs-style editing. |"
+        }
+      ]
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "321",
+          "text": "| **输入历史** | 按 session/project 记录、搜索、导航、flush 历史 | `packages/tui/src/ui/input-history.ts:66`，`packages/tui/src/ui/input-history.ts:192`，`packages/tui/src/ui/input-history.ts:286` | 上下键或历史搜索复用旧输入 |"
+        }
+      ]
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "321",
+          "text": "| **输入历史** | 按 session/project 记录、搜索、导航、flush 历史 | `packages/tui/src/ui/input-history.ts:66`，`packages/tui/src/ui/input-history.ts:192`，`packages/tui/src/ui/input-history.ts:286` | 上下键或历史搜索复用旧输入 |"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/architecture/11-render-tui-capability-plan.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "117",
+          "text": "- history navigation via `createHistoryNavigator` / `addToHistory`"
+        },
+        {
+          "location": "118",
+          "text": "  (`src/ui/input-history.ts`), bound to ↑ / ↓."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/architecture/11-render-tui-capability-plan.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "117",
+          "text": "- history navigation via `createHistoryNavigator` / `addToHistory`"
+        },
+        {
+          "location": "118",
+          "text": "  (`src/ui/input-history.ts`), bound to ↑ / ↓."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/132/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/132/detail",
+          "text": "The functions fmtTokens (lines 411-416) and modelTags (lines 419-428) are identical to those in ModelSelector.tsx (lines 21-27, 30-39). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/132/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        },
+        {
+          "location": "/133/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/133/detail",
+          "text": "The functions fmtTokens (lines 21-27) and modelTags (lines 30-39) are identical to those in ModelManager.tsx (lines 411-416, 419-428). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/133/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/32/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/32/detail",
+          "text": "The functions fmtTokens (lines 411-416) and modelTags (lines 419-428) are identical to those in ModelSelector.tsx (lines 21-27, 30-39). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/32/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        },
+        {
+          "location": "/32/verify_reason",
+          "text": "Both fmtTokens and modelTags functions are byte-for-byte identical across ModelManager.tsx (lines 411-428) and ModelSelector.tsx (lines 21-39). These are pure utility functions with no contextual logic or side effects. Duplication violates DRY and creates maintenance risk: any future updates to token formatting thresholds, regex patterns, or new capability tags must be applied in two places, increasing the likelihood of inconsistency."
+        },
+        {
+          "location": "/88/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/88/detail",
+          "text": "The functions fmtTokens (lines 21-27) and modelTags (lines 30-39) are identical to those in ModelManager.tsx (lines 411-416, 419-428). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/88/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        },
+        {
+          "location": "/88/verify_reason",
+          "text": "Both fmtTokens (lines 22-27 in ModelSelector.tsx, 411-416 in ModelManager.tsx) and modelTags (lines 30-39 in ModelSelector.tsx, 419-428 in ModelManager.tsx) are character-for-character identical. Both functions are actively used in their respective files. This creates maintenance debt: any future updates to token formatting or model tag logic must be manually applied to both locations, risking divergence or missed updates."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/132/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/132/detail",
+          "text": "The functions fmtTokens (lines 411-416) and modelTags (lines 419-428) are identical to those in ModelSelector.tsx (lines 21-27, 30-39). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/132/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        },
+        {
+          "location": "/133/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/133/detail",
+          "text": "The functions fmtTokens (lines 21-27) and modelTags (lines 30-39) are identical to those in ModelManager.tsx (lines 411-416, 419-428). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/133/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/132/reason",
+          "text": "Both fmtTokens and modelTags functions are byte-for-byte identical across ModelManager.tsx (lines 411-428) and ModelSelector.tsx (lines 21-39). These are pure utility functions with no contextual logic or side effects. Duplication violates DRY and creates maintenance risk: any future updates to token formatting thresholds, regex patterns, or new capability tags must be applied in two places, increasing the likelihood of inconsistency."
+        },
+        {
+          "location": "/133/reason",
+          "text": "Both fmtTokens (lines 22-27 in ModelSelector.tsx, 411-416 in ModelManager.tsx) and modelTags (lines 30-39 in ModelSelector.tsx, 419-428 in ModelManager.tsx) are character-for-character identical. Both functions are actively used in their respective files. This creates maintenance debt: any future updates to token formatting or model tag logic must be manually applied to both locations, risking divergence or missed updates."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/214/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/214/detail",
+          "text": "The functions fmtTokens (lines 411-416) and modelTags (lines 419-428) are identical to those in ModelSelector.tsx (lines 21-27, 30-39). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/214/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        },
+        {
+          "location": "/215/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/215/detail",
+          "text": "The functions fmtTokens (lines 21-27) and modelTags (lines 30-39) are identical to those in ModelManager.tsx (lines 411-416, 419-428). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/215/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/57/title",
+          "text": "Duplicated utility functions fmtTokens and modelTags"
+        },
+        {
+          "location": "/57/detail",
+          "text": "The functions fmtTokens (lines 21-27) and modelTags (lines 30-39) are identical to those in ModelManager.tsx (lines 411-416, 419-428). This code duplication makes maintenance harder when these utilities need updates."
+        },
+        {
+          "location": "/57/fix",
+          "text": "Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/utils/modelFormatting.ts) and import them in both ModelManager.tsx and ModelSelector.tsx."
+        },
+        {
+          "location": "/57/verify_reason",
+          "text": "Both fmtTokens (lines 22-27 in ModelSelector.tsx, 411-416 in ModelManager.tsx) and modelTags (lines 30-39 in ModelSelector.tsx, 419-428 in ModelManager.tsx) are character-for-character identical. Both functions are actively used in their respective files. This creates maintenance debt: any future updates to token formatting or model tag logic must be manually applied to both locations, risking divergence or missed updates."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "66",
+          "text": "| ⬜ | 简化 | `tui/ui/components/ModelSelector.tsx:21-27, 30-39` | Duplicated utility functions fmtTokens and modelTags | Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/s… |"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/round2_section.md",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "39",
+          "text": "| ⬜ | 🟡 中 | 简化 | `tui/ui/components/ModelManager.tsx:411-416, 419-428` | Duplicated utility functions fmtTokens and modelTags | Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/util… |"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-7-2026-07-08.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "13",
+          "text": "| `/login <api-key>` persists secret history | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/CommandInput.tsx:171` | `aa71492e9ea63da9ca7c057732ba7b2a15b06ef1` | `packages/tui/src/ui/input-history.test.ts`: inline `/login` arguments are skipped from in-memory and JSONL history while plain `/login` and normal commands remain | Failing regression observed, then `bun test packages/tui/src/ui/input-history.test.ts` passed twice before commit. |"
+        },
+        {
+          "location": "19",
+          "text": "`bun test packages/tui/src/ui/index.test.tsx packages/tui/src/ui/input-history.test.ts packages/tui/src/ui/App.render-entry.test.tsx packages/core/src/protocol/chat-session-manager.permission.test.ts packages/core/src/tool-system/path-policy-approval.test.ts packages/core/src/credentials/use-credential-tool.test.ts packages/core/src/credentials/inject-credential-tool.test.ts`"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-7-2026-07-08.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "13",
+          "text": "| `/login <api-key>` persists secret history | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/CommandInput.tsx:171` | `aa71492e9ea63da9ca7c057732ba7b2a15b06ef1` | `packages/tui/src/ui/input-history.test.ts`: inline `/login` arguments are skipped from in-memory and JSONL history while plain `/login` and normal commands remain | Failing regression observed, then `bun test packages/tui/src/ui/input-history.test.ts` passed twice before commit. |"
+        },
+        {
+          "location": "19",
+          "text": "`bun test packages/tui/src/ui/index.test.tsx packages/tui/src/ui/input-history.test.ts packages/tui/src/ui/App.render-entry.test.tsx packages/core/src/protocol/chat-session-manager.permission.test.ts packages/core/src/tool-system/path-policy-approval.test.ts packages/core/src/credentials/use-credential-tool.test.ts packages/core/src/credentials/inject-credential-tool.test.ts`"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "46",
+          "text": "| 🟠 | `/login <api-key>` persists secret history | `packages/tui/src/ui/components/CommandInput.tsx:171` | Submitted slash command text is added to persistent input history before `/login` parses its API key argument. | Remove inline secret args or mark/redact sensitive command submissions before history write. | `review-tui-cdp-2026-07-08.md` |"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "23",
+          "text": "Problem: every submitted input is written with `addToHistory(v)` before dispatch. `/login` explicitly accepts an API key argument at `packages/tui/src/cli/commands/builtin/extra-commands.ts:55` and reads it from `arg.trim()` at line 57, and `input-history` queues the full display string for disk persistence at `packages/tui/src/ui/input-history.ts:208`."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "21",
+          "text": "### `packages/tui/src/ui/components/CommandInput.tsx:171` - `/login <api-key>` persists secrets in input history"
+        },
+        {
+          "location": "23",
+          "text": "Problem: every submitted input is written with `addToHistory(v)` before dispatch. `/login` explicitly accepts an API key argument at `packages/tui/src/cli/commands/builtin/extra-commands.ts:55` and reads it from `arg.trim()` at line 57, and `input-history` queues the full display string for disk persistence at `packages/tui/src/ui/input-history.ts:208`."
+        },
+        {
+          "location": "27",
+          "text": "Fix: remove or deprecate `/login <api-key>` in favor of a secret prompt, or mark commands/arguments as sensitive so `CommandInput` redacts/skips history. Extend `/logout` to scrub matching historical secret entries."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/review-uncommitted-security-2026-07-08.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "84",
+          "text": "- `aa71492e` input history: skips `/login <arg>` entries before JSONL persistence (`packages/tui/src/ui/input-history.ts:192`, `packages/tui/src/ui/input-history.ts:214`). This is scoped to `/login`; it does not redact arbitrary secret-bearing prompts or non-login commands."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/todo/review-uncommitted-security-2026-07-08.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "84",
+          "text": "- `aa71492e` input history: skips `/login <arg>` entries before JSONL persistence (`packages/tui/src/ui/input-history.ts:192`, `packages/tui/src/ui/input-history.ts:214`). This is scoped to `/login`; it does not redact arbitrary secret-bearing prompts or non-login commands."
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/windows-compat-audit-2026-06-10.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "69",
+          "text": "| 18 | 历史文件 `mode: 0o600` 在 Windows 被静默忽略 → owner-only 保护失效 | `tui/src/ui/input-history.ts:173` |"
+        }
+      ]
+    },
+    {
+      "path": "docs/archive/windows-compat-audit-2026-06-10.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "69",
+          "text": "| 18 | 历史文件 `mode: 0o600` 在 Windows 被静默忽略 → owner-only 保护失效 | `tui/src/ui/input-history.ts:173` |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "13",
+          "text": "| TUI | CLI run/runs/options、slash commands、permission、undo/export、renderers、query guard、输入/history、pending question | 5 个新测试；150 项 CLI/UI纯逻辑等 baseline | 完整 Ink/PTY 原生会话、全部组件渲染与快捷键 |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "/source_inventory/2303",
+          "text": "packages/tui/src/ui/input-history.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/source_inventory/2296",
+          "text": "packages/tui/src/ui/components/model-display.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/source_inventory/2303",
+          "text": "packages/tui/src/ui/input-history.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/quality.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "27",
+          "text": "| A08 / P2 | 保留 | config 响应确实省略 sessionStorageDir，command 默认路径与自定义真实 history 不一致；配置 getter 为替身。默认同 ID 旧历史的误恢复只属静态风险。 |"
+        },
+        {
+          "location": "57",
+          "text": "| A09 | `utility-commands.ts:73–101`；`file-history.ts:363–367` |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/hits/history_identity/69/context",
+          "text": "久化26个provider tool_use；实际TurnLoop仅给前25项写tool_use metadata/tool_result，live第二次request和返回messages完整且完成；实际SessionManager.fork读取同一源JSONL后抛 Fork provider history inserts a message before pending tool results。"
+        },
+        {
+          "location": "/hits/history_identity/71/context",
+          "text": "新图像不会在首次请求后立即全部清除。使用独立、确定性的近期图像窗口，同时限制保留请求次数、图像数量和字节数；新图至少有首次呈现机会，旧图按先进先出淘汰。实现默认保留 6 次成功模型响应，历史上限 4 个图像出现位置、8 MiB 编码数据；同一 block 被重复引用也按实际发送次数计入容量。新输入首次请求允许超过历史上限，随后淘汰超额内容。窗口是 run-local，新的用户 run 不自动恢复旧像素。淘汰只影响模型请求上下文，原始 transcript 仍可通过现有 view_image 回读。"
+        },
+        {
+          "location": "/hits/history_identity/72/context",
+          "text": "script 却含 26 个 provider `tool_use`、25 个 metadata `tool_use`、25 个 `tool_result`。随后实际 `SessionManager.fork(\"source\")` 从同一临时 JSONL 读取并抛出 `Fork provider history inserts a message before pending tool results`，无法创建 full fork。\n\n**原因。** [ModelFacade.recordResponse](../../packages/core/src/engine/model-facade.ts#L294) 遍历全部 response.toolCalls 并在 :303 写入 assistant message。TurnLoop 在 facade 返回后才 [slice 到上限](../../packages/core/src/engine/turn-l"
+        },
+        {
+          "location": "/hits/history_identity/76/context",
+          "text": "ext：这一轮需要看什么\nMemory：以后值得记住什么\n```\n\n长对话中，Context 可以裁剪、摘要或外置大块工具结果，但 Transcript 仍承担恢复与审计职责。Memory 则保存从多次经历中提炼出的长期信息，而不是无限复制聊天原文。\n\n把三者分开，才能同时满足“模型输入足够短”“历史事实不丢失”和“长期知识不过度膨胀”。\n\n### 4.3 Engine 管运行，Host 管交互\n\n宿主需要的是稳定语义：开始运行、接收流式事件、展示审批、转向、取消和查询状态。它不应了解 TurnLoop 内部如何调度工具或压缩上下文。\n\n协议层把这些语义固定下来后，终端、桌面、远程界面和自动化服务可以共享同一套运行机制，同时保留各自的交互方式。\n\n### 4.4 Core 定义生命周期，Capability 定义领域能力\n\nEngine 只需要知道一种能力如何被安装、选择和调用，不需要知道“编程”“研究”或“运维”分别意味着什么。具体工具、领域提示、"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/matches/23/hits/1/text",
+          "text": "实际结果：恢复后的用户对象正确保留 clean text、clientMessageId 和一个带名称、MIME、size、path 的附件，但普通聊天只显示文字，没有附件名称或数量提示；纯图片输入连用户气泡都不显示，assistant 回答仍正常。68-byte 图片原件与 canonical journal 均保留，因此没有输入、历史或文件丢失的结论。一个渲染根因覆盖两种输入，合并为窄 P3。"
+        },
+        {
+          "location": "/matches/58/hits/3/text",
+          "text": "ext：这一轮需要看什么\nMemory：以后值得记住什么\n```\n\n长对话中，Context 可以裁剪、摘要或外置大块工具结果，但 Transcript 仍承担恢复与审计职责。Memory 则保存从多次经历中提炼出的长期信息，而不是无限复制聊天原文。\n\n把三者分开，才能同时满足“模型输入足够短”“历史事实不丢失”和“长期知识不过度膨胀”。\n\n### 4.3 Engine 管运行，Host 管交互\n\n宿主需要的是稳定语义：开始运行、接收流式事件、展示审批、转向、取消和查询状态。它不应了解 TurnLoop 内部如何调度工具或压缩上下文。\n\n协议层把这些语义固定下来后，终端、桌面、远程界面和自动化服务可以共享同一套运行机制，同时保留各自的交互方式。\n\n### 4.4 Core 定义生命周期，Capability 定义领域能力\n\nEngine 只需要知道一种能力如何被安装、选择和调用，不需要知道“编程”“研究”或“运维”分别意味着什么。具体工具、领域提示、"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/hits/logs/1/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but "
+        },
+        {
+          "location": "/hits/logs/2/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits out"
+        },
+        {
+          "location": "/hits/logs/3/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result strin"
+        },
+        {
+          "location": "/hits/settings-navigation/0/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but "
+        },
+        {
+          "location": "/hits/settings-navigation/1/text",
+          "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn().\", \"verify_reason\": \"Line 71 uses `this.rootUri.replace(\\\"file://\\\", \\\"\\\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whereas the correct conversion would be `C:/Users/test` or `C:\\\\Users\\\\test`. The `fileURLToPath()` function from `node:url` (already available in the Node.js standard library) is designed to handle this conversion correctly on all platforms. The current code will fail or use the wrong working director"
+        },
+        {
+          "location": "/hits/settings-navigation/2/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits out"
+        },
+        {
+          "location": "/hits/settings-navigation/3/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result strin"
+        },
+        {
+          "location": "/hits/sidebar-projection/8/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but "
+        },
+        {
+          "location": "/hits/sidebar-projection/9/text",
+          "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn().\", \"verify_reason\": \"Line 71 uses `this.rootUri.replace(\\\"file://\\\", \\\"\\\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whereas the correct conversion would be `C:/Users/test` or `C:\\\\Users\\\\test`. The `fileURLToPath()` function from `node:url` (already available in the Node.js standard library) is designed to handle this conversion correctly on all platforms. The current code will fail or use the wrong working director"
+        },
+        {
+          "location": "/hits/sidebar-projection/10/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits out"
+        },
+        {
+          "location": "/hits/sidebar-projection/11/text",
+          "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result strin"
+        },
+        {
+          "location": "/hits/sidebar-projection/12/text",
+          "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or (b) re-attempt with a simpler prompt or raise an error.\", \"verify_note\": \"The issue is real but low-impact: (1) It's already logged, so not truly \\\"silent\\\"; (2) Returning empty array is graceful and consistent with error handling elsewhere (line 67); (3) The scenario is edge-case - requires model to ignore explicit instruction after maxToolRounds. However, the reviewer is correct that better observability is possible. A more explicit check after line 199 (if (!finalText) logger.warn(...)) would improve debugging of LLM instruction-following failures.\", \"verify_reason\": \"The code at lines 183-202 in argue.ts exhibits a real but low-severity issue. When a model reaches maxToolRounds without producing text, the fallback message is sent (lines 184-198). If thi"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/sources/12/path",
+          "text": "packages/tui/src/ui/components/model-display.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "/files/74/path",
+          "text": "packages/tui/src/ui/components/model-display.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/tui.md",
+      "topic": "model-display",
+      "matches": [
+        {
+          "location": "27",
+          "text": "完整阅读了 DiffLine、DiffView、StructuredDiff、CodeBlock、ToolCall、MessageRow、ChatStore、slice-anchor、ui/truncate、render/wrap-text、render/measure-text、app-helpers、model-display、AgentBlock、AgentDock、useSessionUsage、useCostSummary，以及本次运行的五份既有测试。VirtualMessageList 阅读至 240 行，useVirtualScroll、render/stringWidth 和 render/index 的输出有截断，只按选择性阅读记录；没有把截断输出记成完整阅读。MessageContent 本轮只读既有测试，已确认的 fenced-table / escaped-pipe 问题不重复计数。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "/hits/1/excerpt",
+          "text": "pp-helpers.tsx`, `ui/components/TuiControlSurface.tsx`, `ui/store.ts`, `ui/components/{CommandInput,TextInput}.tsx`, `ui/input-history.ts` | `App` composes the stream/run state machine; pure rendering/predicate helpers and the onboarding/model/session/provider/AskUser/input control surface are split out. Chat entries live in an external store; input combines slash completion, history, multiline paste, and Emacs-style editing. |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-batched-dedup.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/hits/1/excerpt",
+          "text": "pp-helpers.tsx`, `ui/components/TuiControlSurface.tsx`, `ui/store.ts`, `ui/components/{CommandInput,TextInput}.tsx`, `ui/input-history.ts` | `App` composes the stream/run state machine; pure rendering/predicate helpers and the onboarding/model/session/provider/AskUser/input control surface are split out. Chat entries live in an external store; input combines slash completion, history, multiline paste, and Emacs-style editing. |"
+        },
+        {
+          "location": "/hits/148/excerpt",
+          "text": "- `TextInput` — stays in `src/ui/components/`. Rationale: it bundles slash-command parsing, history, completions. Decision recorded so future refactors don't relitigate it."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/hits/12/excerpt",
+          "text": "oses the stream/run state machine; pure rendering/predicate helpers and the onboarding/model/session/provider/AskUser/input control surface are split out. Chat entries live in an external store; input combines slash completion, history, multiline paste, and Emacs-style editing. |"
+        },
+        {
+          "location": "/hits/140/excerpt",
+          "text": "| TUI | CLI run/runs/options、slash commands、permission、undo/export、renderers、query guard、输入/history、pending question | 5 个新测试；150 项 CLI/UI纯逻辑等 baseline | 完整 Ink/PTY 原生会话、全部组件渲染与快捷键 |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/hits/142/matches/5/text",
+          "text": "| 历史图引用 | 原生 `view_image` schema 没有历史编号，只接受磁盘路径；已经在对话中的图片由普通 input/history image item 承载。`codex-rs/core/src/tools/handlers/view_image_spec.rs:15-49`。[源码][codex-spec] | `imageNumber` 可从当前 session transcript 中重新取回原 base64。`packages/core/src/tool-system/builtin/view-image.ts:37-53,81-90,146-185` | CodeShell 特有增强，不是 Codex parity 要求；目前的动态序号设计不稳定。 |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-findings.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/findings/0/actual",
+          "text": "实际ModelFacade先持久化26个provider tool_use；实际TurnLoop仅给前25项写tool_use metadata/tool_result，live第二次request和返回messages完整且完成；实际SessionManager.fork读取同一源JSONL后抛 Fork provider history inserts a message before pending tool results。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-dedup.json",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "/hits/359/text",
+          "text": "新图像不会在首次请求后立即全部清除。使用独立、确定性的近期图像窗口，同时限制保留请求次数、图像数量和字节数；新图至少有首次呈现机会，旧图按先进先出淘汰。实现默认保留 6 次成功模型响应，历史上限 4 个图像出现位置、8 MiB 编码数据；同一 block 被重复引用也按实际发送次数计入容量。新输入首次请求允许超过历史上限，随后淘汰超额内容。窗口是 run-local，新的用户 run 不自动恢复旧像素。淘汰只影响模型请求上下文，原始 transcript 仍可通过现有 view_image 回读。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/session.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "7",
+          "text": "**触发和实际后果。** 完整模型响应一次返回 26 个合法工具调用，TurnLoop 使用当前 Engine 默认上限 25；fake client 后续正常返回 `done`。实际 live 第二次请求和最终返回的 Message[] 都有完整工具配对，且只执行前 25 个 fake tool。实际落盘 transcript 却含 26 个 provider `tool_use`、25 个 metadata `tool_use`、25 个 `tool_result`。随后实际 `SessionManager.fork(\"source\")` 从同一临时 JSONL 读取并抛出 `Fork provider history inserts a message before pending tool results`，无法创建 full fork。"
+        }
+      ]
+    },
+    {
+      "path": "docs/core-deep-dive/v2-01-core-as-agent-harness.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "174",
+          "text": "把三者分开，才能同时满足“模型输入足够短”“历史事实不丢失”和“长期知识不过度膨胀”。"
+        }
+      ]
+    },
+    {
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "92",
+          "text": "| 历史图引用 | 原生 `view_image` schema 没有历史编号，只接受磁盘路径；已经在对话中的图片由普通 input/history image item 承载。`codex-rs/core/src/tools/handlers/view_image_spec.rs:15-49`。[源码][codex-spec] | `imageNumber` 可从当前 session transcript 中重新取回原 base64。`packages/core/src/tool-system/builtin/view-image.ts:37-53,81-90,146-185` | CodeShell 特有增强，不是 Codex parity 要求；目前的动态序号设计不稳定。 |"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/delivery-audit.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "13",
+          "text": "- `reproductions/` 与 `latest-reproductions/` 的 38 个 TS/TSX/MJS 源文件未残留 `/Users/admin/...` 审查工作区或 `/tmp/codeshell-review...` 原始证据路径依赖。静态导入、动态工作区定位、子进程入口及 observations 输出都已使用仓库/脚本相对路径。两运行脚本按自身位置解析仓库根目录，新功能入口检查 Git ancestry。专项文字保留的原始 `/tmp` 命令属于历史复现记录，目录 README 已明确说明便携副本位置；与“脚本可迁移”没有冲突。"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "11",
+          "text": "A narrow P3 candidate is credible, pending authorized fixture execution: an accepted current paired-native text+image or image-only turn has a valid modern journal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery."
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-round25.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "7",
+          "text": "实际结果：恢复后的用户对象正确保留 clean text、clientMessageId 和一个带名称、MIME、size、path 的附件，但普通聊天只显示文字，没有附件名称或数量提示；纯图片输入连用户气泡都不显示，assistant 回答仍正常。68-byte 图片原件与 canonical journal 均保留，因此没有输入、历史或文件丢失的结论。一个渲染根因覆盖两种输入，合并为窄 P3。"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-history.raw.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "7",
+          "text": "A narrow P3 candidate is credible, pending authorized fixture execution: an accepted current paired-native text+image or image-only turn has a valid modern journal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery."
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-static-initial.raw.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "7",
+          "text": "A narrow P3 candidate is credible, pending authorized fixture execution: an accepted current paired-native text+image or image-only turn has a valid modern journal; opening it in the ordinary Desktop conversation successfully recovers clean user text and structured image metadata, but MessageStream ignores that metadata. Text+image has no visible image summary, and image-only matches the empty-user return-null guard. The image bytes, journal record and recovered attachment object are retained. This is a renderer projection omission, not lost input, lost history, thumbnail-read failure, permission bypass, or incomplete recovery."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-18-subagent-dock-followups.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "494",
+          "text": "  /** Fired when ↓ is pressed and input is empty and history is exhausted."
+        },
+        {
+          "location": "539",
+          "text": "    placeholder={placeholder ?? \"Ask anything… (/ for commands, ↑ for history)\"}"
+        },
+        {
+          "location": "575",
+          "text": "Used by App.tsx to stop ↑/↓ from leaking into input history while"
+        },
+        {
+          "location": "1242",
+          "text": "8. From inside that transcript, press `↑` — verify the input box does NOT auto-fill from history (the `disabled` gate worked)."
+        },
+        {
+          "location": "1254",
+          "text": "| §2.2 ↑/↓ never bleeds to input history | Task 4 (`disabled` prop), Task 6 (wire it) |"
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "555",
+          "text": "  /** Fired when ↓ is pressed and input is empty and history is exhausted."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "805",
+          "text": "Open `src/ui/App.tsx`, locate the `handleSubmit` `useCallback` (around line 1074). The portion from `chatStore.update((prev) => [...prev, entry({ type: \"user\", text: trimmed })]);` (line ~1103) down to the closing `}` of the `useCallback` body (line ~1213) is the engine-submission state machine. Everything above that — slash-command branch, history bookkeeping, input clearing — is input-source-specific."
+        },
+        {
+          "location": "936",
+          "text": "Replace the existing `handleSubmit` `useCallback` body (lines ~1074–1215) so it ends up shaped like this — keeping its existing read-only-slash-command checks, input clearing, history/banner logic, and slash-command branch, but delegating engine submission to `submitToEngine`:"
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "947",
+          "text": "grep -rn 'await import(\"@cjhyy/code-shell-core\")' packages/tui/src packages/desktop/src   # 预期:仅 utility-commands.ts /undo 一处(FileHistory 等公共符号,合法)"
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "153",
+          "text": "- `TextInput` — stays in `src/ui/components/`. Rationale: it bundles slash-command parsing, history, completions. Decision recorded so future refactors don't relitigate it."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "254",
+          "text": "   - `↑/↓` → input history (current behaviour)"
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-followups-design.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "21",
+          "text": "2. `↑/↓` while dock-focused never bleeds into input-history scrolling."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-followups-design.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "10",
+          "text": "2. **↑ leaks into input history.** When the user has dock focus and presses `↑` to move up between agents, `CommandInput`'s `useInput` *also* fires, populating the input box from history. The two `useInput` handlers run independently — `return` in App.tsx only ends its own handler."
+        },
+        {
+          "location": "21",
+          "text": "2. `↑/↓` while dock-focused never bleeds into input-history scrolling."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "topic": "history",
+      "matches": [
+        {
+          "location": "247",
+          "text": "`onArrowOut?.(\"down\")` is `App.tsx`'s signal to set `dockFocusIdx = 0` (only if `visible.length > 0`). Symmetric `↑` does **not** escape — keep input-history behaviour unchanged on `↑`."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "12",
+          "text": "2. Arrow keys are never routed to the dock. `CommandInput.tsx:88-100` unconditionally claims `↑/↓` for input history, so the user has no way to focus the dock with the keyboard."
+        },
+        {
+          "location": "228",
+          "text": "`CommandInput.tsx:88-100` claims `↑/↓` for history. To let `↓` escape the input we add an `onArrowOut` prop, fired only when **input is empty and history navigator is at the bottom**:"
+        },
+        {
+          "location": "247",
+          "text": "`onArrowOut?.(\"down\")` is `App.tsx`'s signal to set `dockFocusIdx = 0` (only if `visible.length > 0`). Symmetric `↑` does **not** escape — keep input-history behaviour unchanged on `↑`."
+        },
+        {
+          "location": "316",
+          "text": "4. Otherwise — existing behaviour, including `CommandInput` claiming `↑/↓` for input history."
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "78",
+          "text": "   global `commandQueue` (separate from chat history) at priority `later`."
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/agent-optimization-agent.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "85",
+          "text": "现有普通日志不是完整请求记录；开发模式的 session recorder 能保留更多输入，但它仍不能自动重建历史工具环境。回放需要冻结输入、工具响应或环境快照，并明确是记录回放还是新执行。"
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/mimi-architecture-review-2026-09-05.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "15",
+          "text": "- `engine.done.tokens` 是该次运行累计用量；每轮输入会重复计入已有历史。它既不是同时占用的上下文，也不能直接当作未命中缓存的收费 tokens。计费需进一步区分输入、输出、缓存读写及辅助请求。"
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/pet-work-reliability-design-2026-09-20.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "43",
+          "text": "新图像不会在首次请求后立即全部清除。使用独立、确定性的近期图像窗口，同时限制保留请求次数、图像数量和字节数；新图至少有首次呈现机会，旧图按先进先出淘汰。实现默认保留 6 次成功模型响应，历史上限 4 个图像出现位置、8 MiB 编码数据；同一 block 被重复引用也按实际发送次数计入容量。新输入首次请求允许超过历史上限，随后淘汰超额内容。窗口是 run-local，新的用户 run 不自动恢复旧像素。淘汰只影响模型请求上下文，原始 transcript 仍可通过现有 view_image 回读。"
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/release-ui-20261015.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "696",
+          "text": "in one successful invocation, and all eight Web browser commands. History's"
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/session-fork.md",
+      "topic": "history-semantics",
+      "matches": [
+        {
+          "location": "712",
+          "text": "- target 首次 `Engine.run()` 的 provider input 顺序是 copied history→新 user message，且没有重复 system reminder。"
+        }
+      ]
+    }
+  ]
+}

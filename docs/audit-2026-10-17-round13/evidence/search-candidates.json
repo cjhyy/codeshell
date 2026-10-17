@@ -1,0 +1,23 @@
+[
+  {
+    "id": "SEARCH-R13-C1",
+    "status": "candidate",
+    "title": "Content-query readiness differs from Main's trimmed 2-128 length gate",
+    "file": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+    "line": 29,
+    "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+    "trigger": "Ordinary content input with one non-space character plus trailing space, or a 129-character term",
+    "actual": "Real pure parser returns ready:true; Main source trim/length contract rejects these terms",
+    "controls": [
+      "one character without trailing whitespace is not ready",
+      "two characters plus trailing whitespace are ready with trimmed length 2",
+      "128-character term is ready",
+      "title query remains outside content mode"
+    ],
+    "evidenceLevel": "Actual production pure parser observations; UI/hook/preload/Main connection inspected as source only",
+    "limitations": "No actual Main handler, IPC, debounce or UI execution; frontend contract explicitly documents only minimum length, so no formal severity or observed UI failure claimed",
+    "report": "docs/audit-2026-10-17-round13/search.md",
+    "fixture": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts",
+    "rawLog": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.log"
+  }
+]

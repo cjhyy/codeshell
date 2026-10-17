@@ -1,0 +1,142 @@
+{
+  "baseline": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "totals": {
+    "firstBunShards": 5,
+    "completedCleanShards": 4,
+    "passedTests": 66,
+    "expectations": 146,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 1,
+    "existingBaselineTests": 54,
+    "newFocusedObservationsAndControls": 12,
+    "failedShardPassedTests": 0,
+    "failedShardFailures": 1,
+    "failedShardErrors": 1,
+    "failedFocusedTestBodiesExecuted": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-git-text-existing.first.log",
+      "exitFile": "evidence/root-git-text-existing.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/coding/src/git/parse-log.test.ts",
+        "packages/coding/src/git/worktree/slug.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 17,
+      "skipped": 0,
+      "sha256": "b0cc63047446c82f4030f05cd4a3676d9d46f78492124f9e78b43ce752a47f40"
+    },
+    {
+      "log": "evidence/history-characterization.first.log",
+      "exitFile": "evidence/history-characterization.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round13/evidence/history-characterization.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 31,
+      "skipped": 0,
+      "sha256": "491f629a71f1d3b3335a57940d45298f90b55ff6c9a96ed8efd33a9f0bbbcf7c"
+    },
+    {
+      "log": "evidence/search-pure-contracts.first.log",
+      "exitFile": "evidence/search-pure-contracts.first.exit.txt",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+        "packages/desktop/src/renderer/modelSelection.test.ts",
+        "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 18,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 32,
+      "skipped": 0,
+      "sha256": "712dce85584fbb3b334aa3ad9dbda0f02920dc6790edbcd9429bc0bcde32dfe4"
+    },
+    {
+      "log": "evidence/groups-existing-baseline.first.raw.log",
+      "exitFile": "evidence/groups-existing-baseline.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+        "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+        "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 33,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 66,
+      "skipped": 0,
+      "sha256": "0d6a6e6d020840560e3f7d08a8436b2a394fc6b41a85130ffe5830ace6709f7a"
+    },
+    {
+      "log": "evidence/groups-patch-summary.first.raw.log",
+      "exitFile": "evidence/groups-patch-summary.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round13/evidence/groups-patch-summary.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 1,
+      "completed": false,
+      "clean": false,
+      "passed": 0,
+      "failed": 1,
+      "errors": 1,
+      "expectations": 0,
+      "skipped": null,
+      "sha256": "27f73a06a6570142e4e530dbd759e57f3d8d9f57e5ff2df4e2e3e5dbfbeffe38",
+      "disposition": "SKIP entire focused patch-summary direction; wrong fixture relative import; no repair/rerun/alternate validation",
+      "plannedFocusedTests": 7,
+      "focusedTestBodiesExecuted": 0
+    }
+  ],
+  "notes": [
+    "Five first raw combined stdout/stderr logs and exits preserved before inspection. Four completed clean; one focused fixture load failed. No product rerun or alternate validation.",
+    "Clean 66 = 54 existing + 12 focused; shared history log counted once for two findings and candidate. Failed planned seven bodies never loaded and are not counted passed or skipped clean tests.",
+    "History uses actual helpers/fs/nextTick under pre-import homedir-only mock; no environment HOME/home/CODEX_HOME assignment or operator history access. React/Ink/UI lifecycle and Esc consumption source-only.",
+    "Same-tick flush candidate lacks ordinary TUI reachability; explicit flush recovers. Cross-start disk undo not executed or claimed.",
+    "Search actual pure parser and owned memory settings callbacks only; Main/IPC/UI/debounce not executed. modelPicker DD6-04 old failure remains skipped.",
+    "Groups baseline validates existing functions only; both new patch-summary candidates and Move remain static after focused load failure. No real ApplyPatch, UI or Git producer.",
+    "Root Git parser/slug existing pure tests only; old A03/A04 excluded. Additional transcript review source-only and test-source truncation disclosed; old i18n route not restored.",
+    "No models/paid APIs/accounts/user data/external messages/native apps/PTY/auth/permission/security/custody/watchdog experiments, shared deps/dist build or full build/typecheck/lint/test."
+  ]
+}

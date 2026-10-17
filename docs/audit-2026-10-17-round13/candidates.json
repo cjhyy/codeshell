@@ -1,0 +1,80 @@
+{
+  "baseline": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "count": 4,
+  "candidates": [
+    {
+      "id": "HIST-R13-C1",
+      "status": "candidate",
+      "title": "同 tick 撤销清空 pending 后，自动 flush 标记不复位",
+      "file": "packages/tui/src/ui/input-history.ts",
+      "line": 168,
+      "related": [
+        {
+          "file": "packages/tui/src/ui/input-history.ts",
+          "line": 183
+        },
+        {
+          "file": "packages/tui/src/ui/input-history.ts",
+          "line": 230
+        }
+      ],
+      "actual": "真实 add→remove→drainTick→add→drainTick 后第二条普通输入在 memory 但磁盘为空；显式 flushHistorySync 后落盘恢复。非空正常 flush 对照会允许下一次自动 flush。",
+      "reasonNotConfirmed": "普通 App Esc 在后续输入事件中通常已过 nextTick；本轮没有证明真实 TUI 能在 nextTick 前到达 remove，clearPendingHistoryEntries 也未发现正常调用点。保留函数序列结果，不将同 tick 到达性猜测升级成用户缺陷。",
+      "fixture": "history-characterization.test.ts",
+      "log": "history-characterization.first.log",
+      "limits": "无永久数据丢失结论，正常进程退出显式 flush 仍可恢复；未模拟崩溃或完整输入事件调度。"
+    },
+    {
+      "id": "SEARCH-R13-C1",
+      "status": "candidate",
+      "title": "Content-query readiness differs from Main's trimmed 2-128 length gate",
+      "file": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+      "line": 29,
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "trigger": "Ordinary content input with one non-space character plus trailing space, or a 129-character term",
+      "actual": "Real pure parser returns ready:true; Main source trim/length contract rejects these terms",
+      "controls": [
+        "one character without trailing whitespace is not ready",
+        "two characters plus trailing whitespace are ready with trimmed length 2",
+        "128-character term is ready",
+        "title query remains outside content mode"
+      ],
+      "evidenceLevel": "Actual production pure parser observations; UI/hook/preload/Main connection inspected as source only",
+      "limitations": "No actual Main handler, IPC, debounce or UI execution; frontend contract explicitly documents only minimum length, so no formal severity or observed UI failure claimed",
+      "report": "docs/audit-2026-10-17-round13/search.md",
+      "fixture": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts",
+      "rawLog": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.log"
+    },
+    {
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "evidenceLevel": "Source-only candidate; focused first fixture failed before tests loaded; whole focused direction skipped without repair or alternative validation",
+      "report": "docs/audit-2026-10-17-round13/groups.md",
+      "limits": "No production ApplyPatch, UI/React/native/Git product process/model/network/user-data execution. No actual summary result observed for candidate cases.",
+      "id": "GROUPS-R13-C1",
+      "title": "合法 header-only Delete 补丁可能不生成 Desktop 文件摘要",
+      "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "line": 95,
+      "relatedSources": [
+        "packages/coding/src/tools/apply-patch/parser.ts:127",
+        "packages/coding/src/tools/apply-patch/index.ts:42",
+        "packages/desktop/src/renderer/types.ts:1897"
+      ],
+      "reason": "Delete header initializes zero added/removed; flush requires nonzero content line counts, so source predicts a missing changed-file entry. Exact deleted line counts are not required by this candidate."
+    },
+    {
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "evidenceLevel": "Source-only candidate; focused first fixture failed before tests loaded; whole focused direction skipped without repair or alternative validation",
+      "report": "docs/audit-2026-10-17-round13/groups.md",
+      "limits": "No production ApplyPatch, UI/React/native/Git product process/model/network/user-data execution. No actual summary result observed for candidate cases.",
+      "id": "GROUPS-R13-C2",
+      "title": "合法 V4A ++/-- 内容可能被当作 unified diff header 排除",
+      "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "line": 137,
+      "relatedSources": [
+        "packages/coding/src/tools/apply-patch/parser.ts:14"
+      ],
+      "reason": "V4A marker plus ++counter;/--counter; yields +++counter;/---counter;, but Desktop parser excludes those prefixes, predicting missing entries or one-sided counts/synthetic diff."
+    }
+  ],
+  "note": "Two actual pure/helper observations with unproven UI contract/reachability; two static patch-summary candidates after focused first-load failure. None counted confirmed."
+}

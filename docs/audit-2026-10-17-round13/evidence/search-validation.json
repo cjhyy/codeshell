@@ -1,0 +1,74 @@
+{
+  "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "confirmedFindings": [],
+  "candidateIds": [
+    "SEARCH-R13-C1"
+  ],
+  "runs": [
+    {
+      "name": "search-pure-contracts",
+      "kind": "13 existing pure tests plus 5 focused observations and controls",
+      "attempt": 1,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+        "packages/desktop/src/renderer/modelSelection.test.ts",
+        "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts"
+      ],
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "fixtures": [
+        {
+          "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+          "bytes": 3772,
+          "sha256": "61f51649a1f8812c6d169814e39edbeced6405b633777721ea988414b4eff6ea"
+        },
+        {
+          "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+          "bytes": 1235,
+          "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af"
+        },
+        {
+          "path": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts",
+          "bytes": 3999,
+          "sha256": "be852f3348fb96cd8fa694e823398501fdccabc5c2f5c19a1fde059d9517de2f"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.log",
+      "rawLogSha256": "712dce85584fbb3b334aa3ad9dbda0f02920dc6790edbcd9429bc0bcde32dfe4",
+      "exitFile": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.exit.txt",
+      "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 18,
+      "expectCalls": 32,
+      "failures": 0,
+      "skipped": 0,
+      "guardedCompletionPresent": true,
+      "clean": true
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 1,
+    "tests": 18,
+    "expectCalls": 32,
+    "newFocusedTests": 5,
+    "baselineTests": 13,
+    "failures": 0,
+    "skipped": 0,
+    "failedShards": 0,
+    "retries": 0
+  },
+  "skippedDirections": [
+    {
+      "direction": "modelPickerPresentation grouping/runtime",
+      "reason": "historical round6 DD6-04 failed fixture; no recovery or alternate validation",
+      "historicalReport": "docs/audit-2026-10-17-round6/desktop-display.md"
+    }
+  ],
+  "firstRunPolicy": "combined raw output and exit file saved before any inspection; any failure stops this direction with zero retries",
+  "sourceManifest": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+  "dedup": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+  "scope": "Production pure parsing and memory callback functions only; no UI/DOM/Electron/native/PTY/network/model/user data/settings persistence/real jobs or product Git process"
+}

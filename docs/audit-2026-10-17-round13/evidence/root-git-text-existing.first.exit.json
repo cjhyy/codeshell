@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/coding/src/git/parse-log.test.ts",
+    "packages/coding/src/git/worktree/slug.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "elapsedSeconds": 0.278
+}

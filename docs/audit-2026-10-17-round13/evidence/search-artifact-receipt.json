@@ -1,0 +1,71 @@
+{
+  "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "scope": "Final worker report and search-* artifacts except this self-referential receipt; metadata only, no test rerun",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round13/search.md",
+      "bytes": 7070,
+      "sha256": "7843d9bff637e61384301da7173e0e4457b38b6c47b0c5fdaa8ed04f6dc8093e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-assemble.py",
+      "bytes": 7482,
+      "sha256": "7564ffe953fbae533c999a84a08874458797dbfb86489b332a82a77447966a06"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-candidates.json",
+      "bytes": 1329,
+      "sha256": "94323185dbbb0c4da3a04de723b49bc0974ba7f3ecc6e46bfafadcc7440b923d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "bytes": 375780,
+      "sha256": "ab04eb4d8c8247962f3b7fc667f41a37d130232606afff068592f5b3dc59fa48"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.py",
+      "bytes": 3514,
+      "sha256": "33d2bf699558414eea9e7d0c637a37f474c8e1e77162c340134aa1df3e8687ac"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-first-run.py",
+      "bytes": 1874,
+      "sha256": "e4ad017947ada2b9bf38862b0550d79a601853191ac9f6dd017c7d17621a8108"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.log",
+      "bytes": 2126,
+      "sha256": "712dce85584fbb3b334aa3ad9dbda0f02920dc6790edbcd9429bc0bcde32dfe4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.receipt.json",
+      "bytes": 1613,
+      "sha256": "da04d4ef0e08b4acb5a1e217e266d8a8e4d0d0b5768f62514f6b23782a1442d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts",
+      "bytes": 3999,
+      "sha256": "be852f3348fb96cd8fa694e823398501fdccabc5c2f5c19a1fde059d9517de2f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "bytes": 8637,
+      "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-validation.json",
+      "bytes": 2911,
+      "sha256": "df897315f636107952ea55582c8d55b2753e2ed33964347f3679ab79aa582bbd"
+    }
+  ]
+}

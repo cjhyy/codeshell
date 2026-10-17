@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+    "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+    "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T06:57:08.728552+00:00",
+  "finishedAt": "2026-10-17T06:57:08.885693+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round13/evidence/groups-existing-baseline.first.raw.log",
+  "rawBytes": 3102,
+  "rawSha256": "0d6a6e6d020840560e3f7d08a8436b2a394fc6b41a85130ffe5830ace6709f7a",
+  "policy": "FIRST combined stdout/stderr saved before inspection; no retry, fixture repair or alternate validation after any failure"
+}

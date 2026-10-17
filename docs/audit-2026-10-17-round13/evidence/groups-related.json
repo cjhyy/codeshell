@@ -1,0 +1,16 @@
+{
+  "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "relatedObservations": [
+    {
+      "id": "GROUPS-R13-R1",
+      "title": "Desktop Move marker flush branch related to prior external changedFiles rename family",
+      "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "line": 132,
+      "history": "docs/audit-2026-10-17/root.md R2-08",
+      "evidenceLevel": "Source-only; focused fixture skipped after initial import failure",
+      "countedConfirmed": false,
+      "countedCandidate": false,
+      "limits": "Separate parser implementation but related visible rename family; no runtime observation."
+    }
+  ]
+}
