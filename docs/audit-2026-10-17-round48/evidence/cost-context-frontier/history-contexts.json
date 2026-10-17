@@ -1,0 +1,3643 @@
+{
+  "createdUTC": "2026-10-17T15:42:59.888285+00:00",
+  "hits": {
+    "source_path": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/203",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/789",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/176/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "lines": 167,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 2,
+          "claimVariants": 2,
+          "claims": [
+            {
+              "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+                  "jsonLocation": "$[\"files\"][16]"
+                }
+              ]
+            },
+            {
+              "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][10]"
+                }
+              ]
+            }
+          ]
+        },
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/361/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "lines": 167,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1610/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts"
+          ],
+          "origin": "list-scalar",
+          "provenance": [
+            {
+              "historyRow": 198,
+              "jsonPointer": "/source_inventory/203"
+            },
+            {
+              "historyRow": 1119,
+              "jsonPointer": "/files/789"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/final/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/final/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3193,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/final/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3202,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3212,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            }
+          ],
+          "claimId": "C001611"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1610/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {
+            "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 1348,
+              "jsonPointer": "/files/176"
+            },
+            {
+              "historyRow": 1350,
+              "jsonPointer": "/files/361"
+            },
+            {
+              "historyRow": 2798,
+              "jsonPointer": "/files/10"
+            }
+          ],
+          "claimId": "C001612"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1612/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts",
+            "packages/core/src/model-traces/context.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 2790,
+              "jsonPointer": "/relativeImports/540"
+            },
+            {
+              "historyRow": 2791,
+              "jsonPointer": "/relativeImports/619"
+            }
+          ],
+          "claimId": "C001613"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1612/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1613/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts",
+            "packages/core/src/llm/client-base.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 2790,
+              "jsonPointer": "/relativeImports/607"
+            },
+            {
+              "historyRow": 2790,
+              "jsonPointer": "/relativeImports/609"
+            },
+            {
+              "historyRow": 2791,
+              "jsonPointer": "/relativeImports/692"
+            },
+            {
+              "historyRow": 2791,
+              "jsonPointer": "/relativeImports/694"
+            }
+          ],
+          "claimId": "C001614"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1613/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {
+            "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "limited-or-not-full-scope-unknown",
+          "scopeFields": {
+            "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+          },
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 2769,
+              "jsonPointer": "/files/16"
+            }
+          ],
+          "claimId": "C001615"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/2848/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/3209/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C001611",
+            "C001612",
+            "C001613",
+            "C001614",
+            "C001615"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 4,
+            "limited-or-not-full-scope-unknown": 1
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/622",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/16/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "worktreeMatchesFrozen": true,
+          "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+        },
+        "sourceSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/540/resolved",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/model-traces/context.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/607/resolved",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/609/resolved",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/619/resolved",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/model-traces/context.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/692/resolved",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/694/resolved",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/10/path",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        },
+        "sourceSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "packages/core/src/cost-ledger/context.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      }
+    ],
+    "source_filename": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/203",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/789",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/176/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "lines": 167,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 2,
+          "claimVariants": 2,
+          "claims": [
+            {
+              "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+                  "jsonLocation": "$[\"files\"][16]"
+                }
+              ]
+            },
+            {
+              "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][10]"
+                }
+              ]
+            }
+          ]
+        },
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/361/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "lines": 167,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1610/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts"
+          ],
+          "origin": "list-scalar",
+          "provenance": [
+            {
+              "historyRow": 198,
+              "jsonPointer": "/source_inventory/203"
+            },
+            {
+              "historyRow": 1119,
+              "jsonPointer": "/files/789"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3125,
+              "jsonPointer": "/final/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3135,
+              "jsonPointer": "/final/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3193,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3196,
+              "jsonPointer": "/final/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3202,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3209,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            },
+            {
+              "historyRow": 3212,
+              "jsonPointer": "/snapshot/loadedWorkspaceModules/6"
+            }
+          ],
+          "claimId": "C001611"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1610/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {
+            "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 1348,
+              "jsonPointer": "/files/176"
+            },
+            {
+              "historyRow": 1350,
+              "jsonPointer": "/files/361"
+            },
+            {
+              "historyRow": 2798,
+              "jsonPointer": "/files/10"
+            }
+          ],
+          "claimId": "C001612"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1612/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts",
+            "packages/core/src/model-traces/context.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 2790,
+              "jsonPointer": "/relativeImports/540"
+            },
+            {
+              "historyRow": 2791,
+              "jsonPointer": "/relativeImports/619"
+            }
+          ],
+          "claimId": "C001613"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1612/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1613/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {},
+          "hashBinding": "no-same-object-sha",
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {},
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts",
+            "packages/core/src/llm/client-base.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 2790,
+              "jsonPointer": "/relativeImports/607"
+            },
+            {
+              "historyRow": 2790,
+              "jsonPointer": "/relativeImports/609"
+            },
+            {
+              "historyRow": 2791,
+              "jsonPointer": "/relativeImports/692"
+            },
+            {
+              "historyRow": 2791,
+              "jsonPointer": "/relativeImports/694"
+            }
+          ],
+          "claimId": "C001614"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1613/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "sourceHashFields": {
+            "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+          },
+          "hashBinding": "current-same-object",
+          "coverageKind": "limited-or-not-full-scope-unknown",
+          "scopeFields": {
+            "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+          },
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false,
+          "roleBoundaryFields": {},
+          "sourcePathIncludesLocator": false,
+          "directSourcePathsInObject": [
+            "packages/core/src/cost-ledger/context.ts"
+          ],
+          "origin": "object-scalar-field",
+          "provenance": [
+            {
+              "historyRow": 2769,
+              "jsonPointer": "/files/16"
+            }
+          ],
+          "claimId": "C001615"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/2848/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/3209/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C001611",
+            "C001612",
+            "C001613",
+            "C001614",
+            "C001615"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 4,
+            "limited-or-not-full-scope-unknown": 1
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/622",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/16/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "worktreeMatchesFrozen": true,
+          "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+        },
+        "sourceSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/540/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/540/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/model-traces/context.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/607/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/607/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/609/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/609/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/619/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/619/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/model-traces/context.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/692/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/692/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/694/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/694/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/llm/client-base.ts",
+          "specifier": "../cost-ledger/context.js",
+          "resolved": "packages/core/src/cost-ledger/context.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/10/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        },
+        "sourceSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "jsonPointer": "/modules/7/productionFiles/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e633c7a607420e27750c2d2f2bba294a405728d93ddf6310c2aefa6e62634bb9"
+      }
+    ],
+    "source_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/176/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "lines": 167,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 2,
+          "claimVariants": 2,
+          "claims": [
+            {
+              "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+                  "jsonLocation": "$[\"files\"][16]"
+                }
+              ]
+            },
+            {
+              "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][10]"
+                }
+              ]
+            }
+          ]
+        },
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/176/claims/0/sourceSha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+              "jsonLocation": "$[\"files\"][16]"
+            }
+          ]
+        },
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/176/claims/1/sourceSha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+              "jsonLocation": "$[\"files\"][10]"
+            }
+          ]
+        },
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/361/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "lines": 167,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/sourceHashFields/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+        },
+        "sourceSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/671/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167,
+          "status": "historical-object-no-current-explicit-semantic-coverage",
+          "currentExplicitFullClaimIds": [],
+          "currentExplicitSelectedClaimIds": [],
+          "currentSelectedUnionLines": 0,
+          "claimIds": [
+            "C001611",
+            "C001612",
+            "C001613",
+            "C001614",
+            "C001615"
+          ],
+          "claimKindCounts": {
+            "incidental-path-or-pin-object": 4,
+            "limited-or-not-full-scope-unknown": 1
+          }
+        },
+        "sourceSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/671/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167
+        },
+        "sourceSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/671/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "lines": 167,
+          "initial49ShaMatches": true,
+          "blockedBy49EndingOverlay": false,
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        },
+        "sourceSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/16/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "worktreeMatchesFrozen": true,
+          "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+        },
+        "sourceSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/10/sha256",
+        "line": 1,
+        "needle": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "context": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "bytes": 5823,
+          "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        },
+        "sourceSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      }
+    ],
+    "display_contract": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/203",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/204",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/205",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/pricing.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/206",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/store.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/207",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/summary.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/208",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/types.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/2543",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "scripts/smoke-runtime-cost-ledger.mjs",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1502/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "18629db3ab4ca36ab600c9742cb23f7835d25cfdea3a055aeb21ba9f4743f977"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1503/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "18629db3ab4ca36ab600c9742cb23f7835d25cfdea3a055aeb21ba9f4743f977"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "jsonPointer": "/files/295/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5526576cf6318dbed766f2cc5a847588c73e7f0ce907de432abd69e4c2eb0bc3"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "jsonPointer": "/files/321/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5526576cf6318dbed766f2cc5a847588c73e7f0ce907de432abd69e4c2eb0bc3"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+        "jsonPointer": "/scannedFiles/295/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e3e1d42f7cf201fe0affbed4e7c0bdc9844d5639e639ae07d9f8254df1c2d8e6"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+        "jsonPointer": "/scannedFiles/321/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e3e1d42f7cf201fe0affbed4e7c0bdc9844d5639e639ae07d9f8254df1c2d8e6"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "jsonPointer": "/files/1560/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a9d90ba91428cc9993485a239f490583ebdfa9befb77426435d4b680d0273d79"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "jsonPointer": "/files/1561/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a9d90ba91428cc9993485a239f490583ebdfa9befb77426435d4b680d0273d79"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/hits/immutability/38/context",
+        "line": 5,
+        "needle": "cost-ledger",
+        "context": "5 | service/overlay/disabled-lists/project read, types/exports inspected; no dynamic toggle/recovery. |\n| cli | 4/3 | Not covered here. |\n| composition | 10/5 | activation/lifetime/freeze/compiler lifecycle read, remaining wiring partially read; no dynamic activation or disposal. |\n| context | 7/17 | Not covered here. |\n| cost-ledger | 6/1 | All production files read: attempt/snapshot ownership, receipt persistence, summary/pricing/unknown semantics. Real in-memo",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/hits/immutability/41/context",
+        "line": 5,
+        "needle": "cost-ledger",
+        "context": "5 | service/overlay/disabled-lists/project read, types/exports inspected; no dynamic toggle/recovery. |\n| cli | 4/3 | Not covered here. |\n| composition | 10/5 | activation/lifetime/freeze/compiler lifecycle read, remaining wiring partially read; no dynamic activation or disposal. |\n| context | 7/17 | Not covered here. |\n| cost-ledger | 6/1 | All production files read: attempt/snapshot ownership, receipt persistence, summary/pricing/unknown semantics. Real in-memo",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1559/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1560/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3f4da5100b3d2b512a167410df44b2863cff7f2b5c99a75081fc4e1a3b4432a7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "jsonPointer": "/files/903/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d834db5819494b3b73facc06df297a8a04a7f1e2ac07e84c5e373287c301dfff"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "jsonPointer": "/files/929/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d834db5819494b3b73facc06df297a8a04a7f1e2ac07e84c5e373287c301dfff"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1616/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ea237de513d27f5366ec2c6d831a2091e59d5a9d9768263c49c00db4b09e73ac"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1617/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ea237de513d27f5366ec2c6d831a2091e59d5a9d9768263c49c00db4b09e73ac"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "jsonPointer": "/files/550/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "db434249ea6d2e98097b40fda17000bde582168d1e86623dfb9bb0d2d181b4e8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "jsonPointer": "/files/571/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "db434249ea6d2e98097b40fda17000bde582168d1e86623dfb9bb0d2d181b4e8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "jsonPointer": "/files/1674/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3658d0cd18f0bbe5685f1a8fb1bcab77da97bf331729556baf9af0853612716e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "jsonPointer": "/files/1675/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3658d0cd18f0bbe5685f1a8fb1bcab77da97bf331729556baf9af0853612716e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1674/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "acb6dd8a20c8e4e5a2fc7130d49be5a72beeb07c61bc51cfa9671a8dfff8c68e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1675/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "acb6dd8a20c8e4e5a2fc7130d49be5a72beeb07c61bc51cfa9671a8dfff8c68e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+        "jsonPointer": "/inventory/1674/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ab04eb4d8c8247962f3b7fc667f41a37d130232606afff068592f5b3dc59fa48"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+        "jsonPointer": "/inventory/1675/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ab04eb4d8c8247962f3b7fc667f41a37d130232606afff068592f5b3dc59fa48"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+        "jsonPointer": "/scope",
+        "line": 1,
+        "needle": "inspectionscope",
+        "context": "Hashing complete files does not imply full-file behavioural coverage; inspectionScope distinguishes executed pure functions from static consumers and skipped grouping.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "jsonPointer": "/inventory/1726/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "28bffc7bc8c55ee09323a8b31ce4556f99ebd64d7fe91c1047d49d7a7e3c29d5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "jsonPointer": "/inventory/1727/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "28bffc7bc8c55ee09323a8b31ce4556f99ebd64d7fe91c1047d49d7a7e3c29d5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+        "jsonPointer": "/hits/addressed_old_sources/8/context",
+        "line": 6,
+        "needle": "cost-r9-01",
+        "context": "具目录检索与统计数据开展独立查重和验证，确认 **3 项 P3**，另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d38307bd081e82a3acf8ddae2fcd725ca2dc794a02772d420b5a5b3352c745ef"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1726/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d38307bd081e82a3acf8ddae2fcd725ca2dc794a02772d420b5a5b3352c745ef"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1727/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d38307bd081e82a3acf8ddae2fcd725ca2dc794a02772d420b5a5b3352c745ef"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/files/1726/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/files/1727/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "jsonPointer": "/inventory/1784/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a1bad6f073d1f9dbabe69bff0afb33cb2192fd7005a8ab729c298d9560aac7fd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "jsonPointer": "/inventory/1785/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a1bad6f073d1f9dbabe69bff0afb33cb2192fd7005a8ab729c298d9560aac7fd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "jsonPointer": "/inventory/1783/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "jsonPointer": "/inventory/1784/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+        "jsonPointer": "/inventory/1783/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b641103dc1cea251bc9c5490aca1b827f4cdf6add3fbe57fa49f15f5a241c11e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json",
+        "jsonPointer": "/inventory/1784/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b641103dc1cea251bc9c5490aca1b827f4cdf6add3fbe57fa49f15f5a241c11e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1783/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "46e8652375da805039f83686cb94439fc4b06a682d659734a68cdbe70d91c6f1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1784/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "46e8652375da805039f83686cb94439fc4b06a682d659734a68cdbe70d91c6f1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/bidi-dedup.json",
+        "jsonPointer": "/inventory/1840/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1afc108fd8520c096c679669471a35ffe4f05ecb18b26d5ae9e28b152ef3c209"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/bidi-dedup.json",
+        "jsonPointer": "/inventory/1841/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1afc108fd8520c096c679669471a35ffe4f05ecb18b26d5ae9e28b152ef3c209"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1840/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1841/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+        "jsonPointer": "/inventory/1840/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8630de2015694c51afba126d1ad36093386e6756b3ed4919d27b6c9aa5a353e1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+        "jsonPointer": "/inventory/1841/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8630de2015694c51afba126d1ad36093386e6756b3ed4919d27b6c9aa5a353e1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/tasknoise-dedup.json",
+        "jsonPointer": "/inventory/1841/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc896bc8f47188d6769abd217c7b3c57229a01417164ab47a3b938150e40663d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round16/evidence/tasknoise-dedup.json",
+        "jsonPointer": "/inventory/1842/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc896bc8f47188d6769abd217c7b3c57229a01417164ab47a3b938150e40663d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/catalog-dedup.json",
+        "jsonPointer": "/inventory/1896/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "246a0b7780df621973741aa2dd8120ae9d84a0ddf39fd0b159f1d81e13a60edd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/catalog-dedup.json",
+        "jsonPointer": "/inventory/1897/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "246a0b7780df621973741aa2dd8120ae9d84a0ddf39fd0b159f1d81e13a60edd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+        "jsonPointer": "/inventory/1896/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2fb7597ce0faa82a8874a65bd0f31a8cba9e8f729d09ebd80ca47213bc7cee65"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+        "jsonPointer": "/inventory/1897/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2fb7597ce0faa82a8874a65bd0f31a8cba9e8f729d09ebd80ca47213bc7cee65"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1896/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b3b54948c351b94ba3516ad4f2a73d59669a9ff4f6365cdf108ee89b201e4b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1897/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b3b54948c351b94ba3516ad4f2a73d59669a9ff4f6365cdf108ee89b201e4b1e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round18/evidence/presentation-dedup.json",
+        "jsonPointer": "/files/1953",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ffbe05430d99564f5f9cf5bca7e3d331eb4230c21431ec8adb8b464a045a59ef"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round18/evidence/presentation-dedup.json",
+        "jsonPointer": "/files/1954",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ffbe05430d99564f5f9cf5bca7e3d331eb4230c21431ec8adb8b464a045a59ef"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round18/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1953/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3d4ec013600e81e28f4f77dacda92ac9111791b01ba1866b3dbe7e74912ffc12"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round18/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/1954/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3d4ec013600e81e28f4f77dacda92ac9111791b01ba1866b3dbe7e74912ffc12"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2008/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16c041935063d82927306e90cc9aae8f4eb10c4d51e1aa3fef738a6de3593b94"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2009/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "16c041935063d82927306e90cc9aae8f4eb10c4d51e1aa3fef738a6de3593b94"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/inventory/2068/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+        "jsonPointer": "/inventory/2069/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2067/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b3f57a6cb0da02aeca6c8477e5569043a2620efaac4dd216d3a02ac28948b3fb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2068/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b3f57a6cb0da02aeca6c8477e5569043a2620efaac4dd216d3a02ac28948b3fb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "jsonPointer": "/inventory/2068/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "jsonPointer": "/inventory/2069/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "jsonPointer": "/matchingFiles/request_accounting/99",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "jsonPointer": "/matchingFiles/request_accounting/100",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json",
+        "jsonPointer": "/inventory/2068/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3a4daf48f1ac426d2f7f2295f90faca2faa19b4234ffabb3fcc971f4570bb0e8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json",
+        "jsonPointer": "/inventory/2069/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3a4daf48f1ac426d2f7f2295f90faca2faa19b4234ffabb3fcc971f4570bb0e8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+        "jsonPointer": "/inventory/2128/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5dc4c600193ece5b49b5ebe4f3bd0858dbb3f94d1e1f60764c1404e80ed6538b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+        "jsonPointer": "/inventory/2129/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5dc4c600193ece5b49b5ebe4f3bd0858dbb3f94d1e1f60764c1404e80ed6538b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/ndjson-dedup.json",
+        "jsonPointer": "/inventory/2127/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec3660d02501fb64fcb6de1301493b67d88d8554f3f0519b1b0792d30349ff08"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/ndjson-dedup.json",
+        "jsonPointer": "/inventory/2128/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec3660d02501fb64fcb6de1301493b67d88d8554f3f0519b1b0792d30349ff08"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2127/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ddf5fc3190c699cec67bbdc3feee2dda81aae9d6b967fbb1c5278cb4d6a3b2a6"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2128/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ddf5fc3190c699cec67bbdc3feee2dda81aae9d6b967fbb1c5278cb4d6a3b2a6"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "jsonPointer": "/inventory/2128/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "9c4d7d10e4bc9add88446a5de34c3a7fedb501ccbe05ef94d3aca057df5fd9f9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "jsonPointer": "/inventory/2129/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "9c4d7d10e4bc9add88446a5de34c3a7fedb501ccbe05ef94d3aca057df5fd9f9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "jsonPointer": "/inventory/2190/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7f49f39854634870164ebd12d69b07dbaa8f3a66b3320cbfd07232e55dd50839"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "jsonPointer": "/inventory/2191/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7f49f39854634870164ebd12d69b07dbaa8f3a66b3320cbfd07232e55dd50839"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2190/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0822147160e51c37e7ae22751363ceec1530de01812139a973878f46d14fd974"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2191/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0822147160e51c37e7ae22751363ceec1530de01812139a973878f46d14fd974"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "jsonPointer": "/inventory/2190/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "f9b75d716a613ca2e44516467f266bf47f95cddbaaf79948eec1b88323c790c7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "jsonPointer": "/inventory/2191/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "f9b75d716a613ca2e44516467f266bf47f95cddbaaf79948eec1b88323c790c7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+        "jsonPointer": "/commands/1/stdout",
+        "line": 1656,
+        "needle": "cost-ledger",
+        "context": "y.md\ndocs/todo/independent-output-journal-receipt.json\ndocs/todo/link-headless-server-feasibility.md\ndocs/todo/im-gateway-research.md\ndocs/todo/runtime-active-close-delivery.md\ndocs/todo/external-runtime-output-journal-delivery.md\ndocs/todo/agent-evals-platforms-and-adapters.md\ndocs/todo/project-cloud-panels-plan.md\ndocs/todo/runtime-cross-session-cost-ledger-design.md\ndocs/todo/docker-candidate-pre-core-guards.md\ndocs/todo/2026-09-11-overnight-todo-audit.md\ndocs/todo/all-todo-completion-2026-10-09.md\ndocs/review-remaining-2026-10-12/validation/setup/install.json\ndocs/review-2026-10-12/file-mutex-round19.md\ndocs/review-2026-10-12/connection-recovery-quality-round15.md\ndocs/audit-2026-10-17-round15/evidence/migration-source-pure.first.exit.json\ndocs/audit-2026-10-17-round15/evidence/migration-config-pure.first.exit.json\ndocs/audit-2026-10-17-round15/evidence/injection-image-grammar.first.exit.json\ndocs/audit-2026-10-17-round15/evidence/injection-focused-dedup.json\ndocs/audit-2026-10-17-round15/evidence/injection-source-manifest.json\ndocs/audit-20",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0761bd3b105a628fd8a622eefacabc7ee7253c0ae7f783b80beca3951a3112d8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+        "jsonPointer": "/commands/1/stdout",
+        "line": 1741,
+        "needle": "cost-ledger",
+        "context": "rectory-bookmarks-delivery.md\ndocs/todo/mobile-half-open-recovery-2026-10-13.md\ndocs/todo/core-harness-and-plugin-panels.md\ndocs/todo/macos-keychain-acceptance-final-receipt.json\ndocs/todo/release-ui-20261015.md\ndocs/todo/xiaohongshu-automation-session-troubleshooting.md\ndocs/todo/workspace-datasource-binding-adr.md\ndocs/todo/runtime-cross-session-cost-ledger-delivery.md\ndocs/todo/agent-optimization-agent.md\ndocs/todo/figma-link-mcp-plan.md\ndocs/todo/cloud-main-services-https-receipt.json\ndocs/todo/panel-plugin-runtime-implementation.md\ndocs/todo/output-journal-frozen-race-receipt.json\ndocs/todo/agent-module-phase-c-delivery.md\ndocs/todo/mimi-chat-replay-2026-09-06.md\ndocs/todo/link-connector-refactor-delivery-2026-10-16.md\ndocs/todo/cloud-native-chooser-2026-10-13.md\ndocs/todo/prompt-cache-optimization.md\ndocs/todo/mobile-external-output-journal-delivery.md\ndocs/review-2026-10-12/legacy-history-round24.md\ndocs/review-2026-10-12/quality-round16.md\ndocs/review-2026-10-12/desktop-quality-round10.md\ndocs/review-2026-10-12/quality-round22.md\ndocs/re",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0761bd3b105a628fd8a622eefacabc7ee7253c0ae7f783b80beca3951a3112d8"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-history.json",
+        "jsonPointer": "/inventory/2191",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "fadd635036e998cd445f9a80e60c21f860ae01aa72b5eba4cfc88dd4e6dce930"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-history.json",
+        "jsonPointer": "/inventory/2192",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "fadd635036e998cd445f9a80e60c21f860ae01aa72b5eba4cfc88dd4e6dce930"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "jsonPointer": "/inventory/2190/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "cbc6c1a608ce230c7aaf847bf75c0f979041b20ab11426aa0e008c8ba48498fd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "jsonPointer": "/inventory/2191/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "cbc6c1a608ce230c7aaf847bf75c0f979041b20ab11426aa0e008c8ba48498fd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+        "jsonPointer": "/inventory/2259/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d31896a7455cb9334ea7b2a27f18c1e2435c244c23d4417fa543bd6566dfbd94"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+        "jsonPointer": "/inventory/2260/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "d31896a7455cb9334ea7b2a27f18c1e2435c244c23d4417fa543bd6566dfbd94"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/product-cwd-dedup.json",
+        "jsonPointer": "/inventory/2259/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "32bdbf1ba85b16169fbefbfa6048b93e8eaaf21841b3e8bdc9210a93ad6f83e0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/product-cwd-dedup.json",
+        "jsonPointer": "/inventory/2260/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "32bdbf1ba85b16169fbefbfa6048b93e8eaaf21841b3e8bdc9210a93ad6f83e0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/product-dedup.json",
+        "jsonPointer": "/inventory/2259/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0b2d3c002c4f1b114f13444e80b41c1304350827bc94458f29b6a60bf8a09b16"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/product-dedup.json",
+        "jsonPointer": "/inventory/2260/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0b2d3c002c4f1b114f13444e80b41c1304350827bc94458f29b6a60bf8a09b16"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 989,
+        "needle": "cost-ledger",
+        "context": "-connector-refactor-delivery-2026-10-16.md\ndocs/audit-2026-10-17-round17/evidence/mappers-findings.json\ndocs/audit-2026-10-17-round17/evidence/root-qc.md\ndocs/todo/xiaohongshu-automation-session-troubleshooting.md\ndocs/audit-2026-10-17-round17/evidence/catalog-dedup.json\ndocs/todo/workspace-datasource-binding-adr.md\ndocs/todo/runtime-cross-session-cost-ledger-delivery.md\ndocs/audit-2026-10-17-round17/evidence/mappers-dedup.json\ndocs/todo/agent-optimization-agent.md\ndocs/audit-2026-10-17-round17/evidence/frontier-dedup.json\ndocs/todo/figma-link-mcp-plan.md\ndocs/audit-2026-10-17-round17/evidence/review-catalog.md\ndocs/audit-2026-10-17-round17/evidence/catalog-findings.json\ndocs/todo/cloud-main-services-https-receipt.json\ndocs/audit-2026-10-17-round17/evidence/frontier-assembly-note.md\ndocs/audit-2026-10-17-round17/evidence/frontier-candidates.json\ndocs/audit-2026-10-17-round17/evidence/mappers-source-manifest.json\ndocs/todo/panel-plugin-runtime-implementation.md\ndocs/audit-2026-10-17-round17/evidence/mappers-preflight.json\ndocs/todo/memory-final-d",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7b9ad6d49579d972637ab9f83796971eacc093c75653d7d28925b5b2418f671c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 1042,
+        "needle": "cost-ledger",
+        "context": "gate.md\ndocs/todo/runtime-active-close-delivery.md\ndocs/todo/external-runtime-output-journal-delivery.md\ndocs/audit-2026-10-17-round17/evidence/frontier-source-manifest.json\ndocs/todo/agent-evals-platforms-and-adapters.md\ndocs/todo/project-cloud-panels-plan.md\ndocs/audit-2026-10-17-round17/evidence/review-mappers.md\ndocs/todo/runtime-cross-session-cost-ledger-design.md\ndocs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json\ndocs/todo/docker-candidate-pre-core-guards.md\ndocs/todo/2026-09-11-overnight-todo-audit.md\ndocs/todo/all-todo-completion-2026-10-09.md\ndocs/audit-2026-10-17-round17/worker-integrity.json\ndocs/audit-2026-10-17-round17/addressed-sources.json\ndocs/audit-2026-10-17-round17/source-manifest.json\ndocs/audit-2026-10-17-round23/evidence/room-data-callers-navigation.json\ndocs/audit-2026-10-17-round23/evidence/integration-before.json\ndocs/audit-2026-10-17-round23/evidence/room-data-navigation.json\ndocs/audit-2026-10-17-round23/evidence/cron-dedup.json\ndocs/audit-2026-10-17-round23/evidence/cron-history-selected.json\ndocs/aud",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7b9ad6d49579d972637ab9f83796971eacc093c75653d7d28925b5b2418f671c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/inventory/2260/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/inventory/2261/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2259/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "03a2820c1946fb898c37d9cf885e4eb2176eb5acb1ed9e32f59324e1b84c1a5c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2260/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "03a2820c1946fb898c37d9cf885e4eb2176eb5acb1ed9e32f59324e1b84c1a5c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "jsonPointer": "/inventory/2259/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8c8fef1017b5aa29be7c78fcea3b821adcc040e7d7d43cd688854a0883e02ddc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "jsonPointer": "/inventory/2260/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8c8fef1017b5aa29be7c78fcea3b821adcc040e7d7d43cd688854a0883e02ddc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.json",
+        "jsonPointer": "/inventory/2333/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e69964ea9c28ece5679c46e73689709290de169ff00c8b53ad3746c8615f632d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.json",
+        "jsonPointer": "/inventory/2334/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e69964ea9c28ece5679c46e73689709290de169ff00c8b53ad3746c8615f632d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 1302,
+        "needle": "cost-ledger",
+        "context": "ache-optimization.md\ndocs/todo/output-journal-frozen-race-receipt.json\ndocs/todo/agent-module-phase-c-delivery.md\ndocs/todo/mimi-chat-replay-2026-09-06.md\ndocs/todo/link-connector-refactor-delivery-2026-10-16.md\ndocs/todo/xiaohongshu-automation-session-troubleshooting.md\ndocs/todo/workspace-datasource-binding-adr.md\ndocs/todo/runtime-cross-session-cost-ledger-delivery.md\ndocs/todo/agent-optimization-agent.md\ndocs/todo/figma-link-mcp-plan.md\ndocs/todo/cloud-main-services-https-receipt.json\ndocs/todo/panel-plugin-runtime-implementation.md\ndocs/todo/memory-final-design.md\ndocs/todo/codeshell-hub-iteration-design.md\ndocs/todo/cloud-main-services-https-delivery.md\ndocs/todo/codex-cloud-remote-tasks-design.md\ndocs/todo/2026-09-11-overnight-polish-results.md\ndocs/todo/project-cloud-panels-objective.md\ndocs/todo/macos-keychain-acceptance-combined-receipt.json\ndocs/todo/mimi-wechat-turn-lifecycle-2026-09-21.md\ndocs/todo/context-notes-strategy.md\ndocs/todo/profile-mcp-transport-reload-delivery.md\ndocs/todo/panel-worktree-directory-bookmarks-delivery.md\ndo",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5d68a33d710902998e4bc9b5a28c905ac9694bf2a5d1fb6563167b003a7a0fa9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+        "jsonPointer": "/stdout",
+        "line": 1328,
+        "needle": "cost-ledger",
+        "context": "ce-final-receipt.json\ndocs/todo/release-ui-20261015.md\ndocs/todo/link-headless-server-feasibility.md\ndocs/todo/im-gateway-research.md\ndocs/todo/runtime-active-close-delivery.md\ndocs/todo/external-runtime-output-journal-delivery.md\ndocs/todo/agent-evals-platforms-and-adapters.md\ndocs/todo/project-cloud-panels-plan.md\ndocs/todo/runtime-cross-session-cost-ledger-design.md\ndocs/todo/docker-candidate-pre-core-guards.md\ndocs/todo/2026-09-11-overnight-todo-audit.md\ndocs/todo/all-todo-completion-2026-10-09.md\ndocs/review-remaining-2026-10-12/validation/core-lifecycle/INDEX.md\ndocs/audit-2026-10-17-round16/source-manifest.json\ndocs/audit-2026-10-17-round16/candidates.json\ndocs/audit-2026-10-17-round16/worker-integrity.json\ndocs/audit-2026-10-17-round16/tabstops.md\ndocs/todo/optimization-lab-acceptance-2026-10-08.md\ndocs/todo/p0-p1-release-2026-10-12.md\ndocs/todo/pet-built-runtime-acceptance-2026-10-12.json\ndocs/todo/core-universalize-plugin-panel-design.md\ndocs/todo/bug-status-desktop-main.md\ndocs/todo/project-cloud-panels-delivery.md\ndocs/todo/workspace",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "5d68a33d710902998e4bc9b5a28c905ac9694bf2a5d1fb6563167b003a7a0fa9"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.json",
+        "jsonPointer": "/inventory/2334/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "11b4082dcb4264f555019a1cde72b7ccdcf9ab63200d214825a06451f7cf7c9a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.json",
+        "jsonPointer": "/inventory/2335/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "11b4082dcb4264f555019a1cde72b7ccdcf9ab63200d214825a06451f7cf7c9a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2333/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7c8a21fc1361b6ca7385a26ef03ddeaa6429047e2d55ebda8d6a69ad4fb5a37b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-dedup.json",
+        "jsonPointer": "/inventory/2334/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "7c8a21fc1361b6ca7385a26ef03ddeaa6429047e2d55ebda8d6a69ad4fb5a37b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "jsonPointer": "/inventory/2332/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "jsonPointer": "/inventory/2333/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+        "jsonPointer": "/files/70/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "f46c47265d8ac8dda06459c94d119f936845559f6bdb9d6e3f8912c66aff44aa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+        "jsonPointer": "/allIndexEntryPaths/27",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "f46c47265d8ac8dda06459c94d119f936845559f6bdb9d6e3f8912c66aff44aa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+        "jsonPointer": "/sources/47/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+        "jsonPointer": "/checks/47/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "05cac3927bd8b1ebbdcd7a063d97cc815de8e084fc311e2b03f3b0d044d44c71"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "jsonPointer": "/inventory/2333/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "jsonPointer": "/inventory/2334/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+        "jsonPointer": "/inventory/2333/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2f97179bed408b25a03e1e9bea557a2f261b005b2ba8f778c53d178b2ab4338a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/windows-dedup.json",
+        "jsonPointer": "/inventory/2334/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2f97179bed408b25a03e1e9bea557a2f261b005b2ba8f778c53d178b2ab4338a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+        "jsonPointer": "/files/53/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "805e7a30f7bcbe5f713dc0f6d171ad7f2f42c05a965199231689ffed69c6fb56"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+        "jsonPointer": "/priorPrepHashOnlyChecks/47/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "805e7a30f7bcbe5f713dc0f6d171ad7f2f42c05a965199231689ffed69c6fb56"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/history.json",
+        "jsonPointer": "/inventory/2409/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ecf1e8e1b037f7a34cd69607489ab5c3c32405dd7f1434e81df4e05f2c0755ea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/history.json",
+        "jsonPointer": "/inventory/2410/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ecf1e8e1b037f7a34cd69607489ab5c3c32405dd7f1434e81df4e05f2c0755ea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/787",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/ledger.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/788",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/summary.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/789",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/790",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/pricing.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/791",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/index.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/792",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/types.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/793",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/cost-ledger/store.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/1507",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "packages/core/src/engine/engine.cost-ledger.test.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+        "jsonPointer": "/inventory/2410/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "c2252fa38b1492179492a3bfdef6a7060553d44f26b849bd8f2675440849c1fe"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+        "jsonPointer": "/inventory/2411/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "c2252fa38b1492179492a3bfdef6a7060553d44f26b849bd8f2675440849c1fe"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/output-dedup.json",
+        "jsonPointer": "/inventory/2411/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e5b387a0308965385c74cd15c50eebcd314e36aa17c20081c073dd59db478fad"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/output-dedup.json",
+        "jsonPointer": "/inventory/2412/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e5b387a0308965385c74cd15c50eebcd314e36aa17c20081c073dd59db478fad"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history-supplement.json",
+        "jsonPointer": "/matches/codex-user-context/40/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "78a329ee4b72bd303ba07072f3907ef1cf120fa2849fd5ed3ce3e098ec93fb89"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "jsonPointer": "/inventory/2464/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "jsonPointer": "/inventory/2465/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+        "jsonPointer": "/inventory/2467/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "69d9e502a1aba80ff7d7d0abbca0fdee8df6046d3cfdb16bb16282f47768d70f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+        "jsonPointer": "/inventory/2468/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "69d9e502a1aba80ff7d7d0abbca0fdee8df6046d3cfdb16bb16282f47768d70f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/root-branch-scan.json",
+        "jsonPointer": "/inventory/2467/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6b91899adef8e14c16a8f4f6285e8bdfc98f8d628617e5c78a80b14892358187"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/root-branch-scan.json",
+        "jsonPointer": "/inventory/2468/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6b91899adef8e14c16a8f4f6285e8bdfc98f8d628617e5c78a80b14892358187"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+        "jsonPointer": "/inventory/2468/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "139f132c615782b657de7113733f3a0dfa1f45d92ccc8fc77993a71332ccbf8a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+        "jsonPointer": "/inventory/2469/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "139f132c615782b657de7113733f3a0dfa1f45d92ccc8fc77993a71332ccbf8a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-dedup.json",
+        "jsonPointer": "/inventory/2467/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "434dcddb86d2bed0827d6c9d32bc02df2306df34a6e6c073b899dd0c77486c13"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-dedup.json",
+        "jsonPointer": "/inventory/2468/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "434dcddb86d2bed0827d6c9d32bc02df2306df34a6e6c073b899dd0c77486c13"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-prep/history.json",
+        "jsonPointer": "/inventory/2467/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "421a365a60c1c236fe6687a1e34a947bbc6c1fdacfc43d58ff6fca2e205ff444"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-prep/history.json",
+        "jsonPointer": "/inventory/2468/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "421a365a60c1c236fe6687a1e34a947bbc6c1fdacfc43d58ff6fca2e205ff444"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "jsonPointer": "/inventory/2554/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-delivery.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4a2c1a34d92f7f35925e0bfbd4edc8b38b944f41c5d585bde9126bcebce370a5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "jsonPointer": "/inventory/2555/path",
+        "line": 1,
+        "needle": "cost-ledger",
+        "context": "docs/todo/runtime-cross-session-cost-ledger-design.md",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "4a2c1a34d92f7f35925e0bfbd4edc8b38b944f41c5d585bde9126bcebce370a5"
+      }
+    ]
+  },
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/176",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "lines": 167,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][16]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/361",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "lines": 167,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/671",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "lines": 167,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C001611",
+          "C001612",
+          "C001613",
+          "C001614",
+          "C001615"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 4,
+          "limited-or-not-full-scope-unknown": 1
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/671",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "lines": 167
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/671",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "lines": 167,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/16",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "worktreeMatchesFrozen": true,
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/10",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+}

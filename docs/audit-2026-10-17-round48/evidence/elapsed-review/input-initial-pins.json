@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T16:00:09.962360+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "bytes": 13129,
+      "lines": 387,
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "beforeBodyAndNavigation": true
+    }
+  ]
+}

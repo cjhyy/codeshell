@@ -1,0 +1,11 @@
+{
+  "dateUTC": "2026-10-17T15:53:26.634194+00:00",
+  "toolChunkId": "7d83d5",
+  "commandExitCode": 0,
+  "requestedMaxOutputTokens": 6200,
+  "observedOriginalTokenCount": 6512,
+  "observedWarning": "Warning: truncated output (original token count: 6512)",
+  "observedTotalOutputLines": 156,
+  "observedElision": "\u2026312 tokens truncated\u2026",
+  "scope": "Metadata history window display, not product execution; source excerpts unaffected. Full saved JSON predates this display. Reprint exact selected row background-elapsed/index24 without rescanning."
+}

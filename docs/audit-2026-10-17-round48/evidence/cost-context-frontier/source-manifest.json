@@ -1,0 +1,748 @@
+{
+  "capturedUTC": "2026-10-17T15:47:17.473705+00:00",
+  "rootContext": "Root reported c3a9ece2e6f183671b00e07322a9722fad6bda54; this agent0Git",
+  "repositoryRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "bytes": 5823,
+      "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "lineCount": 167,
+      "kind": "product",
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          7,
+          15
+        ],
+        [
+          19,
+          29
+        ],
+        [
+          31,
+          42
+        ],
+        [
+          48,
+          59
+        ],
+        [
+          65,
+          68
+        ],
+        [
+          78,
+          84
+        ],
+        [
+          88,
+          96
+        ],
+        [
+          101,
+          127
+        ],
+        [
+          137,
+          158
+        ]
+      ],
+      "selectedLineCount": 113,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          167
+        ]
+      ],
+      "bodyDisplayedLineCount": 167,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          167
+        ]
+      ],
+      "displayedLineCount": 167,
+      "initialSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "initialPinUTC": "2026-10-17T15:42:52.945423+00:00",
+      "initialPinTiming": "before61 product body read",
+      "endingSameSha256": true,
+      "scope": "Ordinary receipt/usage/purpose DTO and finish/settle forwarding. AsyncLocalStorage resource propagation, crypto request-ID construction, enabled/preflight mechanism and transport invocation correctness are boundary-only; not semantic full.",
+      "prepPinRow": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "lineCount": 167,
+        "pinUTC": "2026-10-17T15:42:52.945423+00:00",
+        "timing": "before61 product body read"
+      }
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "lineCount": 92,
+      "kind": "product",
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          3,
+          47
+        ]
+      ],
+      "selectedLineCount": 45,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          92
+        ]
+      ],
+      "bodyDisplayedLineCount": 92,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          92
+        ]
+      ],
+      "displayedLineCount": 92,
+      "initialSha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "initialPinUTC": "2026-10-17T15:44:24.468113+00:00",
+      "initialPinTiming": "before61 first source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Ordinary UsagePurpose/UsageIdentity/UsageReceipt declaration only. Summary/query/external DTO remainder displayed, not reviewed as consumer semantics.",
+      "prepPinRow": {
+        "path": "packages/core/src/cost-ledger/types.ts",
+        "bytes": 2251,
+        "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+        "lineCount": 92,
+        "pinUTC": "2026-10-17T15:44:24.468113+00:00",
+        "timing": "before61 first source body/navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "bytes": 18650,
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "lineCount": 468,
+      "kind": "product",
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          34,
+          35
+        ],
+        [
+          59,
+          64
+        ],
+        [
+          109,
+          112
+        ],
+        [
+          115,
+          126
+        ],
+        [
+          136,
+          149
+        ]
+      ],
+      "selectedLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          32,
+          80
+        ],
+        [
+          102,
+          154
+        ]
+      ],
+      "bodyDisplayedLineCount": 102,
+      "additionalNavigationSnippetLines": [
+        10,
+        13,
+        14,
+        15,
+        97,
+        98,
+        99,
+        175,
+        176,
+        177,
+        193,
+        194,
+        195,
+        280,
+        281,
+        294,
+        309,
+        310,
+        320,
+        321,
+        341,
+        342,
+        352,
+        353,
+        363,
+        364
+      ],
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          32,
+          80
+        ],
+        [
+          97,
+          99
+        ],
+        [
+          102,
+          154
+        ],
+        [
+          175,
+          177
+        ],
+        [
+          193,
+          195
+        ],
+        [
+          280,
+          281
+        ],
+        [
+          294,
+          294
+        ],
+        [
+          309,
+          310
+        ],
+        [
+          320,
+          321
+        ],
+        [
+          341,
+          342
+        ],
+        [
+          352,
+          353
+        ],
+        [
+          363,
+          364
+        ]
+      ],
+      "displayedLineCount": 128,
+      "initialSha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "initialPinUTC": "2026-10-17T15:44:24.470334+00:00",
+      "initialPinTiming": "before61 first source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Actual constructor model/provider assignment, ordinary usage DTO forwarding and createMessage accounting wrapper. No provider request, retry, auth/key, fetch-boundary or billing authority implementation conclusion.",
+      "prepPinRow": {
+        "path": "packages/core/src/llm/client-base.ts",
+        "bytes": 18650,
+        "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+        "lineCount": 468,
+        "pinUTC": "2026-10-17T15:44:24.470334+00:00",
+        "timing": "before61 first source body/navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "bytes": 17975,
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "lineCount": 498,
+      "kind": "product",
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          214,
+          240
+        ],
+        [
+          248,
+          255
+        ],
+        [
+          259,
+          261
+        ]
+      ],
+      "selectedLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          189,
+          271
+        ]
+      ],
+      "bodyDisplayedLineCount": 83,
+      "additionalNavigationSnippetLines": [
+        19,
+        87,
+        89,
+        283,
+        285,
+        286,
+        298,
+        300,
+        306
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          87,
+          87
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          189,
+          271
+        ],
+        [
+          283,
+          283
+        ],
+        [
+          285,
+          286
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          300,
+          300
+        ],
+        [
+          306,
+          306
+        ]
+      ],
+      "displayedLineCount": 92,
+      "initialSha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "initialPinUTC": "2026-10-17T15:44:24.469410+00:00",
+      "initialPinTiming": "before61 first source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Only ordinary receipt field/time/outcome assignment and usage forwarding. Validation/namespace/custody/persist/locking/storage authority stops at visible boundary; no real store read or invocation.",
+      "prepPinRow": {
+        "path": "packages/core/src/cost-ledger/store.ts",
+        "bytes": 17975,
+        "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+        "lineCount": 498,
+        "pinUTC": "2026-10-17T15:44:24.469410+00:00",
+        "timing": "before61 first source body/navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "kind": "navigation-only",
+      "coverage": "navigation-only; no semantic body review",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        14,
+        116,
+        380,
+        639,
+        640,
+        641,
+        1142,
+        1390,
+        1821,
+        1967,
+        2619,
+        2779,
+        2787,
+        2968,
+        3586,
+        3717,
+        3721,
+        3726,
+        3744,
+        3745,
+        3754,
+        3760,
+        3764,
+        4489
+      ],
+      "displayedLineRanges": [
+        [
+          14,
+          14
+        ],
+        [
+          116,
+          116
+        ],
+        [
+          380,
+          380
+        ],
+        [
+          639,
+          641
+        ],
+        [
+          1142,
+          1142
+        ],
+        [
+          1390,
+          1390
+        ],
+        [
+          1821,
+          1821
+        ],
+        [
+          1967,
+          1967
+        ],
+        [
+          2619,
+          2619
+        ],
+        [
+          2779,
+          2779
+        ],
+        [
+          2787,
+          2787
+        ],
+        [
+          2968,
+          2968
+        ],
+        [
+          3586,
+          3586
+        ],
+        [
+          3717,
+          3717
+        ],
+        [
+          3721,
+          3721
+        ],
+        [
+          3726,
+          3726
+        ],
+        [
+          3744,
+          3745
+        ],
+        [
+          3754,
+          3754
+        ],
+        [
+          3760,
+          3760
+        ],
+        [
+          3764,
+          3764
+        ],
+        [
+          4489,
+          4489
+        ]
+      ],
+      "displayedLineCount": 24,
+      "initialSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "initialPinUTC": "2026-10-17T15:44:24.471304+00:00",
+      "initialPinTiming": "before61 first source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "rg navigation proves real withUsageOwner references and owner/purpose names only. Individual implementation lines are navigation, with no contiguous body-range or ownership/native/session mechanism semantic review.",
+      "prepPinRow": {
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210666,
+        "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+        "lineCount": 5082,
+        "pinUTC": "2026-10-17T15:44:24.471304+00:00",
+        "timing": "before61 first source body/navigation display"
+      }
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "bytes": 18125,
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "lineCount": 435,
+      "kind": "test-navigation-only",
+      "coverage": "navigation-only; no semantic body review",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        7,
+        31,
+        50,
+        98,
+        136,
+        139,
+        149,
+        159,
+        169,
+        175,
+        179,
+        181,
+        187,
+        199,
+        207,
+        221,
+        229,
+        239,
+        257,
+        258,
+        260,
+        261,
+        262,
+        264,
+        265,
+        285,
+        286,
+        297,
+        299,
+        308,
+        315,
+        342
+      ],
+      "displayedLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          136,
+          136
+        ],
+        [
+          139,
+          139
+        ],
+        [
+          149,
+          149
+        ],
+        [
+          159,
+          159
+        ],
+        [
+          169,
+          169
+        ],
+        [
+          175,
+          175
+        ],
+        [
+          179,
+          179
+        ],
+        [
+          181,
+          181
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          199,
+          199
+        ],
+        [
+          207,
+          207
+        ],
+        [
+          221,
+          221
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          239,
+          239
+        ],
+        [
+          257,
+          258
+        ],
+        [
+          260,
+          262
+        ],
+        [
+          264,
+          265
+        ],
+        [
+          285,
+          286
+        ],
+        [
+          297,
+          297
+        ],
+        [
+          299,
+          299
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          342,
+          342
+        ]
+      ],
+      "displayedLineCount": 32,
+      "initialSha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "initialPinUTC": "2026-10-17T15:44:24.469787+00:00",
+      "initialPinTiming": "before61 first source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Existing test names/matching lines only; individual body lines remain navigation. No contiguous test-body read, declaration semantic claim, fixture import/invocation or execution. Old retry/local-provider directions are not reopened.",
+      "prepPinRow": {
+        "path": "packages/core/src/cost-ledger/ledger.test.ts",
+        "bytes": 18125,
+        "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+        "lineCount": 435,
+        "pinUTC": "2026-10-17T15:44:24.469787+00:00",
+        "timing": "before61 first source body/navigation display"
+      }
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "kind": "instruction-carried-hash",
+      "coverage": "hash-only; no new semantic source reading",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": null,
+      "initialPinUTC": "2026-10-17T15:42:52.947874+00:00",
+      "initialPinTiming": "carried prior instruction reading; original first semantic timestamp not reconstructed",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lineCount": 217,
+        "pinUTC": "2026-10-17T15:42:52.947874+00:00",
+        "timing": "carried earlier instruction read hash; current body0"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "kind": "instruction-carried-hash",
+      "coverage": "hash-only; no new semantic source reading",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": null,
+      "initialPinUTC": "2026-10-17T15:42:52.948555+00:00",
+      "initialPinTiming": "carried prior instruction reading; original first semantic timestamp not reconstructed",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lineCount": 5,
+        "pinUTC": "2026-10-17T15:42:52.948555+00:00",
+        "timing": "carried earlier instruction read hash; current body0"
+      }
+    }
+  ],
+  "semanticScopeCounts": {
+    "productSelectedLines": 234,
+    "testDeclarationSelectedLines": 0,
+    "semanticSelectedLines": 234,
+    "displayedUniqueSourceLines": 535,
+    "selectedRows": 4,
+    "navigationOnlyRows": 2,
+    "hashOnlyRows": 2,
+    "explicitSemanticFullRows": 0
+  },
+  "rangeConvention": "One-based inclusive; canonical displayedLineRanges is union of body display and additional rg navigation lines, selected ranges are a subset. Repeated display is not added twice. Boundary exclusions prevent full semantic promotion.",
+  "historyScope": "4255 historical MD/JSON files traversed for metadata and scalar keyword navigation; only identified exact source rows and bounded old tracker contexts reviewed. Not entire-history semantic coverage.",
+  "runs": {
+    "product": 0,
+    "helper": 0,
+    "fixture": 0,
+    "tests": 0,
+    "provider": 0,
+    "model": 0,
+    "billing": 0,
+    "realStore": 0,
+    "fileLocks": 0,
+    "native": 0,
+    "network": 0,
+    "git": 0
+  }
+}

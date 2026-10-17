@@ -1,0 +1,24 @@
+{
+  "atUTC": "2026-10-17T16:04:15.191330+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "bytes": 13129,
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "lines": 387,
+      "beforeRootCurrentBodyAndNavigation": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "bytes": 8606,
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "lines": 245,
+      "beforeRootCurrentBodyAndNavigation": true
+    },
+    {
+      "path": "packages/core/src/internal.ts",
+      "isFile": false,
+      "noBodyRead": true
+    }
+  ]
+}

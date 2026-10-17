@@ -1,0 +1,54 @@
+120:import { TurnLoop } from "./turn-loop.js";
+407:   * tokens). Survives across turns so each fresh TurnLoop instance can seed
+424:   * The TurnLoop of the in-flight run(), exposed so extendGoalRun() can bump a
+427:  private activeTurnLoop: TurnLoop | null = null;
+450:   * Single-valued like activeTurnLoop — one top-level run per engine at a time.
+544:   * uniform with TurnLoop.emitHook.
+1163:    const active = this.activeTurnLoop !== null && activeRunSessionId === sessionId;
+1604:    if (!workspaceResolved.ok) return workspaceResolved.result;
+1681:    if (!imageInput.ok) return imageInput.result;
+1766:    if (!openedResult.ok) return openedResult.result;
+2045:          // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
+2047:          // construction but cannot execute until turnLoop.run() starts.
+2049:          // cannot run until turnLoop.run(), so definite assignment is intentional.
+2051:            turnLoop,
+2089:          let result: Awaited<ReturnType<typeof turnLoop.run>>;
+2092:            ({ result, firstGoalTermination } = await this.runTurnLoopWithHeadlessDrain({
+2093:              turnLoop,
+2110:            if (this.activeTurnLoop === turnLoop) {
+2111:              this.activeTurnLoop = null;
+2120:            turnCount: turnLoop.currentTurn,
+2155:    result: Awaited<ReturnType<TurnLoop["run"]>>;
+2235:  private async runTurnLoopWithHeadlessDrain(args: {
+2236:    turnLoop: TurnLoop;
+2242:    result: Awaited<ReturnType<TurnLoop["run"]>>;
+2245:    const { turnLoop, messages, applyGoalTermination, session, options } = args;
+2247:    let result = await turnLoop.run(messages);
+2274:        runTurnLoop: (msgs) => turnLoop.run(msgs),
+2286:    return { result, firstGoalTermination };
+2708:   * `on_agent_start` hook, goal resolution / arming, the {@link TurnLoop} itself,
+2738:    turnLoop: TurnLoop;
+2769:    let turnLoop!: TurnLoop;
+2775:      recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
+2932:      recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
+2935:    turnLoop = this.buildTurnLoop({
+2975:      this.activeTurnLoop = turnLoop;
+2996:      turnLoop,
+3326:   * Assemble the run-scoped {@link TurnLoop} (its dependency object + option
+3333:  private buildTurnLoop(args: {
+3361:  }): TurnLoop {
+3389:    // Buffer the most recent event so TurnLoop can drain it and emit the
+3403:    const turnLoop = new TurnLoop(
+3572:    return turnLoop;
+4133:      this.activeTurnLoop !== null &&
+4182:      this.activeTurnLoop !== null &&
+4194:      this.activeTurnLoop!.updateGoal(undefined);
+4197:      this.activeTurnLoop !== null &&
+4216:        this.activeTurnLoop!.updateGoal(undefined);
+4220:        this.activeTurnLoop!.updateGoal(
+4276:        this.activeTurnLoop !== null &&
+4289:      if (controlsThisRun) this.activeTurnLoop!.updateGoal(undefined);
+4763:    if (!this.activeTurnLoop) return null;
+4773:      const currentMaxTurns = this.activeTurnLoop.extend({}).maxTurns;
+4774:      return this.activeTurnLoop.extend({
+4779:    return this.activeTurnLoop.extend(opts);

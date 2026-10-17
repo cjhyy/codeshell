@@ -1,0 +1,237 @@
+{
+  "rows": [
+    {
+      "sourceContextIndex": 0,
+      "document": "docs/architecture/06-long-running-orchestration.md",
+      "pointer": "",
+      "matchedToken": "background work and a wall-clock",
+      "boundedWindow": "met\n(`packages/core/src/hooks/goal-stop-hook.ts:103`). Before judging it collects\nrunning background work and a wall-clock snapshot\n(`packages/core/src/hooks/goal-stop-hook.ts:208`). Judge failures and\nunparseable responses are conservative: they continue the session rather than\nclear a goal (`packages/core/src/hooks/goal-stop-hook.ts:291`)"
+    },
+    {
+      "sourceContextIndex": 1,
+      "document": "docs/audit-2026-10-17-round38/evidence/inbox-model-frontier/validation.json",
+      "pointer": "/ordinaryCounterevidence/2",
+      "matchedToken": "BackgroundWork contract, groups with real filters and reset",
+      "boundedWindow": "ge consumes complete snapshot DTO, filters ordinary navigation records out via explicit isBackgroundWork contract, groups with real filters and resets page size on filter changes; render/status/source keys and load-more consume these same groups."
+    },
+    {
+      "sourceContextIndex": 2,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/decisions.json",
+      "pointer": "/ordinarySourceReasoning",
+      "matchedToken": "background detailSink feeds translator. Leaf tombstone only seals its local assistant row and reset",
+      "boundedWindow": "tream wrapper does not filter tombstone, normal child Engine passes callback to TurnLoop, background detailSink feeds translator. Leaf tombstone only seals its local assistant row and resets pointer; replacement delta appends a distinct bg-counter row. Registry stores both and selected actual TUI detail consumes raw rows; no runtime fixture used."
+    },
+    {
+      "sourceContextIndex": 3,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-excerpts.json",
+      "pointer": "/snapshots/6/text",
+      "matchedToken": "elapsed milliseconds; unaffected by wall-clock",
+      "boundedWindow": " tool spans. */\n      startedAt?: number;\n      completedAt?: number;\n      /** Monotonic elapsed milliseconds; unaffected by wall-clock adjustments. */\n      durationMs?: number;\n    }\n  // Goal mode visibility: emitted each time the goal judge re-prompts the\n  // model (\"not_met\", carries the judge's `gaps` + the running round count),\n  // when the goa"
+    },
+    {
+      "sourceContextIndex": 4,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-excerpts.json",
+      "pointer": "/snapshots/18/text",
+      "matchedToken": "elapsed-millisecond duration",
+      "boundedWindow": "inishedFadeAt;\n    })\n    .sort((a, b) => a.startedAt - b.startedAt);\n}\n\n/**\n * Format an elapsed-millisecond duration as \"23s\" / \"4m 23s\" / \"1h 4m 23s\".\n */\nexport function formatElapsed(ms: number): string {\n  const totalSec = Math.max(0, Math.floor(ms / 1000));\n  if (totalSec < 60) return `${totalSec}s`;\n  const m = Math.floor(totalS"
+    },
+    {
+      "sourceContextIndex": 5,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-contexts.json",
+      "pointer": "/hits/transcript_contract/100/context",
+      "matchedToken": "background sub-agents with elapsed",
+      "boundedWindow": "x tests/ui/agent-dock.test.tsx src/ui/App.tsx\ngit commit -m \"feat(ui): AgentDock surfaces background sub-agents with elapsed timer\"\n```\n\n**Phase 4 complete.**\n\n---\n\n## Phase 5 — Per-Agent Transcript + Ctrl-Digit View Switching (P3 part 2, 1.5 day)\n\n### Task 5.1: Add `transcript` field to AsyncAgentEntry\n\n**Files:**\n- Modify: `src/tool-system/"
+    },
+    {
+      "sourceContextIndex": 6,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-contexts.json",
+      "pointer": "/hits/transcript_contract/112/context",
+      "matchedToken": "elapsed` (running), `name · status · duration",
+      "boundedWindow": "e timeout: 30 s for both success and failure.\n- Summary row content: `name · latestTool · elapsed` (running), `name · status · duration` (terminal).\n- Sync sub-agents enter the dock too (deviation from spec 9.1).\n- Inline `AgentBlock` rendering in main thread is removed.\n"
+    },
+    {
+      "sourceContextIndex": 7,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-selected-contexts.json",
+      "pointer": "/rows/32/context",
+      "matchedToken": "background sub-agents with elapsed",
+      "boundedWindow": "x tests/ui/agent-dock.test.tsx src/ui/App.tsx\ngit commit -m \"feat(ui): AgentDock surfaces background sub-agents with elapsed timer\"\n```\n\n**Phase 4 complete.**\n\n---\n\n## Phase 5 — Per-Agent Transcript + Ctrl-Digit View Switching (P3 part 2, 1.5 day)\n\n### Task 5.1: Add `transcript` field to AsyncAgentEntry\n\n**Files:**\n- Modify: `src/tool-system/"
+    },
+    {
+      "sourceContextIndex": 8,
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-selected-contexts.json",
+      "pointer": "/rows/44/context",
+      "matchedToken": "elapsed` (running), `name · status · duration",
+      "boundedWindow": "e timeout: 30 s for both success and failure.\n- Summary row content: `name · latestTool · elapsed` (running), `name · status · duration` (terminal).\n- Sync sub-agents enter the dock too (deviation from spec 9.1).\n- Inline `AgentBlock` rendering in main thread is removed.\n"
+    },
+    {
+      "sourceContextIndex": 9,
+      "document": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "pointer": "",
+      "matchedToken": "background 条件分支、`config.goal` 和 RunManager active-goal resume 必须各有正反例，断言 DTO 次数、route、wakeup、ledger identity/reset",
+      "boundedWindow": "e.ts:2050`、`packages/core/src/engine/engine.ts:2070` |\n\n每行至少一个 integration fixture。resume/background 条件分支、`config.goal` 和 RunManager active-goal resume 必须各有正反例，断言 DTO 次数、route、wakeup、ledger identity/reset 和 goal clear：\n\n- `config.goal` 正例：无 `options.goal`、有 `config.goal` 时 active goal 被规范化/持久化并在自然 stop 调 judge；反例：config 无 goal 时不构建、不调用 judge。\n- RunManager 正例：显式复用含 activeGoal 的 session 时继承并判断；反例：普通 objective 或复用无 activeGo"
+    },
+    {
+      "sourceContextIndex": 10,
+      "document": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "pointer": "",
+      "matchedToken": "background sub-agents with elapsed",
+      "boundedWindow": "x tests/ui/agent-dock.test.tsx src/ui/App.tsx\ngit commit -m \"feat(ui): AgentDock surfaces background sub-agents with elapsed timer\"\n```\n\n**Phase 4 complete.**\n\n---\n\n## Phase 5 — Per-Agent Transcript + Ctrl-Digit View Switching (P3 part 2, 1.5 day)\n\n### Task 5.1: Add `transcript` field to AsyncAgentEntry\n\n**Files:**\n- Modify: `src/tool-system/"
+    },
+    {
+      "sourceContextIndex": 11,
+      "document": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "pointer": "",
+      "matchedToken": "elapsed = formatElapsed",
+      "boundedWindow": "us === \"cancelled\"\n          ? \"ansi:yellow\"\n          : \"ansi:red\"; /* failed */\n  const elapsed = formatElapsed(\n    (entry.finishedAt ?? now) - entry.startedAt,\n  );\n  const name = truncate(entry.description, NAME_MAX);\n\n  return (\n    <Box flexDirection=\"row\">\n      <Text color={focused ? \"ansi:cyanBright\" : undefined} bold={fo"
+    },
+    {
+      "sourceContextIndex": 12,
+      "document": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "pointer": "",
+      "matchedToken": "elapsed-millisecond duration",
+      "boundedWindow": "     (a.finishedFadeAt !== undefined && now < a.finishedFadeAt),\n  );\n}\n\n/**\n * Format an elapsed-millisecond duration as \"23s\" / \"4m 23s\" / \"1h 4m 23s\".\n */\nexport function formatElapsed(ms: number): string {\n  const totalSec = Math.max(0, Math.floor(ms / 1000));\n  if (totalSec < 60) return `${totalSec}s`;\n  const m = Math.floor(totalS"
+    },
+    {
+      "sourceContextIndex": 13,
+      "document": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+      "pointer": "",
+      "matchedToken": "elapsed format — Task 2 (`formatElapsed",
+      "boundedWindow": "ttomContent)\n- §2.3 row format `cursor ● name … elapsed` — Task 2 (`AgentDockRow`)\n- §2.4 elapsed format — Task 2 (`formatElapsed`)\n- §2.5 keyboard — Task 3 (`onArrowOut`) + Task 4 (dock-focus branch)\n- §2.6 remove Ctrl-0..5 — Task 4 Step 8\n- §2.7 30 s linger — Task 1 (`finishedFadeAt`) + Task 2 (`getVisibleAgents`)\n- §2.8 fullscreen + flow — Task"
+    },
+    {
+      "sourceContextIndex": 14,
+      "document": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "pointer": "",
+      "matchedToken": "turn_duration",
+      "boundedWindow": "Change:\n\n```ts\nexport type SystemSubtype =\n  | \"compact_boundary\"\n  | \"memory_saved\"\n  | \"turn_duration\"\n  | \"info\";\n```\n\nto:\n\n```ts\nexport type SystemSubtype =\n  | \"compact_boundary\"\n  | \"memory_saved\"\n  | \"turn_duration\"\n  | \"info\"\n  | \"bg_agent_notification\";\n```\n\n- [ ] **Step 6.2: Typecheck**\n\nRun: `bun run tsc --noEm"
+    },
+    {
+      "sourceContextIndex": 15,
+      "document": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "pointer": "",
+      "matchedToken": "turn_duration",
+      "boundedWindow": "Change:\n\n```ts\nexport type SystemSubtype =\n  | \"compact_boundary\"\n  | \"memory_saved\"\n  | \"turn_duration\"\n  | \"info\";\n```\n\nto:\n\n```ts\nexport type SystemSubtype =\n  | \"compact_boundary\"\n  | \"memory_saved\"\n  | \"turn_duration\"\n  | \"info\"\n  | \"bg_agent_notification\";\n```\n\n- [ ] **Step 6.2: Typecheck**\n\nRun: `bun run tsc --noEm"
+    },
+    {
+      "sourceContextIndex": 16,
+      "document": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "pointer": "",
+      "matchedToken": "runStartRef",
+      "boundedWindow": "      setTotalCost(costTracker.getEstimatedCost());\n\n        const elapsed = Date.now() - runStartRef.current;\n        const turnCost = result.usage\n          ? costTracker.estimateForTokens(\n              model,\n              result.usage.promptTokens,\n              result.usage.completionTokens,\n            )\n        "
+    },
+    {
+      "sourceContextIndex": 17,
+      "document": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "pointer": "",
+      "matchedToken": "turn_duration",
+      "boundedWindow": "atStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);\n\n        if (result.reason !== \"completed\") {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"status\", reason: friendlyReason(result.reaso"
+    },
+    {
+      "sourceContextIndex": 18,
+      "document": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+      "pointer": "",
+      "matchedToken": "turn_duration",
+      "boundedWindow": "Memory saved\"}</Text>\n          </Box>\n        );\n      }\n      if (sysEntry.subtype === \"turn_duration\") {\n        return (\n          <Box key={key} marginLeft={1} marginTop={1}>\n            <Text dim>{sysEntry.text}</Text>\n          </Box>\n        );\n      }\n      return (\n        ...\n```\n\n- [ ] **Step 9.2: Add a branch"
+    },
+    {
+      "sourceContextIndex": 19,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+      "pointer": "",
+      "matchedToken": "Elapsed` hook for interval-driven elapsed",
+      "boundedWindow": "sk_update` routing.\n- `packages/desktop/src/renderer/messages/AgentMessageView.tsx` — `useElapsed` hook for interval-driven elapsed.\n- `packages/desktop/src/renderer/App.tsx` — wire the coalescer between `onStreamEvent` and `dispatch`.\n\n**Create:**\n- `packages/desktop/src/renderer/streamCoalescer.ts` — pure helper with `createEventCoalescer`.\n- `pac"
+    },
+    {
+      "sourceContextIndex": 20,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+      "pointer": "",
+      "matchedToken": "Elapsed` hook right below the `formatElapsed",
+      "boundedWindow": "0);\n  const rem = s % 60;\n  return rem === 0 ? `${m}m` : `${m}m${rem}s`;\n}\n```\n\nAdd a `useElapsed` hook right below the `formatElapsed` definition:\n\n```ts\nfunction useElapsed(startedAt: number, endedAt: number | undefined): string {\n  // For a completed agent we anchor `now` to endedAt and never tick.\n  // For a running agent we tick once per second so"
+    },
+    {
+      "sourceContextIndex": 21,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+      "pointer": "",
+      "matchedToken": "elapsed = formatElapsed",
+      "boundedWindow": "## Step 2: Use the hook in the component\n\nIn `AgentMessageViewImpl`, find:\n\n```ts\n  const elapsed = formatElapsed(message.startedAt, message.endedAt);\n```\n\nReplace with:\n\n```ts\n  const elapsed = useElapsed(message.startedAt, message.endedAt);\n```\n\n### Step 3: Run existing tests\n\n```bash\ncd /Users/admin/Documents/个人学习/代码学习/codeshell"
+    },
+    {
+      "sourceContextIndex": 22,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+      "pointer": "",
+      "matchedToken": "elapsed = formatElapsed",
+      "boundedWindow": "## Step 2: Use the hook in the component\n\nIn `AgentMessageViewImpl`, find:\n\n```ts\n  const elapsed = formatElapsed(message.startedAt, message.endedAt);\n```\n\nReplace with:\n\n```ts\n  const elapsed = useElapsed(message.startedAt, message.endedAt);\n```\n\n### Step 3: Run existing tests\n\n```bash\ncd /Users/admin/Documents/个人学习/代码学习/codeshell"
+    },
+    {
+      "sourceContextIndex": 23,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+      "pointer": "",
+      "matchedToken": "elapsed via interval) → Task 2 (useElapsed hook + signature change on formatElapsed",
+      "boundedWindow": "ec §A (task_update isolation) → Task 1 (core type + emit + reducer + 2 tests).\n- Spec §B (elapsed via interval) → Task 2 (useElapsed hook + signature change on formatElapsed).\n- Spec §C (50 ms ingress batching) → Task 3 (streamCoalescer.ts + 5 tests + App.tsx wiring).\n- Spec §Testing: 11/12 (reducer), tests for elapsed (note: spec deferred to manual since SSR can't observe intervals — added"
+    },
+    {
+      "sourceContextIndex": 24,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+      "pointer": "",
+      "matchedToken": "Elapsed(startedAt, endedAt)` signature matches the call site replacement in Task 2 Step 2. `formatElapsed",
+      "boundedWindow": "or faster test execution; the wiring in App.tsx uses the default 50 ms. Consistent.\n- `useElapsed(startedAt, endedAt)` signature matches the call site replacement in Task 2 Step 2. `formatElapsed` signature changes from `(startedAt, endedAt?)` to `(startedAt, now)` — only one call site (inside useElapsed), updated correctly.\n- `TaskInfo` shape in Task 1 Step 6 test uses `{ id, title, state }` — flagged as \"adjus"
+    },
+    {
+      "sourceContextIndex": 25,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation.md",
+      "pointer": "",
+      "matchedToken": "elapsed = formatElapsed",
+      "boundedWindow": "false);\n  const status = message.error ? \"err\" : message.done ? \"ok\" : \"running\";\n  const elapsed = formatElapsed(message.startedAt, message.endedAt);\n  const hasBody = message.toolCalls.length > 0 || !!message.text || !!message.error;\n\n  return (\n    <div className=\"msg-row msg-agent\">\n      <div className={`msg-agent-card ${expan"
+    },
+    {
+      "sourceContextIndex": 26,
+      "document": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation.md",
+      "pointer": "",
+      "matchedToken": "background`, `border`, `text-align`, `font`, `color`. The button reset",
+      "boundedWindow": ": …`, drop the duplicated properties from the new block and keep only `cursor`, `width`, `background`, `border`, `text-align`, `font`, `color`. The button reset is the only essential addition.\n\n- [ ] **Step 3: Commit**\n\n```bash\ncd /Users/admin/Documents/个人学习/代码学习/codeshell\ngit add packages/desktop/src/renderer/styles/\ngit commit -m \"style(desktop): agent card header as button +"
+    },
+    {
+      "sourceContextIndex": 27,
+      "document": "docs/superpowers/plans/2026-06-24-drive-claude-code-orchestration.md",
+      "pointer": "",
+      "matchedToken": "backgroundJobRegistry.reset",
+      "boundedWindow": ") => {\n  it(\"registers a background job and finishes it on completion\", async () => {\n    backgroundJobRegistry.reset?.();\n    let resolveRun: (r: any) => void;\n    const runner = () => new Promise<any>((res) => { resolveRun = res; });\n    const tool = mk(runner as any);\n    const p = tool({ prompt: \"long job\", cwd: \"/x\", background: t"
+    },
+    {
+      "sourceContextIndex": 28,
+      "document": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "pointer": "",
+      "matchedToken": "elapsed` (running), `name · status · duration",
+      "boundedWindow": "e timeout: 30 s for both success and failure.\n- Summary row content: `name · latestTool · elapsed` (running), `name · status · duration` (terminal).\n- Sync sub-agents enter the dock too (deviation from spec 9.1).\n- Inline `AgentBlock` rendering in main thread is removed.\n"
+    },
+    {
+      "sourceContextIndex": 29,
+      "document": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "pointer": "",
+      "matchedToken": "elapsed` on one line. The user does not want the `latestToolName` field from `§6.1`. The row should be `name … elapsed",
+      "boundedWindow": "nts it at the very bottom of the UI instead.\n4. Each row currently shows `[n] description elapsed` on one line. The user does not want the `latestToolName` field from `§6.1`. The row should be `name … elapsed` only.\n5. `Ctrl-0..5` was implemented as the switching mechanism even though parent spec `§3` removed it. The revision drops it for real.\n6. The 30 s linger of completed agents (parent spec `§2.7`) was never implemented"
+    },
+    {
+      "sourceContextIndex": 30,
+      "document": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "pointer": "",
+      "matchedToken": "elapsed = formatElapsed",
+      "boundedWindow": " === \"cancelled\" ? \"ansi:yellow\" :\n    /* failed */                   \"ansi:red\";\n  const elapsed = formatElapsed(\n    (entry.finishedAt ?? now) - entry.startedAt,\n  );\n  const name = truncate(entry.description, 40);\n\n  return (\n    <Box flexDirection=\"row\">\n      <Text color={focused ? \"ansi:cyanBright\" : undefined} bold={focused}"
+    },
+    {
+      "sourceContextIndex": 31,
+      "document": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-followup-design.md",
+      "pointer": "",
+      "matchedToken": "Elapsed(message.startedAt)` called `Date.now()` on every render — so the elapsed",
+      "boundedWindow": "w comparison invalidated every time. The header re-rendered, and inside the header `formatElapsed(message.startedAt)` called `Date.now()` on every render — so the elapsed text node (\"3s\" → \"4s\") changed and the browser actually repainted it on every event.\n\n3. **Still feels laggy.** Each `text_delta` / `tool_use_args_delta` dispatched synchronously into the reducer, producing a new `mess"
+    },
+    {
+      "sourceContextIndex": 32,
+      "document": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-followup-design.md",
+      "pointer": "",
+      "matchedToken": "elapsed string (no NaN, no negative), and one that a non-done agent's initial render uses a positive elapsed",
+      "boundedWindow": "he interval. Add one test that the *initial* render of a `done` agent produces a sensible elapsed string (no NaN, no negative), and one that a non-done agent's initial render uses a positive elapsed (Date.now() - startedAt at construction time, not later).\n\n**App ingress batching tests (`packages/desktop/src/renderer/App.batching.test.ts`, new):**\n\nExtract the batching logic into a pure helper `createEventCoalescer"
+    }
+  ],
+  "count": 33,
+  "scope": "33 retained query windows, bounded excerpts inspected; original contexts retained. Old plans/desktop timers/agent dock have different producers; no exact recorded same-cause identified. No claim all history prose semantically read."
+}

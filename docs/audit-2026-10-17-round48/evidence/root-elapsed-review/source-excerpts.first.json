@@ -1,0 +1,99 @@
+{
+  "atUTC": "2026-10-17T15:57:50.720150+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "displayedRanges": [
+        [
+          205,
+          220
+        ],
+        [
+          427,
+          448
+        ],
+        [
+          1658,
+          1686
+        ],
+        [
+          2268,
+          2300
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            205,
+            220
+          ],
+          "text": " 205       tasksTimerRef.current = setTimeout(() => setTasks([]), 3000);\n 206     }\n 207     return () => {\n 208       if (tasksTimerRef.current) clearTimeout(tasksTimerRef.current);\n 209     };\n 210   }, [tasks]);\n 211 \n 212   const queryGuard = useRef(providedQueryGuard ?? new QueryGuard()).current;\n 213   const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);\n 214   const hasRunningBgAgents = useSyncExternalStore(\n 215     asyncAgentRegistry.subscribe,\n 216     asyncAgentRegistry.hasRunning,\n 217   );\n 218   const isRunning = isQueryActive || hasRunningBgAgents;\n 219 \n 220   type ViewMode = { kind: \"main\" } | { kind: \"agent\"; agentId: string };"
+        },
+        {
+          "range": [
+            427,
+            448
+          ],
+          "text": " 427   // Imperative handle on VirtualMessageList so we can scroll the list to\n 428   // the bottom when the user dismisses the \"N new messages\" pill or\n 429   // submits a new turn.\n 430   const listRef = useRef<VirtualMessageListHandle | null>(null);\n 431   const onScrollToBottom = useCallback(() => {\n 432     clearUnseen();\n 433     listRef.current?.scrollToBottom();\n 434   }, [clearUnseen]);\n 435 \n 436   useEffect(() => {\n 437     if (isRunning) {\n 438       runStartRef.current = Date.now();\n 439     }\n 440     uiLog.info(\"debug.app.isRunning_change\", {\n 441       isRunning,\n 442       isQueryActive,\n 443       hasRunningBgAgents,\n 444       runStartRef: runStartRef.current,\n 445     });\n 446   }, [isRunning, isQueryActive, hasRunningBgAgents]);\n 447 \n 448   // Flicker investigation: log every change to the two sources of isRunning"
+        },
+        {
+          "range": [
+            1658,
+            1686
+          ],
+          "text": "1658           return true;\n1659         }\n1660 \n1661         if (!streamPresentationFinalized) {\n1662           finalizeStreamPresentation();\n1663           streamPresentationFinalized = true;\n1664         }\n1665 \n1666         setSessionId(result.sessionId);\n1667         await refreshUsage(result.sessionId);\n1668 \n1669         const elapsed = Date.now() - runStartRef.current;\n1670         const parts: string[] = [formatDuration(elapsed)];\n1671         if (result.usage && result.usage.totalTokens > 0) {\n1672           parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n1673           if (result.usage.cacheReadTokens) {\n1674             parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n1675           }\n1676         }\n1677 \n1678         chatStore.update((prev) => [\n1679           ...prev,\n1680           entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n1681         ]);\n1682 \n1683         if (result.reason !== \"completed\") {\n1684           chatStore.update((prev) => [\n1685             ...prev,\n1686             entry({ type: \"status\", reason: friendlyReason(result.reason) }),"
+        },
+        {
+          "range": [
+            2268,
+            2300
+          ],
+          "text": "2268         isRunning={isRunning}\n2269         dockFocusIdx={dockFocusIdx}\n2270         setDockFocusIdx={setDockFocusIdx}\n2271         viewMode={viewMode}\n2272       />\n2273 \n2274       <Text dim>{separator}</Text>\n2275 \n2276       {deferredQuestionCount > 0 && (\n2277         <Box marginLeft={2}>\n2278           <Text color=\"ansi:yellow\">{`${deferredQuestionCount} 个问题待回答 · Ctrl+G 打开回答`}</Text>\n2279         </Box>\n2280       )}\n2281 \n2282       <Box wrap=\"truncate\">\n2283         <ModeIndicator mode={permMode} />\n2284         {screen === \"transcript\" && <Text color=\"ansi:magenta\">{\" TRANSCRIPT \"}</Text>}\n2285         <Box flexGrow={1} />\n2286         <StatusLine\n2287           model={model}\n2288           effort={currentEffort}\n2289           tokens={totalTokens}\n2290           cost={totalCost}\n2291           sessionId={sessionId}\n2292           baseContextTokens={contextTokens}\n2293           maxContextTokens={activeMaxContextTokens}\n2294           isRunning={isRunning}\n2295           streamingTokensRef={streamingTokensRef}\n2296           runStartRef={runStartRef}\n2297         />\n2298       </Box>\n2299 \n2300       {/* Dock at the very bottom — below StatusLine. Renders null when"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "displayedRanges": [
+        [
+          1,
+          45
+        ],
+        [
+          110,
+          136
+        ],
+        [
+          155,
+          180
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            1,
+            45
+          ],
+          "text": "   1 /**\n   2  * StatusLine — compact bottom status bar matching Claude Code's style.\n   3  *\n   4  * Layout: [running indicator] model · context bar % · $cost\n   5  *\n   6  * Manages its own 1s interval so the parent App doesn't re-render.\n   7  */\n   8 import React, { useState, useEffect, useRef, type MutableRefObject } from \"react\";\n   9 import { Box, Text } from \"../../render/index.js\";\n  10 import { logger } from \"@cjhyy/code-shell-core\";\n  11 import { recordUIEvent } from \"@cjhyy/code-shell-core/internal\";\n  12 import { PERF_ENABLED } from \"../perf-probes.js\";\n  13 \n  14 // UI-scoped — routes to ui-ink-*.log.\n  15 const uiLog = logger.child({ cat: \"ui\" });\n  16 \n  17 interface StatusLineProps {\n  18   model: string;\n  19   effort: string;\n  20   tokens: number;\n  21   cost?: string;\n  22   sessionId?: string;\n  23   /**\n  24    * Authoritative live context size. The engine emits `usage_update` at every\n  25    * message-array mutation (post-tool-result, post-compact, post-LLM), so this\n  26    * tracks the real prompt token count without UI-side accumulation.\n  27    */\n  28   baseContextTokens?: number;\n  29   maxContextTokens?: number;\n  30   gitBranch?: string;\n  31   isRunning?: boolean;\n  32   streamingTokensRef?: MutableRefObject<number>;\n  33   runStartRef?: MutableRefObject<number>;\n  34 }\n  35 \n  36 export function StatusLine({\n  37   model,\n  38   effort,\n  39   tokens,\n  40   cost,\n  41   sessionId,\n  42   baseContextTokens,\n  43   maxContextTokens,\n  44   gitBranch,\n  45   isRunning,"
+        },
+        {
+          "range": [
+            110,
+            136
+          ],
+          "text": " 110     const sinceLastRender = now - lastRenderAtRef.current;\n 111     lastRenderAtRef.current = now;\n 112     renderCountRef.current++;\n 113     // Only log every 5th render to avoid drowning during streams; pair with\n 114     // tick_fire which is 1Hz to triangulate.\n 115     if (renderCountRef.current % 5 === 0) {\n 116       uiLog.info(\"debug.statusline.render_beat\", {\n 117         n: renderCountRef.current,\n 118         sinceLast_ms: Math.round(sinceLastRender),\n 119         tickState: tick,\n 120         tickFires: tickFiredCountRef.current,\n 121       });\n 122     }\n 123   }\n 124 \n 125   const elapsed =\n 126     isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;\n 127   // Probe: surface the raw inputs to elapsed so we can tell if runStartRef\n 128   // was reset mid-turn (would explain a \"frozen\" looking timer).\n 129   if (PERF_ENABLED && isRunning && renderCountRef.current % 10 === 0) {\n 130     uiLog.info(\"debug.statusline.elapsed_inputs\", {\n 131       elapsed_s: elapsed,\n 132       runStartRef: runStartRef?.current ?? 0,\n 133       ageOfRunStart_ms: runStartRef ? Date.now() - runStartRef.current : 0,\n 134     });\n 135   }\n 136   const streamingTokens = isRunning && streamingTokensRef ? streamingTokensRef.current : 0;"
+        },
+        {
+          "range": [
+            155,
+            180
+          ],
+          "text": " 155     recordUIEvent(sessionId, \"ui.ctx.render\", payload);\n 156   }, [baseContextTokens, maxContextTokens, ctxPct, sessionId]);\n 157   const ctxColor = ctxPct > 80 ? \"ansi:red\" : ctxPct > 60 ? \"ansi:yellow\" : \"ansi:green\";\n 158 \n 159   // Context mini-bar (8 chars)\n 160   const barWidth = 8;\n 161   const filled = Math.round((ctxPct / 100) * barWidth);\n 162   const ctxBar = \"█\".repeat(filled) + \"░\".repeat(barWidth - filled);\n 163 \n 164   return (\n 165     <Box>\n 166       {/* Running indicator */}\n 167       {isRunning && (\n 168         <>\n 169           <Text color=\"ansi:cyan\">{\"● \"}</Text>\n 170           <Text color=\"ansi:cyan\">{formatElapsed(elapsed)}</Text>\n 171           {streamingTokens > 0 && <Text dim> {formatNumber(streamingTokens)} tok</Text>}\n 172           <Text dim> │ </Text>\n 173         </>\n 174       )}\n 175 \n 176       {/* Model — alt+m switches; only show hint when terminal has room */}\n 177       <Text dim>{modelShort}</Text>\n 178       {(process.stdout.columns ?? 80) >= 100 && <Text dim>{\" (alt+m)\"}</Text>}\n 179 \n 180       {/* Context bar */}"
+        }
+      ]
+    }
+  ],
+  "purpose": "Known-hypothesis ordinary foreground/background elapsed ref and consumer; no React/timer/function execution"
+}

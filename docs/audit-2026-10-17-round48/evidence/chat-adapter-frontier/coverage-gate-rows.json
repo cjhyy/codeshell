@@ -1,0 +1,174 @@
+{
+  "rows": [
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "pointer": "/matches/21/hits/0/text",
+      "row": {}
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "pointer": "/matches/48/hits/0/text",
+      "row": {}
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "pointer": "/hits/chat-public/7/excerpt",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "pointer": "/hits/chat-public/11/excerpt",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "pointer": "/hits/chat-public/19/excerpt",
+      "row": {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "pointer": "/sources/24/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "frozenSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+        "coverage": "selected1-88 and literal import reference navigation; no transitive graph or adapter runtime"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "pointer": "/checks/24/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "pointer": "/files/30/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "pointer": "/priorPrepHashOnlyChecks/24/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/40/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+        "lines": 313
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/72/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+        "lines": 313
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/518/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/519/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/520/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/521/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/522/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "coverageKind": "limited-or-not-full-scope-unknown"
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/380/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+        "lines": 313
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/380/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+        "lines": 313
+      }
+    },
+    {
+      "candidate": "adapterfactory",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/380/path",
+      "row": {
+        "path": "packages/chat/src/adapter-factory.ts",
+        "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+        "lines": 313
+      }
+    }
+  ],
+  "count": 19,
+  "requiresManualFullOrSelectedInterpretation": true
+}

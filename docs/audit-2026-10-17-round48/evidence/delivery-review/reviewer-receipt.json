@@ -1,0 +1,18 @@
+{
+  "frozenUTC": "2026-10-17T16:12:48.957357+00:00",
+  "directory": "/tmp/codeshell-audit-round70-delivery-review",
+  "selfExcluded": "reviewer-receipt.json",
+  "scope": "metadata-only delivery review; primary integration pending1 explicitly retained",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 51031,
+      "sha256": "e1e44bea394e83010934e38dfff356939ada9570992273abd7e835d64887bd75"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2368,
+      "sha256": "246e41b4514d0a56d64e5cf1143c1b8e0da12462339414eb783ac404427bd430"
+    }
+  ]
+}

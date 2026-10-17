@@ -1,0 +1,26 @@
+{
+  "role": "Targeted independent source review, not blind; hypothesis supplied;64 package never read",
+  "assessment": "supports one P3 static issue opinion; final formal classification and ID assigned by Root",
+  "cause": "Timer initialization effect depends on both underlying activity flags and unconditionally overwrites shared runStartRef whenever OR is true, including bg true→false inside unchanged active foreground query.",
+  "normalProducer": "Agent471–475 declares detached background survives spawning turn;537voidPromise/582terminal callback read. Actual ordinary input gate permits a new foreground while old bg exists.67did not semantically read Engine runYield consumption vs bg wait ordering; this lifecycle premise must be confirmed byRoot66beforeformal.",
+  "requiredObservedStateNotObserved": "UI must commit the bg boolean change while same query remains active and flush this effect before foreground ends; no frame/timing execution in this review.",
+  "impact": "Same root cause shortens StatusLine elapsed on later own ticks and the turn_duration input for that query. Not two independent bugs.",
+  "counterevidence": [
+    "New query start reset is expected, including bg already true; this is not the bug.",
+    "runYield background_notification normally lets initial spawning foreground finish; does not block later foreground submissions while old bg runs.",
+    "More than one remaining running/cancelling agent keeps boolean true; ordinary registry notifications with unchanged boolean do not trigger this dependency.",
+    "Foreground already inactive/isRunning false, batching without a UI commit, or response completion before effect means the proposed manifestation is not established.",
+    "Only current source logical data flow and declared callbacks reviewed, not React scheduling or timer runtime."
+  ],
+  "oldCauseGate": "33 bounded selected query windows; old Desktop elapsed refresh/AgentDock duration format/goal clocks and TUI implementation plan are different producer or nonfinding plan. No exact recorded same cause recognized; no exhaustive history novelty certification.",
+  "newFindingID": null,
+  "sourceMutation": false,
+  "productExecution": 0,
+  "ordinaryInputEntryProved": true,
+  "effectAndConsumerConditionalDataflowProved": true,
+  "spawningParentCanReturnBeforeOldBGFinishFullyProvedBy67": false,
+  "lifecycleProofLocatorsNotRead": [
+    "packages/core/src/engine/turn-loop.ts:1768-1806",
+    "packages/core/src/engine/run-tooling.ts:173-182"
+  ]
+}

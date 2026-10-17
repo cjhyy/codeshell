@@ -1,0 +1,11 @@
+{
+  "baseline": "2735100f81f4d12cbb3e610da0e3977eaf74727c",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static ordinary cost/chat/session data and elapsed control-flow review, metadata-only catalog and integrity checks. No product/helper/fixture/test/React/clock/timer/model/native/business-network or authority experiment. Root Git metadata separately recorded."
+}

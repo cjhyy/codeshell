@@ -1,0 +1,17 @@
+{
+  "capturedUTC": "2026-10-17T15:54:02.300234+00:00",
+  "metadataFailures": [],
+  "productFailures": [],
+  "consoleTruncations": [],
+  "boundedRetention": [
+    {
+      "group": "initial display_contract",
+      "totalHits": 175,
+      "retained": 160,
+      "cap": 160,
+      "effect": "Broad title/prose group capped; not all semantically read. Exact path30, SHA22, basename111 and complete structured row lookup were not cap-truncated."
+    }
+  ],
+  "parseErrors": [],
+  "note": "No current metadata command failures or suppressed-output truncation. Original bounded method and raw inventory retained."
+}

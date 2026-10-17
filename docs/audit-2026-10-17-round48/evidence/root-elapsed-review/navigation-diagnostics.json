@@ -1,0 +1,22 @@
+{
+  "missingMetadataOnlyLocator": "packages/core/src/internal.ts",
+  "missingLocatorNoBody": true,
+  "correctPathLocatedByFilenames": "packages/core/src/index.internal.ts",
+  "filenameRegexNoMatch": {
+    "exitCode": 1,
+    "stdoutBytes": 0,
+    "toolChunk": "93dab7"
+  },
+  "inlineMetadataSyntaxWarnings": [
+    {
+      "toolChunk": "9c8da6",
+      "text": "SyntaxWarning: \"\\.\" is an invalid escape sequence."
+    },
+    {
+      "toolChunk": "10ea11",
+      "text": "SyntaxWarning: \"\\(\" is an invalid escape sequence."
+    }
+  ],
+  "warningScope": "Metadata inline Python warning appeared in tool transcript before rg subprocess capture; no product or test failure, no hidden retry.",
+  "productRuns": 0
+}

@@ -1,0 +1,39 @@
+{
+  "frozenUTC": "2026-10-17T16:08:12.443136+00:00",
+  "directory": "/tmp/codeshell-audit-round69-packet-review",
+  "role": "Frozen-packet metadata cross-check only; original61/65 authorship overlap disclosed; no new independent product semantics",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 51386,
+      "sha256": "a84a101542f75b52f9a4f63e5c880ef8e9e2b1f3e91dccaf714c9bab4b703271"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3431,
+      "sha256": "abb14464eab6b10b7a224ac53d05c8e06a7ead73dbbd0e6cd05f0d70f85d181d"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 2,
+  "totalFilesIncludingSelf": 3,
+  "inputPackets": 4,
+  "receiptListedArtifactsChecked": 66,
+  "receiptSnapshotsHashed": 4,
+  "sourceRowsMetadataOnly": 28,
+  "reportLinksInAuthors": 48,
+  "failures": 0,
+  "filesSourceChecks": [],
+  "productSourceBodyReads": 0,
+  "productShaCurrentChecks": 0,
+  "authorMethodsExecuted": 0,
+  "productHelpersFixturesTestsExecuted": 0,
+  "gitCommands": 0,
+  "mutableRoot66Peer67Reads": 0,
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "limits": "All product source pins are author-captured historical metadata; no current-head certification or new unique semantic coverage."
+}

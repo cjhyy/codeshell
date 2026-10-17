@@ -1,0 +1,40 @@
+{
+  "baseline": "2735100f81f4d12cbb3e610da0e3977eaf74727c",
+  "count": 1,
+  "findings": [
+    {
+      "id": "TUI-R48-01",
+      "severity": "P3",
+      "title": "后台任务完成会重置仍在运行的前台计时，缩短状态栏与回合耗时",
+      "location": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "line": 436,
+        "endLine": 446
+      },
+      "proposalAlias": "STATUSLINE-R64-C1",
+      "aliasDisposition": "Single Root promotion after author64, independent67 and Root66 lifecycle closure. Both elapsed consumers share one cause, counted once.",
+      "validation": "Static production source proof plus targeted independent critique and Root actual interactive yield/return/input closure; no React/clock/timer/registry/Engine/helper/fixture/test/model/native execution.",
+      "runtimeValidated": false,
+      "condition": "Interactive TUI main input is available, an old background agent survives a previous foreground return, a new foreground query starts while it runs, then the last running/cancelling background agent finishes and its true-to-false snapshot commits/flushes this effect while the same foreground remains active and before final elapsed settlement.",
+      "expected": "Keep the current foreground query start when unrelated background status changes; initialize at the actual new foreground start as appropriate.",
+      "actual": "isQueryActive stays true, hasRunningBgAgents changes true to false, and their OR stays true. The effect depends on all three and unconditionally overwrites runStartRef whenever OR is true. Subsequent status elapsed and final turn_duration subtract from the later reset time.",
+      "producer": "Agent detached run/terminal registry notify; run-tooling pending background_notification; TurnLoop1790–1798 returns background_wait. Engine2245–2286 drains only explicit headless runs; interactive return reaches App1719 queryGuard.end, permitting the next foreground while the old background still runs.",
+      "consumer": "App1814–1849 only queues ordinary text on isQueryActive; actual TuiControlSurface364–370 uses isRunning as placeholder, CommandInput232–237 remains focused when dock is not. App2294–2296 passes the ref to StatusLine125–128/167–171; App1669–1681 uses it for turn_duration.",
+      "impact": "Understates the same foreground query elapsed time by the interval before the background-triggered reset. No observed frame, numeric measurement, pricing/accounting error, persistent corruption, or every-notification claim.",
+      "counterevidence": [
+        "A new foreground start legitimately resets the start even when background keeps OR true.",
+        "Other remaining running/cancelling agents keep the aggregate boolean unchanged; arbitrary notify alone does not trigger the effect.",
+        "Headless/sub-agent yields are suppressed and do not establish this interactive sequence.",
+        "Coalesced/uncommitted changes, an already-ended foreground, or result settlement before the effect do not establish this trigger.",
+        "Initial spawn runYield is consumed after the full tool batch; no assumption every launch has an intermediate React frame."
+      ],
+      "deduplication": "Bounded recursive docs/bugs MD/JSON value searches, actual exact-cause windows and original111 metadata show no established same-condition formal record. Old Desktop folded-card Date.now elapsed flicker, AgentDock per-child timer and May20 implementation snippets have different consumers/causes or are plans. Not a claim of semantic history exhaustion.",
+      "fixDirection": "Separate debug-state observation from timer initialization; reset for actual new foreground query (and intended idle-to-running background behavior), not a background boolean change during an unchanged active query. Preserve the valid new-query reset while old background work keeps OR true.",
+      "evidence": [
+        "evidence/elapsed-frontier/report.md",
+        "evidence/elapsed-review/review.md",
+        "evidence/root-elapsed-review/review.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "bytes": 18447,
+      "sha256": "a9af1264f7afd374da8e13a955999cfb78b4c5a892fec8bbfb058dfa62a5dacf",
+      "lineCount": 443,
+      "pinUTC": "2026-10-17T15:51:28.401480+00:00",
+      "timing": "before65 first source navigation/body display"
+    },
+    {
+      "path": "packages/server/src/session-titles-store.test.ts",
+      "bytes": 3473,
+      "sha256": "1ef950d056f96694b39ea14d06c92bfc3839202d226c5a92ac16b81fe35055f2",
+      "lineCount": 81,
+      "pinUTC": "2026-10-17T15:51:28.403484+00:00",
+      "timing": "before65 first source navigation/body display"
+    }
+  ]
+}

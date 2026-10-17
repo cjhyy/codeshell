@@ -1,0 +1,99 @@
+{
+  "atUTC": "2026-10-17T16:00:08.978606+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "displayedRanges": [
+        [
+          45,
+          47
+        ],
+        [
+          1537,
+          1568
+        ],
+        [
+          1635,
+          1655
+        ],
+        [
+          1710,
+          1725
+        ],
+        [
+          1814,
+          1849
+        ],
+        [
+          2237,
+          2273
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            45,
+            47
+          ],
+          "text": "  45 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from \"./components/AgentDock.js\";\n  46 import { asyncAgentRegistry } from \"@cjhyy/code-shell-core/internal\";\n  47 import {"
+        },
+        {
+          "range": [
+            1537,
+            1568
+          ],
+          "text": "1537         chatSummary?: string;\n1538         goal?: string;\n1539         displayText?: string;\n1540         disableGoal?: boolean;\n1541       },\n1542     ): Promise<boolean> => {\n1543       const guardToken = queryGuard.reserve();\n1544       if (guardToken === null) return false;\n1545       const runCancellationEpoch = cancellationEpochRef.current;\n1546       const runWasCancelled = () => cancellationEpochRef.current !== runCancellationEpoch;\n1547       streamingTokensRef.current = 0;\n1548       if (\n1549         cancelledLocalRunTokensRef.current.size === 0 &&\n1550         !cancelledExternalRunPendingRef.current\n1551       ) {\n1552         cancelledRef.current = false;\n1553       }\n1554       // taskManager removed — tasks live in the transcript now; engine\n1555       // emits task_update on resume so the UI re-hydrates without a\n1556       // module-level reset.\n1557 \n1558       const abortController = new AbortController();\n1559       if (!queryGuard.tryStart(abortController, guardToken)) {\n1560         // Race-safety check — should be unreachable since reserve just succeeded\n1561         queryGuard.cancelReservation(guardToken);\n1562         return false;\n1563       }\n1564       localRunTokenRef.current = guardToken;\n1565 \n1566       const goal = !opts.asInjection ? opts.goal?.trim() || null : null;\n1567       const stagedGoalEpoch = goal ? ++goalMirrorEpochRef.current : null;\n1568       if (goal) {"
+        },
+        {
+          "range": [
+            1635,
+            1655
+          ],
+          "text": "1635           }\n1636           // Finalize this run synchronously before the transport can parse a\n1637           // queued external turn's early stream events from the same chunk.\n1638           if (released && !runWasCancelled() && !streamPresentationFinalized) {\n1639             finalizeStreamPresentation();\n1640             streamPresentationFinalized = true;\n1641           }\n1642         };\n1643         const result = await client.run(\n1644           {\n1645             task: engineMessage,\n1646             sessionId: sessionId ?? \"\",\n1647             ...(goal ? { goal } : {}),\n1648             ...(opts.disableGoal ? { disableGoal: true } : {}),\n1649           },\n1650           undefined,\n1651           handleTransportResponse,\n1652         );\n1653 \n1654         // ESC / Ctrl+C took us through the optimistic-cancel path — UI is\n1655         // already idle, history rewound. Don't append turn-duration / status"
+        },
+        {
+          "range": [
+            1710,
+            1725
+          ],
+          "text": "1710         if (!runWasCancelled()) {\n1711           chatStore.update((prev) => [\n1712             ...prev,\n1713             entry({ type: \"error\", error: friendlyError((err as Error).message) }),\n1714           ]);\n1715         }\n1716       } finally {\n1717         // end() is idempotent — safe to call even if forceEnd already released\n1718         // the guard (ESC/Ctrl+C path).\n1719         queryGuard.end(guardToken);\n1720         if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;\n1721         cancelledLocalRunTokensRef.current.delete(guardToken);\n1722         if (\n1723           cancelledLocalRunTokensRef.current.size === 0 &&\n1724           !cancelledExternalRunPendingRef.current\n1725         ) {"
+        },
+        {
+          "range": [
+            1814,
+            1849
+          ],
+          "text": "1814   const handleSubmit = useCallback(\n1815     async (value: string) => {\n1816       const trimmed = value.trim();\n1817       if (!trimmed) return;\n1818 \n1819       const head = trimmed.split(/\\s+/)[0]?.toLowerCase();\n1820       if (isQueryActive && head === \"/force\") {\n1821         const next = trimmed.slice(\"/force\".length).trim();\n1822         if (next) setQueuedInputs((prev) => [...prev, next]);\n1823         setInput(\"\");\n1824         client\n1825           .cancel(sidRef.current ?? sessionId ?? \"\", \"user-force\")\n1826           .catch((err) => uiLog.warn(\"/force cancel failed\", { err: String(err) }));\n1827         return;\n1828       }\n1829       if (isQueryActive && !canExecuteCommandWhileRunning(trimmed)) {\n1830         setQueuedInputs((prev) => [...prev, trimmed]);\n1831         setInput(\"\");\n1832         return;\n1833       }\n1834       if (!isQueryActive) {\n1835         setInput(\"\");\n1836         setShowBanner(false);\n1837         onScrollToBottom();\n1838       } else {\n1839         setInput(\"\");\n1840       }\n1841 \n1842       if (trimmed.startsWith(\"/\")) {\n1843         handleSlashCommand(trimmed);\n1844         return;\n1845       }\n1846 \n1847       await submitToEngine(trimmed, { asInjection: false });\n1848     },\n1849     [isQueryActive, submitToEngine, onScrollToBottom, client],"
+        },
+        {
+          "range": [
+            2237,
+            2273
+          ],
+          "text": "2237         sessionEntries={sessionEntries}\n2238         setSessionEntries={setSessionEntries}\n2239         wizard={wizard}\n2240         setWizard={setWizard}\n2241         pendingQuestion={pendingQuestion}\n2242         onQuestionResolved={(question) =>\n2243           dispatchQuestion({\n2244             type: \"resolve\",\n2245             requestId: question.requestId,\n2246             sessionId: question.sessionId,\n2247           })\n2248         }\n2249         onQuestionDeferred={(requestId) => dispatchQuestion({ type: \"defer\", requestId })}\n2250         onQuestionDraftChange={(requestId, draft) =>\n2251           dispatchQuestion({ type: \"draft\", requestId, draft })\n2252         }\n2253         onQuestionSubmittingChange={(requestId, submitting) =>\n2254           dispatchQuestion({ type: \"submitting\", requestId, submitting })\n2255         }\n2256         pendingApproval={pendingApproval !== null}\n2257         sessionId={sessionId}\n2258         sidRef={sidRef}\n2259         applyModelConfigureResult={applyModelConfigureResult}\n2260         addStatus={addStatus}\n2261         refreshModelManagerState={refreshModelManagerState}\n2262         handleSlashCommand={handleSlashCommand}\n2263         queuedInputs={queuedInputs}\n2264         input={input}\n2265         setInput={setInput}\n2266         handleSubmit={handleSubmit}\n2267         commands={commandDefs}\n2268         isRunning={isRunning}\n2269         dockFocusIdx={dockFocusIdx}\n2270         setDockFocusIdx={setDockFocusIdx}\n2271         viewMode={viewMode}\n2272       />\n2273 "
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "displayedRanges": [
+        [
+          46,
+          109
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            46,
+            109
+          ],
+          "text": "  46   streamingTokensRef,\n  47   runStartRef,\n  48 }: StatusLineProps) {\n  49   const modelShort = shortModel(model);\n  50 \n  51   // Own 1s interval — only this component re-renders, not App\n  52   const [tick, setTick] = useState(0);\n  53   // Perf probe refs: track interval fires vs renders to detect when the\n  54   // setInterval has died (or is firing but ink is dropping the repaint).\n  55   const lastTickAtRef = useRef<number>(performance.now());\n  56   const lastRenderAtRef = useRef<number>(performance.now());\n  57   const tickFiredCountRef = useRef<number>(0);\n  58   const renderCountRef = useRef<number>(0);\n  59 \n  60   useEffect(() => {\n  61     if (PERF_ENABLED) {\n  62       uiLog.info(\"debug.statusline.mount\", { isRunning: !!isRunning });\n  63     }\n  64     return () => {\n  65       if (PERF_ENABLED) uiLog.info(\"debug.statusline.unmount\", {});\n  66     };\n  67   }, []);\n  68 \n  69   useEffect(() => {\n  70     if (!isRunning) {\n  71       setTick(0);\n  72       if (PERF_ENABLED) {\n  73         uiLog.info(\"debug.statusline.interval\", { action: \"skip_not_running\" });\n  74       }\n  75       return;\n  76     }\n  77     if (PERF_ENABLED) {\n  78       uiLog.info(\"debug.statusline.interval\", { action: \"start\" });\n  79     }\n  80     const timer = setInterval(() => {\n  81       const now = performance.now();\n  82       const sinceLast = now - lastTickAtRef.current;\n  83       lastTickAtRef.current = now;\n  84       tickFiredCountRef.current++;\n  85       if (PERF_ENABLED) {\n  86         // Log every fire — only ~1Hz so volume is fine.\n  87         uiLog.info(\"debug.statusline.tick_fire\", {\n  88           n: tickFiredCountRef.current,\n  89           sinceLast_ms: Math.round(sinceLast),\n  90           drift_ms: Math.round(sinceLast - 1000),\n  91         });\n  92       }\n  93       setTick((t) => t + 1);\n  94     }, 1000);\n  95     return () => {\n  96       if (PERF_ENABLED) {\n  97         uiLog.info(\"debug.statusline.interval\", { action: \"clear\" });\n  98       }\n  99       clearInterval(timer);\n 100     };\n 101   }, [isRunning]);\n 102   void tick;\n 103 \n 104   // Render heartbeat — proves whether React is actually re-rendering this\n 105   // component. If tick_fire keeps firing but render_beat stops, React is\n 106   // batching us out. If render_beat fires but the screen looks frozen, ink\n 107   // is dropping the patch.\n 108   if (PERF_ENABLED && isRunning) {\n 109     const now = performance.now();"
+        }
+      ]
+    }
+  ],
+  "scope": "Ordinary submit/await/release and elapsed tick source only, no invoked code, QueryGuard mechanism not opened"
+}

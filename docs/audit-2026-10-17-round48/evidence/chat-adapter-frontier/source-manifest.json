@@ -1,0 +1,223 @@
+{
+  "createdUTC": "2026-10-17T15:47:05.451266+00:00",
+  "rootReportedContext": "c3a9ece2e6f183671b00e07322a9722fad6bda54; product unchanged by pending docs47, no own Git verification",
+  "files": [
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "bytes": 10201,
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "initialSemanticReadSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          31
+        ],
+        [
+          43,
+          59
+        ],
+        [
+          66,
+          114
+        ],
+        [
+          121,
+          130
+        ],
+        [
+          134,
+          189
+        ],
+        [
+          210,
+          274
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          114
+        ],
+        [
+          121,
+          130
+        ],
+        [
+          134,
+          190
+        ],
+        [
+          210,
+          281
+        ]
+      ],
+      "semanticLineCount": 215,
+      "displayedLineCount": 253,
+      "scope": "Selected ordinary accepted channel selector, error/module names, same-config constructor forwarding, and lazy proxy constructor fields. WeChat credential-storage/fingerprint branch190–209 and operation bodies276+ not reviewed; adjacent signatures displayed only. Discord static case/import reference is not a retry of old failed import.",
+      "pinOrigin": "initial-pins.json",
+      "pinUTC": "2026-10-17T15:43:03.153772+00:00",
+      "endingUTC": "2026-10-17T15:47:05.447095+00:00",
+      "endingBytes": 10201,
+      "endingSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "bytes": 28057,
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "initialSemanticReadSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          36
+        ],
+        [
+          108,
+          120
+        ],
+        [
+          136,
+          139
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          20,
+          36
+        ],
+        [
+          108,
+          120
+        ],
+        [
+          136,
+          139
+        ]
+      ],
+      "semanticLineCount": 34,
+      "displayedLineCount": 34,
+      "scope": "Accepted ConfiguredChannel/GatewayConfig and Telegram/Discord/Slack structural DTO field names only. No env/file values, secrets, parsing, allowlist/identity or credential retrieval functions.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:44:32.016655+00:00",
+      "endingUTC": "2026-10-17T15:47:05.449263+00:00",
+      "endingBytes": 28057,
+      "endingSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "initialSemanticReadSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          75,
+          79
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          68,
+          80
+        ]
+      ],
+      "semanticLineCount": 5,
+      "displayedLineCount": 13,
+      "scope": "Actual ordinary CLI accepted config.channels→async factory invocation. Instance lease/process signals/Desktop client/gateway construction shown adjacent, excluded; no CLI/process invocation.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:44:32.019414+00:00",
+      "endingUTC": "2026-10-17T15:47:05.449943+00:00",
+      "endingBytes": 11645,
+      "endingSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "bytes": 5782,
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "initialSemanticReadSha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          14
+        ],
+        [
+          22,
+          22
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          8,
+          14
+        ],
+        [
+          22,
+          22
+        ]
+      ],
+      "semanticLineCount": 8,
+      "displayedLineCount": 8,
+      "scope": "Only local SlackAdapterConfig2field names, readonly channel and constructor signature. Constructor body/SDK login/client/transport/threads not read or inferred.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:44:32.020612+00:00",
+      "endingUTC": "2026-10-17T15:47:05.450718+00:00",
+      "endingBytes": 5782,
+      "endingSha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "initialSemanticReadSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          141,
+          143
+        ],
+        [
+          151,
+          154
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          141,
+          154
+        ]
+      ],
+      "semanticLineCount": 7,
+      "displayedLineCount": 14,
+      "scope": "Only ordinary ChannelAdapter channel/capabilities/required run-send method signatures; no sending, capability correctness or identity/routing contract expansion.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:44:32.021763+00:00",
+      "endingUTC": "2026-10-17T15:47:05.451263+00:00",
+      "endingBytes": 7027,
+      "endingSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "unchanged": true
+    }
+  ],
+  "hashOnlyFiles": [],
+  "semanticProductLines": 269,
+  "displayedProductLines": 322,
+  "fullProductFiles": 0,
+  "selectedProductFiles": 5,
+  "noUniqueRepositoryCoverageClaim": true,
+  "runtime": {
+    "factoryHelperOrImport": 0,
+    "productFunctions": 0,
+    "testsBodyOrExecution": 0,
+    "languageFixtures": 0,
+    "realConfigSecretsRead": 0,
+    "sendLoginNetworkTransport": 0,
+    "uiProcessesNative": 0,
+    "git": 0
+  },
+  "scope": "Ordinary already-accepted config DTO selection and local constructor signature only; no external SDK latest behavior claim."
+}

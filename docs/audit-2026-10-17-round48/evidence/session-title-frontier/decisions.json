@@ -1,0 +1,42 @@
+{
+  "capturedUTC": "2026-10-17T15:54:02.299826+00:00",
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "classificationCounts": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "result": "bounded-negative",
+  "gate": {
+    "explicitSameShaFullFound": false,
+    "exactPathShaRowsInspected": 8,
+    "knownSameShaSelectedRanges": [
+      [
+        120,
+        189
+      ]
+    ],
+    "knownSelectedLines": 70,
+    "additionalNestedVersionsRow": "Old sidebar original source manifest /paths/16 only binds two version hashes; no full scope.",
+    "fullAdapterCounterevidence": "Old reviewer full14 is packages/desktop/src/main/session-titles-store.ts SHA5c7ea723..., distinct from current Server189.",
+    "noRowIsUnreadClaim": false
+  },
+  "ordinaryCounterevidence": [
+    "A normal nonempty title assigns map[id], an empty title deletes the override.",
+    "Expected title undefined skips comparison; expected null or empty string compares against absent-map-entry normalized to empty. These are distinct from unspecified expected-title semantics.",
+    "Hub ordinary producer validates single-line text and passes trimmed title, so whitespace-only input becomes the existing clear operation.",
+    "Summary selects nonempty customTitle before state.title/preview/default and separately exposes customTitle. Both list map and GET wire that same override map.",
+    "Existing declaration71–81 describes null first-write, stale-empty rejection and clear; it was not run and does not establish concurrent atomicity."
+  ],
+  "oldScopeExclusions": [
+    "R22 already selected Server120–18970lines and excluded old Sidebar double-source/manual-title/UTF16 issues; no duplicate new related item.",
+    "Old sidebar/catalog/history/shared-title distinction, R71 CAS and file-mutex/native/permission failure directions remain historical boundaries and were not reopened."
+  ],
+  "limits": [
+    "No real user/account/config/session data or registry files read.",
+    "No lock/queue/persistence/atomic-save/auth/permission/path-identity mechanism correctness review.",
+    "No history window/export/Buffer/Unicode experiment or arbitrary malformed DTO used to create a candidate."
+  ]
+}

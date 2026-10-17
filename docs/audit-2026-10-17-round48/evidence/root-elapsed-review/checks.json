@@ -1,0 +1,20 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "recommendation": "Promote STATUSLINE-R64-C1 as one P3 in formal48 after independent67 input and Root66 lifecycle closure; this packet itself is not the formal finding register.",
+  "files": [],
+  "selectedProductFiles": 10,
+  "semanticProductLines": 353,
+  "canonicalDisplayedLines": 931,
+  "testsExecuted": 0,
+  "producerClosure": "Interactive turn-loop1790–1798 returns background_wait; engine2247–2286 only drains if isHeadless true,1243–1244 explicit config check; engine2141 returns finalized; App1719 ends queryguard. Thus a surviving old bg and later user foreground are ordinary reachable; headless and swallowed/coalesced changes are excluded.",
+  "independentPeerMustRetainItsUnreadConsumerBoundary": true,
+  "historyContextReadCounts": {
+    "exactRunStartRef": 1,
+    "turnDuration": 4,
+    "elapsedBackground": 7
+  },
+  "historyQueryIsBoundedNotNoveltyExhaustion": true,
+  "rootKnownCandidateNotBlind": true,
+  "productRuns": 0
+}

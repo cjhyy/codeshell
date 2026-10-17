@@ -1,0 +1,107 @@
+{
+  "frozenUTC": "2026-10-17T15:48:04.225579+00:00",
+  "directory": "/tmp/codeshell-audit-round62-chat-adapter",
+  "files": [
+    {
+      "path": "cause-history-method.py",
+      "bytes": 2734,
+      "sha256": "6d18772a2d636b2290e94cc6f54008f961e7d5099b1f201b5a9502c36558f730"
+    },
+    {
+      "path": "cause-history.json",
+      "bytes": 75483,
+      "sha256": "06f34ab3b3001cbda7c1249b9bc0a9036a9f5ec4a84decb15e475b66de1c26ee"
+    },
+    {
+      "path": "chain-pins.json",
+      "bytes": 1232,
+      "sha256": "e9a9c96059ae7651a5abd64f17b11b47afaab19a20f0f6b154daafdf21b20b32"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1052,
+      "sha256": "ba9cb10f23f4fd760e5e491add6555a6fd965d4d93a8366ef2a057f43e168f0b"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 6301,
+      "sha256": "e01e7ca5ac9a7f8f90ff8b54610fe3d70ecb658dafa8d6ba5a227fe295752720"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2375,
+      "sha256": "0fdc3be7638afceed81e1ba14fa0c2961bac9ba46632493fcb9466fd05c45f5f"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 15924,
+      "sha256": "da7c0fd6f80cd1740849d4ad07493cbc0ffd5621ad9839efdff431e3c76fe36c"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3891,
+      "sha256": "83811fea9f85b4f3229158bb6a5b8b6eb91ea7f7496a67dd5fb8d06de3d90c42"
+    },
+    {
+      "path": "history.json",
+      "bytes": 848504,
+      "sha256": "dee6b09034bbdf38c5318ee4104062f4fe8b232d9b89a1d42189e8e31806abf2"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 467,
+      "sha256": "f0f85a6e9c0ce6828030106f1e8028f61ed3ed130d1bf27677a44346e077bda8"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 609,
+      "sha256": "3ef7b2029a794ef5ce20e9b8a4782f1bdd4fb6eb59f530317ec05faa764f4085"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3321,
+      "sha256": "af4fa15ddb0d5295cf09ab0038de79d0148eb134bbc3bc4b7b69101a72321870"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 13299,
+      "sha256": "40740752193e9b91cd679bd89e5c4814cc20a5e16d50ce776f8e5832b60e2ff7"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 6755,
+      "sha256": "a9beb0fe1c66036e3a543463fbcf358871e5c5917619ff575fd61a8a644ff84f"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 14,
+  "totalFilesIncludingSelf": 15,
+  "reportLinks": {
+    "count": 14,
+    "missing": []
+  },
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "source": {
+    "selectedRows": 5,
+    "fullRows": 0,
+    "semanticProductLines": 269,
+    "displayedProductLines": 322,
+    "allPinsEndingSame": true
+  },
+  "history": {
+    "files": 4255,
+    "endingAdded": 0,
+    "endingRemoved": 0,
+    "endingChanged": 0,
+    "scope": "include frozen46; exclude47–62; capped cause contexts not semantically exhausted"
+  },
+  "productExecutions": 0,
+  "testExecutions": 0,
+  "realConfigSecretsRead": 0,
+  "nativeNetworkGit": 0,
+  "limits": "Ordinary accepted DTO selection only. No all-adapter/SDK/identity/credential/transport correctness claim, no old import failure reopened."
+}

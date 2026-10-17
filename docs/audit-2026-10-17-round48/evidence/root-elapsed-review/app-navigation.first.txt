@@ -1,0 +1,40 @@
+46:import { asyncAgentRegistry } from "@cjhyy/code-shell-core/internal";
+213:  const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);
+214:  const hasRunningBgAgents = useSyncExternalStore(
+215:    asyncAgentRegistry.subscribe,
+216:    asyncAgentRegistry.hasRunning,
+218:  const isRunning = isQueryActive || hasRunningBgAgents;
+225:    asyncAgentRegistry.subscribe,
+226:    asyncAgentRegistry.getSnapshot,
+393:  const runStartRef = useRef(0);
+438:      runStartRef.current = Date.now();
+442:      isQueryActive,
+443:      hasRunningBgAgents,
+444:      runStartRef: runStartRef.current,
+446:  }, [isRunning, isQueryActive, hasRunningBgAgents]);
+452:    uiLog.info("flicker.isQueryActive_change", { isQueryActive });
+453:  }, [isQueryActive]);
+455:    uiLog.info("flicker.hasRunningBgAgents_change", {
+456:      hasRunningBgAgents,
+463:  }, [hasRunningBgAgents, agentsSnapshot]);
+1300:      const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), Date.now());
+1377:        for (const a of asyncAgentRegistry.list()) {
+1378:          if (a.status === "running") asyncAgentRegistry.cancel(a.agentId);
+1412:    // Gate on isQueryActive (not isRunning), otherwise ESC would be eaten by
+1420:      isQueryActive &&
+1444:      // socket teardown), and the awaited client.run() in handleSubmit will
+1526:  //   - handleSubmit: real user input. asInjection=false, the user's text
+1669:        const elapsed = Date.now() - runStartRef.current;
+1794:        isQueryActive,
+1812:  }, [notificationSnapshot, isQueryActive, input, overlayOpen, submitToEngine, sessionId]);
+1814:  const handleSubmit = useCallback(
+1820:      if (isQueryActive && head === "/force") {
+1829:      if (isQueryActive && !canExecuteCommandWhileRunning(trimmed)) {
+1834:      if (!isQueryActive) {
+1849:    [isQueryActive, submitToEngine, onScrollToBottom, client],
+1853:    if (isQueryActive || queuedInputs.length === 0 || input.trim() !== "") return;
+1856:    if (next) void handleSubmit(next);
+1857:  }, [isQueryActive, queuedInputs, input, handleSubmit]);
+2186:          runStartRef={runStartRef}
+2266:        handleSubmit={handleSubmit}
+2296:          runStartRef={runStartRef}

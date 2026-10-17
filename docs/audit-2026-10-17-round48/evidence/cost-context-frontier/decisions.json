@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T15:47:17.475501+00:00",
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "classificationCounts": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "result": "bounded-negative",
+  "explicitSameShaFullGate": {
+    "samePathShaRowsInspected": 7,
+    "explicitFullFound": false,
+    "rawSourceRowFieldsChecked": "Complete rows inspected, not only coverage: review/scope/inspectionScope if present and SHA/path binding. Old R9 row states selected, ranges absent; other rows are inventory/hash/incidental/unknown. No-row is not unread."
+  },
+  "ordinaryChain": [
+    "LLMClientBase constructor copies config.provider/model; usageIdentity preserves both strings and providerKind.",
+    "createMessage wrapper routes through withUsageAccounting, then withUsageAttempt; recordUsage and recordAttemptUsage forward normal reported usage.",
+    "context forwards normal identity/usage to ledger.begin/settle/finish, preserving purpose fields in ordinary DTO projection.",
+    "Selected ledger receipt construction copies provider/model/providerKind and purpose; begin/settle/finish use this.now for startedAt/settledAt."
+  ],
+  "counterevidence": [
+    "No canonical-model rewrite appears in the selected ordinary provider→context→receipt chain, so standalone CostTracker identity-loss cause is not newly counted.",
+    "Accounting exception containment and retained null usage are explicit in source, but no runtime behavior/pass is claimed.",
+    "No normal DTO-backed new mismatch was established within selected scope; no arbitrary invalid DTO or retry experiment used."
+  ],
+  "oldExclusions": [
+    "COST-R9-01 standalone CostTracker full model identifier loss is a historical recorded issue; its bound-ledger comparison and old execution counts are not this run.",
+    "Budget-threshold/429, provider/network retries and all previously failed dynamic directions were not reopened."
+  ],
+  "limits": [
+    "No AsyncLocalStorage/crypto/ownership/resource/authority/permission/identity mechanism correctness review.",
+    "No persistence/locking/pricing formula/summary pagination/real account or configuration audit.",
+    "No actual provider/model/store/network operation or test fixture execution."
+  ]
+}

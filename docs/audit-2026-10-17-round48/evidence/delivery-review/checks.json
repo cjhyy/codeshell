@@ -1,0 +1,1078 @@
+{
+  "createdUTC": "2026-10-17T16:12:17.667131+00:00",
+  "scope": "Delivery metadata only; own prep68 author now reviews its formal rendering, not an independent source/root-cause re-review. Inline Python standard-library metadata I/O only; no repository/product scripts executed.",
+  "files": [],
+  "inputPins": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/ALL-ISSUES.md",
+      "bytes": 22619,
+      "sha256": "5dd34321522f648252248d1c4726baede31d18504c45ac9195463e0c51766a35",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.506023+00:00"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/recorded-findings-catalog.json",
+      "bytes": 75011,
+      "sha256": "4d36a161d98ac557f2a683cc037a9276a11cb57293a07c1fce909cbdf258be8b",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.510965+00:00"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/findings.json",
+      "bytes": 4075,
+      "sha256": "04407bbab34f3642ef569f39885298575e76d0881b8daadfbcea30b0764f7827",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.511368+00:00"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/evidence/catalog-checks.json",
+      "bytes": 468,
+      "sha256": "1d0479131f1221d93d638f34b81404c147724e84881728fc90bf564455c7d0d8",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.512852+00:00"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+      "bytes": 71885,
+      "sha256": "6e9e8a286a6e07a1306e7d007bad8935f15e202a9d1e44878b9589b9a6cf6075",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.513371+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/draft.md",
+      "bytes": 22382,
+      "sha256": "ee4eea0ac6481a559013308fa74938f20d27250ef1415db67cfed9fc092ebd39",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.513719+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/inputs.json",
+      "bytes": 2595,
+      "sha256": "6150115e231be37c594659a893e0d9ab436c38b2e24bf1a34f7748649bb49e02",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.514045+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/checks.json",
+      "bytes": 62314,
+      "sha256": "52d9a5a294b5817a1e40e7633ddfb65e2f4efa7ce77ed2a606dfaccb34af6438",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.514581+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/receipt.json",
+      "bytes": 602,
+      "sha256": "b0b6654a5925f4c357749c83ee58fd1a662bc3566691972d8a66663bd58ee3db",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:11:09.514821+00:00"
+    }
+  ],
+  "comparisons": {
+    "original43Rows": 111,
+    "formal48Rows": 112,
+    "original111RowsExactlyRetained": true,
+    "originalRowDifferences": [],
+    "canonicalSequence": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "A09",
+      "A10",
+      "A11",
+      "A12",
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "D01",
+      "D02",
+      "D03",
+      "SWC-01",
+      "SWC-02",
+      "SWC-03",
+      "SWC-04",
+      "SWC-05",
+      "SWC-06",
+      "R2-01",
+      "R2-02",
+      "R2-03",
+      "R2-04",
+      "R2-05",
+      "R2-06",
+      "R2-07",
+      "R2-08",
+      "R2-09",
+      "R2-10",
+      "R2-11",
+      "S01",
+      "S02",
+      "S03",
+      "OM1",
+      "OM3",
+      "OM4",
+      "OM5",
+      "UI-01",
+      "UI-02",
+      "UI-03",
+      "PET-01",
+      "TIME1",
+      "TIME2",
+      "CHD01",
+      "CHD02",
+      "R3-01",
+      "R3-02",
+      "R3-03",
+      "R3-04",
+      "HL-01",
+      "HL-02",
+      "CDP-R3-01",
+      "CDP-R3-02",
+      "CDP-R3-03",
+      "LAB-R3-01",
+      "ARENA-R3-01",
+      "ARENA-R3-02",
+      "CTX-1",
+      "CTX-2",
+      "SET-01",
+      "SET-02",
+      "CODING-R4-01",
+      "CODING-R4-02",
+      "LOG-R4-01",
+      "WEB-R5-01",
+      "WEB-R5-02",
+      "PROFILE-R5-01",
+      "PROMPT-01",
+      "CHAT-R5-01",
+      "FILES-R7-01",
+      "FILES-R7-03",
+      "FILES-R7-04",
+      "PROV-R7-01",
+      "GIT-R8-01",
+      "PLUGIN-R8-01",
+      "PLUGIN-R8-02",
+      "PLUGIN-R8-03",
+      "WEB-R8-01",
+      "WEB-R8-02",
+      "ATT-R9-01",
+      "COST-R9-01",
+      "SESSION-R9-01",
+      "DIAG-R10-01",
+      "PET-R10-01",
+      "PET-R10-02",
+      "CHAT-R11-01",
+      "TUI-R12-01",
+      "TUI-R12-02",
+      "DESKTOP-R12-01",
+      "PATCH-R12-01",
+      "HIST-R13-01",
+      "HIST-R13-02",
+      "CHAT-R17-01",
+      "REVIEWPROMPT-R19-01",
+      "ERROR-R22-01",
+      "PRODUCT-R23-01",
+      "OUTPUT-R25-01",
+      "TUI-R26-01",
+      "RENDERER-R26-01",
+      "AGGREGATOR-R27-01",
+      "STREAMING-R28-01",
+      "MARKETPLACE-R37-01",
+      "MCP-R38-01",
+      "MCP-R39-01",
+      "TRANSCRIPT-R42-01",
+      "TUI-R48-01"
+    ],
+    "uniqueIds": 112,
+    "priorityCounts": {
+      "P2": 44,
+      "P3": 68
+    },
+    "formal48Count": 1,
+    "newFormalIds": [
+      "TUI-R48-01"
+    ],
+    "newFormalPriorities": [
+      "P3"
+    ],
+    "newCatalogRows": [
+      {
+        "id": "TUI-R48-01",
+        "priority": "P3",
+        "title": "后台任务完成会重置仍在运行的前台计时，缩短状态栏与回合耗时",
+        "sourceRound": 48,
+        "canonicalFindings": "docs/audit-2026-10-17-round48/findings.json",
+        "baseline": "2735100f81f4d12cbb3e610da0e3977eaf74727c",
+        "originalStatus": "static-confirmed; runtime unvalidated",
+        "originalFixedFlag": false,
+        "originalMainSourceDisposition": null,
+        "statusInterpretation": "Dated source-only confirmation; no runtime or current-unfixed revalidation inferred."
+      }
+    ],
+    "newCatalogMatchesFormal": true,
+    "proposalAlias": "STATUSLINE-R64-C1",
+    "proposalAliasIsSeparateFormalRow": false,
+    "metadataRootCauseCertification": false
+  },
+  "markdown": {
+    "tableRows": 112,
+    "uniqueTableIds": 112,
+    "priorityCounts": {
+      "P2": 44,
+      "P3": 68
+    },
+    "sequenceEqualsCatalog": true,
+    "old111TitlesPrioritiesEqual68": true,
+    "old111TableDifferences": [],
+    "canonicalLinkMismatches": [],
+    "totalLinks": 116,
+    "asWrittenExistingCount": 115,
+    "ownedResolvedExistingCount": 116,
+    "linkChecks": [
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round47/README.md",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round47/README.md",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-16/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round10/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round10/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round10/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round10/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round10/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round10/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round11/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round11/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round12/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round13/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round13/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round17/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round17/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round19/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round19/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round22/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round22/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round23/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round23/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round25/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round25/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round26/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round26/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round26/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round26/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round27/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round27/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round28/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round28/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round37/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round37/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round38/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round38/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round39/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round39/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round42/findings.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round42/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round48/findings.json",
+        "existsAsWritten": false,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/findings.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+        "ownedResolvedExists": true
+      },
+      {
+        "target": "recorded-findings-catalog.json",
+        "existsAsWritten": true,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/recorded-findings-catalog.json",
+        "ownedResolvedExists": true
+      }
+    ],
+    "primaryIntegrationPending": [
+      {
+        "target": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round48/findings.json",
+        "existsAsWritten": false,
+        "ownedResolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/findings.json",
+        "ownedResolvedExists": true
+      }
+    ]
+  },
+  "catalogSources": {
+    "sourceDocumentRecords": 48,
+    "distinctFindingSourceTargets": 25,
+    "newSourceRecord": {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/findings.json",
+      "bytes": 4075,
+      "sha256": "04407bbab34f3642ef569f39885298575e76d0881b8daadfbcea30b0764f7827",
+      "originalReportedCount": 1,
+      "baselineBlobMatches": null,
+      "scope": "Current owned48 input"
+    },
+    "predecessorShaMatchesPinned43": true,
+    "newSourceHashMatchesPinnedFindings": true,
+    "originalSourceDocumentsRetained": true
+  },
+  "prior68": {
+    "frozenHashMatches": [
+      {
+        "path": "checks.json",
+        "matches": true
+      },
+      {
+        "path": "draft.md",
+        "matches": true
+      },
+      {
+        "path": "inputs.json",
+        "matches": true
+      }
+    ],
+    "allMatch": true,
+    "original111IdPriorityMatch": true
+  },
+  "coverageAndStatus": {
+    "throughFrozenRound": 45,
+    "TSorTSXTotal": 4643,
+    "full": 304,
+    "selectedWithoutFull": 169,
+    "unknown": 4170,
+    "cannotMarkFull": 4339,
+    "arithmeticValid": true,
+    "currentUnfixedCount": null,
+    "notUnreadCount": true,
+    "sourceStageOnly": {
+      "source": "docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+      "sourceAddressedOriginalConditions": [
+        "MARKETPLACE-R37-01",
+        "MCP-R38-01",
+        "MCP-R39-01"
+      ],
+      "runtimeRevalidated": false,
+      "olderConcurrentSourceNote": "WEB-R8-01 old source disposition remains in original dated row; no new current status certification."
+    },
+    "boundaryPhrasesPresent": {
+      "截至冻结45": true,
+      "304": true,
+      "169": true,
+      "4170": true,
+      "4643": true,
+      "4339": true,
+      "不是未读数": true,
+      "不是“当前仍有112项未修复”": true,
+      "运行尚未复验": true,
+      "46及以后没有倒填": true
+    },
+    "rootCatalogChecksMatch": true
+  },
+  "endingInputs": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/ALL-ISSUES.md",
+      "bytes": 22619,
+      "sha256": "5dd34321522f648252248d1c4726baede31d18504c45ac9195463e0c51766a35",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/recorded-findings-catalog.json",
+      "bytes": 75011,
+      "sha256": "4d36a161d98ac557f2a683cc037a9276a11cb57293a07c1fce909cbdf258be8b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/findings.json",
+      "bytes": 4075,
+      "sha256": "04407bbab34f3642ef569f39885298575e76d0881b8daadfbcea30b0764f7827",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/evidence/catalog-checks.json",
+      "bytes": 468,
+      "sha256": "1d0479131f1221d93d638f34b81404c147724e84881728fc90bf564455c7d0d8",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+      "bytes": 71885,
+      "sha256": "6e9e8a286a6e07a1306e7d007bad8935f15e202a9d1e44878b9589b9a6cf6075",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/draft.md",
+      "bytes": 22382,
+      "sha256": "ee4eea0ac6481a559013308fa74938f20d27250ef1415db67cfed9fc092ebd39",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/inputs.json",
+      "bytes": 2595,
+      "sha256": "6150115e231be37c594659a893e0d9ab436c38b2e24bf1a34f7748649bb49e02",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/checks.json",
+      "bytes": 62314,
+      "sha256": "52d9a5a294b5817a1e40e7633ddfb65e2f4efa7ce77ed2a606dfaccb34af6438",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round68-user-catalog/receipt.json",
+      "bytes": 602,
+      "sha256": "b0b6654a5925f4c357749c83ee58fd1a662bc3566691972d8a66663bd58ee3db",
+      "unchanged": true
+    }
+  ],
+  "allInputsUnchanged": true,
+  "execution": {
+    "productSourceReads": 0,
+    "productRuns": 0,
+    "helperCalls": 0,
+    "testOrFixtureRuns": 0,
+    "UIOrNativeNetwork": 0,
+    "gitCalls": 0,
+    "repositoryScriptRuns": 0
+  },
+  "metadataDiagnostics": {
+    "toolOutputTruncations": 0,
+    "metadataExecutionErrors": 0,
+    "knownDeliveryLimit": "One new primary absolute findings link currently absent before integration; exact owned counterpart exists. Root notified; final main fast-forward/path existence remains Root responsibility."
+  },
+  "primaryDeliveryDisposition": {
+    "rootAcknowledgedUTC": "2026-10-17T16:12:48.952416+00:00",
+    "status": "one-primary-link-pending-integration",
+    "rootPlan": "Parent acknowledged exact pending primary48 findings link; will retain current four author files, verify owned counterpart/hash pre-integration and as-written targets after main fast-forward. This reviewer has not performed that future final verification.",
+    "pendingOwnedTargetMatchesPinnedFindings": true,
+    "pendingOwnedTargetSha256": "04407bbab34f3642ef569f39885298575e76d0881b8daadfbcea30b0764f7827"
+  }
+}

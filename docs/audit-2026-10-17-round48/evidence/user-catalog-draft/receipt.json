@@ -1,0 +1,22 @@
+{
+  "frozenUTC": "2026-10-17T16:05:23.579972+00:00",
+  "directory": "/tmp/codeshell-audit-round68-user-catalog",
+  "selfExcluded": "receipt.json",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 62314,
+      "sha256": "52d9a5a294b5817a1e40e7633ddfb65e2f4efa7ce77ed2a606dfaccb34af6438"
+    },
+    {
+      "path": "draft.md",
+      "bytes": 22382,
+      "sha256": "ee4eea0ac6481a559013308fa74938f20d27250ef1415db67cfed9fc092ebd39"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 2595,
+      "sha256": "6150115e231be37c594659a893e0d9ab436c38b2e24bf1a34f7748649bb49e02"
+    }
+  ]
+}

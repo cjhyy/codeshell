@@ -1,0 +1,59 @@
+{
+  "capturedUTC": "2026-10-17T15:47:57.995435+00:00",
+  "reportLinks": [
+    {
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "consumer-initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "target": "history-gate-selected.json",
+      "exists": true
+    },
+    {
+      "target": "history-cost-causes.json",
+      "exists": true
+    },
+    {
+      "target": "history-cause-selected.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true
+    },
+    {
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "target": "metadata-diagnostics.json",
+      "exists": true
+    }
+  ],
+  "linksChecked": 12,
+  "allLocalLinksExist": true,
+  "outsideAliasRequired": false,
+  "sourceRowsRangeUnionsChecked": 8,
+  "productRuns": 0,
+  "testsRun": 0
+}

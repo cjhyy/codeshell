@@ -1,0 +1,24 @@
+{
+  "createdUTC": "2026-10-17T15:50:50.957438+00:00",
+  "target": "packages/core/src/cost-ledger/context.ts",
+  "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+  "sameSHAOldFullFound": false,
+  "decision": "Proceed to independent bounded ordinary source reading",
+  "originalEvidence": [
+    {
+      "document": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "pointer": "/files/16",
+      "label": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage.",
+      "classification": "Selected statement, not full; no source novelty inferred fromR28/R44 unknown/pin-only."
+    }
+  ],
+  "oldCauseExcluded": [
+    {
+      "id": "COST-R9-01",
+      "scope": "Standalone unbound CostTracker loses full model identifier and misestimates price; recorded current EngineRuntime bound path was correct. No re-report or borrowed execution."
+    }
+  ],
+  "files": [],
+  "history": "4255dated including46 excluding exact47 and57–65; no cap truncation: path57/SHA11/filename58/oldCause79 all retained cap100;0parse",
+  "author61InputsRead": false
+}

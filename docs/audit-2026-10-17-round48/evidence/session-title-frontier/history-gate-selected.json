@@ -1,0 +1,225 @@
+{
+  "scope": "Complete eight same-object path+SHA rows actually inspected, including scope/review/inspectionScope if present; explicit selected120–189 is not full or unread.",
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "jsonPointer": "/sources/9",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "frozenSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "currentSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "matchesFrozen": true,
+        "coverage": "selected",
+        "ranges": [
+          [
+            120,
+            189
+          ]
+        ],
+        "lineCount": 189,
+        "note": "separate override store static only; no filesystem/lock execution"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "jsonPointer": "/files/37",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "mainSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/28",
+      "row": {
+        "manifest": "title-source-manifest.json",
+        "path": "packages/server/src/session-titles-store.ts",
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/894",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "lines": 189,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "status": "current-sha-selected-only",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 1,
+        "currentSelectedUnionLines": 70,
+        "currentSelectedUnionRanges": [
+          [
+            120,
+            189
+          ]
+        ],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                120,
+                189
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][9]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round22/source-manifest.json",
+                "jsonLocation": "$[\"files\"][37]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round22/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][28]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3685",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "lines": 189,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/4007",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "lines": 189,
+        "status": "current-sha-explicit-selected-object",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [
+          "C014697"
+        ],
+        "currentSelectedUnionLines": 70,
+        "claimIds": [
+          "C014697",
+          "C014698",
+          "C014699",
+          "C014700",
+          "C014701"
+        ],
+        "claimKindCounts": {
+          "explicit-selected": 1,
+          "incidental-path-or-pin-object": 4
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/4007",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "lines": 189
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/4008",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "lines": 189,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "carryable-explicit-selected-no-full"
+      }
+    }
+  ],
+  "exactPathNarratives": [
+    {
+      "path": "docs/audit-2026-10-17-round22/title-report.md",
+      "jsonPointer": null,
+      "line": 11,
+      "needle": "packages/server/src/session-titles-store.ts",
+      "context": "查此 flag。历史页 [commitEdit](../../packages/desktop/src/renderer/sessions/SessionsView.tsx#L254) 等待 Main 的 title override 写入，随后 [history sync](../../packages/desktop/src/renderer/app/useSessionHistorySync.ts#L46) 把成功名称及 manual flag 回填 loaded aliases；[Main handler](../../packages/desktop/src/main/activity-history-ipc.ts#L29) 写另一套 [override store](../../packages/server/src/session-titles-store.ts#L138)。这条接线只做 selected 静态阅读，不导入或运行 renderer、IPC、registry、磁盘或 native。旧 [sidebar 命名观察](../review-2026-10-12/sidebar-title-observation-round27.md#L9) 已明确自动标题 guard 与双来源边界，因此不能只因 Core 后台写 title 就断言会覆盖手工名。\n\n去重扫描 [全历史清单](evidence/title-dedup.json) 包括 docs/bugs 的 MD 与递归 JSON 标量，排除本批，含 archive/_archive。读取时共 2232 文件（1202 MD、1030 JSON）、309994 字符串叶与 436035 全标量叶、0 JSON parse error。exact 137 次、mechanism 339 次匹配，各仅保留前 100 条 context；计数不等于语义穷尽，mechanism 的 title/race 在旧 JSON 记录 title 字段与通用 race 文本中产生噪声。[去重决定](evidence/title-dedup-decisions.json) 记录有界补读及排除：UTF-16 slice 旧机制、旧自动标题/usage/summary 讨论、模型输出格式愿望、已有 Sidebar 双来源观察均不算新增。没有运行 surrogate 边界、假定模型违背 prompt、真实模型或旧失败方向。\n\n[首次 raw](evidence/title-session-leaf.ra",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "781d87b52602f82d429a30b42d3f957aff5d1d37ec82e77d41ff7262bf9434a6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPointer": "/hits/sidebar-projection/381/text",
+      "line": 1,
+      "needle": "packages/server/src/session-titles-store.ts",
+      "context": "- The registry implementation (`packages/server/src/session-titles-store.ts:133–188`) serializes registry writes but exposes no broadcast/callback which could turn catalog metadata back into registry titles. `renderer/app/useHostSubscriptions.ts:348–365` also guards manual sidebar titles from LLM title replacement; it is not a registry backfill.",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "jsonPointer": null,
+      "line": 45,
+      "needle": "packages/server/src/session-titles-store.ts",
+      "context": "实 HubAuth 运行**。其它设备先提交 B 后，C 草稿遇 CAS409仍保留，原保存禁用；实际「读取最新标题」只更新 expectedTitle/reviewedTitle 而保留草稿，核对后保存 C。源码保护为 HubSessions [189–198/219–230/304–306/351–353](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:189)，SessionTitlesStore [169–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/session-titles-store.ts:169) 校验 expectedTitle；同步 write.current [165–167](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:165) 防同 tick 两次 form submit，fixture 两次 submit只得到一个 PATCH，不列重复提交发现。\n\n最终追加的 500 控制将 owned session-titles.json 暂存后在原路径建目录，实际 registry 拒写，UI 保留 D 草稿且同稿可重试，恢复文件后成功；**这是非文件 registry 错误，不是成功的 EACCES 控制。** 独立的 parent chmod/EACCES 诊断因为 lock 等待超过 test deadline 失败，保留于 diagnostic-parent-EACCES-lock-timeout.log，不用于正式正常控制或新增发现。404 控制把 owned session dir 暂移，UI保留 E 草稿并禁保存，恢复后显式读取才重启提交，同稿成功，generated Engine title 保持不变。元数据错误状态映射见 session-management [341–355](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/session-management.ts:3",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "bbb52f96c5f5494cbee370d59f362a9e621d8efc2c77aeb83ca89a7e5f07be03"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-hub-session-operations-round18/quality-audit.md",
+      "jsonPointer": null,
+      "line": 45,
+      "needle": "packages/server/src/session-titles-store.ts",
+      "context": "实 HubAuth 运行**。其它设备先提交 B 后，C 草稿遇 CAS409仍保留，原保存禁用；实际「读取最新标题」只更新 expectedTitle/reviewedTitle 而保留草稿，核对后保存 C。源码保护为 HubSessions [189–198/219–230/304–306/351–353](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:189)，SessionTitlesStore [169–174](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/session-titles-store.ts:169) 校验 expectedTitle；同步 write.current [165–167](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/HubSessions.tsx:165) 防同 tick 两次 form submit，fixture 两次 submit只得到一个 PATCH，不列重复提交发现。\n\n最终追加的 500 控制将 owned session-titles.json 暂存后在原路径建目录，实际 registry 拒写，UI 保留 D 草稿且同稿可重试，恢复文件后成功；**这是非文件 registry 错误，不是成功的 EACCES 控制。** 独立的 parent chmod/EACCES 诊断因为 lock 等待超过 test deadline 失败，保留于 diagnostic-parent-EACCES-lock-timeout.log，不用于正式正常控制或新增发现。404 控制把 owned session dir 暂移，UI保留 E 草稿并禁保存，恢复后显式读取才重启提交，同稿成功，generated Engine title 保持不变。元数据错误状态映射见 session-management [341–355](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/session-management.ts:3",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "bbb52f96c5f5494cbee370d59f362a9e621d8efc2c77aeb83ca89a7e5f07be03"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-sidebar-title-round27/independent-quality.raw.md",
+      "jsonPointer": null,
+      "line": 72,
+      "needle": "packages/server/src/session-titles-store.ts",
+      "context": "SessionHistorySync.test.tsx | cd4e2a3c56dfebac63e2e000836b450725c753954a2e6106ac485c649955ddd5 |\n| packages/desktop/src/renderer/shell/SessionSearchModal.tsx | 6fa8dedc538efb70a859e9ba00abb85b756e518de3f95f369a6080b80fd4806a |\n| packages/desktop/src/main/session-titles-store.ts | 5c7ea7233f145105a79886d570d0735e8d66c1a90ab9495f9ed054d85bc374d7 |\n| packages/server/src/session-titles-store.ts | 3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0 |\n| packages/server/src/sessions-service.ts | 8be914ac63c6f235474eb07b5220f18a66d4d645c938beb05574e8eacacb5720 |\n| packages/server/src/sessions-service.test.ts | 95a9fbb1b9ec3c8e90847f1c110d198297e3cbc2f0e23a4c07f0a641a72d88c8 |\n| packages/desktop/src/renderer/App.tsx | 556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8 |\n| packages/desktop/src/preload/index.ts | b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327 |\n| packages/desktop/src/renderer/app/useHostSubscriptions.ts | 86d9d570eb165c07884ccdebcc70aefb8fe7e8b39f2627868528e887ccdb70e8 |\n| docs/superpowers/specs/2026-06-01-llm-session-title-de",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9bfd5f9888bd7baa1f8c24a0c87f3ecc48f85bfe6af59028ba978bfa59ba624d"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-sidebar-title-round27/static-counterreview.md",
+      "jsonPointer": null,
+      "line": 22,
+      "needle": "packages/server/src/session-titles-store.ts",
+      "context": "ommit calls `window.codeshell.renameSession` before `onSessionRenamed` (`SessionsView.tsx:121–155`). `renderer/app/useSessionHistorySync.ts:40–64` then finds catalog rows by canonical engine ID and calls `renameSessionLocal(..., true)`. This supports registry-to-catalog propagation after a successful history rename.\n- The registry implementation (`packages/server/src/session-titles-store.ts:133–188`) serializes registry writes but exposes no broadcast/callback which could turn catalog metadata back into registry titles. `renderer/app/useHostSubscriptions.ts:348–365` also guards manual sidebar titles from LLM title replacement; it is not a registry backfill.\n\n## Important counterevidence and scope\n\n`docs/superpowers/specs/2026-06-01-llm-session-title-design.md:21–25` explicitly made touching `desktop/session-titles.json` a non-goal for the old LLM-title work and called SessionsView's title system independent from sidebar localStorage. This is meaningful design counterevidence against assuming every sidebar title must be the shared history title. The document scoped that decisio",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "4a502aa431f1a8a7e9169b072cfc8ad0075fcc703b85ed12295a54bc4d9f4a80"
+    }
+  ]
+}

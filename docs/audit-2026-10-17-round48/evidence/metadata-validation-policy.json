@@ -1,0 +1,75 @@
+{
+  "scope": "Only evidence-document integration; zero product/helper/test executions.",
+  "frozenWhitespaceExemptions": [
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/source-excerpts.txt",
+      "source": "/tmp/codeshell-audit-round64-tui-status/source-excerpts.txt",
+      "bytes": 27991,
+      "sha256": "38451d437da30dc873a6d7a871407415e5fc18678aa0b8bea75eb1f9c1172bce",
+      "trailingLineNumbers": [
+        14,
+        17,
+        36,
+        51,
+        60,
+        69,
+        104,
+        125,
+        139,
+        148,
+        159,
+        164,
+        176,
+        180,
+        185,
+        193,
+        204,
+        216,
+        223,
+        262,
+        282,
+        294,
+        343,
+        361,
+        369,
+        390,
+        398,
+        425,
+        440,
+        454,
+        460,
+        465,
+        468,
+        477,
+        482,
+        494,
+        501,
+        505,
+        509,
+        523,
+        584,
+        595,
+        623,
+        654
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    }
+  ],
+  "fullWhitespaceCheck": "Preserve actual complete git diff --cached --check diagnostic; only exact known frozen source-excerpt path/line headers may fail, all other paths require exit0. Never rewrite frozen source excerpt to manufacture clean output.",
+  "pendingPrimaryLinkPolicy": "Pre-integration checker may map only missing absolute primary paths under this exact round48 prefix to same owned file, returns each pending target/hash explicitly. Integration must resolve and byte-check actual as-written primary target before delivery.",
+  "deliveryReviewBoundary": "70 independently checks list metadata but is same author as68; not independent source/root-cause validation.",
+  "assemblerRuns": [
+    {
+      "artifact": "assemble-first.txt",
+      "exit": 0,
+      "scope": "9 frozen packets"
+    },
+    {
+      "artifact": "assemble-final.txt",
+      "exit": 0,
+      "reason": "Added frozen70 metadata-only delivery check; not product rerun."
+    }
+  ],
+  "goalStillActive": true
+}

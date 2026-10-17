@@ -1,0 +1,21 @@
+{
+  "capturedUTC": "2026-10-17T15:54:02.300603+00:00",
+  "mode": "static-source-and-history-metadata-only",
+  "productAttempts": 0,
+  "storeInvocations": 0,
+  "helpersRun": 0,
+  "languageFixtures": 0,
+  "testRuns": 0,
+  "testPasses": 0,
+  "testFailures": 0,
+  "testDeclarationOnly": true,
+  "realUserDataReads": 0,
+  "lockCalls": 0,
+  "nativeCalls": 0,
+  "networkCalls": 0,
+  "gitCommands": 0,
+  "metadataErrors": 0,
+  "consoleTruncations": 0,
+  "sourceEndingShaAllSame": true,
+  "historyTraversalNotSemanticExhaustion": true
+}

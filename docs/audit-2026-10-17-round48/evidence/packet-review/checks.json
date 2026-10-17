@@ -1,0 +1,1387 @@
+{
+  "capturedUTC": "2026-10-17T16:06:43.808495+00:00",
+  "role": "Separate frozen-packet metadata cross-check only; reviewer previously authored61 and65, not a new independent product semantic review.",
+  "allowedInputDirectories": [
+    "/tmp/codeshell-audit-round61-cost-context",
+    "/tmp/codeshell-audit-round62-chat-adapter",
+    "/tmp/codeshell-audit-round63-cost-context-review",
+    "/tmp/codeshell-audit-round65-session-titles"
+  ],
+  "files": [],
+  "productSourceBodyReads": 0,
+  "productShaCurrentChecks": 0,
+  "authorMethodsExecuted": 0,
+  "gitCommands": 0,
+  "productTestHelperFixtureExecutions": 0,
+  "schemaAdapters": {
+    "61and65": "canonical displayed ranges plus additional nav must equal body union; instruction carried hashes separated",
+    "62": "selected/displayed range union; line bounds sourced from own initial/chain captured pins",
+    "63": "displayedLineRanges and additionalNavigationSnippetLines form union for displayedLineCountIncludingNavigation; separate navigation/instruction rows retained"
+  },
+  "packetChecks": [
+    {
+      "packet": "61",
+      "directory": "/tmp/codeshell-audit-round61-cost-context",
+      "receiptSnapshot": {
+        "path": "artifact-receipt.json",
+        "bytes": 3445,
+        "sha256": "fb1c39faa00a60b54426beac90ee0f15a4578520e3549047138dfe93e0854296"
+      },
+      "receiptListedArtifactCount": 20,
+      "directoryFileCountIncludingReceipt": 21,
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "declaredBytes": 1130,
+          "actualBytes": 1130,
+          "declaredSha256": "b535031c8fdc3b52923b7379acd53f634f87ffe17d292a599d0f7f24038239b9",
+          "actualSha256": "b535031c8fdc3b52923b7379acd53f634f87ffe17d292a599d0f7f24038239b9",
+          "matches": true
+        },
+        {
+          "path": "build-final-metadata.py",
+          "declaredBytes": 8885,
+          "actualBytes": 8885,
+          "declaredSha256": "7c9d0c43b8aeab914fa3f3d22a0adfb7b1c682939574f0ed57c0034befed23ba",
+          "actualSha256": "7c9d0c43b8aeab914fa3f3d22a0adfb7b1c682939574f0ed57c0034befed23ba",
+          "matches": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "declaredBytes": 1595,
+          "actualBytes": 1595,
+          "declaredSha256": "bcb2185069a6c571e2d7287a5b8aa310b747babb7851a1588b4d6bc7274f7e28",
+          "actualSha256": "bcb2185069a6c571e2d7287a5b8aa310b747babb7851a1588b4d6bc7274f7e28",
+          "matches": true
+        },
+        {
+          "path": "decisions.json",
+          "declaredBytes": 2256,
+          "actualBytes": 2256,
+          "declaredSha256": "40ff5fb249a2be6c341a9a295b4e5b39a4ef13dda4ec51b1ba566c21fd838893",
+          "actualSha256": "40ff5fb249a2be6c341a9a295b4e5b39a4ef13dda4ec51b1ba566c21fd838893",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "declaredBytes": 2810,
+          "actualBytes": 2810,
+          "declaredSha256": "7efe8d97513a8435bcb1a86cb6932a9282d95bd1e9c66e2fe0009c74119fef42",
+          "actualSha256": "7efe8d97513a8435bcb1a86cb6932a9282d95bd1e9c66e2fe0009c74119fef42",
+          "matches": true
+        },
+        {
+          "path": "history-cause-selected.json",
+          "declaredBytes": 4498,
+          "actualBytes": 4498,
+          "declaredSha256": "a00cb4a0c11db597619f42a56582b3a4df355326315d06fae504348840cf8176",
+          "actualSha256": "a00cb4a0c11db597619f42a56582b3a4df355326315d06fae504348840cf8176",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "declaredBytes": 175813,
+          "actualBytes": 175813,
+          "declaredSha256": "14574dac2563870ac46c58852aa974b8ea01e00555c288d19126d11fbf9cb0bd",
+          "actualSha256": "14574dac2563870ac46c58852aa974b8ea01e00555c288d19126d11fbf9cb0bd",
+          "matches": true
+        },
+        {
+          "path": "history-cost-causes.json",
+          "declaredBytes": 36043,
+          "actualBytes": 36043,
+          "declaredSha256": "40e604d8f353e2a1a1c05c7e5c855eb2527fadc3afe677b4ee66cba0658f8ec5",
+          "actualSha256": "40e604d8f353e2a1a1c05c7e5c855eb2527fadc3afe677b4ee66cba0658f8ec5",
+          "matches": true
+        },
+        {
+          "path": "history-gate-selected.json",
+          "declaredBytes": 5306,
+          "actualBytes": 5306,
+          "declaredSha256": "b9678255677fc413efb5b264b18e45c0b272c49b5f6a8d3c46c54b4a880f1853",
+          "actualSha256": "b9678255677fc413efb5b264b18e45c0b272c49b5f6a8d3c46c54b4a880f1853",
+          "matches": true
+        },
+        {
+          "path": "history-initial-pins.json",
+          "declaredBytes": 938472,
+          "actualBytes": 938472,
+          "declaredSha256": "efffe00bfd4c1bacc89f7f86e5c89d8ffceacbc66a6009c9c4517efd5f152833",
+          "actualSha256": "efffe00bfd4c1bacc89f7f86e5c89d8ffceacbc66a6009c9c4517efd5f152833",
+          "matches": true
+        },
+        {
+          "path": "history-inventory.raw.txt",
+          "declaredBytes": 276922,
+          "actualBytes": 276922,
+          "declaredSha256": "4670d47d2ff7c86f0e3feaf46d5874fa8638a4267e42c19c65599ba6bc20181e",
+          "actualSha256": "4670d47d2ff7c86f0e3feaf46d5874fa8638a4267e42c19c65599ba6bc20181e",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "declaredBytes": 939744,
+          "actualBytes": 939744,
+          "declaredSha256": "e487885bd3b283f1b4e64b7ab4a220e5fadd73ae09799a279cd320ea3e2a9f21",
+          "actualSha256": "e487885bd3b283f1b4e64b7ab4a220e5fadd73ae09799a279cd320ea3e2a9f21",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "declaredBytes": 1046,
+          "actualBytes": 1046,
+          "declaredSha256": "e7532c19b400bdd606c7ab17cfb0363036ac2e1f163f3d774f7909be176373b4",
+          "actualSha256": "e7532c19b400bdd606c7ab17cfb0363036ac2e1f163f3d774f7909be176373b4",
+          "matches": true
+        },
+        {
+          "path": "metadata-diagnostics.json",
+          "declaredBytes": 670,
+          "actualBytes": 670,
+          "declaredSha256": "b21b411f9b2a09ad63eb994ea8d804010fd2858f15cef4b2657bb492eacd0dea",
+          "actualSha256": "b21b411f9b2a09ad63eb994ea8d804010fd2858f15cef4b2657bb492eacd0dea",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "declaredBytes": 5560,
+          "actualBytes": 5560,
+          "declaredSha256": "cb5f020594f1be5b2a545f9708c6ad7e0e95d4a6c883a83ad223dad1afa86126",
+          "actualSha256": "cb5f020594f1be5b2a545f9708c6ad7e0e95d4a6c883a83ad223dad1afa86126",
+          "matches": true
+        },
+        {
+          "path": "scan-cost-causes.py",
+          "declaredBytes": 2413,
+          "actualBytes": 2413,
+          "declaredSha256": "4b93e2bbd7591fa350141545efbfa3884da7d0c7fb9667134e93b92e5c87873f",
+          "actualSha256": "4b93e2bbd7591fa350141545efbfa3884da7d0c7fb9667134e93b92e5c87873f",
+          "matches": true
+        },
+        {
+          "path": "scan-history.py",
+          "declaredBytes": 5560,
+          "actualBytes": 5560,
+          "declaredSha256": "b0266d61e433687e95ce0bd2d6fb8a55996ab96320b7f611e5fa37bfbe2587f3",
+          "actualSha256": "b0266d61e433687e95ce0bd2d6fb8a55996ab96320b7f611e5fa37bfbe2587f3",
+          "matches": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "declaredBytes": 16838,
+          "actualBytes": 16838,
+          "declaredSha256": "ed0cf88de030bf6b05ff5c1cfb6f9605e3933d1349f888c3f286882042e93e3f",
+          "actualSha256": "ed0cf88de030bf6b05ff5c1cfb6f9605e3933d1349f888c3f286882042e93e3f",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "declaredBytes": 17666,
+          "actualBytes": 17666,
+          "declaredSha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+          "actualSha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "declaredBytes": 542,
+          "actualBytes": 542,
+          "declaredSha256": "8041c29162b1e9e8b6d36961dd243166c7d8a1dc680c41990a3adf98e68d0fc6",
+          "actualSha256": "8041c29162b1e9e8b6d36961dd243166c7d8a1dc680c41990a3adf98e68d0fc6",
+          "matches": true
+        }
+      ],
+      "manifestSnapshot": {
+        "bytes": 17666,
+        "sha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66"
+      },
+      "reportSnapshot": {
+        "path": "report.md",
+        "bytes": 5560,
+        "sha256": "cb5f020594f1be5b2a545f9708c6ad7e0e95d4a6c883a83ad223dad1afa86126"
+      },
+      "sourceRowMetadataChecks": [
+        {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "capturedSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "selectedCount": 113,
+          "displayUnionCount": 167,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/cost-ledger/types.ts",
+          "capturedSha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+          "selectedCount": 45,
+          "displayUnionCount": 92,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/llm/client-base.ts",
+          "capturedSha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+          "selectedCount": 38,
+          "displayUnionCount": 128,
+          "additionalNavigationCount": 26,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/cost-ledger/store.ts",
+          "capturedSha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+          "selectedCount": 38,
+          "displayUnionCount": 92,
+          "additionalNavigationCount": 9,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/engine/engine.ts",
+          "capturedSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+          "selectedCount": 0,
+          "displayUnionCount": 24,
+          "additionalNavigationCount": 24,
+          "classification": "navigation-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/cost-ledger/ledger.test.ts",
+          "capturedSha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+          "selectedCount": 0,
+          "displayUnionCount": 32,
+          "additionalNavigationCount": 32,
+          "classification": "navigation-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayUnionCount": 0,
+          "additionalNavigationCount": 0,
+          "classification": "hash-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayUnionCount": 0,
+          "additionalNavigationCount": 0,
+          "classification": "hash-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        }
+      ],
+      "declaredAndComputedScope": {
+        "productSemantic": 234,
+        "testDeclarationSemantic": 0,
+        "semanticTotal": 234,
+        "displayUnion": 535,
+        "selectedRows": 4,
+        "navigationOnlyRows": 2,
+        "hashOnlyRows": 2,
+        "explicitFullRows": 0
+      },
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredRuntime": {
+        "product": 0,
+        "helper": 0,
+        "fixture": 0,
+        "tests": 0,
+        "provider": 0,
+        "model": 0,
+        "billing": 0,
+        "realStore": 0,
+        "fileLocks": 0,
+        "native": 0,
+        "network": 0,
+        "git": 0
+      },
+      "reportLinks": [
+        {
+          "target": "validation.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "consumer-initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-gate-selected.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-cost-causes.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-cause-selected.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-excerpts.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "decisions.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-diagnostics.json",
+          "staysInPacket": true,
+          "exists": true
+        }
+      ],
+      "reportClaimReview": "Reported finite scope, selected/display separation, zero classification and no runtime statements agree with the declared/computed metadata. No product content or current product SHA checked."
+    },
+    {
+      "packet": "62",
+      "directory": "/tmp/codeshell-audit-round62-chat-adapter",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 3146,
+        "sha256": "996ae5e04bf79bdf662af897794065229241a7aac957c873797da9bd590663eb"
+      },
+      "receiptListedArtifactCount": 14,
+      "directoryFileCountIncludingReceipt": 15,
+      "artifactChecks": [
+        {
+          "path": "cause-history-method.py",
+          "declaredBytes": 2734,
+          "actualBytes": 2734,
+          "declaredSha256": "6d18772a2d636b2290e94cc6f54008f961e7d5099b1f201b5a9502c36558f730",
+          "actualSha256": "6d18772a2d636b2290e94cc6f54008f961e7d5099b1f201b5a9502c36558f730",
+          "matches": true
+        },
+        {
+          "path": "cause-history.json",
+          "declaredBytes": 75483,
+          "actualBytes": 75483,
+          "declaredSha256": "06f34ab3b3001cbda7c1249b9bc0a9036a9f5ec4a84decb15e475b66de1c26ee",
+          "actualSha256": "06f34ab3b3001cbda7c1249b9bc0a9036a9f5ec4a84decb15e475b66de1c26ee",
+          "matches": true
+        },
+        {
+          "path": "chain-pins.json",
+          "declaredBytes": 1232,
+          "actualBytes": 1232,
+          "declaredSha256": "e9a9c96059ae7651a5abd64f17b11b47afaab19a20f0f6b154daafdf21b20b32",
+          "actualSha256": "e9a9c96059ae7651a5abd64f17b11b47afaab19a20f0f6b154daafdf21b20b32",
+          "matches": true
+        },
+        {
+          "path": "classification.json",
+          "declaredBytes": 1052,
+          "actualBytes": 1052,
+          "declaredSha256": "ba9cb10f23f4fd760e5e491add6555a6fd965d4d93a8366ef2a057f43e168f0b",
+          "actualSha256": "ba9cb10f23f4fd760e5e491add6555a6fd965d4d93a8366ef2a057f43e168f0b",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "declaredBytes": 6301,
+          "actualBytes": 6301,
+          "declaredSha256": "e01e7ca5ac9a7f8f90ff8b54610fe3d70ecb658dafa8d6ba5a227fe295752720",
+          "actualSha256": "e01e7ca5ac9a7f8f90ff8b54610fe3d70ecb658dafa8d6ba5a227fe295752720",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "declaredBytes": 2375,
+          "actualBytes": 2375,
+          "declaredSha256": "0fdc3be7638afceed81e1ba14fa0c2961bac9ba46632493fcb9466fd05c45f5f",
+          "actualSha256": "0fdc3be7638afceed81e1ba14fa0c2961bac9ba46632493fcb9466fd05c45f5f",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "declaredBytes": 15924,
+          "actualBytes": 15924,
+          "declaredSha256": "da7c0fd6f80cd1740849d4ad07493cbc0ffd5621ad9839efdff431e3c76fe36c",
+          "actualSha256": "da7c0fd6f80cd1740849d4ad07493cbc0ffd5621ad9839efdff431e3c76fe36c",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "declaredBytes": 3891,
+          "actualBytes": 3891,
+          "declaredSha256": "83811fea9f85b4f3229158bb6a5b8b6eb91ea7f7496a67dd5fb8d06de3d90c42",
+          "actualSha256": "83811fea9f85b4f3229158bb6a5b8b6eb91ea7f7496a67dd5fb8d06de3d90c42",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "declaredBytes": 848504,
+          "actualBytes": 848504,
+          "declaredSha256": "dee6b09034bbdf38c5318ee4104062f4fe8b232d9b89a1d42189e8e31806abf2",
+          "actualSha256": "dee6b09034bbdf38c5318ee4104062f4fe8b232d9b89a1d42189e8e31806abf2",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "declaredBytes": 467,
+          "actualBytes": 467,
+          "declaredSha256": "f0f85a6e9c0ce6828030106f1e8028f61ed3ed130d1bf27677a44346e077bda8",
+          "actualSha256": "f0f85a6e9c0ce6828030106f1e8028f61ed3ed130d1bf27677a44346e077bda8",
+          "matches": true
+        },
+        {
+          "path": "metadata-notes.json",
+          "declaredBytes": 609,
+          "actualBytes": 609,
+          "declaredSha256": "3ef7b2029a794ef5ce20e9b8a4782f1bdd4fb6eb59f530317ec05faa764f4085",
+          "actualSha256": "3ef7b2029a794ef5ce20e9b8a4782f1bdd4fb6eb59f530317ec05faa764f4085",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "declaredBytes": 3321,
+          "actualBytes": 3321,
+          "declaredSha256": "af4fa15ddb0d5295cf09ab0038de79d0148eb134bbc3bc4b7b69101a72321870",
+          "actualSha256": "af4fa15ddb0d5295cf09ab0038de79d0148eb134bbc3bc4b7b69101a72321870",
+          "matches": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "declaredBytes": 13299,
+          "actualBytes": 13299,
+          "declaredSha256": "40740752193e9b91cd679bd89e5c4814cc20a5e16d50ce776f8e5832b60e2ff7",
+          "actualSha256": "40740752193e9b91cd679bd89e5c4814cc20a5e16d50ce776f8e5832b60e2ff7",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "declaredBytes": 6755,
+          "actualBytes": 6755,
+          "declaredSha256": "a9beb0fe1c66036e3a543463fbcf358871e5c5917619ff575fd61a8a644ff84f",
+          "actualSha256": "a9beb0fe1c66036e3a543463fbcf358871e5c5917619ff575fd61a8a644ff84f",
+          "matches": true
+        }
+      ],
+      "manifestSnapshot": {
+        "bytes": 6755,
+        "sha256": "a9beb0fe1c66036e3a543463fbcf358871e5c5917619ff575fd61a8a644ff84f"
+      },
+      "reportSnapshot": {
+        "path": "report.md",
+        "bytes": 3321,
+        "sha256": "af4fa15ddb0d5295cf09ab0038de79d0148eb134bbc3bc4b7b69101a72321870"
+      },
+      "sourceRowMetadataChecks": [
+        {
+          "path": "packages/chat/src/adapter-factory.ts",
+          "capturedSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+          "selectedCount": 215,
+          "displayUnionCount": 253,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/chat/src/config.ts",
+          "capturedSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+          "selectedCount": 34,
+          "displayUnionCount": 34,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/chat/src/cli.ts",
+          "capturedSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+          "selectedCount": 5,
+          "displayUnionCount": 13,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/chat/src/slack.ts",
+          "capturedSha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+          "selectedCount": 8,
+          "displayUnionCount": 8,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/chat/src/channel.ts",
+          "capturedSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+          "selectedCount": 7,
+          "displayUnionCount": 14,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        }
+      ],
+      "declaredAndComputedScope": {
+        "productSemantic": 269,
+        "testDeclarationSemantic": 0,
+        "semanticTotal": 269,
+        "displayUnion": 322,
+        "selectedRows": 5,
+        "navigationOnlyRows": 0,
+        "hashOnlyRows": 0,
+        "explicitFullRows": 0
+      },
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredRuntime": {
+        "factoryHelperOrImport": 0,
+        "productFunctions": 0,
+        "testsBodyOrExecution": 0,
+        "languageFixtures": 0,
+        "realConfigSecretsRead": 0,
+        "sendLoginNetworkTransport": 0,
+        "uiProcessesNative": 0,
+        "git": 0
+      },
+      "reportLinks": [
+        {
+          "target": "coverage-gate-rows.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "classification.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "chain-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-excerpts.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-method.py",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-contexts.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "cause-history-method.py",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "cause-history.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-notes.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "staysInPacket": true,
+          "exists": true
+        }
+      ],
+      "reportClaimReview": "Reported finite scope, selected/display separation, zero classification and no runtime statements agree with the declared/computed metadata. No product content or current product SHA checked."
+    },
+    {
+      "packet": "63",
+      "directory": "/tmp/codeshell-audit-round63-cost-context-review",
+      "receiptSnapshot": {
+        "path": "reviewer-receipt.json",
+        "bytes": 3730,
+        "sha256": "e38d7f4b2b0900dbe1d5ec4408f2cd31a818e1e0a9a2845a8ed2e3b46c1f2193"
+      },
+      "receiptListedArtifactCount": 14,
+      "directoryFileCountIncludingReceipt": 15,
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "declaredBytes": 3550,
+          "actualBytes": 3550,
+          "declaredSha256": "390cbc55d904ae10ce6a0b7a0d9023522ab0df2c48eefea95eac1b7f5474ea0d",
+          "actualSha256": "390cbc55d904ae10ce6a0b7a0d9023522ab0df2c48eefea95eac1b7f5474ea0d",
+          "matches": true
+        },
+        {
+          "path": "classification.json",
+          "declaredBytes": 578,
+          "actualBytes": 578,
+          "declaredSha256": "b25acbfb173edc2361add7642e3a801971448efc32a344602df218fc747f2f69",
+          "actualSha256": "b25acbfb173edc2361add7642e3a801971448efc32a344602df218fc747f2f69",
+          "matches": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "declaredBytes": 1852,
+          "actualBytes": 1852,
+          "declaredSha256": "3bccbc0ab72fc4b95ff8e42abda326ad54343f4962d65c99b190f299e39b1754",
+          "actualSha256": "3bccbc0ab72fc4b95ff8e42abda326ad54343f4962d65c99b190f299e39b1754",
+          "matches": true
+        },
+        {
+          "path": "coverage-gate-objects.json",
+          "declaredBytes": 18590,
+          "actualBytes": 18590,
+          "declaredSha256": "59c9a86708a8999cfb7557de3623389b3426ce9905b14fed789b6437be3c43c3",
+          "actualSha256": "59c9a86708a8999cfb7557de3623389b3426ce9905b14fed789b6437be3c43c3",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "declaredBytes": 3650,
+          "actualBytes": 3650,
+          "declaredSha256": "6b9a978e6e17cab64f77aa8fcf2fc743fdddb80d112572ffa2da61921217a3cb",
+          "actualSha256": "6b9a978e6e17cab64f77aa8fcf2fc743fdddb80d112572ffa2da61921217a3cb",
+          "matches": true
+        },
+        {
+          "path": "gate-decision.json",
+          "declaredBytes": 1201,
+          "actualBytes": 1201,
+          "declaredSha256": "7413c382229bc745260f549791e05305c71ad877392eb915b621eb631a6d5c3c",
+          "actualSha256": "7413c382229bc745260f549791e05305c71ad877392eb915b621eb631a6d5c3c",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "declaredBytes": 86491,
+          "actualBytes": 86491,
+          "declaredSha256": "eb57c4de00dbd69d80f49f88c9c22a3728eff965e0e86c1069b98578b3f34b58",
+          "actualSha256": "eb57c4de00dbd69d80f49f88c9c22a3728eff965e0e86c1069b98578b3f34b58",
+          "matches": true
+        },
+        {
+          "path": "history-method.py",
+          "declaredBytes": 3674,
+          "actualBytes": 3674,
+          "declaredSha256": "0955071575b871622c97366a51d3a20f0d7ec5a7503789cb7c3abd6b39c1bab4",
+          "actualSha256": "0955071575b871622c97366a51d3a20f0d7ec5a7503789cb7c3abd6b39c1bab4",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "declaredBytes": 945454,
+          "actualBytes": 945454,
+          "declaredSha256": "58dcd92cb7c24b9742350d50166da0b57f148768d5b23facf5cbe9decc609869",
+          "actualSha256": "58dcd92cb7c24b9742350d50166da0b57f148768d5b23facf5cbe9decc609869",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "declaredBytes": 850,
+          "actualBytes": 850,
+          "declaredSha256": "32e22ffe5aef90a299fd1f75404bc69991a0966c2c92abdc743bf1ab4581735a",
+          "actualSha256": "32e22ffe5aef90a299fd1f75404bc69991a0966c2c92abdc743bf1ab4581735a",
+          "matches": true
+        },
+        {
+          "path": "review.md",
+          "declaredBytes": 4863,
+          "actualBytes": 4863,
+          "declaredSha256": "571e22165029ea2aec6e8bece989ed52a6e53b1dfff829b01d377635ebcaf33c",
+          "actualSha256": "571e22165029ea2aec6e8bece989ed52a6e53b1dfff829b01d377635ebcaf33c",
+          "matches": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "declaredBytes": 37703,
+          "actualBytes": 37703,
+          "declaredSha256": "fbda596e7c6d168b76cfc9b18cf4fc322e779b29d951a5d74ab17cd6e906497b",
+          "actualSha256": "fbda596e7c6d168b76cfc9b18cf4fc322e779b29d951a5d74ab17cd6e906497b",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "declaredBytes": 11461,
+          "actualBytes": 11461,
+          "declaredSha256": "8f269e3b13e00c32234eb309fcc0a0e2a0fccd08aecf088268c763b05e8f0d81",
+          "actualSha256": "8f269e3b13e00c32234eb309fcc0a0e2a0fccd08aecf088268c763b05e8f0d81",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "declaredBytes": 1235,
+          "actualBytes": 1235,
+          "declaredSha256": "a0031b78b79cdcbb6ada8efe2627907c0ee6bcd4e1f77066169630d1af1e7da2",
+          "actualSha256": "a0031b78b79cdcbb6ada8efe2627907c0ee6bcd4e1f77066169630d1af1e7da2",
+          "matches": true
+        }
+      ],
+      "manifestSnapshot": {
+        "bytes": 11461,
+        "sha256": "8f269e3b13e00c32234eb309fcc0a0e2a0fccd08aecf088268c763b05e8f0d81"
+      },
+      "reportSnapshot": {
+        "path": "review.md",
+        "bytes": 4863,
+        "sha256": "571e22165029ea2aec6e8bece989ed52a6e53b1dfff829b01d377635ebcaf33c"
+      },
+      "sourceRowMetadataChecks": [
+        {
+          "path": "packages/core/src/cost-ledger/context.ts",
+          "capturedSha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+          "selectedCount": 162,
+          "displayUnionCount": 167,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/llm/client-base.ts",
+          "capturedSha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+          "selectedCount": 71,
+          "displayUnionCount": 100,
+          "additionalNavigationCount": 5,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/cost-ledger/types.ts",
+          "capturedSha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+          "selectedCount": 47,
+          "displayUnionCount": 50,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/types.ts",
+          "capturedSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+          "selectedCount": 7,
+          "displayUnionCount": 22,
+          "additionalNavigationCount": 0,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/engine/engine.ts",
+          "capturedSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+          "selectedCount": 8,
+          "displayUnionCount": 60,
+          "additionalNavigationCount": 2,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/cost-ledger/ledger.test.ts",
+          "capturedSha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+          "selectedCount": 14,
+          "displayUnionCount": 72,
+          "additionalNavigationCount": 5,
+          "classification": "test-declaration-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/model-request-boundary/accounting.test.ts",
+          "capturedSha256": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+          "selectedCount": 20,
+          "displayUnionCount": 50,
+          "additionalNavigationCount": 5,
+          "classification": "test-declaration-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/core/src/model-traces/context.ts",
+          "capturedSha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+          "selectedCount": 0,
+          "displayUnionCount": 2,
+          "additionalNavigationCount": 2,
+          "classification": "navigation-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayUnionCount": 0,
+          "additionalNavigationCount": 0,
+          "classification": "hash-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayUnionCount": 0,
+          "additionalNavigationCount": 0,
+          "classification": "hash-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        }
+      ],
+      "declaredAndComputedScope": {
+        "productSemantic": 295,
+        "testDeclarationSemantic": 34,
+        "semanticTotal": 329,
+        "displayUnion": 523,
+        "selectedRows": 7,
+        "navigationOnlyRows": 1,
+        "hashOnlyRows": 2,
+        "explicitFullRows": 0
+      },
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredRuntime": {
+        "testExecutions": 0,
+        "productExecution": 0,
+        "gitOperations": 0,
+        "nativeNetwork": 0
+      },
+      "reportLinks": [
+        {
+          "target": "initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "coverage-gate-objects.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "gate-decision.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-excerpts.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "consumer-initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "classification.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "validation.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "reviewer-receipt.json",
+          "staysInPacket": true,
+          "exists": true
+        }
+      ],
+      "reportClaimReview": "Reported finite scope, selected/display separation, zero classification and no runtime statements agree with the declared/computed metadata. No product content or current product SHA checked."
+    },
+    {
+      "packet": "65",
+      "directory": "/tmp/codeshell-audit-round65-session-titles",
+      "receiptSnapshot": {
+        "path": "artifact-receipt.json",
+        "bytes": 3131,
+        "sha256": "e8cf2fe186a48d6de5fbed79dd2a2921d57870461cca13b0cd18f85a9aa8b2d6"
+      },
+      "receiptListedArtifactCount": 18,
+      "directoryFileCountIncludingReceipt": 19,
+      "artifactChecks": [
+        {
+          "path": "artifact-checks.json",
+          "declaredBytes": 1052,
+          "actualBytes": 1052,
+          "declaredSha256": "de03db5c0c8b26299e24cfba62d8b3e7bd7fdd5e505f5fb65441c6720090c5fc",
+          "actualSha256": "de03db5c0c8b26299e24cfba62d8b3e7bd7fdd5e505f5fb65441c6720090c5fc",
+          "matches": true
+        },
+        {
+          "path": "build-final-metadata.py",
+          "declaredBytes": 7700,
+          "actualBytes": 7700,
+          "declaredSha256": "a0864fa0d3381d295f775724ffe236c487796df2e7e786da6fe0ac41200bed9f",
+          "actualSha256": "a0864fa0d3381d295f775724ffe236c487796df2e7e786da6fe0ac41200bed9f",
+          "matches": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "declaredBytes": 665,
+          "actualBytes": 665,
+          "declaredSha256": "86976e705cb6e433c9b2b89fe9edb59cc31f9992fe41ec5d594d26f0f8985a2b",
+          "actualSha256": "86976e705cb6e433c9b2b89fe9edb59cc31f9992fe41ec5d594d26f0f8985a2b",
+          "matches": true
+        },
+        {
+          "path": "decisions.json",
+          "declaredBytes": 2201,
+          "actualBytes": 2201,
+          "declaredSha256": "02daeeba5800849ceff3195d86e3967e1fd6117f7e9c8d158bea254ffa33c988",
+          "actualSha256": "02daeeba5800849ceff3195d86e3967e1fd6117f7e9c8d158bea254ffa33c988",
+          "matches": true
+        },
+        {
+          "path": "ending-checks.json",
+          "declaredBytes": 1910,
+          "actualBytes": 1910,
+          "declaredSha256": "e0df4f59c77a38b9ecdde9e8b13c0acfb7ace2c5f176b772fd95a49e8a07c0b1",
+          "actualSha256": "e0df4f59c77a38b9ecdde9e8b13c0acfb7ace2c5f176b772fd95a49e8a07c0b1",
+          "matches": true
+        },
+        {
+          "path": "history-contexts.json",
+          "declaredBytes": 336316,
+          "actualBytes": 336316,
+          "declaredSha256": "b63381f60c499d41a49f2edb37991a7030f0c714c90707327c076c3b874b281b",
+          "actualSha256": "b63381f60c499d41a49f2edb37991a7030f0c714c90707327c076c3b874b281b",
+          "matches": true
+        },
+        {
+          "path": "history-gate-selected.json",
+          "declaredBytes": 15572,
+          "actualBytes": 15572,
+          "declaredSha256": "4d300efa6417d3938b62b5f18733f41d268a6abd7e18d7ce5cfb05884c2a765b",
+          "actualSha256": "4d300efa6417d3938b62b5f18733f41d268a6abd7e18d7ce5cfb05884c2a765b",
+          "matches": true
+        },
+        {
+          "path": "history-initial-pins.json",
+          "declaredBytes": 938758,
+          "actualBytes": 938758,
+          "declaredSha256": "1442f5505a17efad8b7fa5237e2ab95aa146f9bf27caac7f81796999084139bd",
+          "actualSha256": "1442f5505a17efad8b7fa5237e2ab95aa146f9bf27caac7f81796999084139bd",
+          "matches": true
+        },
+        {
+          "path": "history-inventory.raw.txt",
+          "declaredBytes": 277178,
+          "actualBytes": 277178,
+          "declaredSha256": "880913ed3d822246a5ea730399a7c59df55309c14c25562ba09e5ccbf0858634",
+          "actualSha256": "880913ed3d822246a5ea730399a7c59df55309c14c25562ba09e5ccbf0858634",
+          "matches": true
+        },
+        {
+          "path": "history-range-selected.json",
+          "declaredBytes": 8273,
+          "actualBytes": 8273,
+          "declaredSha256": "e0838bc6ebd76660694a380b84c2e5974dc2d24f4f517656c4e73d24ec867ea9",
+          "actualSha256": "e0838bc6ebd76660694a380b84c2e5974dc2d24f4f517656c4e73d24ec867ea9",
+          "matches": true
+        },
+        {
+          "path": "history.json",
+          "declaredBytes": 939723,
+          "actualBytes": 939723,
+          "declaredSha256": "681ea5bf30618e932826e7c39c5061c08d44bcd67b7c8c8344b365fb8146e08f",
+          "actualSha256": "681ea5bf30618e932826e7c39c5061c08d44bcd67b7c8c8344b365fb8146e08f",
+          "matches": true
+        },
+        {
+          "path": "initial-pins.json",
+          "declaredBytes": 1049,
+          "actualBytes": 1049,
+          "declaredSha256": "8f43bc07c9c725cb3d8b99db147bea30f652500b7c749b9d4b88c272ab8ab595",
+          "actualSha256": "8f43bc07c9c725cb3d8b99db147bea30f652500b7c749b9d4b88c272ab8ab595",
+          "matches": true
+        },
+        {
+          "path": "metadata-diagnostics.json",
+          "declaredBytes": 609,
+          "actualBytes": 609,
+          "declaredSha256": "14e58cf309921d60ea685e4916b24378c2724a3ce0c771f6d234662fef0a8828",
+          "actualSha256": "14e58cf309921d60ea685e4916b24378c2724a3ce0c771f6d234662fef0a8828",
+          "matches": true
+        },
+        {
+          "path": "report.md",
+          "declaredBytes": 5010,
+          "actualBytes": 5010,
+          "declaredSha256": "bb5d56ac6e881eb2c87f69016f3cc88dcbe451c497807bf348012f101e3c579a",
+          "actualSha256": "bb5d56ac6e881eb2c87f69016f3cc88dcbe451c497807bf348012f101e3c579a",
+          "matches": true
+        },
+        {
+          "path": "scan-history.py",
+          "declaredBytes": 5556,
+          "actualBytes": 5556,
+          "declaredSha256": "d14c7cc09b4c972f5ca2f15f008abb800228d80f49dab83d1cd271939081ec2e",
+          "actualSha256": "d14c7cc09b4c972f5ca2f15f008abb800228d80f49dab83d1cd271939081ec2e",
+          "matches": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "declaredBytes": 10747,
+          "actualBytes": 10747,
+          "declaredSha256": "bf088468b75bf7fdcd2a7f7b263e17dd3daee55eb49c1de246fd28ffee03d277",
+          "actualSha256": "bf088468b75bf7fdcd2a7f7b263e17dd3daee55eb49c1de246fd28ffee03d277",
+          "matches": true
+        },
+        {
+          "path": "source-manifest.json",
+          "declaredBytes": 10530,
+          "actualBytes": 10530,
+          "declaredSha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc",
+          "actualSha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc",
+          "matches": true
+        },
+        {
+          "path": "validation.json",
+          "declaredBytes": 528,
+          "actualBytes": 528,
+          "declaredSha256": "13e3897ad7e8ba6a1e14d15ff14f2338625a774bc564fb74fd292609579cf485",
+          "actualSha256": "13e3897ad7e8ba6a1e14d15ff14f2338625a774bc564fb74fd292609579cf485",
+          "matches": true
+        }
+      ],
+      "manifestSnapshot": {
+        "bytes": 10530,
+        "sha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc"
+      },
+      "reportSnapshot": {
+        "path": "report.md",
+        "bytes": 5010,
+        "sha256": "bb5d56ac6e881eb2c87f69016f3cc88dcbe451c497807bf348012f101e3c579a"
+      },
+      "sourceRowMetadataChecks": [
+        {
+          "path": "packages/server/src/session-titles-store.ts",
+          "capturedSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+          "selectedCount": 54,
+          "displayUnionCount": 128,
+          "additionalNavigationCount": 2,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/server/src/hub/session-management.ts",
+          "capturedSha256": "a9af1264f7afd374da8e13a955999cfb78b4c5a892fec8bbfb058dfa62a5dacf",
+          "selectedCount": 34,
+          "displayUnionCount": 95,
+          "additionalNavigationCount": 10,
+          "classification": "product-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "packages/server/src/session-titles-store.test.ts",
+          "capturedSha256": "1ef950d056f96694b39ea14d06c92bfc3839202d226c5a92ac16b81fe35055f2",
+          "selectedCount": 11,
+          "displayUnionCount": 28,
+          "additionalNavigationCount": 17,
+          "classification": "test-declaration-selected",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "CODESHELL.md",
+          "capturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedCount": 0,
+          "displayUnionCount": 0,
+          "additionalNavigationCount": 0,
+          "classification": "hash-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        },
+        {
+          "path": "AGENTS.md",
+          "capturedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedCount": 0,
+          "displayUnionCount": 0,
+          "additionalNavigationCount": 0,
+          "classification": "hash-only",
+          "boundsCheckedAgainst": "frozen packet metadata only",
+          "ownCapturedPinMatches": true
+        }
+      ],
+      "declaredAndComputedScope": {
+        "productSemantic": 88,
+        "testDeclarationSemantic": 11,
+        "semanticTotal": 99,
+        "displayUnion": 251,
+        "selectedRows": 3,
+        "navigationOnlyRows": 0,
+        "hashOnlyRows": 2,
+        "explicitFullRows": 0
+      },
+      "classification": {
+        "formal": 0,
+        "candidates": 0,
+        "related": 0
+      },
+      "declaredRuntime": {
+        "product": 0,
+        "store": 0,
+        "helper": 0,
+        "fixtures": 0,
+        "tests": 0,
+        "native": 0,
+        "network": 0,
+        "git": 0
+      },
+      "reportLinks": [
+        {
+          "target": "validation.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "consumer-initial-pins.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-gate-selected.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "history-range-selected.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-excerpts.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "decisions.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "source-manifest.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "ending-checks.json",
+          "staysInPacket": true,
+          "exists": true
+        },
+        {
+          "target": "metadata-diagnostics.json",
+          "staysInPacket": true,
+          "exists": true
+        }
+      ],
+      "reportClaimReview": "Reported finite scope, selected/display separation, zero classification and no runtime statements agree with the declared/computed metadata. No product content or current product SHA checked."
+    }
+  ],
+  "totals": {
+    "packets": 4,
+    "receiptListedArtifactsChecked": 66,
+    "receiptSnapshotsHashed": 4,
+    "packetFilesIncludingReceipts": 70,
+    "sourceRowsMetadataOnly": 28,
+    "reportLinksChecked": 48,
+    "newUniqueSemanticCoverage": 0
+  },
+  "failures": [],
+  "limits": [
+    "Source excerpts and all method scripts were byte-hashed only, never decoded/executed.",
+    "No product filesystem/source body, real data, Git or mutable66/67 directory accessed.",
+    "Captured source pins and author ending statements are historical metadata, not this reviewer current product SHA certification.",
+    "Overlapping61/63 ranges are not summed as new unique semantic coverage."
+  ],
+  "supportingMetadataChecks": [
+    {
+      "packet": "61",
+      "checks": {
+        "emptyFindingArrays": true,
+        "sourcePinCount": true,
+        "authorLinkCount": true,
+        "receiptRuntimeZero": true,
+        "validationRuntimeZeros": true
+      },
+      "additionalDeclaredRuntime": {
+        "productAttempts": 0,
+        "helpersRun": 0,
+        "languageFixtures": 0,
+        "testRuns": 0,
+        "testPasses": 0,
+        "testFailures": 0,
+        "nativeCalls": 0,
+        "networkCalls": 0,
+        "gitCommands": 0
+      }
+    },
+    {
+      "packet": "62",
+      "checks": {
+        "receiptClassification": true,
+        "receiptSourceCounts": true,
+        "authorLinkCount": true,
+        "receiptRuntimeZero": true,
+        "validationRuntimeZeros": true
+      },
+      "additionalDeclaredRuntime": {
+        "factoryHelperOrImport": 0,
+        "productFunctions": 0,
+        "testsBodyOrExecution": 0,
+        "languageFixtures": 0,
+        "realConfigSecretsRead": 0,
+        "sendLoginNetworkTransport": 0,
+        "uiProcessesNative": 0,
+        "git": 0
+      }
+    },
+    {
+      "packet": "63",
+      "checks": {
+        "receiptClassification": true,
+        "receiptSourceCounts": true,
+        "authorLinkCount": true,
+        "receiptRuntimeZero": true,
+        "validationRuntimeZeros": true
+      },
+      "additionalDeclaredRuntime": {
+        "productsExecuted": 0,
+        "productImportsHelpersFixturesTests": 0,
+        "AsyncLocalStorageExamplesExecuted": 0,
+        "providersOrServersStarted": 0,
+        "realAccountsBillsConfigRead": 0,
+        "cryptoOrNativeIdentityPermissionsExperiments": 0,
+        "network": 0,
+        "gitOperations": 0,
+        "productWrites": 0,
+        "testsExecuted": 0
+      }
+    },
+    {
+      "packet": "65",
+      "checks": {
+        "emptyFindingArrays": true,
+        "sourcePinCount": true,
+        "authorLinkCount": true,
+        "receiptRuntimeZero": true,
+        "validationRuntimeZeros": true
+      },
+      "additionalDeclaredRuntime": {
+        "productAttempts": 0,
+        "helpersRun": 0,
+        "languageFixtures": 0,
+        "testRuns": 0,
+        "testPasses": 0,
+        "testFailures": 0,
+        "nativeCalls": 0,
+        "networkCalls": 0,
+        "gitCommands": 0
+      }
+    }
+  ],
+  "supportingCheckUTC": "2026-10-17T16:07:24.677561+00:00",
+  "firstPassDiagnostic": {
+    "toolChunk": "9d428a",
+    "failures": 0,
+    "suppressedOutput": false
+  }
+}

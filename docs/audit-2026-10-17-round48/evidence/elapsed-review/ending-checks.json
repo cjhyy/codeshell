@@ -1,0 +1,135 @@
+{
+  "capturedUTC": "2026-10-17T16:03:44.726182+00:00",
+  "sourceAndInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "firstSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "firstBytes": 206,
+      "endingBytes": 206,
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "firstSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstBytes": 17639,
+      "endingBytes": 17639,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "firstSHA": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "endingSHA": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "firstBytes": 90976,
+      "endingBytes": 90976,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "firstSHA": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "endingSHA": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "firstBytes": 7462,
+      "endingBytes": 7462,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "firstSHA": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "endingSHA": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "firstBytes": 15679,
+      "endingBytes": 15679,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.test.ts",
+      "firstSHA": "a7c58ab2cca9cb07faccdb28c326fd636085dd3b049285ac28b759ebc34cdc9a",
+      "endingSHA": "a7c58ab2cca9cb07faccdb28c326fd636085dd3b049285ac28b759ebc34cdc9a",
+      "firstBytes": 3146,
+      "endingBytes": 3146,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.phase0.test.ts",
+      "firstSHA": "1df453525ef6edb05665798aa21fd42500d9bb810d3cc0471124d15551735a49",
+      "endingSHA": "1df453525ef6edb05665798aa21fd42500d9bb810d3cc0471124d15551735a49",
+      "firstBytes": 7628,
+      "endingBytes": 7628,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "firstSHA": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "endingSHA": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "firstBytes": 710,
+      "endingBytes": 710,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "firstSHA": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "endingSHA": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "firstBytes": 62377,
+      "endingBytes": 62377,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "firstSHA": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "endingSHA": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstBytes": 17401,
+      "endingBytes": 17401,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "firstSHA": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "endingSHA": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "firstBytes": 108774,
+      "endingBytes": 108774,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "firstSHA": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "endingSHA": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "firstBytes": 25457,
+      "endingBytes": 25457,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.run-yield.test.ts",
+      "firstSHA": "2cb70de149c320d86774a66e863bd2e7dd1614372d647f835d8a475e050d2395",
+      "endingSHA": "2cb70de149c320d86774a66e863bd2e7dd1614372d647f835d8a475e050d2395",
+      "firstBytes": 18017,
+      "endingBytes": 18017,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "firstSHA": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "endingSHA": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "firstBytes": 13129,
+      "endingBytes": 13129,
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "firstSHA": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "endingSHA": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "firstBytes": 8606,
+      "endingBytes": 8606,
+      "same": true
+    }
+  ],
+  "allSourceAndInstructionSame": true,
+  "historyDatedCount": 4336,
+  "endingFilterCount": 4336,
+  "addedPaths": [],
+  "removedPaths": [],
+  "changedMembers": [],
+  "originalHistoryRewritten": false,
+  "gitOperations": 0,
+  "productExecution": 0,
+  "sourceRecheckAfterAdditionalReadUTC": "2026-10-17T16:04:25.691796+00:00"
+}

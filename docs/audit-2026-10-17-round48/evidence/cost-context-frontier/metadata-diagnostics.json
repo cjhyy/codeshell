@@ -1,0 +1,17 @@
+{
+  "capturedUTC": "2026-10-17T15:47:17.476261+00:00",
+  "metadataFailures": [],
+  "productFailures": [],
+  "consoleTruncations": [],
+  "boundedRetention": [
+    {
+      "group": "initial display_contract",
+      "totalHits": 741,
+      "retained": 160,
+      "cap": 160,
+      "effect": "Broad cost-ledger group was capped; not claimed exhaustively read. Exact path57/SHA11 and structured same-object rows were not cap truncated; focused old_tracker10/context_scope64 were below cap100."
+    }
+  ],
+  "parseErrors": [],
+  "note": "No current metadata command errors or suppressed-output truncations. Cap retention is an explicit method limit, not a runtime failure."
+}
