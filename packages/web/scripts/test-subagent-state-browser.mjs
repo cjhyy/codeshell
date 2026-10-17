@@ -557,12 +557,24 @@ try {
         assert.equal(await send.isEnabled(), true, "Background child must leave Send enabled");
         assert.equal(await input.inputValue(), item.draftBefore);
       }
+      notify(id, {
+        type: "tool_result",
+        agentId: "owned-background",
+        result: { id: `bg-tool-${width}`, result: "Owned background tool result", isError: false },
+      });
+      await until(
+        async () => (await state()).items.some((v) => v.id === `bg-tool-${width}` && v.done),
+        "Owned background tool result must complete its actual card",
+      );
       notify(id, { type: "assistant_message", agentId: "owned-background" });
       notify(id, { type: "turn_complete", agentId: "owned-background", reason: "completed" });
       notify(id, { type: "agent_end", agentId: "owned-background" });
       await page.getByText("Owned background child · 已完成", { exact: false }).waitFor();
       assert.equal(await send.isEnabled(), true);
       await hit(send);
+      await page.screenshot({
+        path: path.join(evidence, `${width}-child-complete-before-send.png`),
+      });
       const before = rpc.filter((v) => v.method === "agent/run").length;
       await send.click();
       await until(
@@ -624,6 +636,9 @@ try {
         .getByText("owned-child-b sibling continues", { exact: false })
         .waitFor();
       await hit(stop);
+      await page.screenshot({
+        path: path.join(evidence, `${width}-child-error-parent-live-before-stop.png`),
+      });
       await stop.click();
       await until(
         () =>
