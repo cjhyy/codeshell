@@ -119,8 +119,8 @@ export const gitCommands: SlashCommand[] = [
       }
 
       try {
-        const create = arg.includes("--create") || arg.includes("-c");
-        const name = arg.replace(/--create|-c/g, "").trim();
+        const create = /(^|\s)(?:--create|-c)(?=\s|$)/.test(arg);
+        const name = arg.replace(/(^|\s)(?:--create|-c)(?=\s|$)/g, "$1").trim();
         gitCheckout(ctx.cwd, name, create);
         ctx.addStatus(`Switched to branch: ${name}${create ? " (created)" : ""}`);
       } catch (err) {
