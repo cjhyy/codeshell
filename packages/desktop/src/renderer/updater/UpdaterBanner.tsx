@@ -282,6 +282,19 @@ export function UpdaterSettingsRow() {
           {loading ? t("misc.updater.loadingStatus") : describeStatus(status, t)}
         </span>
       </div>
+      {!loading && status.kind === "error" && (
+        <details className="min-w-0 text-xs">
+          <summary className="w-fit cursor-pointer rounded-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+            {t("misc.updater.errorDetails")}
+          </summary>
+          <pre
+            tabIndex={0}
+            className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted/50 p-3 font-mono text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            {status.message}
+          </pre>
+        </details>
+      )}
       {versionError && (
         <div className="flex flex-wrap items-start gap-2 text-xs text-status-err" role="alert">
           <span className="min-w-0 flex-1">
@@ -404,7 +417,7 @@ function describeStatus(s: UpdaterStatus, t: TFunction): string {
     case "installing":
       return t("misc.updater.statusInstalling", { version: s.version });
     case "error":
-      return t("misc.updater.statusError", { message: s.message });
+      return t("misc.updater.statusErrorSummary");
   }
 }
 

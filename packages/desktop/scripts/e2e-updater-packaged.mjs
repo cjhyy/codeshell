@@ -1,7 +1,7 @@
 /* Actual immutable packaged Main/preload/Settings and installed electron-updater.
  * Only the generic update feed is an owned loopback server. No updater, IPC,
  * app.isPackaged, timers or UI state are substituted. Never downloads/installs. */
-/* global window */
+/* global window, document */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
@@ -61,6 +61,12 @@ const operations = [],
   requests = [],
   errors = [],
   pending = [];
+const errorDetailsAcceptance = {
+  required: true,
+  feedMode: "401",
+  status: "unreached",
+  keyboard: [],
+};
 let fixture,
   appImageRuntime,
   app,
@@ -261,6 +267,56 @@ async function check(feedMode, version) {
     problems.push("real HTTP failure detail missing");
   return { feedMode, expected, finalNative, events, ui, problems };
 }
+async function checkErrorDetails(result) {
+  errorDetailsAcceptance.status = "checking";
+  assert.equal(result.feedMode, "401");
+  assert.equal(result.finalNative.kind, "error");
+  const section = win.getByRole("heading", { name: /^(自动更新|Auto-update)$/ }).locator("..");
+  const details = section.locator("details");
+  assert.equal(await details.count(), 1, "Exactly one updater error disclosure");
+  const summary = details.locator("summary");
+  const content = details.locator("pre");
+  errorDetailsAcceptance.summary = await section.getByRole("status").innerText();
+  assert.match(errorDetailsAcceptance.summary, /^(更新失败|Failed to update)$/);
+  errorDetailsAcceptance.closed = {
+    open: (await details.getAttribute("open")) !== null,
+    visible: await content.isVisible(),
+    text: await content.textContent(),
+  };
+  assert.equal(errorDetailsAcceptance.closed.open, false);
+  assert.equal(errorDetailsAcceptance.closed.visible, false);
+  assert.equal(errorDetailsAcceptance.closed.text, result.finalNative.message);
+  const checkButton = win.getByRole("button", { name: /^(检查更新|Check for updates)$/ });
+  assert.equal(await checkButton.evaluate((element) => element === document.activeElement), true);
+  await checkButton.press("Shift+Tab");
+  errorDetailsAcceptance.keyboard.push("Shift+Tab");
+  assert.equal(await summary.evaluate((element) => element === document.activeElement), true);
+  await summary.press("Enter");
+  errorDetailsAcceptance.keyboard.push("Enter");
+  await until(async () => (await details.getAttribute("open")) !== null, "keyboard opens details");
+  errorDetailsAcceptance.opened = {
+    open: (await details.getAttribute("open")) !== null,
+    visible: await content.isVisible(),
+    text: await content.textContent(),
+  };
+  assert.equal(errorDetailsAcceptance.opened.open, true);
+  assert.equal(errorDetailsAcceptance.opened.visible, true);
+  assert.equal(errorDetailsAcceptance.opened.text, result.finalNative.message);
+  await summary.press("Space");
+  errorDetailsAcceptance.keyboard.push("Space");
+  await until(async () => (await details.getAttribute("open")) === null, "keyboard closes details");
+  errorDetailsAcceptance.closedAgain = {
+    open: (await details.getAttribute("open")) !== null,
+    visible: await content.isVisible(),
+    focused: await summary.evaluate((element) => element === document.activeElement),
+    text: await content.textContent(),
+  };
+  assert.equal(errorDetailsAcceptance.closedAgain.open, false);
+  assert.equal(errorDetailsAcceptance.closedAgain.visible, false);
+  assert.equal(errorDetailsAcceptance.closedAgain.focused, true);
+  assert.equal(errorDetailsAcceptance.closedAgain.text, result.finalNative.message);
+  errorDetailsAcceptance.status = "passed";
+}
 try {
   if (process.platform === "darwin") {
     keychainReference = readKeychainReference(options.get("--default-keychain-reference"));
@@ -301,6 +357,7 @@ try {
   const identity = await launch();
   for (const feedMode of ["404", "401", "403", "500", "yaml"]) {
     const result = await check(feedMode, identity.version);
+    if (feedMode === "401") await checkErrorDetails(result);
     await win.screenshot({ path: join(evidence, `updater-${feedMode}-result.png`) });
     const retry = await check("healthy", identity.version);
     operations.push({ feedMode, identity, result, retry });
@@ -353,6 +410,11 @@ const settled = await settlePackagedPet({
     );
     assert.deepEqual(errors, [], "Renderer/feed failure requires retaining private HOME");
     assert.deepEqual(failures, [], "Failed updater expectations require retaining private HOME");
+    assert.equal(
+      errorDetailsAcceptance.status,
+      "passed",
+      "Error disclosure acceptance is required",
+    );
     if (keychainReference) {
       const after = readDefaultKeychain(keychainReference.home);
       for (const key of ["path", "dev", "ino", "uid"])
@@ -368,6 +430,7 @@ const receipt = {
   status: settled.errors.length ? "failed" : "passed",
   packagedApp,
   operations,
+  errorDetailsAcceptance,
   requests,
   errors,
   processEvidence,
