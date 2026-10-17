@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts"
+  ],
+  "startedUtc": "2026-10-17T07:07:59.630919+00:00",
+  "finishedUtc": "2026-10-17T07:07:59.797884+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.log",
+  "rawSha256": "c89f08b57d00aa09d619ab0e6a60e42f700762d7572f78026ba894da1765a0de",
+  "fixture": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts",
+  "fixtureSha256": "4e3fb5ecaecbd66624094b4d15a3e6e74f859538c4d6a2dd3b9dfe170b4fe9cb",
+  "policy": "First combined raw output and exit saved before inspection; failure would skip this direction without repair/retry/alternate."
+}

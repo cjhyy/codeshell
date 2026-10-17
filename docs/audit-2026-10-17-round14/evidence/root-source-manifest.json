@@ -1,0 +1,118 @@
+{
+  "baseline": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "unchanged instruction file"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "instruction file"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/modelTracePresentation.ts",
+      "sha256": "14e065d719a6066470d009d35ef112f0b7eb955682fc607c95d6d3294f62daf8",
+      "bytes": 3126,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read; actual pure helper execution"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/openActivitySession.ts",
+      "sha256": "ed34a9f4ff5c97cb61a1fff2887602c61c365a8cf8abd81ec7271f4c92d77683",
+      "bytes": 1917,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read, source-only, no adapter invocation"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/useModelTraceSessionTitles.ts",
+      "sha256": "cf97d8ff644a7c3ad46f9df8c3dec1eca30e3880879acd2b4e2444ac8912923c",
+      "bytes": 967,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read, source-only, no React execution"
+    },
+    {
+      "path": "packages/desktop/src/preload/model-trace-api.ts",
+      "sha256": "18a0fdc680cb9323824f20b3c12c7435d2660679fdc01b3dad3dd79be09f0d1b",
+      "bytes": 1404,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full source/type read; no IPC factory execution"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTraceEvents.tsx",
+      "sha256": "b5dea56bec502e616bc17261c9c8b2c0852de0ff244af8163c77821f851a1c08",
+      "bytes": 1572,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full small source read; no UI runtime"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTraceExecutions.tsx",
+      "sha256": "f41efd5a740a0083f0e10f58d475628bc700b6e8e47dccebbefd7b1f332d8bee",
+      "bytes": 7713,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected1–90 source consumer read; no UI runtime"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "bytes": 36755,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected references plus170–195 consumer read; no UI runtime"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTraceDetail.tsx",
+      "sha256": "e1197f213c25f345b79d51dbe067f70d183723ffd3828afa8fde4db346b6a064",
+      "bytes": 12645,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected150–162,232–243 consumer read; no UI runtime"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.interaction.test.tsx",
+      "sha256": "ee2875a39eaebfea12835ba65c33b93d5e84d1e6005f8db21d673fbff079e063",
+      "bytes": 37496,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected825–860 source excerpt only; not executed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "bytes": 2633,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "incoming diff read only; old fix not retested"
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+      "sha256": "b829c4ac1e007235e3218e80d83b2879f95beb1c263b8736f7cc720d98c54761",
+      "bytes": 5996,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "incoming diff read only; old fix not retested"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "guarded runner pin"
+    }
+  ],
+  "note": "Selected pins, partial source reads and type-only dependencies are not full backend/UI/transitive coverage."
+}

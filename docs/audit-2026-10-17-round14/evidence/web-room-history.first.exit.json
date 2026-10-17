@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/web/src/lib/roomHistory.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T07:07:42.590011+00:00",
+  "finishedAt": "2026-10-17T07:07:42.859123+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round14/evidence/web-room-history.first.raw.log",
+  "rawSha256": "3da37ec6595211fcd84370e0f30d8199aab13ea7809718cdbf0a6c32d75bdd8c",
+  "capture": "combined stdout/stderr saved before inspecting",
+  "files": [
+    "packages/web/src/lib/roomHistory.test.ts"
+  ]
+}

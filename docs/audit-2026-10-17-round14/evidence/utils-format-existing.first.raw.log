@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/utils/format.test.ts:
+(pass) formatDuration sub-second handling > exactly 0 → 0s [0.79ms]
+(pass) formatDuration sub-second handling > 500ms → 0.5s (was wrongly 0s) [0.38ms]
+(pass) formatDuration sub-second handling > 1ms → 0.0s, not 0s [0.03ms]
+(pass) formatDuration sub-second handling > 999ms → 1.0s
+(pass) formatDuration sub-second handling > 1000ms → 1s (whole second, no decimal)
+(pass) formatDuration sub-second handling > 1500ms → 1s (floored whole second)
+
+ 6 pass
+ 0 fail
+ 6 expect() calls
+Ran 6 tests across 1 file. [139.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

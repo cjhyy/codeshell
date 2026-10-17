@@ -1,0 +1,72 @@
+{
+  "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round14/bytes.md",
+      "bytes": 5677,
+      "sha256": "afeaf33d0adcb75d3f266f2922ee967867d05b4bea3275bd48eab50fb0a1df01"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-assemble.py",
+      "bytes": 5643,
+      "sha256": "2053c563c934b6e00e39b8d455bcd3980b9e8af0cd3818485cff072c9f5f8c82"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-candidates.json",
+      "bytes": 855,
+      "sha256": "9dfcd83a2ebb1e774fe22b436a7db84fa8793d138cbaca67cbc9188cccfdb989"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+      "bytes": 374980,
+      "sha256": "28bffc7bc8c55ee09323a8b31ce4556f99ebd64d7fe91c1047d49d7a7e3c29d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.py",
+      "bytes": 3337,
+      "sha256": "807a0b3f62bf1b9d14d46eb1448ba9d21b8c6bc32cd98786a38d6b2fa858c428"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-external-sources.json",
+      "bytes": 788,
+      "sha256": "6cb2dc0166f88cc92b77485779c9807e6018adbd2d8e963178cfcfc433e1f311"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-findings.json",
+      "bytes": 183,
+      "sha256": "828d1295bf08e662abe51418b83e875d8669fb05f988d325b67b75e68b7fadee"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.exit.json",
+      "bytes": 782,
+      "sha256": "40fe02ebd8985a463217a5bf9d469d4a5f8d3c147fef308cae53694e257e29d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.log",
+      "bytes": 1504,
+      "sha256": "c89f08b57d00aa09d619ab0e6a60e42f700762d7572f78026ba894da1765a0de"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts",
+      "bytes": 3693,
+      "sha256": "4e3fb5ecaecbd66624094b4d15a3e6e74f859538c4d6a2dd3b9dfe170b4fe9cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-navigation-skip.md",
+      "bytes": 639,
+      "sha256": "656673fc84ffecfd0c09c42dd7d974b0aecf4ef5b378cbcfe15365dc7ad20fa2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "bytes": 3322,
+      "sha256": "40af4a551a36222b550dd43dfeb59374c7da65c992a856e8919bb019328bb5bb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-validation.json",
+      "bytes": 2408,
+      "sha256": "7d6c16bb693b0158a247e95dcae47bea37705538d3a26a8241da637d64f1374f"
+    }
+  ],
+  "selfExcluded": true,
+  "policy": "Metadata only; no product test/fixture rerun."
+}

@@ -1,0 +1,456 @@
+{
+  "pattern": "(sliceAnsi|wrap-text\\.ts|render/output\\.ts|水平裁剪|horizontal.{0,25}clip|CJK.{0,80}(?:clip|截|slice)|(?:clip|裁剪).{0,80}CJK)",
+  "counts": {
+    "md": 1088,
+    "json": 680,
+    "jsonLeaves": 260285
+  },
+  "parseErrors": [],
+  "matches": [
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "1631",
+      "text": "- `sliceAnsi.ts`"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "location": "3300",
+      "text": "- theme/format/toolDisplay/debug/env/lockfile/memoize/semver/sliceAnsi/intl/earlyInput 等。"
+    },
+    {
+      "path": "docs/archive/core-risk-signal-index.md",
+      "location": "213",
+      "text": "| `utils/sliceAnsi.ts` | `exec`×1 |"
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "48",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "49",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "location": "38",
+      "text": "| SpacerHead 要等软换行实现才有 producer                                | `packages/tui/src/render/output.ts:788` 已在最后一列放不下宽字符时写 SpacerHead                                                                                             | 局部注释过期；完整自动换行语义仍需独立评估                                            |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$.source_inventory[739]",
+      "text": "packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$.source_inventory[2221]",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$.source_inventory[2255]",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "location": "$.files[61].path",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "location": "$.hits[21].matches[3].text",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[0].text",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[5].text",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[83].text",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[91].text",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[96].text",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[100].text",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[106].text",
+      "text": "| ⬜ | 正确性 | `tui/render/wrap-text.ts:59` | Unsafe non-null assertion on optional parameter | Either: (1) Add a check: `if (wrapType && wrapType.startsWith('truncate'))`, or … |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[109].text",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "location": "$.sources[9].path",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.logs[1].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.logs[2].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.logs[3].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.settings-navigation[0].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.settings-navigation[1].text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn().\", \"verify_reason\": \"Line 71 uses `this.rootUri.replace(\\\"file://\\\", \\\"\\\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whereas the correct conversion would be `C:/Users/test` or `C:\\\\Users\\\\test`. The `fileURLToPath()` function from `node:url` (already available in the Node.js standard library) is designed to handle this conversion correctly on all platforms. The current code will fail or use the wrong working directory on Windows when spawning the LSP subprocess.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"73-81\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Promise rejection in appendJsonl lock chain not handled\", \"detail\": \"If `appendFileSync()` throws inside the `.then()` callback (line 77), the returned `current` promise rejects. The lock map stores this rejecte"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.settings-navigation[2].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.settings-navigation[3].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.sidebar-projection[8].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.sidebar-projection[9].text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is not currently imported at line 9 (only `pathToFileURL` is imported), the fix is straightforward: add `fileURLToPath` to the import and use it at line 71. This is a real correctness issue that will cause language servers to fail on Windows due to incorrect working directory paths being passed to spawn().\", \"verify_reason\": \"Line 71 uses `this.rootUri.replace(\\\"file://\\\", \\\"\\\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whereas the correct conversion would be `C:/Users/test` or `C:\\\\Users\\\\test`. The `fileURLToPath()` function from `node:url` (already available in the Node.js standard library) is designed to handle this conversion correctly on all platforms. The current code will fail or use the wrong working directory on Windows when spawning the LSP subprocess.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"73-81\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Promise rejection in appendJsonl lock chain not handled\", \"detail\": \"If `appendFileSync()` throws inside the `.then()` callback (line 77), the returned `current` promise rejects. The lock map stores this rejecte"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.sidebar-projection[10].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.sidebar-projection[11].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.sidebar-projection[12].text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or (b) re-attempt with a simpler prompt or raise an error.\", \"verify_note\": \"The issue is real but low-impact: (1) It's already logged, so not truly \\\"silent\\\"; (2) Returning empty array is graceful and consistent with error handling elsewhere (line 67); (3) The scenario is edge-case - requires model to ignore explicit instruction after maxToolRounds. However, the reviewer is correct that better observability is possible. A more explicit check after line 199 (if (!finalText) logger.warn(...)) would improve debugging of LLM instruction-following failures.\", \"verify_reason\": \"The code at lines 183-202 in argue.ts exhibits a real but low-severity issue. When a model reaches maxToolRounds without producing text, the fallback message is sent (lines 184-198). If this fallback response also contains no text (i.e., resp.text is empty), line 199 assigns this empty string to finalText. This empty string is then passed to parseCritiquesResponse (line 202), which silently returns an empty array (parse.ts line 89: \\\"if (!jsonMatch) return []\\\"). While this result IS logged via logger.info (line 203-207) with critiqueCount: 0, and IS reported via progress events (li"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-export-surface-convergence-phase1c.md",
+      "location": "73",
+      "text": "- [x] **Step B1:** For every tui import of an internal-set symbol (list in recon report; includes getGraphemeSegmenter, sliceAnsi, env, execFileNoThrow, gte, logForDebugging, isEnvTruthy/isEnvDefinedFalsy, stopCapturingEarlyInput, formatBytes/formatToolArgs/singleLine/MAX_LINE_WIDTH/TOOL_DOT_COLORS, classifyBashLines, formatDuration/formatTokens, getTheme/Theme/ThemeName/ThemeSetting/resolveThemeSetting, rotateLogs, recordUIEvent, getInteractiveApprovalBackend, defaultSandboxConfig/SandboxConfig, buildNotificationMessage/buildNotificationSummary/notificationQueue/NotificationItem, CronStore/CronRunResult/bindCronToEngine/cronScheduler, asyncAgentRegistry/AsyncAgentEntry, createInProcessClient, ProtocolModelEntry, CachedModel/defaultCacheDir/fetchModelList/FetchResult/sanitizeApiKey/hasNonAsciiPrintable/PROVIDER_KINDS/ProviderKindName/ProviderConfig, getMergedCatalog, ApprovalRequest/ApprovalResult/ApprovalScope/TaskInfo): change specifier to `@cjhyy/code-shell-core/internal`. Split the 4 mixed statements into two imports (public symbols stay on root entry)."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-export-surface-convergence-phase1c.md",
+      "location": "103",
+      "text": "  - Keep: /internal runtime-export pin list (update to new actual list), no Engine/Arena on internal, root must export Engine/createServer and must NOT export leaked symbols — extend the must-NOT list with a sample of moved host symbols (e.g. `sliceAnsi`, `notificationQueue`, `cronScheduler`)."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].normal.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.final.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[2].normal.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.final.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].normal.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.final.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "location": "$.modules[39].productionFiles[15]",
+      "text": "utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[7].text",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[8].text",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[68].text",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[70].text",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/archive/core-modules/utils.md",
+      "location": "26",
+      "text": "| `sliceAnsi.ts` | ANSI-aware string slicing (default export). |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "location": "$[48].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "location": "$[52].file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "$[115].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "$[116].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "$[124].file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "location": "$[79].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "location": "$[83].file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[180].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[181].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[182].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[183].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[184].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[201].file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "location": "15",
+      "text": "| ⬜ | 性能 | `tui/render/output.ts:363-387` | O(n*m) loop checking absoluteClears for every row during blit | Build a Set or Map of row ranges covered by absoluteClears during the initial co… |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "location": "57",
+      "text": "| ⬜ | 正确性 | `tui/render/wrap-text.ts:59` | Unsafe non-null assertion on optional parameter | Either: (1) Add a check: `if (wrapType && wrapType.startsWith('truncate'))`, or … |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "$[115].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "$[116].file",
+      "text": "packages/tui/src/render/output.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "$[124].file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+      "location": "$.hits[54].excerpt",
+      "text": "packages/tui/src/render/output.ts packages/tui/src/render/parse-keypress.ts packages/tui/src/render/reconciler.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+      "location": "$.hits[66].excerpt",
+      "text": "packages/tui/src/render/output.ts packages/tui/src/render/parse-keypress.ts packages/tui/src/render/reconciler.ts"
+    }
+  ]
+}

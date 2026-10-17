@@ -1,0 +1,16 @@
+{
+  "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "candidates": [
+    {
+      "id": "BYTES-R14-C1",
+      "title": "JPEG SOF3 识别与全局 DQT 前提可能不一致",
+      "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+      "file": "packages/server/src/image-byte-probe.ts",
+      "line": 119,
+      "report": "docs/audit-2026-10-17-round14/bytes.md",
+      "evidenceLevel": "Real pure probe rejection of self-built SOF3 marker sequence; format source read; candidate only",
+      "reason": "Recognized SOF set includes lossless SOF3, but EOI requires DQT independently of frame coding mode.",
+      "limits": "No independent pixel-decoder proof of sample validity or normal downstream lossless JPEG support/contract; no stage/upload/file/native/runtime/network/UI exercised. No severity or confirmed bug claim."
+    }
+  ]
+}

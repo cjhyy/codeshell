@@ -1,0 +1,844 @@
+{
+  "scope": "all docs/bugs Markdown plus parsed recursive JSON string leaves, excluding round14",
+  "files": 1768,
+  "markdown": 1088,
+  "json": 680,
+  "jsonStringLeaves": 185197,
+  "parseErrors": [],
+  "patterns": {
+    "projection": "transcriptUserDisplay|userMessageDisplay|attached-directory|attached-image-paths|普通.{0,12}XML|user.written.{0,12}XML",
+    "format": "packages/web/src/lib/format|groupByProject|projectForCwd|sameProjectPath",
+    "room": "RoomHistoryAccumulator|collectRoomHistory|roomHistory\\.ts",
+    "attachments": "attachmentName|Windows.{0,50}hash|哈希.{0,30}附件|附件.{0,30}哈希|textContent.{0,30}join"
+  },
+  "matches": {
+    "projection": [
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$.hits.space_path[0].snippet",
+        "text": " blocks containing text plus base64 image blocks (`packages/core/src/engine/engine.ts:1329`). Image attachments that name real workspace files also get an `<attached-image-paths>` hint for tools such as `GenerateImage` (`packages/core/src/engine/engine.ts:1343`).\n- **Hooks can inject around the prompt.** `on_session_start` and `user_prompt_submit` run before the model turn;"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[104].matches[0].text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[177].matches[4].text",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[177].matches[5].text",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[177].matches[6].text",
+        "text": "读现有 `transcriptReplay.test.ts:76–102/104–121` 还可确认现代投影已有名称/大小/显示正文与无base64契约，并保留普通用户写的XML正文；修复应按真实persisted附件格式复用安全显示投影，不能无条件删除所有相似字符串。这些既有测试仅只读，未在此审计重新执行。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[178].matches[1].text",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[193].matches[1].text",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[193].matches[3].text",
+        "text": "最低历史图片契约（mobile-remote-send-image.md:213–217）确实要求隐藏内部path block并至少显示附件提示，第一版下载API可后置。长程journal文档的旧peer/无共同cursor保守降级、任意历史import TODO不取消此已支持native history的最低显示契约。现有transcriptReplay测试还保留普通用户XML；建议复用识别真实消息格式的投影，不做全局字符串删除。与R54/R58/R65/R39、上传生命周期项及R21根因不同。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[262].matches[1].text",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[262].matches[3].text",
+        "text": "最低历史图片契约（mobile-remote-send-image.md:213–217）确实要求隐藏内部path block并至少显示附件提示，第一版下载API可后置。长程journal文档的旧peer/无共同cursor保守降级、任意历史import TODO不取消此已支持native history的最低显示契约。现有transcriptReplay测试还保留普通用户XML；建议复用识别真实消息格式的投影，不做全局字符串删除。与R54/R58/R65/R39、上传生命周期项及R21根因不同。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[263].matches[4].text",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[263].matches[5].text",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[263].matches[6].text",
+        "text": "读现有 `transcriptReplay.test.ts:76–102/104–121` 还可确认现代投影已有名称/大小/显示正文与无base64契约，并保留普通用户写的XML正文；修复应按真实persisted附件格式复用安全显示投影，不能无条件删除所有相似字符串。这些既有测试仅只读，未在此审计重新执行。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$.sources[7].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$.files[105].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/sources.md",
+        "location": "13",
+        "text": "- **正常触发**：XLSX/PPTX 包的内部联系目标使用以包根起始的 `/xl/worksheets/sheet2.xml`、`/ppt/slides/slide2.xml` 或可规范化的 `./worksheets/sheet2.xml`，另一条关系使用既有测试覆盖的普通相对形式。目标 XML 实际存在，原件未变化，无截断预算压力。"
+      },
+      {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "67",
+        "text": "- engine 已有 `<attached-image-paths>` 回显：如果 `ParsedImage.name` 能解析为存在的文件路径，就把路径作为文本提示给模型，见 `packages/core/src/engine/engine.ts:1340` 到 `packages/core/src/engine/engine.ts:1358`。"
+      },
+      {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "149",
+        "text": "- core parser 读取新增 attrs，`<attached-image-paths>` 优先使用 path attr。"
+      },
+      {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "355",
+        "text": "### Stage 3：core 解析 path attrs，完善 `<attached-image-paths>`"
+      },
+      {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "370",
+        "text": "- path attr 必须按 cwd resolve 后仍存在；不存在时不进 `<attached-image-paths>`，但可在 text hint 中标注附件路径不可达。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[52].text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[65].text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[2412]",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "location": "56",
+        "text": "- **Persist the new user message.** The user content is either plain text or content blocks containing text plus base64 image blocks (`packages/core/src/engine/engine.ts:1329`). Image attachments that name real workspace files also get an `<attached-image-paths>` hint for tools such as `GenerateImage` (`packages/core/src/engine/engine.ts:1343`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/root-web.md",
+        "location": "31",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。"
+      },
+      {
+        "path": "docs/todo/durable-output-journal-delivery.md",
+        "location": "95",
+        "text": "submission identity. The shared browser projection reuses `transcriptUserDisplay`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "location": "$.files[96].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "location": "$.sources[3].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/PLAN.md",
+        "location": "14",
+        "text": "- Vision input persists a text block containing `<attached-image-paths>` plus the explanatory model hint, followed by image source blocks. Non-image/metadata-only attachments persist `<attached-file path=\"...\">` with absolutePath/mime/size/sha256/origin. None of these strings will be hand-authored by the fixture."
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-stage-quality.md",
+        "location": "5",
+        "text": "结论：源码支持一个**窄 P3 候选**，可进入已审隔离 fixture 验证。合法旧 paired native `chat.send` 图片 turn 未带 `displayText`，且从未发布 output journal；当前客户端正常协商 outputJournal:1 后进入既有 legacy history 分支，旧 reader 把 model-facing `<attached-image-paths>` 和提示作为用户正文，附件名称/数量没有成为显示 summary。真实 authority 的可达条件和 hook 消费均有生产接线，未发现“当前旧会话一律被门禁拒绝”或“该分支只是死代码”的反证。但此阶段没有运行结果，不能将源码判断写作实际 authority 验收或完整设备端到端复现。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-stage-quality.md",
+        "location": "51",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-stage-quality.md",
+        "location": "53",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-stage-quality.md",
+        "location": "83",
+        "text": "读现有 `transcriptReplay.test.ts:76–102/104–121` 还可确认现代投影已有名称/大小/显示正文与无base64契约，并保留普通用户写的XML正文；修复应按真实persisted附件格式复用安全显示投影，不能无条件删除所有相似字符串。这些既有测试仅只读，未在此审计重新执行。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-final-quality.md",
+        "location": "13",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-final-quality.md",
+        "location": "23",
+        "text": "最低历史图片契约（mobile-remote-send-image.md:213–217）确实要求隐藏内部path block并至少显示附件提示，第一版下载API可后置。长程journal文档的旧peer/无共同cursor保守降级、任意历史import TODO不取消此已支持native history的最低显示契约。现有transcriptReplay测试还保留普通用户XML；建议复用识别真实消息格式的投影，不做全局字符串删除。与R54/R58/R65/R39、上传生命周期项及R21根因不同。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+        "location": "$.observations.legacy.user.text",
+        "text": "Describe the saved image\n\n<attached-image-paths>\n.code-shell/attachments/legacy-image-round24/431ced6916a2a21a-historical-shot.png\n</attached-image-paths>\n(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+        "location": "14",
+        "text": "<attached-image-paths>"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+        "location": "16",
+        "text": "</attached-image-paths>"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+        "location": "24",
+        "text": "Suggested direction: give legacy native history the existing safe user-message display projection, preserving ordinary user-written XML and respecting clean displayText. Do not add required historical thumbnails/download APIs, discard authorization checks, or treat a missing previously-published journal as legacy success."
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-static-initial.raw.md",
+        "location": "16",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+        "location": "$[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-history.raw.md",
+        "location": "16",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+        "location": "$.sources[20].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+        "location": "7",
+        "text": "结论：源码支持一个**窄 P3 候选**，可进入已审隔离 fixture 验证。合法旧 paired native `chat.send` 图片 turn 未带 `displayText`，且从未发布 output journal；当前客户端正常协商 outputJournal:1 后进入既有 legacy history 分支，旧 reader 把 model-facing `<attached-image-paths>` 和提示作为用户正文，附件名称/数量没有成为显示 summary。真实 authority 的可达条件和 hook 消费均有生产接线，未发现“当前旧会话一律被门禁拒绝”或“该分支只是死代码”的反证。但此阶段没有运行结果，不能将源码判断写作实际 authority 验收或完整设备端到端复现。"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+        "location": "53",
+        "text": "- reducer入口虽调用 `projectOutputUserEvent`，但 `userMessageDisplay.ts:153` 仅处理 `session_user_message`/`steer_injected`；旧history合成的 `user_message` 不进入其 transcript metadata投影。`streamReducer.ts:649–680/713–715` 直接保存文本，只有event本身有attachments才显示summary。"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+        "location": "55",
+        "text": "- 正常journal的legacyBase走 `output-recovery.ts:245–248`→`transcriptReplay.ts:132–140`→`transcriptUserDisplay`。`userMessageDisplay.ts:97–145` 去掉同wrapper/model hint并恢复图片名称/MIME/数量，不携带base64用于显示。"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+        "location": "85",
+        "text": "读现有 `transcriptReplay.test.ts:76–102/104–121` 还可确认现代投影已有名称/大小/显示正文与无base64契约，并保留普通用户写的XML正文；修复应按真实persisted附件格式复用安全显示投影，不能无条件删除所有相似字符串。这些既有测试仅只读，未在此审计重新执行。"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-round24.md",
+        "location": "7",
+        "text": "实际结果：用户正文末尾出现 `<attached-image-paths>`、工作区路径和“作为工具输入”的模型提示，没有安全的附件 summary。路径本身包含文件名，因此不声称完全没有图片线索。真实 Workbench SSR 已确认标记以转义后的普通正文出现；普通文字和 assistant 回答仍正常。此项是旧历史投影的窄 P3，不涉及图片原件、任务或历史丢失。"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-round24.md",
+        "location": "9",
+        "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。"
+      },
+      {
+        "path": "docs/review-2026-10-12/legacy-history-round24.md",
+        "location": "21",
+        "text": "建议复用已有、识别真实消息元数据的安全展示投影，保留普通用户自己写的 XML 和 clean displayText。不能用全局字符串删除 XML 代替消息识别，也不应把曾经发布而丢失的 journal 当正常旧会话。"
+      },
+      {
+        "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+        "location": "20",
+        "text": "4. [packages/desktop/src/renderer/types.ts:649](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/types.ts:649) applies the shared projectOutputUserEvent. [packages/web/src/lib/userMessageDisplay.ts:97](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/src/lib/userMessageDisplay.ts:97) strips attached-image-paths/model instruction and preserves name/path/size/MIME; event metadata becomes UserMessage.attachments at types858–905. This output is the intended safe canonical representation, without duplicated base64. [packages/core/src/engine/run-stream.ts:72](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/run-stream.ts:72) appends a synthetic canonical user anchor to the journal; run-stream85–90 does not emit that synthetic anchor as a live stream user echo."
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+        "location": "$[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+        "location": "$.runs[0].sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+        "location": "$.runs[1].sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/quality-round24.md",
+        "location": "13",
+        "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。"
+      },
+      {
+        "path": "docs/review-2026-10-12/quality-round24.md",
+        "location": "23",
+        "text": "最低历史图片契约（mobile-remote-send-image.md:213–217）确实要求隐藏内部path block并至少显示附件提示，第一版下载API可后置。长程journal文档的旧peer/无共同cursor保守降级、任意历史import TODO不取消此已支持native history的最低显示契约。现有transcriptReplay测试还保留普通用户XML；建议复用识别真实消息格式的投影，不做全局字符串删除。与R54/R58/R65/R39、上传生命周期项及R21根因不同。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "$.module_inventory.84740d56.paths[184]",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "$.module_inventory.a66f4ef2.paths[185]",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+        "location": "$.observations.legacy.user.text",
+        "text": "Describe the saved image\n\n<attached-image-paths>\n.code-shell/attachments/legacy-image-round24/431ced6916a2a21a-historical-shot.png\n</attached-image-paths>\n(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "location": "$.sourceManifest[49].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+        "location": "$.sourceManifest[28].path",
+        "text": "packages/web/src/lib/userMessageDisplay.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+        "location": "$.observations.legacy.user.text",
+        "text": "Describe the saved image\n\n<attached-image-paths>\n.code-shell/attachments/legacy-image-round24/431ced6916a2a21a-historical-shot.png\n</attached-image-paths>\n(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)"
+      }
+    ],
+    "format": [
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[135].matches[0].text",
+        "text": "ned state.json/transcript.jsonl files. It delays only completion of `projectRegistry.resolveForCwdBatch` **after actual ProjectStore.resolveProjectForCwdBatch succeeds** with `{projectId:P,rootId:P-root,created:false}`. ProjectStore at `main/project-store.ts:533–575` checks the current registry and mounted root; this is not an invented success for a forbidden cwd. No worker or model executes. Actual native aut"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[135].matches[1].text",
+        "text": "g:false,nextCursor:\"\"}`；再次通过 hook 的公开 loadDiskSessionCatalogPage 调用重试。第二次实际 `server listDiskSessions` 读取真实 Core 会话 B，实际 ProjectStore.resolveProjectForCwdBatch 映射当前受追踪项目；B 被导入，A 仍活动，A 快照完全相等，getSessionTranscript 调用次数为 0。独立新 SessionManager.resume 验证 B 的原消息仍在磁盘。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[203].matches[1].text",
+        "text": "- **Native validation/authority:** fixture uses actual registerPetIpc → actual PetStateAggregator → actual `server/src/sessions-service.ts:listDiskSessions` on owned state.json/transcript.jsonl files. It delays only completion of `projectRegistry.resolveForCwdBatch` **after actual ProjectStore.resolveProjectForCwdBatch succeeds** with `{projectId:P,rootId:P-root,created:false}`. ProjectStore at `main/project-store.ts:533–575` checks the current registry and mounted root; this is not an invented success for a forbidden cwd. No worker or model executes. Actual native authority IPC calls that same service at `main/project-authority-ipc.ts:193–205`."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$.hits[209].matches[2].text",
+        "text": "测试在真实 hook + useTrackedProjects 中：第一次 listDiskSessions IPC 明确失败，已存在 A 的索引/活动选择/原快照仍保留，catalog 变为 `{initialized:true,loading:false,nextCursor:\"\"}`；再次通过 hook 的公开 loadDiskSessionCatalogPage 调用重试。第二次实际 `server listDiskSessions` 读取真实 Core 会话 B，实际 ProjectStore.resolveProjectForCwdBatch 映射当前受追踪项目；B 被导入，A 仍活动，A 快照完全相等，getSessionTranscript 调用次数为 0。独立新 SessionManager.resume 验证 B 的原消息仍在磁盘。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/web.md",
+        "location": "7",
+        "text": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/web.md",
+        "location": "8",
+        "text": "- Contract: `projectForCwd` explicitly returns the project whose root owns the cwd, selecting the longest prefix. Existing `format.test.ts` establishes ordinary descendant grouping and V2 secondary-root support. `/` is a valid POSIX absolute directory value for this API; production `ProjectStore.resolvePickedRoot` (`packages/desktop/src/main/project-store.ts:743–760`) checks an existing absolute directory and contains no explicit filesystem-root exclusion. That registration observation is static; the fixture does not register or inspect the operator's filesystem root."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/web.md",
+        "location": "10",
+        "text": "- Observed: normalization preserves `/`, then `isSameOrInside` checks the descendant against `//`. Exact `/` matches, but `/workspace` returns no project. Real `groupByProject` produces separate `Root project` and `workspace` groups, and the child group lacks `projectId`."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/findings.json",
+        "location": "$.findings[4].source",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/findings.json",
+        "location": "$.findings[4].evidenceLevel",
+        "text": "真实projectForCwd/groupByProject纯数据"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+        "location": "$.checks[0].relativeImport",
+        "text": "../../../packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+        "location": "$.checks[0].resolved",
+        "text": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.patterns.root_path",
+        "text": "(projectForCwd|groupByProject|isSameOrInside|filesystem root|项目根.{0,15}/|根目录.{0,20}(后代|子目录|匹配))"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[0].snippet",
+        "text": "- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[1].snippet",
+        "text": "- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[2].snippet",
+        "text": "- 旧记录核查：2026-10-16 findings、2026-10-12 Web 主报告与 remaining 主报告未找到 `projectForCwd` / 项目大小写同项（有限查重）；SWC-06 是磁盘会话分页排序，与此处不同。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[3].snippet",
+        "text": "，且存在两个仅大小写不同的合法注册项目根。当前纯函数运行在本机并不能证明 Linux 项目注册已实际完成；报告已限定这一点。静态 `canonicalKey` 只对 darwin/win32 转小写，Linux 保留大小写，与条件相容。`targetForCwd` 使用错误的 `projectForCwd` 返回值并在无精确 root 时只传错误 projectId，后续主根选择是静态接线，不可改称新会话实际创建/工具实际写错项目。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[4].snippet",
+        "text": "projectForCwd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[6].snippet",
+        "text": "ned state.json/transcript.jsonl files. It delays only completion of `projectRegistry.resolveForCwdBatch` **after actual ProjectStore.resolveProjectForCwdBatch succeeds** with `{projectId:P,rootId:P-root,created:false}`. ProjectStore at `main/project-store.ts:533–575` checks the current registry and mounted root; this is not an invented success for a forbidden cwd. No worker or model executes. Actual native aut"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.root_path[7].snippet",
+        "text": "g:false,nextCursor:\"\"}`；再次通过 hook 的公开 loadDiskSessionCatalogPage 调用重试。第二次实际 `server listDiskSessions` 读取真实 Core 会话 B，实际 ProjectStore.resolveProjectForCwdBatch 映射当前受追踪项目；B 被导入，A 仍活动，A 快照完全相等，getSessionTranscript 调用次数为 0。独立新 SessionManager.resume 验证 B 的原消息仍在磁盘。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-validation.json",
+        "location": "$.runs[1].command[4]",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-validation.json",
+        "location": "$.runs[1].fixtures[0].path",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-main-source-disposition.json",
+        "location": "$.findings[0].sourceFile",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-existing-display-baseline.first.exit.json",
+        "location": "$.command[4]",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-findings.json",
+        "location": "$.confirmed[0].sourceFile",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-findings.json",
+        "location": "$.confirmed[0].observed",
+        "text": "Exact / matches but /workspace has no owning project; groupByProject splits root and child into separate groups and child lacks projectId."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-findings.json",
+        "location": "$.confirmed[0].contract",
+        "text": "projectForCwd JSDoc promises root ownership and longest prefix; existing tests cover descendants and V2 roots; ProjectStore accepts existing absolute directories without explicit filesystem-root exclusion (static only)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$.sources[1].path",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$.sources[2].path",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$.files[96].path",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$.files[97].path",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-06-25-mobile-ccroom-parity-design.md",
+        "location": "171",
+        "text": "- **session 列表**:`SessionList`(现客户端 `groupByProject`,`format.ts`)改为只渲染"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-25-mobile-ccroom-parity.md",
+        "location": "651",
+        "text": "  const groups = groupByProject(sessions, projects);"
+      },
+      {
+        "path": "docs/audit-2026-10-17/source-manifest.json",
+        "location": "$.files[45].path",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "32",
+        "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "36",
+        "text": "- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "38",
+        "text": "- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "39",
+        "text": "- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "location": "42",
+        "text": "- 旧记录核查：2026-10-16 findings、2026-10-12 Web 主报告与 remaining 主报告未找到 `projectForCwd` / 项目大小写同项（有限查重）；SWC-06 是磁盘会话分页排序，与此处不同。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/findings.json",
+        "location": "$.findings[19].source",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[2399]",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+        "location": "$.productionSources[4].path",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ops-review.md",
+        "location": "24",
+        "text": "2. **UI-02 保留条件 P2。** 必须明确是大小写敏感文件系统 Host（例如 Linux），且存在两个仅大小写不同的合法注册项目根。当前纯函数运行在本机并不能证明 Linux 项目注册已实际完成；报告已限定这一点。静态 `canonicalKey` 只对 darwin/win32 转小写，Linux 保留大小写，与条件相容。`targetForCwd` 使用错误的 `projectForCwd` 返回值并在无精确 root 时只传错误 projectId，后续主根选择是静态接线，不可改称新会话实际创建/工具实际写错项目。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/ui-findings.json",
+        "location": "$.issues[1].file",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/ui-dedup-scan.json",
+        "location": "$.terms[2]",
+        "text": "projectForCwd"
+      },
+      {
+        "path": "docs/todo/multi-folder-local-project-plan.md",
+        "location": "231",
+        "text": "- `ProjectStore.resolveProjectForCwd(cwd)` 与 `resolveProjectForCwdBatch(cwds[])` 只读索引；"
+      },
+      {
+        "path": "docs/todo/multi-folder-local-project-plan.md",
+        "location": "431",
+        "text": "   `ProjectStore.resolveProjectForCwd(canonicalKey(jobCwd))`：命中某项目 root → 构造 `workspaceContext`"
+      },
+      {
+        "path": "docs/todo/multi-folder-local-project-plan.md",
+        "location": "447",
+        "text": "- `session.create` 带 `cwd`：`ProjectStore.resolveProjectForCwd` 命中 root 或等于 no-repo → 接受；否则回复"
+      },
+      {
+        "path": "docs/todo/multi-folder-local-project-plan.md",
+        "location": "465",
+        "text": "新增 `packages/desktop/src/main/project-store.ts`（V2 store + legacy 迁移 + `resolveProjectForCwd[Batch]`），"
+      },
+      {
+        "path": "docs/todo/multi-folder-local-project-plan.md",
+        "location": "684",
+        "text": "   tombstone、`revision` 单调、重叠/重复校验、`resolveProjectForCwd[Batch]`（§4.5 规则 2/3/4）、降级投影。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "location": "$.files[88].path",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+        "location": "135",
+        "text": "// projectLabel/sortProjects/makeCreateProjectForCwd/reconcileProjectsFromDisk..."
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-CROSSCUT.md",
+        "location": "53",
+        "text": "- 补缺：canonical `projects.ts` facade 不再从嵌套返回值泄露 `createRepoForCwd`、`repos`、`repoIdRemap`，改为 `createProjectForCwd`、`projects`、`projectIdRemap`；旧 `repos.ts` API 完全保留。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "location": "$.sources[5].path",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/server-web-results.json",
+        "location": "$[131].file",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/search-routing-round11.md",
+        "location": "34",
+        "text": "- **Native validation/authority:** fixture uses actual registerPetIpc → actual PetStateAggregator → actual `server/src/sessions-service.ts:listDiskSessions` on owned state.json/transcript.jsonl files. It delays only completion of `projectRegistry.resolveForCwdBatch` **after actual ProjectStore.resolveProjectForCwdBatch succeeds** with `{projectId:P,rootId:P-root,created:false}`. ProjectStore at `main/project-store.ts:533–575` checks the current registry and mounted root; this is not an invented success for a forbidden cwd. No worker or model executes. Actual native authority IPC calls that same service at `main/project-authority-ipc.ts:193–205`."
+      },
+      {
+        "path": "docs/review-2026-10-12/transfer-round12.md",
+        "location": "68",
+        "text": "测试在真实 hook + useTrackedProjects 中：第一次 listDiskSessions IPC 明确失败，已存在 A 的索引/活动选择/原快照仍保留，catalog 变为 `{initialized:true,loading:false,nextCursor:\"\"}`；再次通过 hook 的公开 loadDiskSessionCatalogPage 调用重试。第二次实际 `server listDiskSessions` 读取真实 Core 会话 B，实际 ProjectStore.resolveProjectForCwdBatch 映射当前受追踪项目；B 被导入，A 仍活动，A 快照完全相等，getSessionTranscript 调用次数为 0。独立新 SessionManager.resume 验证 B 的原消息仍在磁盘。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "$.module_inventory.84740d56.paths[172]",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "$.module_inventory.a66f4ef2.paths[173]",
+        "text": "packages/web/src/lib/format.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[0].rawLogs[131].file",
+        "text": "packages/web/src/lib/format.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[131].file",
+        "text": "packages/web/src/lib/format.test.ts"
+      }
+    ],
+    "room": [
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$.sources[8].path",
+        "text": "packages/web/src/lib/roomHistory.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$.files[102].path",
+        "text": "packages/web/src/lib/roomHistory.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[2407]",
+        "text": "packages/web/src/lib/roomHistory.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "location": "$.files[92].path",
+        "text": "packages/web/src/lib/roomHistory.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "location": "$.sources[4].path",
+        "text": "packages/web/src/lib/roomHistory.ts"
+      }
+    ],
+    "attachments": [
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$.hits.space_path[38].snippet",
+        "text": "(attachmentName|content hash|哈希前缀|hash.{0,15}prefix|Windows.{0,40}(attachment|附件))"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.patterns.windows_attachment_name",
+        "text": "(attachmentName|content hash|哈希前缀|hash.{0,15}prefix|Windows.{0,40}(attachment|附件))"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.windows_attachment_name[0].snippet",
+        "text": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.windows_attachment_name[1].snippet",
+        "text": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.windows_attachment_name[2].snippet",
+        "text": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.windows_attachment_name[3].snippet",
+        "text": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.matches.windows_attachment_name[4].snippet",
+        "text": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[20].hits[3].excerpt",
+        "text": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[20].hits[4].excerpt",
+        "text": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[1].excerpt",
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[2].excerpt",
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[3].excerpt",
+        "text": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[4].excerpt",
+        "text": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[43].hits[1].excerpt",
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[45].hits[1].excerpt",
+        "text": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "20",
+        "text": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "24",
+        "text": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "25",
+        "text": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[19].hits[3].text",
+        "text": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[19].hits[4].text",
+        "text": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[56].hits[0].text",
+        "text": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[56].hits[1].text",
+        "text": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[59].hits[0].text",
+        "text": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[59].hits[1].text",
+        "text": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+        "location": "33",
+        "text": "结构化只读检索了旧注册表：10-16 findings 25 条、remaining-10-12 findings 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/mobile-remote-send-image.md",
+        "location": "177",
+        "text": "5. `clientMessageId` 的稳定哈希加入附件 sha256 列表；否则“相同文字、不同图片”的重试可能被错误去重。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$.matches.known_text_findings[19].excerpt",
+        "text": "结构化只读检索了旧注册表：10-16 findings 25 条、remaining-10-12 findings 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      }
+    ]
+  }
+}

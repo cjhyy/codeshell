@@ -1,0 +1,53 @@
+{
+  "baseline": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "findings": 0,
+  "candidates": 4,
+  "oldRelatedBoundaries": 1,
+  "olderDirectSourceChanges": 2,
+  "sourceChangeRuntimeRetests": 0,
+  "totals": {
+    "firstBunShards": 6,
+    "completedCleanShards": 4,
+    "passedTests": 31,
+    "expectations": 78,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 2,
+    "existingBaselineTests": 14,
+    "newFocusedObservationsAndControls": 17,
+    "failedShardPassedTests": 0,
+    "failedShardFailures": 2,
+    "failedShardErrors": 2,
+    "failedFocusedTestBodiesExecuted": 0
+  },
+  "selectedFrozenSourceAndContractPins": 62,
+  "workerSourceChecks": 62,
+  "workerArtifactHashChecks": 45,
+  "localLinksAtPrecommitCheck": 73,
+  "unresolvedLinks": [],
+  "rawLogs": 6,
+  "firstCommandsVerified": 6,
+  "checks": [
+    {
+      "check": "fullStagedDiffCheck",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "check": "nonLogStagedDiffCheck",
+      "exitCode": 0,
+      "output": ""
+    }
+  ],
+  "productReruns": 0,
+  "unexecutedFixture": "utils-cache-format-controls.test.ts has0attempts; planned assertions not evidence",
+  "scopeNote": "No confirmed new bug; candidate/raw/static boundaries preserved. Older source repair status is not independent fix verification.",
+  "crossReviewNote": "Workers completed traces/utils/web and aggregate read-only reviews; root reviewed bytes. No added product execution; final metadata corrections verified.",
+  "integrationSnapshot": "integration-final-before.json",
+  "ongoingGoal": true,
+  "aggregateReview": "review-aggregate.md",
+  "aggregateReportSubsetLinks": 72,
+  "metadataCorrections": [
+    "Utils dynamic scope narrowed to six formatDuration cases; intl not independently tested.",
+    "Utils failed run/failedFirstTotals expectations now null because raw has no printed summary; testBodiesExecuted0 is separately labeled. Generator and18artifact receipt refreshed; fixture/raw/exit bytes unchanged."
+  ]
+}
